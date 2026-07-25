@@ -883,6 +883,37 @@ function hhLSLoad(){
 }
 function hhLSSave(){ try{ localStorage.setItem('apcHH:1', JSON.stringify(hhLS)); }catch(e){} }
 const hhMem = {}; // `${lawd}|${name}` → 결과(또는 null), 세션 내 메모리 캐시(localStorage 조회도 아끼기 위함)
+
+// ── 세대수 벌크 프리페치 (지역 랭킹 등 단지 100~200개가 한 화면에 뜨는 탭 최적화) ──
+// batch가 이미 data/hhcnt/<lawd>.json에 지역 전체 단지의 세대수를 정적 파일로 채워뒀는데도,
+// 예전 방식은 단지마다 /api/hhcnt를 개별 Netlify Function 호출로 불러서 — 함수 콜드스타트+자체 fetch
+// 왕복이 화면당 수백 번 쌓여 느려졌음(정적 데이터인데도 호출 비용은 라이브 조회와 비슷하게 듦).
+// 지역 하나당 이 정적 파일을 딱 1번만 통째로 받아 클라이언트에서 매칭하면 호출 수가 1번으로 줄어듦.
+// 정적 파일이 없거나(신규 지역 등) 그 안에서 못 찾은 경우에만 기존 /api/hhcnt 개별 호출로 폴백
+// (그쪽엔 SPLIT_FALLBACK 지역 병합·국토부 라이브 조회 안전망이 그대로 남아있어 정확도는 그대로 유지됨).
+const hhBulkCache = {}; // lawd → Promise<Array<{kaptCode,name,hhcnt,dongCnt,useDate}> | null>
+function hhBulkLoad(lawd){
+  if(!(lawd in hhBulkCache)){
+    hhBulkCache[lawd] = fetch(`/data/hhcnt/${encodeURIComponent(lawd)}.json`)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => (j && Array.isArray(j.items)) ? j.items : null)
+      .catch(() => null);
+  }
+  return hhBulkCache[lawd];
+}
+// 서버 hhcnt.mjs의 matchKapt와 동일한 방식(공백 제거 후 정확 일치 → 부분 포함, 후보 여럿이면 이름 길이 가까운 쪽 채택)
+function hhBulkMatch(list, name){
+  const qn = name.replace(/\s/g, '');
+  const exact = list.filter(a => a.name && a.name.replace(/\s/g, '') === qn);
+  if(exact.length) return exact[0];
+  const cand = list.filter(a => {
+    const an = a.name ? a.name.replace(/\s/g, '') : '';
+    return an && (an.includes(qn) || qn.includes(an));
+  });
+  if(!cand.length) return null;
+  cand.sort((a,b) => Math.abs(a.name.replace(/\s/g,'').length - qn.length) - Math.abs(b.name.replace(/\s/g,'').length - qn.length));
+  return cand[0];
+}
 async function fetchHHCnt(lawd, name){
   const k = `${lawd}|${name}`;
   if(k in hhMem) return hhMem[k];
@@ -894,10 +925,17 @@ async function fetchHHCnt(lawd, name){
   }
   let v = null, ok = false;
   try{
-    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}`);
-    const d = await r.json();
-    v = (d && d.found) ? d : null;
-    ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
+    const bulk = await hhBulkLoad(lawd);
+    if(bulk && bulk.length){
+      const hit = hhBulkMatch(bulk, name);
+      if(hit){ v = { found: true, name: hit.name, hhcnt: hit.hhcnt, dongCnt: hit.dongCnt, useDate: hit.useDate }; ok = true; }
+    }
+    if(!ok){
+      const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}`);
+      const d = await r.json();
+      v = (d && d.found) ? d : null;
+      ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
+    }
   }catch(e){ v = null; } // 네트워크·파싱 오류 — 결과를 신뢰할 수 없으므로 ok=false로 남겨 캐시하지 않음(다음 조회 시 바로 재시도)
   hhMem[k] = v; // 같은 세션(페이지) 안에서는 반복 재요청 방지용으로만 메모리에 저장
   if(ok){ ls[k] = { v, t: Date.now() }; hhLSSave(); } // 확정된 결과만 로컬스토리지에 영구 캐시
