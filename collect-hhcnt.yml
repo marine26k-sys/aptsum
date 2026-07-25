@@ -1,0 +1,51 @@
+name: 세대수 데이터 배치 수집
+
+on:
+  schedule:
+    # 매주 일요일 19:00 UTC = 월요일 04:00 KST — 세대수는 재건축 전까지 거의 안 바뀌므로 주 1회면 충분
+    - cron: "0 19 * * 0"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "특정 지역만 (콤마 구분 lawd 코드, 비우면 전체)"
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-hhcnt
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: git identity 설정 (스크립트 내 중간 커밋에도 사용됨)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 세대수 배치 수집 실행 (지역 10개마다 스크립트가 자체적으로 중간 커밋·푸시함)
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: |
+          node scripts/collect-hhcnt.mjs ${{ github.event.inputs.only && format('--only={0}', github.event.inputs.only) || '' }}
+
+      - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
+        if: always()
+        run: |
+          git add data/hhcnt
+          if git diff --cached --quiet; then
+            echo "변경된 데이터 없음"
+          else
+            git commit -m "chore: 세대수 데이터 배치 수집 최종 커밋 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
