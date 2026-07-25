@@ -2,8 +2,8 @@ name: 세대수 데이터 배치 수집
 
 on:
   schedule:
-    # 매주 일요일 19:00 UTC = 월요일 04:00 KST — 세대수는 재건축 전까지 거의 안 바뀌므로 주 1회면 충분
-    - cron: "0 19 * * 0"
+    # 매월 1일 00:00 UTC = 매월 1일 09:00 KST — 세대수는 재건축 전까지 거의 안 바뀌므로 월 1회면 충분
+    - cron: "0 0 1 * *"
   workflow_dispatch:
     inputs:
       only:
@@ -42,7 +42,7 @@ jobs:
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
         if: always()
         run: |
-          git add data/hhcnt
+          [ -d data/hhcnt ] && git add data/hhcnt
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
