@@ -14,6 +14,25 @@ import { ALL_LAWDS } from "../shared/regions.mjs";
 const COMMIT_EVERY = 10; // 이 개수만큼 지역을 처리할 때마다 중간 커밋 (73개 지역 전체 처리 중 죽어도 진행분 보존)
 
 // collect-trades.mjs와 동일한 취지: 300분 타임아웃/중간 크래시에도 그때까지 받은 data/hhcnt는 살아남게 커밋·푸시
+// 다른 워크플로(collect-trades 등)가 동시에 main에 푸시해 "rejected (fetch first)"가 나는 경우를 대비해
+// push 실패 시 fetch + rebase 후 재시도한다 (data/hhcnt는 다른 워크플로와 파일 경로가 겹치지 않으므로
+// rebase 충돌 가능성이 거의 없음).
+const PUSH_RETRIES = 5;
+
+function pushWithRetry() {
+  for (let attempt = 1; attempt <= PUSH_RETRIES; attempt++) {
+    try {
+      execSync("git push", { stdio: "inherit" });
+      return;
+    } catch (e) {
+      if (attempt === PUSH_RETRIES) throw e;
+      console.error(`  push 거절됨, fetch+rebase 후 재시도 (${attempt}/${PUSH_RETRIES})`);
+      execSync("git fetch origin main", { stdio: "inherit" });
+      execSync("git rebase origin/main", { stdio: "inherit" });
+    }
+  }
+}
+
 function commitProgress(message) {
   try {
     if (!existsSync("data/hhcnt")) return; // 폴더가 아직 없으면(비정상 조기 실패 등) git add가 죽는 것 방지
@@ -21,10 +40,12 @@ function commitProgress(message) {
     const diff = execSync("git diff --cached --name-only").toString().trim();
     if (!diff) return;
     execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });
-    execSync("git push", { stdio: "inherit" });
+    pushWithRetry();
     console.log(`  (중간 커밋 완료: ${message})`);
   } catch (e) {
     console.error("  중간 커밋 실패(계속 진행):", e.message);
+    // rebase 도중 충돌 등으로 중단된 상태면 다음 커밋을 위해 정리
+    try { execSync("git rebase --abort", { stdio: "ignore" }); } catch {}
   }
 }
 

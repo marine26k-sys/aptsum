@@ -22,6 +22,26 @@ import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-p
 // GitHub Actions가 300분 타임아웃으로 죽거나 스크립트가 도중에 죽어도(API 장애 등) 그때까지
 // 받아온 데이터는 살아남도록, kind 하나가 끝날 때마다(또는 catch 시) 바로 커밋·푸시해버린다.
 // 커밋 identity(git config user.name/email)는 워크플로의 앞단 스텝에서 미리 설정돼 있어야 함.
+// collect-hhcnt.mjs와 동일한 취지: 다른 워크플로(collect-hhcnt 등)가 동시에 main에 푸시해
+// "rejected (fetch first)"가 나는 경우를 대비해 push 실패 시 fetch + rebase 후 재시도한다
+// (data/analyze|presale|rent는 collect-hhcnt.mjs가 건드리는 data/hhcnt와 경로가 겹치지 않으므로
+// rebase 충돌 가능성이 거의 없음).
+const PUSH_RETRIES = 5;
+
+function pushWithRetry() {
+  for (let attempt = 1; attempt <= PUSH_RETRIES; attempt++) {
+    try {
+      execSync("git push", { stdio: "inherit" });
+      return;
+    } catch (e) {
+      if (attempt === PUSH_RETRIES) throw e;
+      console.error(`  push 거절됨, fetch+rebase 후 재시도 (${attempt}/${PUSH_RETRIES})`);
+      execSync("git fetch origin main", { stdio: "inherit" });
+      execSync("git rebase origin/main", { stdio: "inherit" });
+    }
+  }
+}
+
 function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
@@ -32,11 +52,13 @@ function commitProgress(message) {
     const diff = execSync("git diff --cached --name-only").toString().trim();
     if (!diff) return; // 변경 없으면 커밋 안 함
     execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });
-    execSync("git push", { stdio: "inherit" });
+    pushWithRetry();
     console.log(`  (중간 커밋 완료: ${message})`);
   } catch (e) {
     // 커밋 실패해도 데이터 수집 자체는 계속 진행 (다음 중간 커밋이나 워크플로의 always() 스텝이 재시도)
     console.error("  중간 커밋 실패(계속 진행):", e.message);
+    // rebase 도중 충돌 등으로 중단된 상태면 다음 커밋을 위해 정리
+    try { execSync("git rebase --abort", { stdio: "ignore" }); } catch {}
   }
 }
 
