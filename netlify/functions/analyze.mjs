@@ -232,18 +232,32 @@ async function fetchShard(key, lawd, yms, origin) {
   const historicalYms = yms.filter((ym) => !isRecent(ym)); // 2개월 이전 — static 우선
   const recentYms = yms.filter(isRecent); // 최근 2개월 — 무조건 실시간
 
-  const staticHits = historicalYms.length
-    ? await Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
-    : [];
+  // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
+  // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
+  // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가)
+  const [staticHits, recentLive] = await Promise.all([
+    historicalYms.length
+      ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
+      : [],
+    recentYms.length ? fetchShardLive(key, lawd, recentYms) : { items: [], anyFailed: false },
+  ]);
   const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null); // static 배치가 아직 못 받은 과거월
   const staticItems = staticHits.filter((h) => h !== null).flat();
 
-  const liveYms = [...recentYms, ...missingHistorical];
-  if (!liveYms.length) return { items: staticItems, anyFailed: false };
+  // 최근월 live 자체가 실패하면(키 오류·한도 초과 등) 기존과 동일하게 처리 — static이라도 있으면 그거라도 반환
+  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
 
-  const live = await fetchShardLive(key, lawd, liveYms);
-  if (live.error) return staticItems.length ? { items: staticItems, anyFailed: true } : live; // 일부라도 정적 캐시로 확보됐으면 완전 에러 처리 대신 있는 데이터는 반환
-  return { items: [...staticItems, ...live.items], anyFailed: live.anyFailed };
+  if (!missingHistorical.length) {
+    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
+  }
+
+  // static에서 못 찾은 과거월만 추가로 live 조회 (recentYms와는 별개 호출 — recentYms는 위에서 이미 끝났음)
+  const missingLive = await fetchShardLive(key, lawd, missingHistorical);
+  if (missingLive.error) {
+    const items = [...staticItems, ...recentLive.items]; // 최근월 live는 이미 성공했으니 그 데이터는 살리고 과거 누락분만 에러 취급
+    return items.length ? { items, anyFailed: true } : missingLive;
+  }
+  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
 }
 
 export default async (req) => {

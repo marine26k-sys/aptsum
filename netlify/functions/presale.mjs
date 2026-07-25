@@ -221,18 +221,30 @@ async function fetchShard(key, lawd, yms, origin) {
   const historicalYms = yms.filter((ym) => !isRecent(ym));
   const recentYms = yms.filter(isRecent);
 
-  const staticHits = historicalYms.length
-    ? await Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
-    : [];
+  // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
+  // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
+  // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가, analyze.mjs와 동일)
+  const [staticHits, recentLive] = await Promise.all([
+    historicalYms.length
+      ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
+      : [],
+    recentYms.length ? fetchShardLive(key, lawd, recentYms) : { items: [], anyFailed: false },
+  ]);
   const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null);
   const staticItems = staticHits.filter((h) => h !== null).flat();
 
-  const liveYms = [...recentYms, ...missingHistorical];
-  if (!liveYms.length) return { items: staticItems, anyFailed: false };
+  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
 
-  const live = await fetchShardLive(key, lawd, liveYms);
-  if (live.error) return staticItems.length ? { items: staticItems, anyFailed: true } : live;
-  return { items: [...staticItems, ...live.items], anyFailed: live.anyFailed };
+  if (!missingHistorical.length) {
+    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
+  }
+
+  const missingLive = await fetchShardLive(key, lawd, missingHistorical);
+  if (missingLive.error) {
+    const items = [...staticItems, ...recentLive.items];
+    return items.length ? { items, anyFailed: true } : missingLive;
+  }
+  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
 }
 
 export default async (req) => {
