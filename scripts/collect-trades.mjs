@@ -165,7 +165,7 @@ async function main() {
   const yms = recentYms(opt.months);
   const refreshSet = new Set(yms.slice(0, opt.refresh)); // 최신 N개월
 
-  for (const kind of opt.kinds) {
+  for (const [kindIdx, kind] of opt.kinds.entries()) {
     const cfg = KIND_CONFIG[kind];
     if (!cfg) { console.error(`알 수 없는 kind: ${kind}`); continue; }
     console.log(`\n=== ${kind} 수집 시작 (지역 ${lawds.length}개 × 최대 ${yms.length}개월) ===`);
@@ -189,7 +189,13 @@ async function main() {
       await writeFile(file, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));
     });
     console.log(`${kind}: 성공 ${ok}건, 실패 ${fail}건 (총 ${tasks.length}건 중 스킵 제외)`);
-    commitProgress(`chore: ${kind} 실거래 배치 수집 중간 커밋 ${new Date().toISOString()}`);
+
+    // kind별 커밋이 이 스크립트의 유일한 정상 커밋 지점이라, 마지막 kind가 아닌 중간 커밋만
+    // [skip ci]를 붙여 Netlify 빌드를 유발하지 않게 함. 마지막 kind의 커밋은 skip ci 없이 남겨둬
+    // 배치 전체가 끝난 시점에 실제 배포가 한 번 트리거되게 함.
+    const isLast = kindIdx === opt.kinds.length - 1;
+    const skipTag = isLast ? "" : " [skip ci]";
+    commitProgress(`chore: ${kind} 실거래 배치 수집 중간 커밋 ${new Date().toISOString()}${skipTag}`);
   }
 }
 

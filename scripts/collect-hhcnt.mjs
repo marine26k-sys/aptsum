@@ -136,7 +136,9 @@ async function main() {
     console.log(`[hhcnt] ${lawd}: 단지 ${complexes.length}개 중 ${out.length}개 세대수 확보 (${done}/${lawds.length})`);
 
     if (done % COMMIT_EVERY === 0) {
-      commitProgress(`chore: 세대수 배치 수집 중간 커밋 (${done}/${lawds.length}) ${new Date().toISOString()}`);
+      // [skip ci]: 중간 커밋은 데이터가 아직 완결되지 않았으므로 Netlify 빌드를 유발하지 않게 함
+      // (완료 커밋·크래시 커밋은 아래에서 skip ci 없이 남겨둬 실제 배포가 트리거되게 함)
+      commitProgress(`chore: 세대수 배치 수집 중간 커밋 (${done}/${lawds.length}) ${new Date().toISOString()} [skip ci]`);
     }
   }
 
