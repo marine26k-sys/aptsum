@@ -883,37 +883,6 @@ function hhLSLoad(){
 }
 function hhLSSave(){ try{ localStorage.setItem('apcHH:1', JSON.stringify(hhLS)); }catch(e){} }
 const hhMem = {}; // `${lawd}|${name}` → 결과(또는 null), 세션 내 메모리 캐시(localStorage 조회도 아끼기 위함)
-
-// ── 세대수 벌크 프리페치 (지역 랭킹 등 단지 100~200개가 한 화면에 뜨는 탭 최적화) ──
-// batch가 이미 data/hhcnt/<lawd>.json에 지역 전체 단지의 세대수를 정적 파일로 채워뒀는데도,
-// 예전 방식은 단지마다 /api/hhcnt를 개별 Netlify Function 호출로 불러서 — 함수 콜드스타트+자체 fetch
-// 왕복이 화면당 수백 번 쌓여 느려졌음(정적 데이터인데도 호출 비용은 라이브 조회와 비슷하게 듦).
-// 지역 하나당 이 정적 파일을 딱 1번만 통째로 받아 클라이언트에서 매칭하면 호출 수가 1번으로 줄어듦.
-// 정적 파일이 없거나(신규 지역 등) 그 안에서 못 찾은 경우에만 기존 /api/hhcnt 개별 호출로 폴백
-// (그쪽엔 SPLIT_FALLBACK 지역 병합·국토부 라이브 조회 안전망이 그대로 남아있어 정확도는 그대로 유지됨).
-const hhBulkCache = {}; // lawd → Promise<Array<{kaptCode,name,hhcnt,dongCnt,useDate}> | null>
-function hhBulkLoad(lawd){
-  if(!(lawd in hhBulkCache)){
-    hhBulkCache[lawd] = fetch(`/data/hhcnt/${encodeURIComponent(lawd)}.json`)
-      .then(r => r.ok ? r.json() : null)
-      .then(j => (j && Array.isArray(j.items)) ? j.items : null)
-      .catch(() => null);
-  }
-  return hhBulkCache[lawd];
-}
-// 서버 hhcnt.mjs의 matchKapt와 동일한 방식(공백 제거 후 정확 일치 → 부분 포함, 후보 여럿이면 이름 길이 가까운 쪽 채택)
-function hhBulkMatch(list, name){
-  const qn = name.replace(/\s/g, '');
-  const exact = list.filter(a => a.name && a.name.replace(/\s/g, '') === qn);
-  if(exact.length) return exact[0];
-  const cand = list.filter(a => {
-    const an = a.name ? a.name.replace(/\s/g, '') : '';
-    return an && (an.includes(qn) || qn.includes(an));
-  });
-  if(!cand.length) return null;
-  cand.sort((a,b) => Math.abs(a.name.replace(/\s/g,'').length - qn.length) - Math.abs(b.name.replace(/\s/g,'').length - qn.length));
-  return cand[0];
-}
 async function fetchHHCnt(lawd, name){
   const k = `${lawd}|${name}`;
   if(k in hhMem) return hhMem[k];
@@ -925,21 +894,50 @@ async function fetchHHCnt(lawd, name){
   }
   let v = null, ok = false;
   try{
-    const bulk = await hhBulkLoad(lawd);
-    if(bulk && bulk.length){
-      const hit = hhBulkMatch(bulk, name);
-      if(hit){ v = { found: true, name: hit.name, hhcnt: hit.hhcnt, dongCnt: hit.dongCnt, useDate: hit.useDate }; ok = true; }
-    }
-    if(!ok){
-      const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}`);
-      const d = await r.json();
-      v = (d && d.found) ? d : null;
-      ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
-    }
+    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}`);
+    const d = await r.json();
+    v = (d && d.found) ? d : null;
+    ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
   }catch(e){ v = null; } // 네트워크·파싱 오류 — 결과를 신뢰할 수 없으므로 ok=false로 남겨 캐시하지 않음(다음 조회 시 바로 재시도)
   hhMem[k] = v; // 같은 세션(페이지) 안에서는 반복 재요청 방지용으로만 메모리에 저장
   if(ok){ ls[k] = { v, t: Date.now() }; hhLSSave(); } // 확정된 결과만 로컬스토리지에 영구 캐시
   return v;
+}
+
+// 목록형 화면(지역 랭킹 등)에서 같은 lawd의 여러 단지명을 한 번의 요청으로 묶어 조회.
+// 이전엔 단지마다 /api/hhcnt를 개별 호출해(최대 100건) 서버가 매번 같은 data/hhcnt/<lawd>.json을
+// 반복해서 읽어야 했음 — 캐시 미스분만 모아 POST 배치로 보내 서버가 그 파일을 딱 한 번만 읽게 한다.
+// (2026.07 추가 — 지역 랭킹 5년·전체평형처럼 목록이 100건에 가까울 때 체감 로딩이 크게 줄어듦)
+async function fetchHHCntBatch(lawd, names){
+  const uniq = [...new Set(names)];
+  const result = {};
+  const ls = hhLSLoad();
+  const need = [];
+  for(const nm of uniq){
+    const k = `${lawd}|${nm}`;
+    if(k in hhMem){ result[nm] = hhMem[k]; continue; }
+    const cached = ls[k];
+    if(cached && Date.now() - cached.t < (cached.v ? HH_TTL_FOUND_MS : HH_TTL_MISS_MS)){
+      hhMem[k] = cached.v; result[nm] = cached.v; continue;
+    }
+    need.push(nm);
+  }
+  if(need.length){
+    try{
+      const r = await fetch('/api/hhcnt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lawd, names: need }) });
+      const d = await r.json();
+      const map = (d && d.results) || {};
+      for(const nm of need){
+        const raw = map[nm];
+        const v = (raw && raw.found) ? raw : null;
+        const k = `${lawd}|${nm}`;
+        hhMem[k] = v; ls[k] = { v, t: Date.now() };
+        result[nm] = v;
+      }
+      hhLSSave();
+    }catch(e){ for(const nm of need) result[nm] = null; } // 네트워크 오류 — 캐시하지 않고 다음 조회 시 재시도
+  }
+  return result;
 }
 
 // 매매 단지명(officialName)과 분양권 데이터를 매칭 — 표기가 완전히 같지 않을 수 있어 exact→substring 순으로 시도
@@ -1627,37 +1625,24 @@ async function search(){
     }
     d.floorMin = fM;
     // 세대수는 실거래 API와 완전히 별개인 국토부 공동주택 단지정보 API로 조회 — 매칭 실패해도 조용히 비워둠
-    // 세대수 조회는 이 함수 내에서 (지역코드, 단지명) 기준으로 dedupe + 동시 요청 수를 제한해서 나간다.
-    // 지역 랭킹처럼 목록이 최대 100건(최고가 거래·거래량 각각) → 최대 200개 가까운 단지를 한 화면에서 동시에 조회할 수 있어,
-    // 제한 없이 Promise.all로 한꺼번에 쏘면 브라우저·Netlify 함수에 순간적으로 과도한 동시 요청이 몰릴 수 있음.
-    const HH_CONCURRENCY = 12;
-    const hhReqs = {}; // `${lawd}|${name}` → Promise (중복 요청 제거)
-    let hhInflight = 0, hhQueue = [];
-    function hhRunNext(){
-      while(hhInflight < HH_CONCURRENCY && hhQueue.length){
-        const job = hhQueue.shift();
-        hhInflight++;
-        fetchHHCnt(job.lw, job.nm).catch(()=>null).then(v=>{ hhInflight--; job.resolve(v); hhRunNext(); });
-      }
-    }
-    const getHH = (lw, nm) => {
-      const k = `${lw}|${nm}`;
-      if(!hhReqs[k]) hhReqs[k] = new Promise(resolve=>{ hhQueue.push({lw, nm, resolve}); hhRunNext(); });
-      return hhReqs[k];
-    };
+    // 2026.07: 목록형 화면(지역·거래량·등락 랭킹, 단지 비교)은 fetchHHCntBatch로 lawd당 한 번에 묶어서 조회
+    // (예전엔 최대 12건 동시 개별 조회 큐를 썼는데, 그래도 결국 목록 크기만큼 서버가 같은 정적 파일을
+    // 반복해서 읽어야 했음 — 배치 엔드포인트로 바뀌면서 이 큐는 저평가 계열의 조기 종료 배치에만 남겨둠).
+    const HH_CONCURRENCY = 12; // 저평가 계열(아래) 조기 종료용 배치 크기로만 사용
     if(d.found && d.mode==='complex'){
-      d.hh = await getHH(lawd, d.name);
+      d.hh = await fetchHHCnt(lawd, d.name);
     }
     // 등락 랭킹의 "단기 저평가 단지"·분기/연간 저평가 탭도 동일하게 세대수 표시(비교 대상 목록 각 항목)
     // 저평가 계열(초단기·분기·연간) 세 로직은 모두 300세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
-    // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 동시성 한도(HH_CONCURRENCY)만큼 배치로 세대수를 조회하면서
+    // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 HH_CONCURRENCY만큼 배치로 세대수를 조회하면서
     // 300세대 이상 조건을 만족하는 상위 10개가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
     // (이전처럼 전체 후보의 세대수를 다 조회한 뒤 거르는 방식보다) 로딩이 느려지지 않는다.
     if(d.found && (mode==='updown'||mode==='peak'||mode==='longpeak') && d.divergence && d.divergence.length){
       const filtered = [];
       for(let i=0; i<d.divergence.length && filtered.length<10; i+=HH_CONCURRENCY){
         const batch = d.divergence.slice(i, i+HH_CONCURRENCY);
-        await Promise.all(batch.map(async x=>{ x.hh = await getHH(lawd, x.apt); }));
+        const map = await fetchHHCntBatch(lawd, batch.map(x=>x.apt));
+        batch.forEach(x=>{ x.hh = map[x.apt] || null; });
         for(const x of batch){
           if(filtered.length>=10) break;
           if(x.hh && x.hh.hhcnt>=300) filtered.push(x);
@@ -1668,7 +1653,7 @@ async function search(){
     // 나머지 탭(지역 랭킹·거래량 랭킹·등락 랭킹 상승/하락 상위·단지 비교)에도 동일하게 세대수 표시.
     if(d.found){
       const attachAll = (list, lw, nameField) => list && list.length
-        ? Promise.all(list.map(async x=>{ x.hh = await getHH(lw, x[nameField||'apt']); }))
+        ? fetchHHCntBatch(lw, list.map(x=>x[nameField||'apt'])).then(map=>{ list.forEach(x=>{ x.hh = map[x[nameField||'apt']] || null; }); })
         : Promise.resolve();
       // 지역 랭킹은 highDeals만, 거래량 랭킹은 topVolume만 실제로 화면에 렌더링되는데,
       // 이전엔 현재 탭에서 안 보이는 나머지 리스트(각각 최대 100건)까지 세대수를 조회하고 있어서 불필요하게 느렸다.
@@ -1680,7 +1665,12 @@ async function search(){
       } else if(mode==='updown'){
         await Promise.all([ attachAll(d.up, lawd), attachAll(d.down, lawd) ]);
       } else if(mode==='compare' && d.complexes && d.complexes.length){
-        await Promise.all(d.complexes.map(async c=>{ c.hh = await getHH(c.lawd, c.name); }));
+        const byLawd = {};
+        d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
+        await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
+          const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
+          arr.forEach(c=>{ c.hh = map[c.name] || null; });
+        }));
       }
     }
 

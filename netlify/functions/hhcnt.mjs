@@ -124,12 +124,79 @@ async function fetchBasis(key, kaptCode) {
 }
 
 export default async (req) => {
+  const key = process.env.DATA_GO_KR_KEY;
+  if (!key) return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
+
+  // ── 배치 모드(POST): 화면 하나(지역 랭킹 등)에서 최대 100여 개 단지명을 한 번의 요청으로 묶어서 조회 ──
+  // GET 모드(기존, 단지 하나씩)는 그대로 유지하되, 목록형 화면은 이 배치 모드를 써서
+  // 같은 data/hhcnt/<lawd>.json 파일을 단지 수만큼 반복해서 fetch하던 낭비를 없앤다
+  // (2026.07 추가 — 지역 랭킹처럼 최대 100건을 개별 조회하면 파일은 동일한데 매번 새로 읽어와 느렸음).
+  if (req.method === "POST") {
+    let body;
+    try { body = await req.json(); } catch { return Response.json({ error: "잘못된 요청" }, { status: 400 }); }
+    const lawd = String(body.lawd || "").trim();
+    const names = Array.isArray(body.names) ? [...new Set(body.names.map((n) => String(n || "").trim()).filter(Boolean))].slice(0, 200) : [];
+    const sggs = resolveSigungu(lawd);
+    if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
+    if (!names.length) return Response.json({ results: {} });
+
+    const results = {};
+    const remaining = new Set(names);
+
+    // 정적 배치 파일을 딱 한 번만 읽어서, 그 안에서 요청받은 이름을 전부 매칭 시도
+    // (data/hhcnt/<lawd>.json에는 세대수까지 이미 포함돼 있어 매칭만 되면 추가 API 호출이 필요 없음)
+    try {
+      const staticR = await fetch(`${new URL(req.url).origin}/data/hhcnt/${encodeURIComponent(lawd)}.json`);
+      if (staticR.ok) {
+        const staticJ = await staticR.json();
+        const staticItems = (staticJ && Array.isArray(staticJ.items)) ? staticJ.items : [];
+        if (staticItems.length) {
+          const staticList = staticItems.map((it) => ({ kaptCode: it.kaptCode, kaptName: it.name }));
+          for (const nm of [...remaining]) {
+            const hit = matchKapt(staticList, nm);
+            if (!hit) continue;
+            const full = staticItems.find((it) => it.kaptCode === hit.kaptCode);
+            if (!full) continue;
+            results[nm] = { found: true, name: full.name, hhcnt: full.hhcnt, dongCnt: full.dongCnt, useDate: full.useDate };
+            remaining.delete(nm);
+          }
+        }
+      }
+    } catch (e) { /* 정적 캐시 조회 실패는 조용히 무시하고 아래 라이브 조회로 폴백 */ }
+
+    // 정적 파일에서 못 찾은 나머지만(신규 단지, 배치가 아직 못 받은 지역 등) 라이브 API로 폴백
+    // — 목록조회는 한 번만, 세대수 조회(basis)는 실제 매칭된 kaptCode만(중복 제거) 병렬로
+    if (remaining.size) {
+      try {
+        const lists = await Promise.all(sggs.map((s) => fetchList(key, s)));
+        const allItems = lists.flat();
+        const matched = {}; // kaptCode → [name, ...]
+        for (const nm of remaining) {
+          const hit = matchKapt(allItems, nm);
+          if (!hit) { results[nm] = { found: false }; continue; }
+          (matched[hit.kaptCode] ||= []).push(nm);
+        }
+        const codes = Object.keys(matched);
+        const bases = await Promise.all(codes.map((c) => fetchBasis(key, c)));
+        codes.forEach((code, i) => {
+          const basis = bases[i];
+          for (const nm of matched[code]) {
+            results[nm] = basis ? { found: true, name: nm, ...basis } : { found: false };
+          }
+        });
+      } catch (e) {
+        for (const nm of remaining) results[nm] = { found: false };
+      }
+    }
+
+    // 배치 응답은 요청마다 이름 조합이 달라 CDN 캐시 효율이 낮으므로 캐시하지 않음
+    // (개별 결과는 이미 위에서 static/basis 단계의 CDN 캐시 대상 데이터를 그대로 활용한 것이라 손해 없음)
+    return Response.json({ results });
+  }
+
   const url = new URL(req.url);
   const lawd = (url.searchParams.get("lawd") || "").trim();
   const name = (url.searchParams.get("name") || "").trim();
-
-  const key = process.env.DATA_GO_KR_KEY;
-  if (!key) return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
 
   const sggs = resolveSigungu(lawd);
   if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
