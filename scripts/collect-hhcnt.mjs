@@ -6,6 +6,7 @@
 // 사용법: DATA_GO_KR_KEY=xxx node scripts/collect-hhcnt.mjs [--only=11680,HS-동탄구]
 
 import { mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { ALL_LAWDS } from "../shared/regions.mjs";
@@ -15,6 +16,7 @@ const COMMIT_EVERY = 10; // 이 개수만큼 지역을 처리할 때마다 중�
 // collect-trades.mjs와 동일한 취지: 300분 타임아웃/중간 크래시에도 그때까지 받은 data/hhcnt는 살아남게 커밋·푸시
 function commitProgress(message) {
   try {
+    if (!existsSync("data/hhcnt")) return; // 폴더가 아직 없으면(비정상 조기 실패 등) git add가 죽는 것 방지
     execSync("git add data/hhcnt", { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
     if (!diff) return;

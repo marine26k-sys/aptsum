@@ -13,6 +13,7 @@
 // - only: 특정 지역 코드만 (콤마 구분) — 디버그/부분 재수집용
 
 import { mkdir, writeFile, access } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
@@ -23,7 +24,11 @@ import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-p
 // 커밋 identity(git config user.name/email)는 워크플로의 앞단 스텝에서 미리 설정돼 있어야 함.
 function commitProgress(message) {
   try {
-    execSync("git add data/analyze data/presale data/rent", { stdio: "inherit" });
+    // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
+    // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
+    const dirs = ["data/analyze", "data/presale", "data/rent"].filter((d) => existsSync(d));
+    if (!dirs.length) return;
+    execSync(`git add ${dirs.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
     if (!diff) return; // 변경 없으면 커밋 안 함
     execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });

@@ -206,14 +206,33 @@ async function fetchStaticMonth(origin, lawd, ym) {
   } catch (e) { return null; }
 }
 
+function currentAndPrevYm() {
+  const d = new Date();
+  const cur = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  d.setMonth(d.getMonth() - 1);
+  const prev = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return { cur, prev };
+}
+
 async function fetchShard(key, lawd, yms, origin) {
   if (!origin) return fetchShardLive(key, lawd, yms);
-  const staticHits = await Promise.all(yms.map((ym) => fetchStaticMonth(origin, lawd, ym)));
-  const missing = yms.filter((_, i) => staticHits[i] === null);
+
+  const { cur, prev } = currentAndPrevYm();
+  const isRecent = (ym) => ym === cur || ym === prev;
+  const historicalYms = yms.filter((ym) => !isRecent(ym));
+  const recentYms = yms.filter(isRecent);
+
+  const staticHits = historicalYms.length
+    ? await Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
+    : [];
+  const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null);
   const staticItems = staticHits.filter((h) => h !== null).flat();
-  if (!missing.length) return { items: staticItems, anyFailed: false };
-  const live = await fetchShardLive(key, lawd, missing);
-  if (live.error) return missing.length === yms.length ? live : { items: staticItems, anyFailed: true };
+
+  const liveYms = [...recentYms, ...missingHistorical];
+  if (!liveYms.length) return { items: staticItems, anyFailed: false };
+
+  const live = await fetchShardLive(key, lawd, liveYms);
+  if (live.error) return staticItems.length ? { items: staticItems, anyFailed: true } : live;
   return { items: [...staticItems, ...live.items], anyFailed: live.anyFailed };
 }
 
@@ -242,10 +261,7 @@ export default async (req) => {
   const r = await fetchShard(key, lawd, yms, url.origin);
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
-  const d = new Date();
-  const cur = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  d.setMonth(d.getMonth() - 1);
-  const prev = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
   return new Response(JSON.stringify({ items: r.items }), {
     headers: {

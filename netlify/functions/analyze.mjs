@@ -214,14 +214,35 @@ async function fetchStaticMonth(origin, lawd, ym) {
   } catch (e) { return null; }
 }
 
+// 오늘 기준 "최근 2개월"(당월+전월) — 이 범위는 실거래 신고가 계속 들어와 배치가 격주로만 돌아도
+// static JSON이 금방 낡아버리므로, 하이브리드 모드에서는 static 존재 여부와 무관하게 항상 실시간 호출한다.
+function currentAndPrevYm() {
+  const d = new Date();
+  const cur = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  d.setMonth(d.getMonth() - 1);
+  const prev = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return { cur, prev };
+}
+
 async function fetchShard(key, lawd, yms, origin) {
   if (!origin) return fetchShardLive(key, lawd, yms);
-  const staticHits = await Promise.all(yms.map((ym) => fetchStaticMonth(origin, lawd, ym)));
-  const missing = yms.filter((_, i) => staticHits[i] === null);
+
+  const { cur, prev } = currentAndPrevYm();
+  const isRecent = (ym) => ym === cur || ym === prev;
+  const historicalYms = yms.filter((ym) => !isRecent(ym)); // 2개월 이전 — static 우선
+  const recentYms = yms.filter(isRecent); // 최근 2개월 — 무조건 실시간
+
+  const staticHits = historicalYms.length
+    ? await Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
+    : [];
+  const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null); // static 배치가 아직 못 받은 과거월
   const staticItems = staticHits.filter((h) => h !== null).flat();
-  if (!missing.length) return { items: staticItems, anyFailed: false };
-  const live = await fetchShardLive(key, lawd, missing);
-  if (live.error) return missing.length === yms.length ? live : { items: staticItems, anyFailed: true }; // 일부라도 정적 캐시로 확보됐으면 완전 에러 처리 대신 있는 데이터는 반환
+
+  const liveYms = [...recentYms, ...missingHistorical];
+  if (!liveYms.length) return { items: staticItems, anyFailed: false };
+
+  const live = await fetchShardLive(key, lawd, liveYms);
+  if (live.error) return staticItems.length ? { items: staticItems, anyFailed: true } : live; // 일부라도 정적 캐시로 확보됐으면 완전 에러 처리 대신 있는 데이터는 반환
   return { items: [...staticItems, ...live.items], anyFailed: live.anyFailed };
 }
 
@@ -252,10 +273,7 @@ export default async (req) => {
 
   // 캐시 전략: 최신 2개월이 섞이거나 재시도까지 실패한 달이 있으면 30분, 전부 과거월이고 완전 성공이면 30일 (CDN 캐시)
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
-  const d = new Date();
-  const cur = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  d.setMonth(d.getMonth() - 1);
-  const prev = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
   return new Response(JSON.stringify({ items: r.items }), {
     headers: {
