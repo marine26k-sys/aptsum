@@ -1,0 +1,2476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>아파트썸 실거래 분석</title>
+<meta name="description" content="국토부 실거래가 데이터 기반 무료 아파트 시세 분석 — 단지 분석, 단지 비교, 지역 랭킹을 확인하세요.">
+<meta name="theme-color" content="#0F2B3D">
+
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="아파트썸 실거래 분석">
+<meta property="og:title" content="아파트썸 실거래 분석 — 국토부 실거래가 기반 무료 시세 분석">
+<meta property="og:description" content="단지 분석 · 단지 비교 · 지역 랭킹을 국토부 공공 데이터로 무료 제공합니다.">
+<meta property="og:image" content="https://aptsumprice.netlify.app/assets/og-image.png">
+<meta property="og:url" content="https://aptsumprice.netlify.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="아파트썸 실거래 분석">
+<meta name="twitter:description" content="국토부 실거래가 기반 무료 아파트 시세 분석">
+<meta name="twitter:image" content="https://aptsumprice.netlify.app/assets/og-image.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
+    --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
+    --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:28px 0 6px;text-align:center}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:var(--navy);letter-spacing:-.5px}
+  header p{font-size:11.5px;color:var(--sub);margin-top:4px}
+
+  .tabs{display:flex;flex-wrap:wrap;background:#E2E8F0;border-radius:12px;padding:4px;margin:18px 0 12px}
+  .tab{flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--sub);padding:9px;border-radius:9px;cursor:pointer;transition:all .15s}
+  .tab.on{background:#fff;color:var(--teal-dark);box-shadow:0 1px 4px rgba(15,43,61,.1)}
+
+  .search-box{display:grid;gap:8px;margin-bottom:8px}
+  .search-box > *{min-width:0}
+  .row2{display:flex;gap:8px}
+  select,input.q{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;background:#fff}
+  select:focus,input.q:focus{outline:none;border-color:var(--teal)}
+  select{flex:0 0 138px;width:100%}
+  input.q{flex:1;min-width:0}
+  .go{background:var(--teal);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+  .go:disabled{background:#93C9CC}
+
+  .loading{display:none;text-align:center;padding:40px 0}
+  .loading.on{display:block}
+  .spinner{width:34px;height:34px;border:4px solid var(--teal-soft);border-top-color:var(--teal);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading div{font-size:12.5px;color:var(--sub)}
+
+  .error{display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:13px 15px;font-size:12.5px;color:var(--red);margin-top:12px;line-height:1.7}
+  .error.on{display:block}
+  .error a{color:var(--teal);cursor:pointer;text-decoration:underline}
+
+  #result{display:none;margin-top:14px}
+  #result.on{display:block;animation:fade .4s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .card{background:#fff;border-radius:16px;box-shadow:0 2px 14px rgba(15,43,61,.07);margin-bottom:12px}
+  .card-hd{background:var(--navy);color:#fff;padding:15px 18px;border-radius:16px 16px 0 0;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(15,43,61,.15)}
+  .card-hd h2{font-size:18px;font-weight:900;letter-spacing:-.5px}
+  .card-hd .meta{font-size:11px;opacity:.75;margin-top:2px}
+  .sec{padding:14px 18px}
+  .sec+.sec{border-top:1px solid var(--line)}
+  .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{color:var(--sub);font-weight:500;font-size:10.5px;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);white-space:pre-line}
+  td{padding:6px 4px;border-bottom:1px dashed var(--line)}
+  .peer-table{table-layout:fixed}
+  .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
+  .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
+  .peer-table th:nth-child(1),.peer-table td:nth-child(1){width:36%;word-break:break-all}
+  .peer-table th:nth-child(2),.peer-table td:nth-child(2){width:13%}
+  .peer-table th:nth-child(3),.peer-table td:nth-child(3),
+  .peer-table th:nth-child(4),.peer-table td:nth-child(4){width:25.5%}
+  .peer-table tr:last-child td{border-bottom:none}
+  .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  tr:last-child td{border-bottom:none}
+  td b{font-size:12.5px;color:var(--navy)}
+  .tr-r{text-align:right}
+  .rng{color:var(--sub);font-size:10.5px}
+  .th-recent{color:var(--teal-dark);font-weight:700}
+  .td-recent b{color:var(--teal-dark)}
+  .th-max{color:#fff;background:var(--red);border-radius:6px 6px 0 0;border-bottom:2px solid var(--red)}
+  .td-max{background:#FEF2F2}
+  .td-max b{color:var(--red);font-size:13px}
+  .th-teal{color:#fff;background:var(--teal);border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
+  .td-teal{background:var(--teal-soft)}
+  .td-teal b{color:var(--teal-dark);font-size:13px}
+  .th-teal2{color:var(--teal-dark);background:var(--teal-light);border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
+  .td-teal2{background:var(--teal-light-soft)}
+  .td-teal2 b{color:var(--teal-dark);font-size:13px}
+  .nh{display:inline-block;font-size:7.5px;font-weight:700;color:#fff;background:var(--red);border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
+  .extag{display:inline-block;font-size:9px;font-weight:700;color:var(--sub);background:var(--slate-bg);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
+  tr.exrow td{opacity:.45}
+
+  .trend{display:flex;align-items:center;gap:10px;background:var(--slate-bg);border-radius:10px;padding:11px 14px}
+  .trend .pct{font-size:14px;font-weight:900}
+  .up{color:var(--teal)} .down{color:var(--red)}
+  .trend .d{font-size:11px;color:var(--sub);line-height:1.5}
+  .trend .d b{font-size:13px;color:var(--navy);font-weight:900}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .chip{font-size:11px;font-weight:700;border:1.5px solid var(--line);color:var(--sub);border-radius:20px;padding:4px 12px;cursor:pointer}
+  .chip.on{border-color:var(--teal);color:var(--teal-dark);background:var(--teal-soft)}
+  .chart-wrap{overflow:hidden}
+  .chart-note{font-size:10px;color:var(--sub);text-align:right;margin-top:2px}
+  circle[data-tip]{touch-action:none}
+  .chart-hover-capture{touch-action:none;cursor:crosshair}
+
+  .rk{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12px}
+  .rk:last-child{border-bottom:none}
+  .rk .no{flex:none;width:20px;height:20px;border-radius:6px;background:var(--slate-bg);color:var(--sub);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .rk:nth-child(-n+3) .no{background:var(--teal);color:#fff}
+  .rk .nm{flex:1;min-width:0;font-weight:500;display:flex;flex-direction:column;gap:2px}
+  .rk .nm .nm-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk .nm small{color:var(--sub);font-weight:400;font-size:10px}
+  .rk .val{flex:none;text-align:right;font-weight:700;font-size:12px}
+  .rk .val small{display:block;font-weight:400;color:var(--sub);font-size:10px}
+  .rk .nm .clickable{cursor:pointer;border-bottom:1px dotted var(--sub)}
+
+  .cmp-row{display:flex;gap:8px;margin-bottom:8px}
+  .cmp-row select{flex:0 0 128px}
+  .cmp-row input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit}
+  .cmp-row input:focus{outline:none;border-color:var(--teal)}
+  .cmp-row .rm{flex:none;width:40px;border:none;background:var(--slate-bg);border-radius:12px;color:var(--sub);font-size:16px;cursor:pointer}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}
+  .legend span{font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:14px;height:3.5px;border-radius:2px;display:inline-block}
+  .toggle2{display:inline-flex;background:var(--slate-bg);border-radius:8px;padding:3px;margin-left:auto}
+  .toggle2 span{font-size:10.5px;font-weight:700;color:var(--sub);padding:4px 10px;border-radius:6px;cursor:pointer}
+  .toggle2 span.on{background:#fff;color:var(--teal-dark);box-shadow:0 1px 3px rgba(15,43,61,.12)}
+  .ctl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  #ac{position:fixed;z-index:60;background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:0 6px 20px rgba(15,43,61,.14);max-height:280px;overflow-y:auto;display:none}
+  #ac.on{display:block}
+  .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #F1F5F9}
+  .ac-item:last-child{border-bottom:none}
+  .ac-item:hover,.ac-item.hl{background:var(--teal-soft)}
+  .ac-item b{color:var(--teal-dark)}
+  .ac-item small{color:var(--sub);font-size:10.5px;white-space:nowrap;align-self:center}
+  .ac-msg{padding:12px 14px;font-size:12px;color:var(--sub)}
+  #tip{position:fixed;z-index:90;background:var(--navy);color:#fff;font-size:11px;line-height:1.5;border-radius:8px;padding:7px 10px;pointer-events:none;display:none;box-shadow:0 4px 14px rgba(15,43,61,.3);max-width:230px}
+  #tip b{color:#7FD4D9}
+  #mpop{position:fixed;inset:0;z-index:80;background:rgba(15,43,61,.45);display:none;align-items:center;justify-content:center;padding:20px}
+  #mpop.on{display:flex}
+  .mpop-box{background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(15,43,61,.3);max-width:380px;width:100%;padding:16px 18px;animation:fade .25s ease}
+  .mpop-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .mpop-hd h3{font-size:13px;font-weight:900;color:var(--navy)}
+  .mpop-hd button{border:none;background:var(--slate-bg);border-radius:8px;width:28px;height:28px;font-size:15px;color:var(--sub);cursor:pointer}
+  .mpop-note{font-size:10px;color:var(--sub);margin-top:6px;text-align:right}
+  .src-note{font-size:10px;color:var(--sub);text-align:center;padding:4px 0 20px;line-height:1.6}
+
+  .fbar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .fbar-lb{flex:0 0 64px;display:flex;flex-direction:column;gap:1px}
+  .fbar-lb b{font-size:11.5px;color:var(--navy)}
+  .fbar-lb .rng{font-size:9px}
+  .fbar-track{flex:1;background:var(--slate-bg);border-radius:6px;height:15px;overflow:hidden}
+  .fbar-fill{height:100%;border-radius:6px;transition:width .3s ease}
+  .fbar-v{flex:0 0 44px;text-align:right;font-weight:700;font-size:12px;color:var(--navy)}
+
+  /* ── 우클릭/드래그/복사 방지 (입력창은 예외) ── */
+  body{ -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  input, textarea, select{ -webkit-user-select:auto; -moz-user-select:auto; user-select:auto; -webkit-touch-callout:default; }
+  img{ -webkit-user-drag:none; user-drag:none; pointer-events:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px">
+    <a href="https://aptsum.netlify.app" style="font-size:11px;font-weight:700;color:var(--teal-dark);background:var(--teal-soft);border-radius:8px;padding:3px 8px;text-decoration:none;white-space:nowrap">📩 비즈니스 문의</a>
+    <div style="display:flex;gap:5px;align-items:center">
+      <img src="https://visitor-badge.laobi.icu/badge?page_id=aptsumprice.netlify.app&text=Total" alt="전체 방문자 수" loading="lazy" style="height:14px;opacity:.8">
+      <img id="dailyBadge" alt="오늘 방문자 수" loading="lazy" style="height:14px;opacity:.8">
+    </div>
+  </div>
+  <script>
+    // 오늘 날짜를 page_id에 포함시켜, 날짜가 바뀌면 새 카운터로 자동 리셋되는 방식으로 "일일 방문자"를 구현
+    (function(){
+      const d = new Date();
+      const ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      document.getElementById('dailyBadge').src = `https://visitor-badge.laobi.icu/badge?page_id=aptsumprice.netlify.app-daily-${ymd}&text=Today`;
+    })();
+  </script>
+  <header>
+    <div class="logo" onclick="logoClick()" style="cursor:default">
+      <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00828A"/><rect x="8" y="6" width="4" height="12" fill="#0F2B3D"/><rect x="14" y="2" width="4" height="16" fill="#00828A"/></svg>
+      아파트썸 실거래 분석
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab on" id="tabC" onclick="setMode('complex')">단지 분석</div>
+    <div class="tab" id="tabCmp" onclick="setMode('compare')">단지 비교</div>
+    <div class="tab" id="tabR" onclick="setMode('region')">지역 랭킹</div>
+    <div class="tab" id="tabV" onclick="setMode('volume')">거래량<br>랭킹</div>
+    <div class="tab" id="tabU" onclick="setMode('updown')">등락 랭킹</div>
+    <div class="tab" id="tabP" onclick="setMode('peak')" style="display:none">분기<br>저평가</div>
+    <div class="tab" id="tabLP" onclick="setMode('longpeak')" style="display:none">연간<br>저평가</div>
+  </div>
+
+  <div class="search-box">
+    <div class="row2" id="singleRow">
+      <select id="lawd" style="flex:1;min-width:0"></select>
+      <button id="regionFavBtn" onclick="toggleFavRegion()" title="이 지역 즐겨찾기" style="flex:0 0 auto;width:38px;background:#fff;border:1.5px solid var(--line);border-radius:12px;color:#D97706;font-size:15px;cursor:pointer">☆</button>
+    </div>
+    <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
+    <div id="cmpRows" style="display:none"></div>
+    <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:9px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
+    <div class="row2" id="optRow">
+      <select id="monthsN" style="flex:1.3;min-width:0">
+        <option value="12">최근 1년</option>
+        <option value="24" selected>최근 2년</option>
+        <option value="36">최근 3년</option>
+        <option value="48">최근 4년</option>
+        <option value="60">최근 5년</option>
+      </select>
+      <select id="pyBand" style="flex:1;min-width:0;display:none">
+        <option value="" selected>전체 평형</option>
+        <option value="17-22">17~22평</option>
+        <option value="23-27">23~27평</option>
+        <option value="28-31">28~31평</option>
+        <option value="32-36">32~36평</option>
+        <option value="37-41">37~41평</option>
+        <option value="42-46">42~46평</option>
+        <option value="47-51">47~51평</option>
+      </select>
+      <select id="floorMin" style="flex:1;min-width:0">
+        <option value="0" selected>전체 층</option>
+        <option value="5">5층 이상</option>
+        <option value="10">10층 이상</option>
+        <option value="20">20층 이상</option>
+      </select>
+    </div>
+    <button class="go" id="btn" onclick="search()">분석</button>
+  </div>
+
+  <div class="chips" id="favRegions" style="margin:2px 0 6px"></div>
+  <div class="chips" id="favs" style="margin:2px 0 6px"></div>
+
+  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
+  <div class="error" id="error"></div>
+  <div id="result"></div>
+</div>
+
+<div id="peakPwModal" style="display:none;position:fixed;inset:0;background:rgba(15,43,61,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:320px;margin-top:70px;box-shadow:0 8px 30px rgba(0,0,0,.25)">
+    <div style="font-weight:700;font-size:15px;color:var(--navy);margin-bottom:10px">비밀번호</div>
+    <input id="peakPwInput" type="password" inputmode="text" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:16px;padding:11px;border:1.5px solid var(--line);border-radius:10px">
+    <div id="peakPwErr" style="display:none;color:var(--red);font-size:12px;margin-top:6px">비밀번호가 틀렸습니다</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="closePeakPwModal()" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:14px;font-family:inherit;color:var(--sub);cursor:pointer">취소</button>
+      <button onclick="submitPeakPw()" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--teal-dark);color:#fff;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer">확인</button>
+    </div>
+  </div>
+</div>
+
+<div id="ac"></div>
+<div id="tip"></div>
+<div id="mpop" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="mpop-box">
+    <div class="mpop-hd"><h3 id="mpopTitle"></h3><button onclick="document.getElementById('mpop').classList.remove('on')">×</button></div>
+    <div id="mpopChart"></div>
+    <div class="mpop-note">● 평균 반영 거래 · <span style="color:#94A3B8">✕ 제외(직거래/저가)</span> · 점 위 = 가격(억)</div>
+  </div>
+</div>
+
+<script>
+// ── 우클릭 · 드래그 방지 (입력창/셀렉트는 예외, PC+모바일 공통) ──
+(function(){
+  const isFormEl = t => t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.tagName==='SELECT' || t.isContentEditable);
+  document.addEventListener('contextmenu', e => { if(!isFormEl(e.target)) e.preventDefault(); });
+  document.addEventListener('dragstart', e => { if(!isFormEl(e.target)) e.preventDefault(); });
+  // 모바일 롱프레스 텍스트선택·드래그 시작 방지 (CSS user-select와 함께 이중 방어)
+  document.addEventListener('selectstart', e => { if(!isFormEl(e.target)) e.preventDefault(); });
+})();
+</script>
+<script>
+const REGIONS = [
+  ['서울', [['강남구','11680'],['강동구','11740'],['강북구','11305'],['강서구','11500'],['관악구','11620'],['광진구','11215'],['구로구','11530'],['금천구','11545'],['노원구','11350'],['도봉구','11320'],['동대문구','11230'],['동작구','11590'],['마포구','11440'],['서대문구','11410'],['서초구','11650'],['성동구','11200'],['성북구','11290'],['송파구','11710'],['양천구','11470'],['영등포구','11560'],['용산구','11170'],['은평구','11380'],['종로구','11110'],['중구','11140'],['중랑구','11260']]],
+  ['경기', [['부천 원미구','BC-원미구'],['부천 소사구','BC-소사구'],['부천 오정구','BC-오정구'],['고양 덕양구','41281'],['고양 일산동구','41285'],['고양 일산서구','41287'],['과천시','41290'],['광명시','41210'],['광주시','41610'],['구리시','41310'],['군포시','41410'],['김포시','41570'],['남양주시','41360'],['성남 분당구','41135'],['성남 수정구','41131'],['성남 중원구','41133'],['수원 권선구','41113'],['수원 영통구','41117'],['수원 장안구','41111'],['수원 팔달구','41115'],['시흥시','41390'],['안산 단원구','41273'],['안산 상록구','41271'],['안양 동안구','41173'],['안양 만안구','41171'],['용인 기흥구','41463'],['용인 수지구','41465'],['용인 처인구','41461'],['의왕시','41430'],['의정부시','41150'],['이천시','41500'],['파주시','41480'],['평택시','41220'],['하남시','41450'],['화성 동탄구','HS-동탄구'],['화성 병점구','HS-병점구'],['화성 만세구','HS-만세구'],['화성 효행구','HS-효행구'],['오산시','41370']]],
+  ['인천', [['제물포구','IC-제물포구'],['영종구','IC-영종구'],['미추홀구','28177'],['연수구','28185'],['남동구','28200'],['부평구','28237'],['계양구','28245'],['서해구','IC-서해구'],['검단구','IC-검단구'],['강화군','28710']]]
+];
+let mode = 'complex';
+let lastData = null;
+
+// ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
+const viewStack = [];
+function pushView(){
+  const inputs = {
+    mode, lawd: sel.value,
+    q: document.getElementById('q').value,
+    mN: document.getElementById('monthsN').value,
+    fM: document.getElementById('floorMin').value,
+    py: document.getElementById('pyBand').value,
+    cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value}))
+  };
+  viewStack.push({data:lastData, inputs});
+  try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
+}
+function buildShareURL(inp){
+  // 비공개 탭(저평가/연간 저평가)은 공유 링크에 절대 노출하지 않음 — 잠금 우회 방지
+  if(inp.mode==='peak' || inp.mode==='longpeak') return location.pathname;
+  const p = new URLSearchParams();
+  p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
+  if(inp.mode==='compare'){
+    p.set('c', inp.cmp.filter(x=>x.name.trim()).map(x=>x.lawd+':'+x.name.trim()).join('|'));
+  } else {
+    p.set('r', inp.lawd);
+    if(inp.mode==='complex') p.set('q', inp.q);
+    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='peak'||inp.mode==='longpeak') && inp.py) p.set('py', inp.py);
+  }
+  return location.pathname + '?' + p.toString();
+}
+// 공유 링크 진입 시 자동 검색
+function initFromURL(){
+  const p = new URLSearchParams(location.search);
+  const m = p.get('m');
+  if(!m) return;
+  // 비공개 탭(저평가/연간 저평가)은 URL만으로 절대 진입 불가 — 잠금 해제(비번 통과) 상태가 아니면 완전히 무시
+  if(m==='peak' || m==='longpeak'){
+    let unlocked = false;
+    try{ unlocked = localStorage.getItem('apc:peakUnlocked') === '1'; }catch(e){}
+    if(!unlocked) return;
+  }
+  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='peak'?'peak':(m==='longpeak'?'longpeak':'complex'))))));
+  if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
+  if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
+  if(m==='compare'){
+    const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
+    document.getElementById('cmpRows').innerHTML='';
+    items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; r.querySelector('select').value=c.lawd; r.querySelector('input').value=c.name; });
+    if(items.length>=2) search();
+  } else {
+    if(p.get('r')) sel.value = p.get('r');
+    if(m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
+    else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
+  }
+}
+async function shareCurrent(){
+  const url = location.origin + location.pathname + location.search;
+  try{
+    if(navigator.share){ await navigator.share({title:'아파트썸 실거래 분석', url}); return; }
+    await navigator.clipboard.writeText(url);
+    alert('분석 링크가 복사되었습니다');
+  }catch(e){}
+}
+
+// ── 즐겨찾기 ──
+function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
+function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
+function toggleFav(lawd, name){
+  let favs = getFavs();
+  if(isFav(lawd,name)){
+    favs = favs.filter(x=>!(x.lawd===lawd && x.name===name));
+    clearFavSeen(lawd, name);
+  } else {
+    const label = [...sel.options].find(o=>o.value===lawd)?.textContent || '';
+    favs.unshift({lawd, name, label});
+    favs = favs.slice(0,10);
+    // 방금 추가한 즐겨찾기는 "지금까지의 거래건수"를 기준선으로 저장 → 다음 방문부터만 신규 거래 배지 표시
+    favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{});
+  }
+  try{ localStorage.setItem('apc:favs', JSON.stringify(favs)); }catch(e){}
+  renderFavs();
+  const btn = document.getElementById('favBtn');
+  if(btn) btn.textContent = isFav(lawd,name)? '★':'☆';
+}
+function renderFavs(){
+  const favs = getFavs();
+  const el = document.getElementById('favs');
+  el.innerHTML = favs.map(x=>{
+    const nb = favBadges[favKey(x.lawd,x.name)];
+    const badge = nb>0 ? `<span class="nh">신규 ${nb}</span>` : '';
+    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(x.name)}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
+  }).join('');
+}
+function favGo(lawd, name){
+  setMode('complex');
+  sel.value = lawd;
+  document.getElementById('q').value = name;
+  search();
+  favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
+}
+// ── 즐겨찾기 "신규 거래" 배지: 최근 12개월 거래건수를 마지막 확인 시점과 비교 ──
+const favBadges = {}; // "lawd|name" → 신규 거래 건수
+function favKey(lawd, name){ return lawd+'|'+name; }
+function getFavSeen(){ try{ return JSON.parse(localStorage.getItem('apc:favSeen')||'{}'); }catch(e){ return {}; } }
+function setFavSeenCount(lawd, name, n){
+  try{
+    const seen = getFavSeen();
+    seen[favKey(lawd,name)] = n;
+    localStorage.setItem('apc:favSeen', JSON.stringify(seen));
+  }catch(e){}
+  delete favBadges[favKey(lawd,name)];
+}
+function clearFavSeen(lawd, name){
+  try{
+    const seen = getFavSeen();
+    delete seen[favKey(lawd,name)];
+    localStorage.setItem('apc:favSeen', JSON.stringify(seen));
+  }catch(e){}
+  delete favBadges[favKey(lawd,name)];
+}
+async function favTradeCount(lawd, name){
+  const items = await ensureMonths(lawd, 12); // 층수 필터와 무관하게 표준 12개월 기준으로 비교
+  let itemsP = [];
+  try{ itemsP = await ensureMonthsP(lawd, 12); }catch(e){} // 분양권 전용(매매 실거래 없는) 단지도 신규 거래 배지 대상에 포함
+  const m = matchComplex(items, name);
+  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, name).hits || []).length;
+  const mp = matchComplex(itemsP, name);
+  return mp.hits ? mp.hits.length : 0;
+}
+// 재방문 시(앱 로드 시) 즐겨찾기별로 마지막 확인 이후 늘어난 거래건수를 조회해 배지 표시
+function refreshFavBadges(){
+  const favs = getFavs();
+  if(!favs.length) return;
+  const seen = getFavSeen();
+  favs.forEach(f=>{
+    favTradeCount(f.lawd, f.name).then(n=>{
+      const key = favKey(f.lawd, f.name);
+      const prev = seen[key];
+      if(prev===undefined){ setFavSeenCount(f.lawd, f.name, n); return; } // 최초 기준선
+      const diff = n - prev;
+      if(diff > 0){ favBadges[key] = diff; renderFavs(); }
+    }).catch(()=>{}); // 배지는 부가 기능이므로 조회 실패는 조용히 무시
+  });
+}
+
+// ── 자주 보는 지역(구) 즐겨찾기 ──
+function getFavRegions(){ try{ return JSON.parse(localStorage.getItem('apc:favRegions')||'[]'); }catch(e){ return []; } }
+function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
+function toggleFavRegion(){
+  const code = sel.value;
+  let favs = getFavRegions();
+  if(isFavRegion(code)) favs = favs.filter(x=>x.code!==code);
+  else {
+    const label = [...sel.options].find(o=>o.value===code)?.textContent || code;
+    favs.unshift({code, label});
+    favs = favs.slice(0,20);
+  }
+  try{ localStorage.setItem('apc:favRegions', JSON.stringify(favs)); }catch(e){}
+  renderFavRegions();
+  updateRegionFavBtn();
+}
+function updateRegionFavBtn(){
+  const btn = document.getElementById('regionFavBtn');
+  if(btn) btn.textContent = isFavRegion(sel.value) ? '★' : '☆';
+}
+function renderFavRegions(){
+  const favs = getFavRegions();
+  const el = document.getElementById('favRegions');
+  el.innerHTML = favs.map(x=>`<span class="chip${x.code===sel.value?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
+}
+function favRegionGo(code){
+  sel.value = code;
+  updateRegionFavBtn();
+  renderFavRegions();
+  if(mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
+}
+function restoreView(vi){
+  const v = viewStack[vi];
+  if(!v){ // 초기 화면
+    document.getElementById('result').classList.remove('on');
+    document.getElementById('result').innerHTML='';
+    return;
+  }
+  const inp = v.inputs;
+  setMode(inp.mode);
+  sel.value = inp.lawd;
+  document.getElementById('q').value = inp.q;
+  document.getElementById('monthsN').value = inp.mN;
+  document.getElementById('floorMin').value = inp.fM;
+  document.getElementById('pyBand').value = inp.py;
+  if(inp.mode==='compare'){
+    document.getElementById('cmpRows').innerHTML='';
+    inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; r.querySelector('select').value=c.lawd; r.querySelector('input').value=c.name; });
+  }
+  lastData = v.data;
+  updateRegionFavBtn();
+  renderFavRegions();
+  if(v.data.mode==='complex') renderComplex(v.data);
+  else if(v.data.mode==='compare') renderCompare(v.data);
+  else if(v.data.mode==='updown') renderUpDown(v.data);
+  else if(v.data.mode==='peak') renderPeak(v.data);
+  else if(v.data.mode==='longpeak') renderLongPeak(v.data);
+  else if(v.data.mode==='volume') renderVolume(v.data);
+  else renderRegion(v.data);
+}
+try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
+window.addEventListener('popstate', e=>{
+  const vi = e.state && typeof e.state.vi==='number' ? e.state.vi : -1;
+  restoreView(vi);
+});
+
+function getLastRegionPref(){ try{ return localStorage.getItem('apc:lastRegion'); }catch(e){ return null; } }
+function saveLastRegionPref(code){ try{ localStorage.setItem('apc:lastRegion', code); }catch(e){} }
+
+// 저평가(신규 로직, 3개월 최고가 기준) 탭 — 로고 5회 연속 클릭 시에만 비번 모달이 뜨는 숨김 기능
+let _logoClicks = 0, _logoClickTimer = null;
+function logoClick(){
+  if(document.getElementById('tabP').style.display !== 'none') return; // 이미 잠금 해제된 상태면 제스처 불필요
+  clearTimeout(_logoClickTimer);
+  _logoClicks++;
+  _logoClickTimer = setTimeout(()=>{ _logoClicks = 0; }, 1500);
+  if(_logoClicks >= 5){
+    _logoClicks = 0;
+    openPeakPwModal();
+  }
+}
+function openPeakPwModal(){
+  const m = document.getElementById('peakPwModal');
+  const inp = document.getElementById('peakPwInput');
+  document.getElementById('peakPwErr').style.display = 'none';
+  inp.value = '';
+  m.style.display = 'flex';
+  setTimeout(()=>inp.focus(), 50);
+}
+function closePeakPwModal(){
+  document.getElementById('peakPwModal').style.display = 'none';
+}
+function submitPeakPw(){
+  const pw = document.getElementById('peakPwInput').value;
+  if(pw === 'aptsum26'){
+    try{ localStorage.setItem('apc:peakUnlocked','1'); }catch(e){}
+    document.getElementById('tabP').style.display = '';
+    document.getElementById('tabLP').style.display = '';
+    closePeakPwModal();
+    setMode('peak');
+  } else {
+    document.getElementById('peakPwErr').style.display = '';
+  }
+}
+document.getElementById('peakPwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') submitPeakPw(); });
+(function(){ // 이전에 잠금 해제한 적 있으면(이 브라우저 기준) 재입력 없이 탭 계속 노출
+  try{ if(localStorage.getItem('apc:peakUnlocked')==='1'){ document.getElementById('tabP').style.display = ''; document.getElementById('tabLP').style.display = ''; } }catch(e){}
+})();
+
+const sel = document.getElementById('lawd');
+REGIONS.forEach(([g,arr])=>{
+  const og = document.createElement('optgroup'); og.label=g;
+  arr.forEach(([n,c])=>{ const o=document.createElement('option'); o.value=c; o.textContent=n; og.appendChild(o); });
+  sel.appendChild(og);
+});
+const lastRegionPref = getLastRegionPref();
+sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '11680';
+sel.addEventListener('change', ()=>{ updateRegionFavBtn(); renderFavRegions(); });
+document.getElementById('pyBand').addEventListener('change', e=>{ if(mode==='region') savePyBandPref(e.target.value); }); // 거래량·등락 랭킹에서의 선택은 기억하지 않음(그 탭 안에서만 적용, 다음 방문 시 항상 전체 평형)
+
+// 평형 필터(pyBand) 마지막 선택값 기억 — 지역/거래량/등락 랭킹 세 탭이 공유
+function getPyBandPref(){ try{ return localStorage.getItem('apc:pyBand'); }catch(e){ return null; } }
+function savePyBandPref(v){ try{ localStorage.setItem('apc:pyBand', v); }catch(e){} }
+
+// 게이트
+function setMode(m){
+  mode = m;
+  document.getElementById('tabC').classList.toggle('on', m==='complex');
+  document.getElementById('tabCmp').classList.toggle('on', m==='compare');
+  document.getElementById('tabR').classList.toggle('on', m==='region');
+  document.getElementById('tabV').classList.toggle('on', m==='volume');
+  document.getElementById('tabU').classList.toggle('on', m==='updown');
+  document.getElementById('tabP').classList.toggle('on', m==='peak');
+  document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
+  document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
+  document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
+  document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
+  document.getElementById('q').style.display = m==='complex' ? '' : 'none';
+  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak') ? '' : 'none';
+  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
+  // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가는 전체 평형)
+  document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
+  document.getElementById('floorMin').value = '0';
+  document.getElementById('pyBand').value = m==='region' ? (getPyBandPref() ?? '32-36') : '';
+  document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : ((m==='updown'||m==='peak'||m==='longpeak') ? '등락 조회' : '랭킹 조회'));
+  if(m==='compare'){
+    if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
+    else document.querySelectorAll('.cmp-row').forEach(r=>{
+      // 단지명을 아직 안 적은(비어있는) 행만 최신 지역으로 갱신 — 이미 입력한 행은 건드리지 않음
+      if(!r.querySelector('input').value.trim()) r.querySelector('select').value = sel.value;
+    });
+  }
+}
+
+function regionSelectHTML(){
+  return REGIONS.map(([g,arr])=>`<optgroup label="${g}">${arr.map(([n,c])=>`<option value="${c}">${n}</option>`).join('')}</optgroup>`).join('');
+}
+function addCmpRow(){
+  const rows = document.querySelectorAll('.cmp-row');
+  if(rows.length >= 4) return;
+  const div = document.createElement('div');
+  div.className = 'cmp-row';
+  div.innerHTML = `<select>${regionSelectHTML()}</select>
+    <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter')search()" autocomplete="off">
+    <button class="rm" onclick="this.parentNode.remove()">×</button>`;
+  div.querySelector('select').value = sel.value; // 기본: 현재 선택 지역
+  document.getElementById('cmpRows').appendChild(div);
+}
+
+
+// ═══ 데이터 조회: 샤드 병렬 + 월 캐시 ═══
+// ⚠️ CACHE_VER 체크리스트 — 아래 중 하나라도 바뀌면 배포 전에 반드시 +1 할 것:
+//    · areaToPy() 앵커/보간 로직, parseItems()의 필드 구성(LS_FIELDS/LS_FIELDS_P/LS_FIELDS_J 순서 포함)
+//    · xtag() 파싱 방식, dealAmount/deposit/excluUseAr 등 원본 API 필드 처리 방식
+//    · 서버(analyze.mjs/presale.mjs/rent.mjs)가 응답에 담는 아이템의 필드 자체가 늘거나 줄 때
+//    올리지 않으면 브라우저에 캐시된 옛 포맷 데이터가 새 코드로 그대로 읽혀 오류가 날 수 있음.
+// 브라우저 localStorage 키 + API 요청 쿼리에 모두 반영되어, CDN의 durable 캐시와
+// 브라우저의 영구 캐시를 동시에 무효화한다 (재배포만으로는 두 캐시 다 안 지워짐).
+const CACHE_VER = 5;
+// 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
+// localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
+// ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
+(function cleanupOldCache(){
+  try{
+    const versionedRe = /^apc[PJ]?:\d+:/;
+    const keep = 'apc:'+CACHE_VER+':', keepP = 'apcP:'+CACHE_VER+':', keepJ = 'apcJ:'+CACHE_VER+':';
+    const toRemove = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(!k || !versionedRe.test(k)) continue; // 버전 태그 있는 캐시 키가 아니면(즐겨찾기 등 설정값) 절대 건드리지 않음
+      if(!k.startsWith(keep) && !k.startsWith(keepP) && !k.startsWith(keepJ)) toRemove.push(k);
+    }
+    toRemove.forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+})();
+const monthCache = {}; // lawd → { ym: {t, items} }
+const FRESH_TTL_MS = 3600000; // 최신 4개월 재확인 주기: 1시간 (2026.07 6시간→1시간 변경)
+const EMPTY_RETRY_TTL_MS = 1800000; // 과거월 캐시가 0건일 때만 재확인하는 주기(30분, 기존 유지) — API 일시 오류로 빈 캐시가 영구 박제되는 것 방지용, 최신월 TTL과는 별개
+const STALE_RETRY_TTL_MS = 604800000; // 과거월이 0건이 아니어도(=거래는 있었지만) 캐시가 7일 넘게 지났으면 한 번 재확인 (2026.07 추가 — 조회 시점엔 일부만 신고돼 있다가 나중에 추가·정정 신고되는 경우, "4개월 신선 구간"을 벗어난 뒤엔 영구 고정돼 못 잡던 문제 보완. 재확인 후 캐시 시각(t)이 갱신되므로 이후 다시 7일 주기로 반복 확인됨(완전한 1회성은 아님) — 신고 지연이 통상 며칠~한 달 단위라 7일이면 대부분 커버되면서도 과도한 재호출은 피하는 절충)
+function lastMonthsYm(n){
+  const out=[]; const d=new Date();
+  for(let i=0;i<n;i++){ out.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`); d.setMonth(d.getMonth()-1); }
+  return out; // 최신→과거
+}
+const ymLabel = ym => `${ym.slice(2,4)}.${ym.slice(4)}`;
+async function postFetch(lawd, yms){
+  // GET + 정렬된 yms → 사용자 간 동일 URL로 CDN 캐시 적중률 확보
+  const q = yms.slice().sort().join(',');
+  const res = await fetch(`/api/analyze?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
+  const d = await res.json().catch(()=>({}));
+  if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
+  return d.items || [];
+}
+
+// ── localStorage 영구 캐시 (압축 배열 포맷, 용량 초과 시 오래된 지역 삭제) ──
+const LS_FIELDS = ['apt','umd','area','py','amt','ym','d','floor','build','direct'];
+const lsLoaded = {};
+function lsLoad(lawd){
+  if(lsLoaded[lawd]) return;
+  lsLoaded[lawd] = true;
+  try{
+    const raw = JSON.parse(localStorage.getItem('apc:'+CACHE_VER+':'+lawd) || 'null');
+    if(!raw) return;
+    const cache = monthCache[lawd] = monthCache[lawd] || {};
+    for(const [ym, e] of Object.entries(raw)){
+      if(cache[ym]) continue;
+      cache[ym] = { t: e.t, items: e.i.map(a => Object.fromEntries(LS_FIELDS.map((k,j)=>[k, a[j]]))) };
+    }
+  }catch(e){}
+}
+function lsSave(lawd){
+  try{
+    const cache = monthCache[lawd]; if(!cache) return;
+    const out = {};
+    for(const [ym, e] of Object.entries(cache)) out[ym] = { t: e.t, i: e.items.map(t => LS_FIELDS.map(k => t[k])) };
+    localStorage.setItem('apc:'+CACHE_VER+':'+lawd, JSON.stringify(out));
+    const meta = JSON.parse(localStorage.getItem('apc:'+CACHE_VER+':meta') || '{}');
+    meta[lawd] = Date.now();
+    localStorage.setItem('apc:'+CACHE_VER+':meta', JSON.stringify(meta));
+  }catch(e){
+    // 용량 초과 → 가장 오래 안 쓴 지역부터 삭제 후 1회 재시도
+    try{
+      const meta = JSON.parse(localStorage.getItem('apc:'+CACHE_VER+':meta') || '{}');
+      const victims = Object.entries(meta).filter(([k])=>k!==lawd).sort((a,b)=>a[1]-b[1]);
+      if(victims.length){
+        localStorage.removeItem('apc:'+CACHE_VER+':'+victims[0][0]);
+        delete meta[victims[0][0]];
+        localStorage.setItem('apc:'+CACHE_VER+':meta', JSON.stringify(meta));
+        lsSave(lawd);
+      }
+    }catch(e2){}
+  }
+}
+
+async function ensureMonths(lawd, n){
+  lsLoad(lawd);
+  const yms = lastMonthsYm(n);
+  const cache = monthCache[lawd] = monthCache[lawd] || {};
+  const now = Date.now();
+  const fresh = new Set(yms.slice(0,4)); // 최신 4개월: 1시간 TTL (2026.07 2→4개월 확대 — 국토부 신고기한(최대 30일)으로 실거래가 계약월보다 늦게, 심지어 다다음달에도 뒤늦게 등록되는 경우가 있어 2개월로는 놓치는 경우 발생. "저평가" 탭처럼 과거월 최고가를 고정값으로 쓰는 계산은 뒤늦게 반영된 신고가를 못 따라잡을 수 있어 확대)
+  // 과거월이라도 캐시된 결과가 0건이면 API 일시 오류(레이트리밋 등)로 빈 캐시가 영구 박제될 수 있으므로
+  // 30분 경과 시 한 번 더 재확인한다. 실제로 거래가 없는 달은 다시 0건으로 채워질 뿐이라 안전하다.
+  // 0건이 아니어도(거래는 있었지만 조회 시점엔 일부만 신고돼 있던 경우) 7일 지나면 한 번 더 재확인
+  const missing = yms.filter(ym =>
+    !cache[ym] ||
+    (fresh.has(ym) && now - cache[ym].t > FRESH_TTL_MS) ||
+    (cache[ym].items.length === 0 && now - cache[ym].t > EMPTY_RETRY_TTL_MS) ||
+    (!fresh.has(ym) && cache[ym].items.length > 0 && now - cache[ym].t > STALE_RETRY_TTL_MS)
+  );
+  if(missing.length){
+    // CDN 캐시 효율: 최신월 요청과 과거월 요청 분리 (과거월 샤드는 30일 캐시 대상)
+    const freshMs = missing.filter(ym => fresh.has(ym));
+    const stableMs = missing.filter(ym => !fresh.has(ym));
+    const chunks = [];
+    if(freshMs.length) chunks.push(freshMs);
+    for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
+    const results = await Promise.all(chunks.map(c=>postFetch(lawd, c)));
+    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
+    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    lsSave(lawd);
+  }
+  return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
+}
+
+// ── 분양권·입주권 전매 (별도 API/캐시, 매매와 완전히 독립) ──
+// 실패해도 단지 분석(매매) 자체는 정상 동작해야 하므로, 호출부에서 항상 try/catch로 감싼다.
+const monthCacheP = {};
+const LS_FIELDS_P = ['apt','umd','area','py','amt','ym','d','floor','ownership','direct'];
+const lsLoadedP = {};
+function lsLoadP(lawd){
+  if(lsLoadedP[lawd]) return;
+  lsLoadedP[lawd] = true;
+  try{
+    const raw = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':'+lawd) || 'null');
+    if(!raw) return;
+    const cache = monthCacheP[lawd] = monthCacheP[lawd] || {};
+    for(const [ym, e] of Object.entries(raw)){
+      if(cache[ym]) continue;
+      cache[ym] = { t: e.t, items: e.i.map(a => Object.fromEntries(LS_FIELDS_P.map((k,j)=>[k, a[j]]))) };
+    }
+  }catch(e){}
+}
+function lsSaveP(lawd){
+  try{
+    const cache = monthCacheP[lawd]; if(!cache) return;
+    const out = {};
+    for(const [ym, e] of Object.entries(cache)) out[ym] = { t: e.t, i: e.items.map(t => LS_FIELDS_P.map(k => t[k])) };
+    localStorage.setItem('apcP:'+CACHE_VER+':'+lawd, JSON.stringify(out));
+    const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+    meta[lawd] = Date.now();
+    localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+  }catch(e){
+    // 용량 초과 → 가장 오래 안 쓴 지역부터 삭제 후 1회 재시도 (매매 캐시 lsSave와 동일한 정책)
+    try{
+      const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+      const victims = Object.entries(meta).filter(([k])=>k!==lawd).sort((a,b)=>a[1]-b[1]);
+      if(victims.length){
+        localStorage.removeItem('apcP:'+CACHE_VER+':'+victims[0][0]);
+        delete meta[victims[0][0]];
+        localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+        lsSaveP(lawd);
+      }
+    }catch(e2){}
+  }
+}
+async function postFetchP(lawd, yms){
+  const q = yms.slice().sort().join(',');
+  const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
+  const d = await res.json().catch(()=>({}));
+  if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
+  return d.items || [];
+}
+async function ensureMonthsP(lawd, n){
+  lsLoadP(lawd);
+  const yms = lastMonthsYm(n);
+  const cache = monthCacheP[lawd] = monthCacheP[lawd] || {};
+  const now = Date.now();
+  const fresh = new Set(yms.slice(0,4)); // 최신 4개월: 1시간 TTL (매매 쪽과 동일)
+  const missing = yms.filter(ym =>
+    !cache[ym] ||
+    (fresh.has(ym) && now - cache[ym].t > FRESH_TTL_MS) ||
+    (cache[ym].items.length === 0 && now - cache[ym].t > EMPTY_RETRY_TTL_MS) ||
+    (!fresh.has(ym) && cache[ym].items.length > 0 && now - cache[ym].t > STALE_RETRY_TTL_MS)
+  );
+  if(missing.length){
+    const freshMs = missing.filter(ym => fresh.has(ym));
+    const stableMs = missing.filter(ym => !fresh.has(ym));
+    const chunks = [];
+    if(freshMs.length) chunks.push(freshMs);
+    for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
+    const results = await Promise.all(chunks.map(c=>postFetchP(lawd, c)));
+    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
+    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    lsSaveP(lawd);
+  }
+  return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
+}
+
+// ── 전세 실거래 (별도 API/캐시, 매매·분양권과 완전히 독립) ──
+// 단지 분석 탭에서만 조회(지역 랭킹 등 다른 탭에는 연동하지 않음). 실패해도 매매 분석 자체는
+// 정상 동작해야 하므로, 호출부에서 항상 try/catch로 감싼다.
+const monthCacheJ = {};
+const LS_FIELDS_J = ['apt','umd','area','py','amt','ym','d','floor','build'];
+const lsLoadedJ = {};
+function lsLoadJ(lawd){
+  if(lsLoadedJ[lawd]) return;
+  lsLoadedJ[lawd] = true;
+  try{
+    const raw = JSON.parse(localStorage.getItem('apcJ:'+CACHE_VER+':'+lawd) || 'null');
+    if(!raw) return;
+    const cache = monthCacheJ[lawd] = monthCacheJ[lawd] || {};
+    for(const [ym, e] of Object.entries(raw)){
+      if(cache[ym]) continue;
+      cache[ym] = { t: e.t, items: e.i.map(a => Object.fromEntries(LS_FIELDS_J.map((k,j)=>[k, a[j]]))) };
+    }
+  }catch(e){}
+}
+function lsSaveJ(lawd){
+  try{
+    const cache = monthCacheJ[lawd]; if(!cache) return;
+    const out = {};
+    for(const [ym, e] of Object.entries(cache)) out[ym] = { t: e.t, i: e.items.map(t => LS_FIELDS_J.map(k => t[k])) };
+    localStorage.setItem('apcJ:'+CACHE_VER+':'+lawd, JSON.stringify(out));
+    const meta = JSON.parse(localStorage.getItem('apcJ:'+CACHE_VER+':meta') || '{}');
+    meta[lawd] = Date.now();
+    localStorage.setItem('apcJ:'+CACHE_VER+':meta', JSON.stringify(meta));
+  }catch(e){
+    // 용량 초과 → 가장 오래 안 쓴 지역부터 삭제 후 1회 재시도 (매매 캐시 lsSave와 동일한 정책)
+    try{
+      const meta = JSON.parse(localStorage.getItem('apcJ:'+CACHE_VER+':meta') || '{}');
+      const victims = Object.entries(meta).filter(([k])=>k!==lawd).sort((a,b)=>a[1]-b[1]);
+      if(victims.length){
+        localStorage.removeItem('apcJ:'+CACHE_VER+':'+victims[0][0]);
+        delete meta[victims[0][0]];
+        localStorage.setItem('apcJ:'+CACHE_VER+':meta', JSON.stringify(meta));
+        lsSaveJ(lawd);
+      }
+    }catch(e2){}
+  }
+}
+async function postFetchJ(lawd, yms){
+  const q = yms.slice().sort().join(',');
+  const res = await fetch(`/api/rent?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
+  const d = await res.json().catch(()=>({}));
+  if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
+  return d.items || [];
+}
+async function ensureMonthsJ(lawd, n){
+  lsLoadJ(lawd);
+  const yms = lastMonthsYm(n);
+  const cache = monthCacheJ[lawd] = monthCacheJ[lawd] || {};
+  const now = Date.now();
+  const fresh = new Set(yms.slice(0,4)); // 최신 4개월: 매매 쪽과 동일한 TTL 정책
+  const missing = yms.filter(ym =>
+    !cache[ym] ||
+    (fresh.has(ym) && now - cache[ym].t > FRESH_TTL_MS) ||
+    (cache[ym].items.length === 0 && now - cache[ym].t > EMPTY_RETRY_TTL_MS) ||
+    (!fresh.has(ym) && cache[ym].items.length > 0 && now - cache[ym].t > STALE_RETRY_TTL_MS)
+  );
+  if(missing.length){
+    const freshMs = missing.filter(ym => fresh.has(ym));
+    const stableMs = missing.filter(ym => !fresh.has(ym));
+    const chunks = [];
+    if(freshMs.length) chunks.push(freshMs);
+    for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
+    const results = await Promise.all(chunks.map(c=>postFetchJ(lawd, c)));
+    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
+    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    lsSaveJ(lawd);
+  }
+  return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
+}
+
+// ── 세대수 조회 (국토부 공동주택 단지목록·기본정보 API, 실거래 API와 별도) ──
+// K-apt(공동주택관리정보시스템) 가입 단지만 나와서 못 찾을 수 있음 — 실패해도 조용히 무시(단지 분석 자체엔 영향 없음)
+// 재건축 전까지 거의 안 바뀌는 값이라 localStorage에 길게 캐시(찾은 경우 180일) — CDN 캐시(hhcnt.mjs)까지 다 맞아도
+// 매 방문마다 최소 1번의 fetch 왕복은 남는데, 이걸로 재방문 시 완전히 0회 호출로 만든다.
+// 단, 못 찾은 경우(v=null)는 TTL을 짧게(1일) 둬서 일시적 API 오류로 인한 미스가 영구 고정되지 않게 함
+const HH_TTL_FOUND_MS = 1000*60*60*24*180; // 180일
+const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
+let hhLS = null;
+function hhLSLoad(){
+  if(hhLS) return hhLS;
+  try{ hhLS = JSON.parse(localStorage.getItem('apcHH:1') || '{}'); }catch(e){ hhLS = {}; }
+  return hhLS;
+}
+function hhLSSave(){ try{ localStorage.setItem('apcHH:1', JSON.stringify(hhLS)); }catch(e){} }
+const hhMem = {}; // `${lawd}|${name}` → 결과(또는 null), 세션 내 메모리 캐시(localStorage 조회도 아끼기 위함)
+async function fetchHHCnt(lawd, name){
+  const k = `${lawd}|${name}`;
+  if(k in hhMem) return hhMem[k];
+  const ls = hhLSLoad();
+  const cached = ls[k];
+  if(cached && Date.now() - cached.t < (cached.v ? HH_TTL_FOUND_MS : HH_TTL_MISS_MS)){
+    hhMem[k] = cached.v;
+    return cached.v;
+  }
+  let v = null, ok = false;
+  try{
+    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}`);
+    const d = await r.json();
+    v = (d && d.found) ? d : null;
+    ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
+  }catch(e){ v = null; } // 네트워크·파싱 오류 — 결과를 신뢰할 수 없으므로 ok=false로 남겨 캐시하지 않음(다음 조회 시 바로 재시도)
+  hhMem[k] = v; // 같은 세션(페이지) 안에서는 반복 재요청 방지용으로만 메모리에 저장
+  if(ok){ ls[k] = { v, t: Date.now() }; hhLSSave(); } // 확정된 결과만 로컬스토리지에 영구 캐시
+  return v;
+}
+
+// 매매 단지명(officialName)과 분양권 데이터를 매칭 — 표기가 완전히 같지 않을 수 있어 exact→substring 순으로 시도
+// ═══ 분석 엔진 (클라이언트) ═══
+const R1 = x => Math.round(x*10)/10;
+const avgA = arr => arr.length ? arr.reduce((s,t)=>s+t.amt,0)/arr.length : null;
+const dkey = t => `${t.ym}${t.d}`;
+const median = a => { const s=a.slice().sort((x,y)=>x-y); const m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+
+function markOutliers(arr, months){
+  for(const t of arr){
+    // ⚠️ 여기서 t.ex를 캐싱해 재계산을 건너뛰면 안 됨 — 거래 객체(t)는 monthCache에서 여러 화면(단지 분석/등락 랭킹/저평가)이
+    // 공유 참조로 재사용하는데, 화면마다 arr(층 필터)·months(기간)가 달라 같은 거래라도 판정 기준(비교군)이 달라진다.
+    // 이전 화면에서 계산된 값을 그대로 스킵하면 탭 진입 순서에 따라 결과가 달라지는 버그가 생기므로 매번 새로 계산한다.
+    if(t.direct){ t.ex='직거래'; continue; }
+    const mi = months.indexOf(t.ym);
+    const win = arr.filter(o=>o!==t && !o.direct && Math.abs(months.indexOf(o.ym)-mi)<=3).map(o=>o.amt);
+    if(win.length>=2){
+      const ref = median(win);
+      if(t.amt < ref*0.7){ t.ex='저가'; continue; }
+    }
+    t.ex = null;
+  }
+  return arr.filter(t=>!t.ex);
+}
+
+// ── 층별 가격 프리미엄 (저층/중층/고층 비교, 관측 범위 5등분: 1구간 저층·2~4구간 중층·5구간 고층) ──
+// arr: 이미 이상치(직거래·저가)가 제외된 동일 단지·평형 거래 배열
+// 필터로 설정한 floorMin과 무관하게 "관측된 최저~최고 층"을 5등분해 나누므로,
+// 층수 필터를 걸어도(예: 10층 이상) 저층 구간이 사라지지 않도록 raw(필터 이전) 데이터로 계산한다.
+function floorBands(arr){
+  const pts = arr.map(t=>({t, f:parseInt(t.floor,10)})).filter(x=>Number.isFinite(x.f) && x.f>0);
+  if(pts.length < 6) return null; // 표본 부족
+  const fs = pts.map(x=>x.f);
+  const min = Math.min(...fs), max = Math.max(...fs);
+  if(max===min) return null; // 전 거래가 같은 층 → 비교 불가
+  const b1 = min + (max-min)/5, b2 = min + (max-min)*4/5; // 관측 층 범위를 5등분: 1구간=저층, 2~4구간=중층, 5구간=고층
+  const low = pts.filter(x=>x.f<=b1), mid = pts.filter(x=>x.f>b1 && x.f<=b2), high = pts.filter(x=>x.f>b2);
+  const band = list => list.length? { v:R1(avgA(list.map(x=>x.t))), n:list.length,
+    fmin:Math.min(...list.map(x=>x.f)), fmax:Math.max(...list.map(x=>x.f)) } : null;
+  const L=band(low), M=band(mid), H=band(high);
+  if(!L || !H || L.n<2 || H.n<2) return null; // 저층·고층 각 2건 이상 필요
+  return { low:L, mid:M, high:H, premiumPct:Math.round((H.v-L.v)/L.v*100) };
+}
+
+// 사업 진행 중 개명된 단지(옛 이름으로 등록된 과거 실거래도 함께 찾도록) — 공백 제거 기준, canonical: [옛 이름들]
+const APT_ALIASES = {
+  '흑석자이': ['흑석리버파크자이'],
+};
+const APT_ALIAS_CANON = {}; // 별칭 → canonical 정규화 키
+Object.entries(APT_ALIASES).forEach(([canon, arr])=>{ arr.forEach(a=>{ APT_ALIAS_CANON[a.replace(/\s/g,'')] = canon; }); });
+function canonNorm(norm){ return APT_ALIAS_CANON[norm] || norm; }
+function aliasesFor(qn){
+  const canon = APT_ALIAS_CANON[qn] || qn;
+  const arr = APT_ALIASES[canon] || [];
+  return [...new Set([canon, qn, ...arr.map(a=>a.replace(/\s/g,''))])];
+}
+function matchComplex(all, name){
+  const qn = name.replace(/\s/g,'');
+  const qnList = aliasesFor(qn); // 검색어 본인 + 알려진 개명 이력 별칭까지 함께 매칭
+  const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
+  if(exact.length) return {hits:exact};
+  const cand = all.filter(t=>{ const a=t.apt.replace(/\s/g,''); return qnList.some(q=>a.includes(q)||q.includes(a)); });
+  const names = [...new Set(cand.map(t=>t.apt))];
+  if(names.length===1) return {hits:cand};
+  if(names.length>1){
+    const cnt={}; cand.forEach(t=>cnt[t.apt]=(cnt[t.apt]||0)+1);
+    return {multi: names.sort((a,b)=>cnt[b]-cnt[a])};
+  }
+  return {hits:[]};
+}
+
+function analyzeComplex(all, name, months, rawAll){
+  const q = name.replace(/\s/g,'');
+  const m = matchComplex(all, name);
+  if(m.multi) return {found:false, multi:true, suggest:m.multi.slice(0,8)};
+  const hits = m.hits;
+  if(!hits.length){
+    const names = [...new Set(all.map(t=>t.apt))];
+    const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
+    const sugg = names.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
+      .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n])=>n);
+    return {found:false, suggest:sugg};
+  }
+  const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
+  const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
+  hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
+  const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
+  const monthsAsc = months.slice().reverse();
+  const m3=months.slice(0,2), p3v=months.slice(2,4);
+  const periodAvg=(arr,ms)=>{ const a=arr.filter(t=>ms.includes(t.ym)); return a.length? {v:R1(avgA(a)), n:a.length} : null; };
+  // 평형별 요약표: 최근 4개 "역법 분기"(달력 기준 1~3월/4~6월/7~9월/10~12월) 평균 — 롤링 기간이 아니라 실제 분기 단위
+  const qKeyOf = ym => { const y=+ym.slice(0,4), mo=+ym.slice(4,6); return `${y}Q${Math.ceil(mo/3)}`; };
+  const qLabelOf = key => { const [y,qn]=key.split('Q'); return `${y.slice(2)}년\n${qn}분기`; };
+  const qMap = {};
+  months.forEach(ym=>{ const k=qKeyOf(ym); (qMap[k]=qMap[k]||[]).push(ym); });
+  const last4Q = [...new Set(months.map(qKeyOf))].slice(0,4).reverse(); // 오래된→최신 순
+  const byPy = Object.entries(groups).map(([py, arrRaw])=>{
+    const clean = markOutliers(arrRaw, months);
+    const arr = clean.length? clean : arrRaw;
+    const max = Math.max(...arr.map(t=>t.amt));
+    const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
+    const maxDate = `${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`;
+    const recent = arr[0];
+    const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(arr, qMap[qk]) }));
+    // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
+    const arrTrend = arr.filter(t=>parseInt(t.floor,10)>=5);
+    const avg3t = periodAvg(arrTrend,m3), pv3t = periodAvg(arrTrend,p3v);
+    const trend = avg3t&&pv3t? {pct:Math.round((avg3t.v-pv3t.v)/pv3t.v*100), recentAvg:avg3t.v, prevAvg:pv3t.v} : null;
+    const monthly = monthsAsc.map(ym=>{
+      const mA = arr.filter(t=>t.ym===ym);
+      return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
+    }).filter(Boolean);
+    // 층별 프리미엄: 층수 필터 이전(raw) 데이터 전체에서 같은 단지·평형 거래를 다시 모아 계산
+    let floorBand = null;
+    if(rawAll){
+      // 층별 프리미엄은 조회 기간과 무관하게 최근 6개월 고정 — 기간이 길면 시세 상승분이 층 프리미엄에 섞여 왜곡되므로
+      const recentMonths = months.slice(0,6);
+      const recentSet = new Set(recentMonths);
+      const rawMatch = rawAll.filter(t=>t.apt===officialName && String(t.py)===py && recentSet.has(t.ym));
+      const rawClean = markOutliers(rawMatch, recentMonths);
+      floorBand = floorBands(rawClean);
+    }
+    return { py:`${py}평`, area:`전용 ${Math.round(recent.area)}㎡`, n:arr.length,
+      excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
+      recent:{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor},
+      max, maxDate, quarters, trend,
+      // 신고가: 가장 최근 거래가 곧 최고가일 때만 표시
+      isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
+  }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
+  return { found:true, mode:'complex', name:officialName, umd:hits[0].umd, build:hits[0].build,
+    count:hits.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    byPy,
+    trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
+}
+
+function analyzeRegion(all, months){
+  const byApt={};
+  for(const t of all){ const k=`${t.apt}|${t.umd}`; (byApt[k]=byApt[k]||[]).push(t); }
+  const r3set = new Set(months.slice(0,3)), p3set = new Set(months.slice(3,6));
+  const topVolume = Object.entries(byApt).map(([k,arr])=>{
+    const sorted = arr.slice().sort((a,b)=>dkey(b).localeCompare(dkey(a)));
+    const pyCnt={}; sorted.forEach(t=>pyCnt[t.py]=(pyCnt[t.py]||0)+1);
+    const mainPy = Object.entries(pyCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    const [apt,umd]=k.split('|');
+    const r3n = arr.filter(t=>r3set.has(t.ym)).length;
+    const p3n = arr.filter(t=>p3set.has(t.ym)).length;
+    const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
+    return {apt, umd, n:sorted.length, mainPy:`${mainPy}평`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
+  }).sort((a,b)=>b.n-a.n).slice(0,100);
+  const seen=new Set(); const highDeals=[];
+  for(const t of all.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))){
+    const k=`${t.apt}|${t.umd}`;
+    if(seen.has(k)) continue;
+    seen.add(k);
+    highDeals.push({apt:t.apt, umd:t.umd, py:`${t.py}평`, amt:t.amt, date:`${ymLabel(t.ym)}.${t.d}`, floor:t.floor, build:t.build, kind:t.kind||null});
+    if(highDeals.length>=100) break;
+  }
+  return { found:true, mode:'region', total:all.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    topVolume, highDeals };
+}
+
+// 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산 — analyzeUpDown 내부에서 공용으로 사용
+function buildRepRows(all, months){
+  const eligible = all.filter(t=>parseInt(t.floor,10)>=5); // 1~4층 제외 (2026.07 저평가/peak 탭과 동일 기준으로 강화 — 4층까지만 걸러서는 저층 할인 왜곡이 통계에 새어 들어와 실제로는 시세 변동이 없는 단지가 등락 랭킹·초단기 저평가 단지에 허위로 잡히는 사례 발견)
+  const byAptPy = {};
+  for(const t of eligible){ const k=`${t.apt}|${t.umd}|${t.py}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  const r3set = new Set(months.slice(0,2)), p3set = new Set(months.slice(2,4));
+  const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
+    const arr = markOutliers(arrRaw, months);
+    const [apt,umd,py] = k.split('|');
+    const r3 = arr.filter(t=>r3set.has(t.ym));
+    const p3 = arr.filter(t=>p3set.has(t.ym));
+    if(r3.length<2 || p3.length<2) return null;
+    const r3avg = avgA(r3), p3avg = avgA(p3);
+    if(!p3avg) return null;
+    const pct = Math.round((r3avg-p3avg)/p3avg*100);
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
+    const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    return { apt, umd, py, area, build:arr[0].build, pct, r3avg:R1(r3avg), p3avg:R1(p3avg), n:arr.length, r3n:r3.length, p3n:p3.length };
+  }).filter(Boolean);
+  const byApt = {};
+  pyRows.forEach(r=>{
+    const k = r.apt+'|'+r.umd;
+    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
+  });
+  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+}
+
+// all: 평형 필터가 적용된 데이터(상승률·하락률 랭킹용) / allUnfiltered: 필터 적용 전 원본(초단기 저평가 단지용)
+// → 초단기 저평가 단지는 "가격"이 기준이라 화면상 "평형" 필터와는 성격이 달라서, 필터 선택과 무관하게 항상 20~39평 구간(국민평형 중심)으로 고정 계산
+function analyzeUpDown(all, months, allUnfiltered){
+  const rows = buildRepRows(all, months);
+  const up = rows.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct).slice(0,10);
+  const down = rows.filter(r=>r.pct<0).sort((a,b)=>a.pct-b.pct).slice(0,10);
+
+  // 초단기 저평가 단지
+  // - 매매 실거래만 사용(분양권·입주권은 준공 전 시세·전매 이슈 등 매매와 무관한 요인으로 움직여서 왜곡 소지가 큼 → 완전히 제외)
+  // - 20~39평 구간만 비교(초소형·초대형은 표본이 적고 가격 스케일이 달라 같은 비교군으로 묶기 부적절)
+  // - 단지마다 "이전 2개월 평균가가 나와 ±2% 이내인 단지 중 가격이 가장 가까운 최대 5개"를 비교군으로 구성
+  //   (고정 구간 대신 상대 비율 기준이라, 경계값 근처에서 억지로 갈리는 문제가 없음)
+  // → "최근 2개월 평균가"가 그 비교군 중앙값보다 5% 이상 낮아진 단지를 표시 (본인 포함 그룹원 3명 이상만 비교)
+  const tradeOnly = (allUnfiltered||all).filter(t=>{
+    if(t.kind) return false;
+    const py = parseInt(t.py,10);
+    return py>=20 && py<=39;
+  });
+  const rowsAll = buildRepRows(tradeOnly, months);
+  const median = arr => { // 표준 중앙값 (짝수 개수일 때 가운데 두 값의 평균)
+    const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1;
+    return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+  };
+  const divergence = [];
+  const MIN_PEER_N = 2; // 비교군은 최근·이전 2개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
+  rowsAll.forEach(r=>{
+    const nearest = rowsAll
+      .filter(o=> o!==r && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
+      .sort((a,b)=> Math.abs(a.p3avg-r.p3avg) - Math.abs(b.p3avg-r.p3avg))
+      .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지
+    const group = [r, ...nearest];
+    if(group.length < 3) return;
+    const r3median = median(group.map(o=>o.r3avg));
+    const gapPct = Math.round((r.r3avg - r3median)/r3median*100);
+    if(gapPct <= -5){
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, p3avg:o.p3avg, r3avg:o.r3avg})).sort((a,b)=>b.r3avg-a.r3avg); // 비교 대상 단지 상세(표 정리용) · 최근가 높은순 정렬
+      divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3avg), gapPct, groupN:group.length, peers }); // gapAmt는 항상 양수(중앙값-내값) — 화면에 "OO억 낮음"으로 표시되므로
+    }
+  });
+  // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
+  divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+
+  return { found:true, mode:'updown', total:all.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    up, down, divergence };
+}
+
+// ═══ 저평가 (내부 검토용, 비번 잠금 탭 전용) ═══
+// 등락 랭킹의 "초단기 저평가 단지"(2개월 평균 기준)와는 완전히 별개 로직.
+// 평균가 대신 최고가, 2개월 구간 대신 3개월 구간을 사용 — "또래 대비 덜 오른" 단지가 아니라
+// "동일 시세대에서 신고가 흐름을 못 따라간" 단지를 잡아내려는 실험적 지표.
+// 등락 랭킹과 달리 분양권·입주권까지 전부 포함하되, 저층 할인 왜곡 방지를 위해 5층 이상 거래만 집계(2026.07 변경) — 20~39평 구간 제한과 함께 적용
+// (분양권 등 층 정보가 없는 거래는 parseInt(floor)가 NaN이 되어 자동으로 제외됨)
+function buildPeakRows(all, months){
+  const byAptPy = {};
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  const r3set = new Set(months.slice(0,3)), p3set = new Set(months.slice(3,6));
+  const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
+    const arr = markOutliers(arrRaw, months);
+    const [apt,umd,py] = k.split('|');
+    const r3 = arr.filter(t=>r3set.has(t.ym));
+    const p3 = arr.filter(t=>p3set.has(t.ym));
+    if(r3.length<2 || p3.length<2) return null;
+    const r3max = Math.max(...r3.map(t=>t.amt)), p3max = Math.max(...p3.map(t=>t.amt));
+    if(!p3max) return null;
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    return { apt, umd, py, area, build:arr[0].build, r3max:R1(r3max), p3max:R1(p3max), n:arr.length, r3n:r3.length, p3n:p3.length };
+  }).filter(Boolean);
+  const byApt = {};
+  pyRows.forEach(r=>{
+    const k = r.apt+'|'+r.umd;
+    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
+  });
+  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+}
+
+function analyzePeakUndervalue(all, months, allUnfiltered){
+  const tradeOnly = (allUnfiltered||all).filter(t=>{
+    const py = parseInt(t.py,10);
+    const floor = parseInt(t.floor,10);
+    return py>=20 && py<=39 && floor>=5; // 5층 이상 거래만 최고가 계산에 포함(저층 할인으로 최고가가 낮게 잡히는 왜곡 방지)
+  });
+  const rowsAll = buildPeakRows(tradeOnly, months);
+  const median = arr => {
+    const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1;
+    return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+  };
+  const divergence = [];
+  const MIN_PEER_N = 2;
+  rowsAll.forEach(r=>{
+    const nearest = rowsAll
+      .filter(o=> o!==r && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+        && (o.r3max - r.r3max) / r.r3max > 0.02)
+      .sort((a,b)=> Math.abs(a.p3max-r.p3max) - Math.abs(b.p3max-r.p3max))
+      .slice(0,5);
+    const group = [r, ...nearest];
+    if(group.length < 3) return;
+    const r3median = median(group.map(o=>o.r3max));
+    const gapPct = Math.round((r.r3max - r3median)/r3median*100);
+    if(gapPct <= -5){
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>b.r3max-a.r3max); // 최근가 높은순 정렬
+      divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3max), gapPct, groupN:group.length, peers }); // gapAmt는 항상 양수(중앙값-내값) — 화면에 "OO억 낮음"으로 표시되므로
+    }
+  });
+  // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
+  divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+
+  return { found:true, mode:'peak', total:all.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    divergence };
+}
+
+// ═══ 연간 저평가 — "분기 저평가"(peak)와 완전히 동일한 로직, 3개월 구간(3vs3) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
+// 분기 저평가가 "최근 신고가 흐름"을 못 따라간 단지를 잡는다면, 연간 저평가는 "지난 1년간 신고가 흐름"을 못 따라간 단지를 잡아내는 버전.
+// 5층 이상·20~39평 제한, 비교군 구성(±2% 이내 최대 5개, 3명 이상), 5% 이상 격차 기준 등 나머지 조건은 모두 동일.
+function buildLongPeakRows(all, months){
+  const byAptPy = {};
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  // 올해 1월~현재월(curN개월) vs 작년 1~12월(12개월) — months.length는 항상 curN+12 (호출부 effMN 계산과 짝)
+  const curN = months.length - 12;
+  const r12set = new Set(months.slice(0,curN)), p12set = new Set(months.slice(curN,curN+12));
+  const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
+    const arr = markOutliers(arrRaw, months);
+    const [apt,umd,py] = k.split('|');
+    const r12 = arr.filter(t=>r12set.has(t.ym));
+    const p12 = arr.filter(t=>p12set.has(t.ym));
+    if(r12.length<2 || p12.length<2) return null;
+    const r12max = Math.max(...r12.map(t=>t.amt)), p12max = Math.max(...p12.map(t=>t.amt));
+    if(!p12max) return null;
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    return { apt, umd, py, area, build:arr[0].build, r3max:R1(r12max), p3max:R1(p12max), n:arr.length, r3n:r12.length, p3n:p12.length };
+  }).filter(Boolean);
+  const byApt = {};
+  pyRows.forEach(r=>{
+    const k = r.apt+'|'+r.umd;
+    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
+  });
+  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+}
+
+function analyzeLongPeakUndervalue(all, months, allUnfiltered){
+  const tradeOnly = (allUnfiltered||all).filter(t=>{
+    const py = parseInt(t.py,10);
+    const floor = parseInt(t.floor,10);
+    return py>=20 && py<=39 && floor>=5; // 5층 이상 거래만 최고가 계산에 포함(저층 할인으로 최고가가 낮게 잡히는 왜곡 방지)
+  });
+  const rowsAll = buildLongPeakRows(tradeOnly, months);
+  const median = arr => {
+    const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1;
+    return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+  };
+  const divergence = [];
+  const MIN_PEER_N = 2;
+  rowsAll.forEach(r=>{
+    const nearest = rowsAll
+      .filter(o=> o!==r && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+        && (o.r3max - r.r3max) / r.r3max > 0.02)
+      .sort((a,b)=> Math.abs(a.p3max-r.p3max) - Math.abs(b.p3max-r.p3max))
+      .slice(0,5);
+    const group = [r, ...nearest];
+    if(group.length < 3) return;
+    const r3median = median(group.map(o=>o.r3max));
+    const gapPct = Math.round((r.r3max - r3median)/r3median*100);
+    if(gapPct <= -5){
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>b.r3max-a.r3max); // 최근가 높은순 정렬
+      divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3max), gapPct, groupN:group.length, peers });
+    }
+  });
+  divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+
+  // 최근/이전 1년 라벨 자동 계산 — months[0]이 최신월(YYYYMM)이므로 그 해를 "최근", 그 전해를 "이전"으로 표시.
+  // 날짜가 바뀌어도(해가 넘어가도) 수동 수정 없이 항상 현재 기준으로 자동 갱신됨.
+  const recentYearNum = parseInt(months[0].slice(0,4),10);
+  const recentYearLabel = `${String(recentYearNum).slice(-2)}년`;
+  const prevYearLabel = `${String(recentYearNum-1).slice(-2)}년`;
+
+  return { found:true, mode:'longpeak', total:all.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    recentYearLabel, prevYearLabel,
+    divergence };
+}
+
+function analyzeCompare(itemsByLawd, targets, months){
+  const monthsAsc = months.slice().reverse();
+  const m3 = months.slice(0,3);
+  const complexes=[], missing=[];
+  for(const tg of targets){
+    const all = itemsByLawd[tg.lawd] || [];
+    const m = matchComplex(all, tg.name);
+    if(m.multi){ missing.push(`${tg.name}(여러 단지 일치 — 정확한 단지명 입력)`); continue; }
+    const hits = m.hits || [];
+    if(!hits.length){ missing.push(tg.name); continue; }
+    const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
+    const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
+    const pys = Object.entries(groups).map(([py, arrRaw])=>{
+      const clean = markOutliers(arrRaw, months);
+      const arr = clean.length? clean : arrRaw;
+      const a3 = arr.filter(t=>m3.includes(t.ym));
+      const monthly = monthsAsc.map(ym=>{
+        const mA = arr.filter(t=>t.ym===ym);
+        return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
+      }).filter(Boolean);
+      const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
+      const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+      return { py:`${py}평`, area, n:arr.length,
+        avg3: a3.length? {v:R1(avgA(a3)), n:a3.length} : null,
+        max: Math.max(...arr.map(t=>t.amt)), monthly };
+    }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
+    if(!pys.length){ missing.push(tg.name); continue; }
+    complexes.push({name:officialName, umd:hits[0].umd, count:hits.length, pys, lawd:tg.lawd});
+  }
+  return { found:complexes.length>0, mode:'compare',
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    complexes, missing };
+}
+
+function esc(s){ return String(s??'').replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+function showError(html){ const e=document.getElementById('error'); e.innerHTML=html; e.classList.add('on'); }
+
+// ── 단지명 자동완성 ──
+const aptMem = {}; // lawd → apts
+let acInput = null, acTimer = null;
+
+async function getApts(lawd){
+  if(aptMem[lawd]) return aptMem[lawd];
+  const items = await ensureMonths(lawd, 12);
+  // 표기(공백 등)가 달라도 같은 단지는 하나로 합치기 위해, 공백 제거한 문자열을 그룹 키로 사용
+  // (예: "아크로 베스티뉴" vs "아크로베스티뉴"가 자동완성에 별개로 뜨던 문제 방지)
+  const groups = {}; // norm -> { umd, presaleOnly, variants: {원문표기: 건수} }
+  for(const t of items){
+    const norm = canonNorm(t.apt.replace(/\s/g,'')); // 개명 이력 있는 단지는 옛 이름 표기도 같은 그룹으로 합침
+    if(!groups[norm]) groups[norm] = { umd:t.umd, presaleOnly:false, variants:{} };
+    groups[norm].presaleOnly = false;
+    groups[norm].variants[t.apt] = (groups[norm].variants[t.apt]||0)+1;
+  }
+  // 분양권·입주권 전용(매매 실거래 없는 신축) 단지도 자동완성에 뜨도록 함께 조회
+  try{
+    const itemsP = await ensureMonthsP(lawd, 12);
+    for(const t of itemsP){
+      const norm = canonNorm(t.apt.replace(/\s/g,''));
+      if(!groups[norm]) groups[norm] = { umd:t.umd, presaleOnly:true, variants:{} };
+      // presaleOnly 여부와 무관하게 항상 카운트해야 매매+분양권 합산 단지의 자동완성 건수(n)가 실제 합계로 표시됨
+      // (이전에는 presaleOnly가 true인 그룹에서만 카운트해, 매매 실거래가 이미 있는 단지는 분양권 건수가 누락되었음)
+      groups[norm].variants[t.apt] = (groups[norm].variants[t.apt]||0)+1;
+    }
+  }catch(e){}
+  aptMem[lawd] = Object.values(groups).map(g=>{
+    const name = Object.entries(g.variants).sort((a,b)=>b[1]-a[1])[0][0]; // 가장 많이 등장한 표기를 대표 이름으로
+    const n = Object.values(g.variants).reduce((s,c)=>s+c,0);
+    return { name, umd:g.umd, n, presaleOnly:g.presaleOnly };
+  }).sort((a,b)=>b.n-a.n);
+  return aptMem[lawd];
+}
+
+function acHide(){ document.getElementById('ac').classList.remove('on'); acInput=null; }
+function acPos(input){
+  const r = input.getBoundingClientRect();
+  const ac = document.getElementById('ac');
+  const w = Math.max(r.width, 260); // 비교 모드처럼 입력창이 좁을 때 팝업까지 좁아져 글자가 세로로 쌓이는 것 방지
+  let left = r.left;
+  if(left + w > window.innerWidth - 8) left = Math.max(8, window.innerWidth - 8 - w);
+  ac.style.left = left+'px';
+  ac.style.top = (r.bottom + 4)+'px'; // position:fixed — 뷰포트 기준
+  ac.style.width = w+'px';
+}
+// 키보드 등장·스크롤·리사이즈 시 열려있는 드롭다운 위치 재계산
+['scroll','resize'].forEach(ev=>window.addEventListener(ev, ()=>{ if(acInput) acPos(acInput); }, {passive:true}));
+if(window.visualViewport) visualViewport.addEventListener('resize', ()=>{ if(acInput) acPos(acInput); });
+function acLawdOf(input){
+  const row = input.closest('.cmp-row');
+  return row ? row.querySelector('select').value : sel.value;
+}
+
+async function acShow(input){
+  const q = input.value.trim().replace(/\s/g,'');
+  const ac = document.getElementById('ac');
+  acInput = input;
+  acPos(input);
+  if(q.length < 1){ acHide(); return; }
+  ac.innerHTML = '<div class="ac-msg">단지 목록 확인 중…</div>';
+  ac.classList.add('on');
+  let apts;
+  try{ apts = await getApts(acLawdOf(input)); }
+  catch(e){ ac.innerHTML = '<div class="ac-msg">'+esc(e.message)+'</div>'; return; }
+  if(acInput !== input) return; // 입력창 바뀜
+  const hits = apts.filter(a=>a.name.replace(/\s/g,'').includes(q)).slice(0,12);
+  if(!hits.length){ ac.innerHTML = '<div class="ac-msg">매매·분양권 실거래 신고 내역이 없는 단지입니다. 단지명을 다시 확인해 주세요</div>'; return; }
+  const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')');
+  ac.innerHTML = hits.map(a=>
+    `<div class="ac-item" onmousedown="acPick('${esc(a.name)}')">
+      <span>${esc(a.name).replace(re,'<b>$1</b>')}</span>
+      <small>${esc(a.umd)} · ${a.n}건${a.presaleOnly?' <span style="color:#00565C">(분양권)</span>':''}</small>
+    </div>`).join('');
+}
+
+function acPick(name){
+  if(acInput){ acInput.value = name; }
+  acHide();
+}
+
+document.addEventListener('input', e=>{
+  if(e.target.matches('#q') || e.target.matches('.cmp-row input')){
+    clearTimeout(acTimer);
+    const t = e.target;
+    acTimer = setTimeout(()=>acShow(t), 180);
+  }
+});
+document.addEventListener('focusin', e=>{
+  if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
+});
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#ac') && !e.target.matches('#q') && !e.target.matches('.cmp-row input')) acHide();
+});
+sel.addEventListener('change', ()=>acHide());
+renderFavs();
+renderFavRegions();
+updateRegionFavBtn();
+refreshFavBadges();
+initFromURL();
+function quick(n){ setMode('complex'); document.getElementById('q').value=n; search(); }
+
+async function search(){
+  updateRegionFavBtn();
+  renderFavRegions();
+  const name = document.getElementById('q').value.trim();
+  const lawd = sel.value;
+  let cmpItems = [];
+  if(mode==='compare'){
+    cmpItems = [...document.querySelectorAll('.cmp-row')].map(r=>({
+      lawd: r.querySelector('select').value,
+      name: r.querySelector('input').value.trim()
+    })).filter(x=>x.name.length>=2);
+    if(cmpItems.length<2){ showError('비교할 단지를 2개 이상 입력해 주세요.'); return; }
+  }
+  if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
+  document.getElementById('error').classList.remove('on');
+  const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
+  const mN = +document.getElementById('monthsN').value;
+  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
+  const curMonthNum = new Date().getMonth()+1; // 1~12
+  const neededMN = mode==='updown' ? 4 : (mode==='peak' ? 6 : (mode==='longpeak' ? curMonthNum+12 : mN)); // 등락 랭킹은 최근 2개월 vs 이전 2개월(4개월) / 분기 저평가는 최근 3개월 vs 이전 3개월 최고가(6개월) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교
+  // 저평가 계열 세 탭(등락 랭킹의 단기 저평가 단지·분기 저평가·연간 저평가)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
+  // → 같은 지역에서 이 세 탭을 오가며 검토할 때(내부 검토용이라 자주 왔다갔다 함) 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
+  // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
+  // 표시상 개월수(neededMN)는 그대로 유지되고, 사용자가 36개월 이상을 직접 선택하면 그 값을 그대로 따른다(24는 하한선일 뿐 상한이 아님).
+  const effMN = (mode==='updown'||mode==='peak'||mode==='longpeak') ? 24 : Math.max(mN, 24);
+  document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('btn').disabled = true;
+
+  try{
+    const months = lastMonthsYm(neededMN); // 분석 창(윈도우) 계산용 — effMN치로 받아온 원본 중 이 개월들만 실제 분석에 사용
+    const neededSet = new Set(months);
+    const floorF = arr => fM ? arr.filter(t=>parseInt(t.floor,10)>=fM) : arr;
+    // 모든 탭이 이제 effMN(≥24개월)치로 받아오므로, 실제 분석 창(neededMN)보다 더 받아온 만큼은 항상 걸러내야 한다
+    // (mN이 24 이상으로 선택된 경우엔 effMN===neededMN이라 필터링이 그대로 통과, 즉 no-op)
+    const windowF = arr => arr.filter(t=>neededSet.has(t.ym));
+    let d;
+    let rawP = [];
+    let rawJ = [];
+
+    if(mode==='compare'){
+      const uniq = [...new Set(cmpItems.map(x=>x.lawd))];
+      const fetched = await Promise.all(uniq.map(ld=>ensureMonths(ld, effMN)));
+      const byLawd = {};
+      uniq.forEach((ld,i)=>byLawd[ld]=floorF(windowF(fetched[i])));
+      d = analyzeCompare(byLawd, cmpItems, months);
+    } else {
+      // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
+      // 전세는 단지 분석 탭에서만 쓰므로, 다른 탭(지역/거래량/등락 랭킹 등)에서는 호출 자체를 하지 않는다.
+      const [raw, rawPFetched, rawJFetched] = await Promise.all([
+        ensureMonths(lawd, effMN),
+        ensureMonthsP(lawd, effMN).catch(()=>[]),
+        mode==='complex' ? ensureMonthsJ(lawd, effMN).catch(()=>[]) : Promise.resolve([]),
+      ]);
+      rawP = rawPFetched;
+      rawJ = rawJFetched;
+      // 분양권·입주권도 매매와 합쳐서 함께 분석 (평균·차트·최고가·신고가 전부 반영)
+      // 매매 데이터가 아예 없는 "분양권 전용" 신축 단지(예: 아직 준공 전)도 조회 가능해야 하므로,
+      // 매매·분양권 양쪽에서 독립적으로 이름 매칭을 시도한 뒤 병합한다 (매매 매칭 성공 여부와 무관하게 분양권도 항상 시도).
+      let rawMerged = raw;
+      if(mode==='complex'){
+        try{
+          const fuzzyMatch = (arr, nm) => {
+            const qn = nm.replace(/\s/g,'');
+            let hits = arr.filter(t=>t.apt.replace(/\s/g,'')===qn);
+            if(!hits.length) hits = arr.filter(t=>{ const an=t.apt.replace(/\s/g,''); return an && (an.includes(qn)||qn.includes(an)); });
+            if(!hits.length) return null;
+            const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
+            const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
+            return { hits, officialName };
+          };
+          const mTrade = fuzzyMatch(raw, name);
+          const mPresale = fuzzyMatch(rawP, name);
+          if(mTrade || mPresale){
+            // 매매 쪽 이름·준공년도를 우선 채택 (더 공식적인 등기명), 매매가 없으면 분양권 자체 표기 사용
+            const officialName = mTrade ? mTrade.officialName : mPresale.officialName;
+            const buildYear = mTrade ? mTrade.hits[0].build : '';
+            const pHits = mPresale ? mPresale.hits : [];
+            const converted = pHits.map(t=>({
+              apt: officialName, umd: t.umd || (mTrade ? mTrade.hits[0].umd : ''), area:t.area, py:t.py, amt:t.amt,
+              ym:t.ym, d:t.d, floor:t.floor||'', build:buildYear, direct:t.direct, kind:t.ownership||'분양권'
+            }));
+            rawMerged = raw.concat(converted);
+          }
+        }catch(e){ rawMerged = raw; }
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak'){
+        // 지역·등락 랭킹: 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화한다.
+        // 1) 분양권 단지명을 매매 쪽 표기에 맞춰 정규화(exact→substring)
+        // 2) 매매에 아예 없는(분양권 전용) 단지는, 분양권 데이터 안에서끼리도 표기를 통일
+        //    (예: "올림픽파크포레온" vs "올림픽파크 포레온"처럼 원본 API 자체가 표기가 갈릴 수 있음)
+        try{
+          const tradeNames = [...new Set(raw.map(t=>t.apt))];
+          const tradeNormMap = {};
+          tradeNames.forEach(n=>{ const norm=n.replace(/\s/g,''); if(!tradeNormMap[norm]) tradeNormMap[norm]=n; });
+
+          const presaleNames = [...new Set(rawP.map(t=>t.apt))];
+          const presaleCount = {}; rawP.forEach(t=>presaleCount[t.apt]=(presaleCount[t.apt]||0)+1);
+          const presaleNormRep = {};
+          presaleNames.forEach(n=>{
+            const norm = n.replace(/\s/g,'');
+            if(!presaleNormRep[norm] || presaleCount[n] > presaleCount[presaleNormRep[norm]]) presaleNormRep[norm] = n;
+          });
+
+          const nameMap = {};
+          presaleNames.forEach(pname=>{
+            const norm = pname.replace(/\s/g,'');
+            if(tradeNormMap[norm]){ nameMap[pname] = tradeNormMap[norm]; return; }
+            const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return tn.includes(norm)||norm.includes(tn); });
+            nameMap[pname] = matched || presaleNormRep[norm];
+          });
+
+          const convertedP = rawP.map(t=>({
+            apt:nameMap[t.apt], umd:t.umd, area:t.area, py:t.py, amt:t.amt, ym:t.ym, d:t.d,
+            floor:t.floor||'', build:'', direct:t.direct, kind:t.ownership||'분양권'
+          }));
+          rawMerged = raw.concat(convertedP);
+        }catch(e){ rawMerged = raw; }
+      }
+      let items = windowF(floorF(rawMerged));
+      if(mode==='region' || mode==='volume'){
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        d = analyzeRegion(items, months);
+        if(mode==='volume') d.mode = 'volume';
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+      } else if(mode==='updown'){
+        const itemsUnfiltered = items; // 평형 필터 적용 전 — "초단기 저평가 단지"는 이 데이터로 고정 계산
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        d = analyzeUpDown(items, months, itemsUnfiltered);
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+      } else if(mode==='peak'){
+        const itemsUnfiltered = items; // 평형 필터 적용 전 — "분기 저평가"는 이 데이터로 고정 계산
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        d = analyzePeakUndervalue(items, months, itemsUnfiltered);
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+      } else if(mode==='longpeak'){
+        const itemsUnfiltered = items; // 평형 필터 적용 전 — "연간 저평가"는 이 데이터로 고정 계산
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        d = analyzeLongPeakUndervalue(items, months, itemsUnfiltered);
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+      } else {
+        d = analyzeComplex(items, name, months, rawMerged);
+        // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
+        // 자체적으로 시도하므로, 매매 매칭이 실패해도(예: 표기 차이) 전세는 따로 찾힐 수 있다.
+        try{
+          const itemsJ = windowF(floorF(rawJ));
+          const dJ = analyzeComplex(itemsJ, name, months);
+          d.jeonse = dJ.found ? dJ : null;
+        }catch(e){ d.jeonse = null; }
+      }
+    }
+    d.monthsN = neededMN;
+    // 분양권 병합으로 매매 조회 기간보다 오래된 거래가 섞여 들어올 수 있으므로, 표시되는 "거래 기간" 문구도 실제 최고령 거래에 맞춰 보정
+    if(d.found && d.mode==='complex' && d.trades && d.trades.length){
+      const minYm = d.trades.reduce((m,t)=> t.date < m ? t.date : m, d.trades[0].date).slice(0,5);
+      const [curStart, curEnd] = d.period.split(' ~ ');
+      if(minYm < curStart) d.period = `${minYm} ~ ${curEnd}`;
+    }
+    d.floorMin = fM;
+    // 세대수는 실거래 API와 완전히 별개인 국토부 공동주택 단지정보 API로 조회 — 매칭 실패해도 조용히 비워둠
+    // 세대수 조회는 이 함수 내에서 (지역코드, 단지명) 기준으로 dedupe + 동시 요청 수를 제한해서 나간다.
+    // 지역 랭킹처럼 목록이 최대 100건(최고가 거래·거래량 각각) → 최대 200개 가까운 단지를 한 화면에서 동시에 조회할 수 있어,
+    // 제한 없이 Promise.all로 한꺼번에 쏘면 브라우저·Netlify 함수에 순간적으로 과도한 동시 요청이 몰릴 수 있음.
+    const HH_CONCURRENCY = 12;
+    const hhReqs = {}; // `${lawd}|${name}` → Promise (중복 요청 제거)
+    let hhInflight = 0, hhQueue = [];
+    function hhRunNext(){
+      while(hhInflight < HH_CONCURRENCY && hhQueue.length){
+        const job = hhQueue.shift();
+        hhInflight++;
+        fetchHHCnt(job.lw, job.nm).catch(()=>null).then(v=>{ hhInflight--; job.resolve(v); hhRunNext(); });
+      }
+    }
+    const getHH = (lw, nm) => {
+      const k = `${lw}|${nm}`;
+      if(!hhReqs[k]) hhReqs[k] = new Promise(resolve=>{ hhQueue.push({lw, nm, resolve}); hhRunNext(); });
+      return hhReqs[k];
+    };
+    if(d.found && d.mode==='complex'){
+      d.hh = await getHH(lawd, d.name);
+    }
+    // 등락 랭킹의 "단기 저평가 단지"·분기/연간 저평가 탭도 동일하게 세대수 표시(비교 대상 목록 각 항목)
+    // 저평가 계열(초단기·분기·연간) 세 로직은 모두 300세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
+    // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 동시성 한도(HH_CONCURRENCY)만큼 배치로 세대수를 조회하면서
+    // 300세대 이상 조건을 만족하는 상위 10개가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
+    // (이전처럼 전체 후보의 세대수를 다 조회한 뒤 거르는 방식보다) 로딩이 느려지지 않는다.
+    if(d.found && (mode==='updown'||mode==='peak'||mode==='longpeak') && d.divergence && d.divergence.length){
+      const filtered = [];
+      for(let i=0; i<d.divergence.length && filtered.length<10; i+=HH_CONCURRENCY){
+        const batch = d.divergence.slice(i, i+HH_CONCURRENCY);
+        await Promise.all(batch.map(async x=>{ x.hh = await getHH(lawd, x.apt); }));
+        for(const x of batch){
+          if(filtered.length>=10) break;
+          if(x.hh && x.hh.hhcnt>=300) filtered.push(x);
+        }
+      }
+      d.divergence = filtered;
+    }
+    // 나머지 탭(지역 랭킹·거래량 랭킹·등락 랭킹 상승/하락 상위·단지 비교)에도 동일하게 세대수 표시.
+    if(d.found){
+      const attachAll = (list, lw, nameField) => list && list.length
+        ? Promise.all(list.map(async x=>{ x.hh = await getHH(lw, x[nameField||'apt']); }))
+        : Promise.resolve();
+      // 지역 랭킹은 highDeals만, 거래량 랭킹은 topVolume만 실제로 화면에 렌더링되는데,
+      // 이전엔 현재 탭에서 안 보이는 나머지 리스트(각각 최대 100건)까지 세대수를 조회하고 있어서 불필요하게 느렸다.
+      // → 실제로 보여줄 리스트 하나만 조회하도록 분리(체감 로딩 시간이 대략 절반으로 줄어듦).
+      if(mode==='region'){
+        await attachAll(d.highDeals, lawd);
+      } else if(mode==='volume'){
+        await attachAll(d.topVolume, lawd);
+      } else if(mode==='updown'){
+        await Promise.all([ attachAll(d.up, lawd), attachAll(d.down, lawd) ]);
+      } else if(mode==='compare' && d.complexes && d.complexes.length){
+        await Promise.all(d.complexes.map(async c=>{ c.hh = await getHH(c.lawd, c.name); }));
+      }
+    }
+
+
+    // 매매·병합 데이터로 매칭 실패했을 때, 분양권 원본(rawP)에서도 이름 유사 후보를 추가로 찾아 추천에 포함
+    // (표기 순서가 뒤바뀐 경우 등 substring 매칭조차 실패하는 오타성 불일치를 "혹시 이 단지?"로 구제)
+    if(!d.found && !d.multi && rawP.length){
+      const q = name.replace(/\s/g,'');
+      const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
+      const pNames = [...new Set(rawP.map(t=>t.apt))].filter(n=>!(d.suggest||[]).includes(n));
+      const pSugg = pNames.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
+        .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);
+      d.suggest = [...(d.suggest||[]), ...pSugg];
+    }
+
+    if(!d.found){
+      if(d.multi){
+        showError('여러 단지가 일치합니다. 단지를 선택해 주세요:<br>' +
+          d.suggest.map(s=>`<a onclick="quick('${esc(s)}')">${esc(s)}</a>`).join(' · '));
+        return;
+      }
+      showError((d.note || '해당 기간·층수 조건에 맞는 거래 내역이 없습니다. 기간을 늘리거나 층 필터를 풀어보세요.') +
+        (d.suggest && d.suggest.length ? '<br>혹시 이 단지? ' + d.suggest.map(s=>`<a onclick="quick('${esc(s)}')">${esc(s)}</a>`).join(' · ') : ''));
+      return;
+    }
+    lastData = d;
+    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else renderRegion(d);
+    pushView();
+    saveLastRegionPref(lawd);
+    // 즐겨찾기 단지를 방금 확인했으므로, "신규 거래" 배지 기준선을 지금 시점으로 갱신
+    if(d.mode==='complex' && isFav(lawd, d.name)){
+      favTradeCount(lawd, d.name).then(n=>{ setFavSeenCount(lawd, d.name, n); renderFavs(); }).catch(()=>{});
+    }
+  }catch(err){ showError('오류: ' + esc(err.message)); }
+  finally{
+    document.getElementById('loading').classList.remove('on');
+    document.getElementById('btn').disabled = false;
+  }
+}
+
+// ── 차트 호버 툴팁 ──
+function showTip(e, html){
+  const tip = document.getElementById('tip');
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 12, y = e.clientY - h - 10;
+  if(x + w > innerWidth - 8) x = e.clientX - w - 12;
+  if(y < 8) y = e.clientY + 14;
+  x = Math.min(Math.max(x, 8), innerWidth - w - 8);   // 왼쪽으로 뒤집었을 때 화면 밖으로 나가는 것 방지
+  y = Math.min(Math.max(y, 8), innerHeight - h - 8);  // 아래로 옮겼을 때 화면 밑으로 잘리는 것 방지
+  tip.style.left = x+'px'; tip.style.top = y+'px';
+}
+function hideTip(){ document.getElementById('tip').style.display='none'; }
+function tipPointerHandler(e){
+  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if(t) showTip(e, t.getAttribute('data-tip'));
+  else if(!(e.target.closest && e.target.closest('.chart-hover-capture'))) hideTip();
+}
+document.addEventListener('pointermove', tipPointerHandler);
+document.addEventListener('pointerdown', function(e){
+  tipPointerHandler(e);
+  // 차트 바깥을 탭하면 고정된(pin) 툴팁·세로선 해제
+  if(curChart.pinned >= 0 && !(e.target.closest && e.target.closest('.chart-hover-capture'))){
+    curChart.pinned = -1;
+    const line = document.getElementById('chartHoverLine');
+    const dot = document.getElementById('chartHoverDot');
+    if(line) line.style.opacity = 0;
+    if(dot) dot.style.opacity = 0;
+  }
+  if(curMultiChart.pinned >= 0 && !(e.target.closest && e.target.closest('.chart-hover-capture'))){
+    curMultiChart.pinned = -1;
+    const line = document.getElementById('cmpHoverLine');
+    if(line) line.style.opacity = 0;
+  }
+});
+
+// ── SVG 월별 추이 차트 ──
+// 호버/터치 상태 (차트는 항상 1개만 표시되므로 전역 변수로 관리)
+let curChart = { monthly:[], xs:[], ys:[], tipFor:null, W:340, top:0, bottom:0, pinned:-1 };
+
+function chartNearestIdx(e){
+  const svgEl = e.currentTarget.closest('svg');
+  const r = svgEl.getBoundingClientRect();
+  const relX = (e.clientX - r.left) / r.width * curChart.W;
+  let idx = 0, best = Infinity;
+  curChart.xs.forEach((x,i)=>{ const dd = Math.abs(x-relX); if(dd<best){ best=dd; idx=i; } });
+  return idx;
+}
+function chartHoverAt(e){
+  if(!curChart.monthly.length) return;
+  const idx = chartNearestIdx(e);
+  const m = curChart.monthly[idx];
+  const line = document.getElementById('chartHoverLine');
+  const dot = document.getElementById('chartHoverDot');
+  if(line){ line.setAttribute('x1', curChart.xs[idx]); line.setAttribute('x2', curChart.xs[idx]); line.style.opacity = 1; }
+  if(dot){ dot.setAttribute('cx', curChart.xs[idx]); dot.setAttribute('cy', curChart.ys[idx]); dot.style.opacity = 1; }
+  showTip(e, curChart.tipFor(m));
+}
+function chartHoverEnd(e){
+  const line = document.getElementById('chartHoverLine');
+  const dot = document.getElementById('chartHoverDot');
+  if(curChart.pinned >= 0){
+    // 다른 점을 훑어보다 벗어나면 고정된 점으로 되돌림
+    const idx = curChart.pinned;
+    if(line){ line.setAttribute('x1', curChart.xs[idx]); line.setAttribute('x2', curChart.xs[idx]); line.style.opacity = 1; }
+    if(dot){ dot.setAttribute('cx', curChart.xs[idx]); dot.setAttribute('cy', curChart.ys[idx]); dot.style.opacity = 1; }
+    if(e) showTip(e, curChart.tipFor(curChart.monthly[idx]));
+    return;
+  }
+  if(line) line.style.opacity = 0;
+  if(dot) dot.style.opacity = 0;
+  hideTip();
+}
+function chartClick(e){
+  if(!curChart.monthly.length) return;
+  const idx = chartNearestIdx(e);
+  if(curChart.pinned === idx){
+    // 같은 점을 다시 탭 → 해당 월 개별 거래 상세
+    showMonthDeals(curChart.monthly[idx].ym);
+    curChart.pinned = -1;
+    return;
+  }
+  curChart.pinned = idx;
+  const m = curChart.monthly[idx];
+  const line = document.getElementById('chartHoverLine');
+  const dot = document.getElementById('chartHoverDot');
+  if(line){ line.setAttribute('x1', curChart.xs[idx]); line.setAttribute('x2', curChart.xs[idx]); line.style.opacity = 1; }
+  if(dot){ dot.setAttribute('cx', curChart.xs[idx]); dot.setAttribute('cy', curChart.ys[idx]); dot.style.opacity = 1; }
+  showTip(e, curChart.tipFor(m));
+}
+
+// ── 차트 숫자 라벨 겹침 방지 헬퍼 ──
+// points: [{cx, cy, ...}] (반드시 cx 오름차순으로 정렬해서 전달)
+// offsets: 시도할 세로 오프셋 우선순위 배열 (예: [-8, 14, -24, 30] = 위 → 아래 → 더 위 → 더 아래)
+// boxW/boxH: 라벨 하나가 차지하는 대략적인 가로/세로 크기(px). 이미 배치된 라벨과 겹치면 다음 오프셋을 시도한다.
+function placeLabels(points, offsets, boxW, boxH){
+  const placed = [];
+  const overlaps = (a,b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+  points.forEach(p=>{
+    let chosen = offsets[offsets.length-1];
+    for(const dy of offsets){
+      const ly = p.cy + dy;
+      const box = {x1:p.cx-boxW/2, x2:p.cx+boxW/2, y1:ly-boxH/2, y2:ly+boxH/2};
+      if(!placed.some(b=>overlaps(b,box))){ placed.push(box); chosen = dy; break; }
+      if(dy===offsets[offsets.length-1]) placed.push(box); // 모든 후보가 겹쳐도 마지막 값으로 강제 배치
+    }
+    p.dy = chosen;
+  });
+  return points;
+}
+
+function chartSVG(monthly, pyLabel, dataRef, priceLabel){
+  dataRef = dataRef || lastData;
+  priceLabel = priceLabel || '매매가';
+  const tipFor = m => {
+    let s = `<b>20${m.ym}</b> · 평균 <b>${m.avg.toFixed(1)}억</b> · 거래 ${m.n}건`;
+    if(pyLabel && dataRef && dataRef.trades){
+      const deals = dataRef.trades.filter(t=>t.py===pyLabel && t.date.startsWith(m.ym) && !t.ex).map(t=>t.amt);
+      if(deals.length>1) s += `<br>범위 ${Math.min(...deals).toFixed(1)}~${Math.max(...deals).toFixed(1)}억`;
+      s += '<br><span style="opacity:.7">한 번 더 탭하면 개별 거래 보기</span>';
+    }
+    return s;
+  };
+  if(!monthly || monthly.length < 2) return '<div class="rng" style="padding:8px 0">월별 데이터 부족 (2개월 이상 거래 필요)</div>';
+  const W=340, H=170, P={t:14,r:12,b:24,l:38};
+  const volH = 26; // 하단 거래량 막대 영역
+  const xs = monthly.map((_,i)=> P.l + i*(W-P.l-P.r)/(monthly.length-1));
+  const vals = monthly.map(m=>m.avg);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if(hi===lo){ hi+=0.5; lo-=0.5; }
+  const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
+  const y = v => P.t + (hi-v)/(hi-lo)*(H-P.t-P.b-volH);
+  const maxN = Math.max(...monthly.map(m=>m.n));
+  const gap = monthly.length>1 ? (W-P.l-P.r)/(monthly.length-1) : 0;
+  const barW = Math.min(14, Math.max(3, gap*0.55));
+  const volY = n => (H-P.b) - (n/maxN)*(volH-4);
+  const pts = monthly.map((m,i)=>`${xs[i]},${y(m.avg).toFixed(1)}`).join(' ');
+  const iMax = vals.indexOf(Math.max(...vals)), iMin = vals.indexOf(Math.min(...vals));
+  const dense = monthly.length > 14;
+  const fs = dense ? 8 : 9.5;
+  // 값 라벨 겹침 방지: 인접 달의 평균가가 비슷해 라벨이 겹치면 자동으로 위/아래 배치를 조정
+  const labelPos = monthly.map((m,i)=>({cx:xs[i], cy:y(m.avg)}));
+  placeLabels(labelPos, [-8, 14, -24, 30], Math.max(20, fs*2.6), fs+3);
+
+  // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
+  curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel };
+
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
+      return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>
+      <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
+    ${monthly.map((m,i)=>`<rect x="${(xs[i]-barW/2).toFixed(1)}" y="${volY(m.n).toFixed(1)}" width="${barW.toFixed(1)}" height="${((H-P.b)-volY(m.n)).toFixed(1)}" rx="1.5" fill="#00828A" opacity=".18"/>`).join('')}
+    <text x="${W-P.r}" y="${H-P.b-volH+4}" text-anchor="end" font-size="8" fill="#94A3B8">거래량 (최대 ${maxN}건)</text>
+    <polyline points="${pts}" fill="none" stroke="#00828A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${monthly.map((m,i)=>`
+      <circle cx="${xs[i]}" cy="${y(m.avg).toFixed(1)}" r="${i===iMax||i===iMin?4:2.5}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#00828A'}"/>
+      <text x="${xs[i]}" y="${y(m.avg) + labelPos[i].dy}" text-anchor="middle" font-size="${fs}" font-weight="${i===iMax||i===iMin?'700':'500'}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#475569'}">${m.avg.toFixed(1)}</text>
+      ${(i===0||i===monthly.length-1||i%Math.ceil(monthly.length/5)===0)? `<text x="${xs[i]}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${m.ym}</text>`:''}
+    `).join('')}
+    <line id="chartHoverLine" x1="${xs[0]}" y1="${P.t}" x2="${xs[0]}" y2="${H-P.b-volH}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
+    <circle id="chartHoverDot" cx="${xs[0]}" cy="${y(monthly[0].avg).toFixed(1)}" r="5" fill="#fff" stroke="#00828A" stroke-width="2.5" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
+    <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
+      onpointerdown="chartHoverAt(event)" onpointermove="chartHoverAt(event)" onpointerleave="chartHoverEnd(event)" onclick="chartClick(event)"/>
+  </svg></div>
+  <div class="chart-note">라인 = 월평균 ${priceLabel}(억) · 막대 = 월 거래량 · <span style="color:#DC2626">●</span>최고 <span style="color:#0F2B3D">●</span>최저<br>점을 탭하면 월/건수/범위 고정 표시, 다시 탭하면 상세</div>`;
+}
+
+let selPy = -1; // -1 = 전체
+const TRADES_PAGE_SIZE = 100;
+let tradesShown = TRADES_PAGE_SIZE; // "최근 거래 내역" 표시 건수 (더보기로 증가)
+// ── 단지 분석 서브탭(매매/전세) ── 항상 하나만 렌더링(공유 DOM 컨테이너) — 전환 시 평형 선택은 초기화됨
+let complexView = 'sale'; // 'sale' | 'jeonse'
+function curComplexData(){ return complexView==='jeonse' ? (lastData && lastData.jeonse) : lastData; }
+const SALE_TRADES_FOOT = '평균·차트·최고가는 직거래 및 시세(동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권(국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
+const JEONSE_TRADES_FOOT = '평균·차트·최고가는 시세(동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약(반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+
+function avgCell(a){
+  return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
+}
+function pyTableHTML(d){
+  const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
+  if(!list.length) return '';
+  const qLabels = list[0].quarters.map(q=>q.label); // 4개 분기 라벨은 모든 평형이 동일
+  return `<table>
+    <tr><th>평형</th><th class="tr-r">${esc(qLabels[0])}</th><th class="tr-r">${esc(qLabels[1])}</th><th class="tr-r th-teal2">${esc(qLabels[2])}</th><th class="tr-r th-teal">${esc(qLabels[3])}</th><th class="tr-r th-max">최고가</th></tr>
+    ${list.map(p=>`<tr>
+      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">신고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td class="tr-r">${avgCell(p.quarters[0].avg)}</td>
+      <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
+      <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
+      <td class="tr-r td-teal">${avgCell(p.quarters[3].avg)}</td>
+      <td class="tr-r td-max"><b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div></td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function tradesHTML(d, footNote){
+  footNote = footNote || SALE_TRADES_FOOT;
+  const full = selPy === -1 ? d.trades : d.trades.filter(t=>t.py===d.byPy[selPy].py);
+  if(!full.length) return '<div class="rng" style="padding:6px 0">해당 평형 거래 없음</div>';
+  const list = full.slice(0, tradesShown);
+  const maxByPy = {}; d.byPy.forEach(p=>{ maxByPy[p.py] = p.max; });
+  const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
+  const remain = full.length - list.length;
+  return `<table>
+    <tr><th>일자</th><th>평형</th><th>층</th><th class="tr-r">금액</th></tr>
+    ${list.map(t=>{
+      const isMax = !t.ex && maxByPy[t.py] === t.amt && !maxMarked.has(t.py);
+      if(isMax) maxMarked.add(t.py);
+      const cls = t.ex ? ' class="exrow"' : '';
+      return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` ${t.area.toFixed(2)}㎡`:''}</span>${isMax?'<span class="nh">신고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+    }).join('')}
+  </table>
+  ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
+  <div class="rng" style="margin-top:6px">${footNote}</div>`;
+}
+function showMoreTrades(){
+  tradesShown += TRADES_PAGE_SIZE;
+  const d = curComplexData();
+  document.getElementById('tradesBox').innerHTML = tradesHTML(d, complexView==='sale'?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT);
+}
+
+function trendHTML(d){
+  const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
+  const rows = list.map(p=>{
+    if(!p.trend) return `<div class="trend" style="margin-bottom:8px">
+      <span class="pct rng" style="font-size:13px">-</span>
+      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
+      <span class="d">전후 2개월 거래 부족으로 비교 불가</span>
+    </div>`;
+    const t = p.trend;
+    return `<div class="trend" style="margin-bottom:8px">
+      <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'+':''}${t.pct}%</span>
+      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
+      <span class="d">최근 2개월 평균 <b>${t.recentAvg.toFixed(1)}억</b><br>이전 2개월 평균 <b>${t.prevAvg.toFixed(1)}억</b></span>
+    </div>`;
+  }).join('');
+  return rows || '<div class="rng">데이터 없음</div>';
+}
+
+function chartTarget(d){
+  if(selPy !== -1) return selPy;
+  return d.byPy.reduce((best,p,i,a)=> p.n>a[best].n? i:best, 0); // 전체 = 거래 최다 평형
+}
+
+// ── 층별 가격 프리미엄 미니 차트 ──
+function fbRow(label, b, color, pct){
+  if(!b) return '';
+  return `<div class="fbar-row">
+    <div class="fbar-lb"><b>${label}</b><span class="rng">${b.fmin}~${b.fmax}층<br>${b.n}건</span></div>
+    <div class="fbar-track"><div class="fbar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div class="fbar-v">${b.v.toFixed(1)}억</div>
+  </div>`;
+}
+function floorPremiumHTML(d, ci){
+  const fb = d.byPy[ci].floorBand;
+  if(!fb) return '<div class="rng" style="padding:6px 0">저층·고층 비교에 필요한 거래(각 2건 이상)가 부족합니다</div>';
+  const vals = [fb.low, fb.mid, fb.high].filter(Boolean).map(b=>b.v);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+  // 스케일 기준을 3개 값의 min~max가 아니라 실제 가격의 ±15%로 고정 → 작은 차이가 막대 길이로 과장되지 않음
+  const base = minV * 0.85;
+  const top = Math.max(maxV, minV * 1.15);
+  const pct = v => Math.max(12, Math.min(100, Math.round((v-base)/((top-base)||1)*100)));
+  const premBadge = (label, b) => {
+    if(!b) return '';
+    const p = Math.round((b.v - fb.low.v)/fb.low.v*100);
+    const up = p >= 0;
+    return `<div style="text-align:center">
+      <div class="pct ${up?'up':'down'}" style="font-size:18px">${up?'+':''}${p}%</div>
+      <div class="rng" style="margin-top:1px">${label}</div>
+    </div>`;
+  };
+  return `
+    <div class="trend" style="margin-bottom:10px;gap:18px">
+      ${premBadge('중층', fb.mid)}
+      ${premBadge('고층', fb.high)}
+      <span class="d">저층(${fb.low.fmin}~${fb.low.fmax}층 · ${fb.low.v.toFixed(1)}억) 대비 프리미엄</span>
+    </div>
+    ${fbRow('저층', fb.low, '#94A3B8', pct(fb.low.v))}
+    ${fbRow('중층', fb.mid, '#00828A', fb.mid?pct(fb.mid.v):0)}
+    ${fbRow('고층', fb.high, '#0F2B3D', pct(fb.high.v))}
+    <div class="rng" style="margin-top:4px">현재 층수 필터와 무관하게, 해당 평형의 관측된 최저~최고 층을 5등분(저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
+}
+
+// ── 월 클릭 → 해당월 개별 거래 플로팅 산점도 ──
+function showMonthDeals(ym){
+  hideTip();
+  // 현재 그려진 차트(curChart)가 매매/전세 중 어느 데이터를 참조하는지로 판단 — lastData 고정 참조 대신
+  // curChart.dataRef를 써야 전세 서브탭 차트를 클릭했을 때도 전세 거래가 뜬다
+  const d = curChart && curChart.dataRef;
+  const py = curChart && curChart.pyLabel;
+  if(!d || !py) return;
+  const deals = d.trades.filter(t=>t.py===py && t.date.startsWith(ym));
+  if(!deals.length) return;
+  document.getElementById('mpopTitle').textContent = `${py} · 20${ym} 거래 ${deals.length}건`;
+
+  const W=330,H=190,P={t:16,r:14,b:26,l:38};
+  const days = deals.map(t=>+t.date.split('.')[2]);
+  const amts = deals.map(t=>t.amt);
+  let lo=Math.min(...amts), hi=Math.max(...amts);
+  if(hi===lo){hi+=0.3;lo-=0.3}
+  const pad=(hi-lo)*0.18; lo-=pad; hi+=pad;
+  const x = day => P.l + (day-1)/30*(W-P.l-P.r);
+  const y = v => P.t + (hi-v)/(hi-lo)*(H-P.t-P.b);
+  const incl = deals.filter(t=>!t.ex);
+  const mAvg = incl.length ? Math.round(incl.reduce((s,t)=>s+t.amt,0)/incl.length*10)/10 : null;
+  const dense = deals.length > 12;
+  // 숫자 라벨 겹침 방지: 날짜/가격이 가까운 거래끼리 라벨이 겹치면 위·아래로 자동 분산 배치
+  const labelPts = incl.map(t=>{ const day=+t.date.split('.')[2]; return { t, cx:x(day), cy:y(t.amt) }; }).sort((a,b)=>a.cx-b.cx);
+  placeLabels(labelPts, [-8, 16, -24, 32], 24, 12);
+  const labelDyOf = new Map(labelPts.map(p=>[p.t, p.dy]));
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    ${[0,.5,1].map(fr=>{ const gy=P.t+fr*(H-P.t-P.b); const gv=(hi-fr*(hi-lo)).toFixed(1);
+      return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0"/>
+      <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
+    ${mAvg!==null? `<line x1="${P.l}" y1="${y(mAvg)}" x2="${W-P.r}" y2="${y(mAvg)}" stroke="#00828A" stroke-dasharray="4 3" stroke-width="1.2" opacity=".6"/>
+      <text x="${P.l-5}" y="${y(mAvg)-6}" text-anchor="end" font-size="8" fill="#00828A">평균</text>
+      <text x="${P.l-5}" y="${y(mAvg)+4}" text-anchor="end" font-size="9.5" font-weight="900" fill="#00828A">${mAvg.toFixed(1)}</text>`:''}
+    ${deals.map(t=>{
+      const day = +t.date.split('.')[2];
+      if(t.ex) return `<text x="${x(day)}" y="${y(t.amt)+4}" text-anchor="middle" font-size="11" fill="#94A3B8">✕</text>`;
+      return `<circle cx="${x(day)}" cy="${y(t.amt)}" r="4" fill="#00828A"/>
+        ${dense? '' : `<text x="${x(day)}" y="${y(t.amt) + (labelDyOf.get(t) ?? -8)}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F2B3D">${t.amt.toFixed(1)}</text>`}`;
+    }).join('')}
+    ${[1,10,20,31].map(dd=>`<text x="${x(dd)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${dd}일</text>`).join('')}
+  </svg>`;
+  document.getElementById('mpopChart').innerHTML = svg;
+  document.getElementById('mpop').classList.add('on');
+}
+
+function selectPy(i){
+  selPy = i;
+  tradesShown = TRADES_PAGE_SIZE;
+  const d = curComplexData();
+  if(!d) return;
+  const isSale = complexView==='sale';
+  const priceLabel = isSale ? '매매가' : '전세가';
+  document.querySelectorAll('#pyChips .chip').forEach((c,j)=>c.classList.toggle('on', j===i+1));
+  document.getElementById('pyTable').innerHTML = pyTableHTML(d);
+  const ci = chartTarget(d);
+  document.getElementById('chartTitle').textContent = `월평균 ${priceLabel} 추이 — ` + d.byPy[ci].py + (selPy===-1?' (거래 최다)':'');
+  document.getElementById('chartBox').innerHTML = chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel);
+  if(isSale){
+    document.getElementById('floorTitle').textContent = '층별 가격 프리미엄 — ' + d.byPy[ci].py + (selPy===-1?' (거래 최다)':'') + ' · 최근 6개월';
+    document.getElementById('floorBox').innerHTML = floorPremiumHTML(d, ci);
+    document.getElementById('trendBox').innerHTML = trendHTML(d);
+  }
+  document.getElementById('tradesBox').innerHTML = tradesHTML(d, isSale?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT);
+}
+
+// 단지 분석 카드 안의 가변 영역(평형칩·요약표·차트·[단기추세·층별프리미엄]·거래내역) — 매매/전세 서브탭 전환 시 이 부분만 다시 그림
+function complexDynamicHTML(){
+  const isSale = complexView==='sale';
+  const priceLabel = isSale ? '매매가' : '전세가';
+  const d = curComplexData();
+  if(!d){
+    return `<div class="sec"><div class="rng" style="padding:10px 0">최근 조회 기간 내 이 단지의 전세 실거래가 없습니다.</div></div>`;
+  }
+  const ci = chartTarget(d);
+  return `
+    <div class="sec">
+      <div class="chips" id="pyChips">
+        <span class="chip on" onclick="selectPy(-1)">전체</span>
+        ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)}</span>`).join('')}
+      </div>
+      <h3>평형별 요약 — 최근 ${priceLabel} (억)</h3>
+      <div id="pyTable">${pyTableHTML(d)}</div>
+    </div>
+
+    <div class="sec">
+      <h3 id="chartTitle">월평균 ${priceLabel} 추이 — ${esc(d.byPy[ci].py)} (거래 최다)</h3>
+      <div id="chartBox">${chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel)}</div>
+    </div>
+    ${isSale ? `
+    <div class="sec">
+      <h3>단기 추세 — 평형별 (최근 2개월 vs 이전 2개월)</h3>
+      <div id="trendBox">${trendHTML(d)}</div>
+      <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
+    </div>
+
+    <div class="sec">
+      <h3 id="floorTitle">층별 가격 프리미엄 — ${esc(d.byPy[ci].py)} (거래 최다) · 최근 6개월</h3>
+      <div id="floorBox">${floorPremiumHTML(d, ci)}</div>
+    </div>` : ''}
+
+    <div class="sec">
+      <h3>최근 ${priceLabel} 거래 내역</h3>
+      <div id="tradesBox">${tradesHTML(d, isSale?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT)}</div>
+    </div>`;
+}
+
+function setComplexView(v){
+  complexView = v;
+  selPy = -1;
+  tradesShown = TRADES_PAGE_SIZE;
+  const sb = document.getElementById('cvSaleBtn'), jb = document.getElementById('cvJeonseBtn');
+  if(sb) sb.classList.toggle('on', v==='sale');
+  if(jb) jb.classList.toggle('on', v==='jeonse');
+  const box = document.getElementById('complexDynamic');
+  if(box) box.innerHTML = complexDynamicHTML();
+}
+
+function renderComplex(d){
+  selPy = -1;
+  tradesShown = TRADES_PAGE_SIZE;
+  complexView = 'sale';
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:12px;right:14px;display:flex;gap:6px">
+        <button id="favBtn" onclick="toggleFav(sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(sel.value,d.name)?'★':'☆'}</button>
+        <button onclick="shareCurrent()" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#fff;font-size:13px;cursor:pointer">⤴</button>
+      </div>
+      <h2 style="padding-right:70px">${esc(d.name)}</h2>
+      <div class="meta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+    </div>
+
+    <div class="sec" style="padding-bottom:0">
+      <div class="chips">
+        <span class="chip on" id="cvSaleBtn" onclick="setComplexView('sale')">매매</span>
+        <span class="chip" id="cvJeonseBtn" onclick="setComplexView('jeonse')">전세</span>
+      </div>
+    </div>
+
+    <div id="complexDynamic">${complexDynamicHTML()}</div>
+  </div>
+  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
+// ── 단지 비교 렌더링 ──
+const CMP_COLORS = ['#00828A','#DC2626','#0F2B3D','#D97706'];
+let cmpPyMap = {}; // cmpPyMap: 단지 인덱스 -> 선택 평형 (단지별 독립 선택)
+
+function cmpDefaultPyFor(c){
+  // 32~36평(국민평형) 중 거래 최다 → 없으면 23~27평 중 거래 최다 → 그래도 없으면 전체 중 거래 최다
+  const byRange = (lo,hi) => {
+    let best=null, bestN=-1;
+    c.pys.forEach(p=>{ const n=parseInt(p.py,10); if(n>=lo && n<=hi && p.n>bestN){ bestN=p.n; best=p.py; } });
+    return best;
+  };
+  return byRange(32,36) || byRange(23,27) || (()=>{
+    let best=null, bestN=-1;
+    c.pys.forEach(p=>{ if(p.n > bestN){ bestN = p.n; best = p.py; } });
+    return best;
+  })();
+}
+
+let curMultiChart = { allYm:[], xs:[], series:[], W:340, top:0, bottom:0, pinned:-1 };
+function multiChartNearestIdx(e){
+  const svgEl = e.currentTarget.closest('svg');
+  const r = svgEl.getBoundingClientRect();
+  const relX = (e.clientX - r.left) / r.width * curMultiChart.W;
+  let idx = 0, best = Infinity;
+  curMultiChart.xs.forEach((x,i)=>{ const dd = Math.abs(x-relX); if(dd<best){ best=dd; idx=i; } });
+  return idx;
+}
+function multiTipFor(idx){
+  const ym = curMultiChart.allYm[idx];
+  const rows = curMultiChart.series
+    .map(s=>({ s, m: s.byYm.get(ym) }))
+    .sort((a,b)=> (b.m?b.m.avg:-Infinity) - (a.m?a.m.avg:-Infinity)) // 비싼 단지가 위로
+    .map(({s,m})=> `<span style="color:${s.color}">●</span> ${esc(s.label)}: ${m? `<b>${m.avg.toFixed(1)}억</b>` : '<span style="opacity:.6">거래 없음</span>'}`)
+    .join('<br>');
+  return `<b>20${ym}</b><br>${rows}`;
+}
+function multiChartHoverAt(e){
+  if(!curMultiChart.allYm.length) return;
+  const idx = multiChartNearestIdx(e);
+  const line = document.getElementById('cmpHoverLine');
+  if(line){ line.setAttribute('x1', curMultiChart.xs[idx]); line.setAttribute('x2', curMultiChart.xs[idx]); line.style.opacity = 1; }
+  showTip(e, multiTipFor(idx));
+}
+function multiChartHoverEnd(e){
+  const line = document.getElementById('cmpHoverLine');
+  if(curMultiChart.pinned >= 0){
+    const idx = curMultiChart.pinned;
+    if(line){ line.setAttribute('x1', curMultiChart.xs[idx]); line.setAttribute('x2', curMultiChart.xs[idx]); line.style.opacity = 1; }
+    if(e) showTip(e, multiTipFor(idx));
+    return;
+  }
+  if(line) line.style.opacity = 0;
+  hideTip();
+}
+function multiChartClick(e){
+  const idx = multiChartNearestIdx(e);
+  curMultiChart.pinned = curMultiChart.pinned===idx ? -1 : idx;
+  if(curMultiChart.pinned<0){ multiChartHoverEnd(); return; }
+  multiChartHoverAt(e);
+}
+function chartMulti(series){
+  // series: [{label,color,monthly:[{ym,avg}]}]
+  const act = series.filter(s=>s.monthly.length>=2);
+  if(!act.length) return '<div class="rng" style="padding:8px 0">표시할 데이터 부족</div>';
+  const allYm = [...new Set(act.flatMap(s=>s.monthly.map(m=>m.ym)))].sort();
+  const val = (s,m)=> m.avg;
+  const allVals = act.flatMap(s=>s.monthly.map(m=>val(s,m)));
+  let lo=Math.min(...allVals), hi=Math.max(...allVals);
+  if(hi===lo){hi+=1;lo-=1}
+  const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
+  const W=340,H=170,P={t:12,r:12,b:24,l:40};
+  const x = ym => P.l + allYm.indexOf(ym)*(W-P.l-P.r)/Math.max(1,allYm.length-1);
+  const y = v => P.t + (hi-v)/(hi-lo)*(H-P.t-P.b);
+  const fmt = v => v.toFixed(1);
+  const grid = [0,.5,1].map(fr=>{
+    const gy=P.t+fr*(H-P.t-P.b); const gv=hi-fr*(hi-lo);
+    return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0"/>
+    <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${fmt(gv)}억</text>`;
+  }).join('');
+  const lines = act.map(s=>{
+    const pts = s.monthly.map(m=>`${x(m.ym).toFixed(1)},${y(val(s,m)).toFixed(1)}`).join(' ');
+    const last = s.monthly[s.monthly.length-1];
+    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${s.monthly.map(m=>`<circle cx="${x(m.ym).toFixed(1)}" cy="${y(val(s,m)).toFixed(1)}" r="2.5" fill="${s.color}"/>`).join('')}
+    <text x="${x(last.ym)}" y="${y(val(s,last))-7}" text-anchor="end" font-size="9" font-weight="700" fill="${s.color}">${fmt(val(s,last))}</text>`;
+  }).join('');
+  // 호버/탭 시 같은 달 모든 단지 정보를 한 번에 보여주기 위한 상태 등록
+  curMultiChart = {
+    allYm, xs: allYm.map(x), W, top:P.t, bottom:H-P.b, pinned:-1,
+    series: act.map(s=>({ label:s.label, color:s.color, byYm: new Map(s.monthly.map(m=>[m.ym, m])) })),
+  };
+  const step = Math.max(1, Math.ceil(allYm.length/5));
+  const xlab = allYm.map((ym,i)=> (i===0||i===allYm.length-1||i%step===0)? `<text x="${x(ym)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${ym}</text>`:'').join('');
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
+    <line id="cmpHoverLine" x1="${x(allYm[0])}" y1="${P.t}" x2="${x(allYm[0])}" y2="${H-P.b}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
+    <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
+      onpointerdown="multiChartHoverAt(event)" onpointermove="multiChartHoverAt(event)" onpointerleave="multiChartHoverEnd(event)" onclick="multiChartClick(event)"/>
+  </svg></div>
+  <div class="chart-note">탭하면 그 달 모든 단지 정보 고정 표시, 다시 탭하면 해제</div>`;
+}
+
+function cmpSeries(d){
+  return d.complexes.map((c,i)=>{
+    const py = cmpPyMap[i];
+    const p = c.pys.find(p=>p.py===py);
+    return { label:`${c.name}${py?' '+py:''}`, color:CMP_COLORS[i%4], monthly: p? p.monthly : [] };
+  });
+}
+
+function drawCompare(d){
+  document.getElementById('cmpChart').innerHTML = chartMulti(cmpSeries(d));
+  document.getElementById('cmpLegend').innerHTML = d.complexes.map((c,i)=>{
+    const opts = c.pys.map(p=>p.py).sort((a,b)=>parseInt(a)-parseInt(b));
+    const cur = cmpPyMap[i];
+    if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)} (거래 없음)</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:5px">
+      <i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)}
+      <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:16px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:1px 4px;background:#fff;max-width:120px">
+        ${opts.map(py=>{ const p=c.pys.find(p=>p.py===py); return `<option value="${esc(py)}"${py===cur?' selected':''}>${esc(py)}(${p.area}㎡)</option>`; }).join('')}
+      </select>
+    </span>`;
+  }).join('');
+  document.getElementById('cmpTable').innerHTML = d.complexes.map((c,i)=>{
+    const py = cmpPyMap[i];
+    const p = c.pys.find(p=>p.py===py);
+    const dot = `<i style="display:inline-block;width:10px;height:3px;border-radius:2px;background:${CMP_COLORS[i%4]};flex:none"></i>`;
+    if(!p) return `<div class="rk">${dot}<span class="nm"><span class="nm-title">${esc(c.name)}</span><small>${esc(c.umd)}${c.hh?` · ${c.hh.hhcnt.toLocaleString()}세대`:''}</small></span><span class="val rng">거래 없음</span></div>`;
+    return `<div class="rk">
+      ${dot}
+      <span class="nm"><span class="nm-title">${esc(c.name)}</span><small>${esc(c.umd)}${c.hh?` · ${c.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(py)}(${p.area}㎡)</small></span>
+      <span class="val">${p.avg3? `<b>${p.avg3.v.toFixed(1)}억</b>`:'-'}<small>${p.avg3?`최근 3개월 ${p.avg3.n}건`:''}</small><small>최고 ${p.max.toFixed(1)}억 · 총 ${p.n}건</small></span>
+    </div>`;
+  }).join('');
+}
+
+function selectCmpPyFor(idx, py){ cmpPyMap[idx] = py; drawCompare(lastData); }
+
+function renderCompare(d){
+  cmpPyMap = {};
+  d.complexes.forEach((c,i)=>{ cmpPyMap[i] = cmpDefaultPyFor(c); });
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <h2>단지 시세 비교</h2>
+      <div class="meta">${esc(d.period)} · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
+    </div>
+
+    <div class="sec">
+      <div id="cmpLegend" class="legend" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+      <div id="cmpChart"></div>
+      <div class="chart-note">월평균 매매가(억) · 단지별 평형 선택 가능</div>
+    </div>
+
+    <div class="sec">
+      <h3>요약 (단지별 선택 평형 기준)</h3>
+      <div id="cmpTable"></div>
+    </div>
+  </div>
+  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  drawCompare(d);
+}
+
+function renderRegion(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const rows = (arr, fmt) => arr.length
+    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2>${esc(regionName)} 실거래 랭킹</h2>
+      <div class="meta">${esc(d.period)} · 총 거래 ${d.total}건${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+    </div>
+
+    <div class="sec">
+      <h3>기간 최고가 거래</h3>
+      ${rows(d.highDeals, x=>`
+        <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
+    </div>
+
+  </div>
+  <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
+function renderVolume(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const rows = (arr, fmt) => arr.length
+    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2>${esc(regionName)} 거래량 랭킹</h2>
+      <div class="meta">${esc(d.period)} · 총 거래 ${d.total}건${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+    </div>
+
+    <div class="sec">
+      <h3>거래량 상위</h3>
+      ${rows(d.topVolume, x=>`
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${d.pyBand? `주력 ${esc(x.mainPy)}` : '전체 평형'}</small></span>
+        <span class="val">${x.n}건</span>`)}
+    </div>
+
+  </div>
+  <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
+
+
+// 저평가 단지 카드: 이름 줄바꿈 허용, 본인 시세 흐름(2개월전→최근) 강조, 비교군은 표로 정리
+function divergenceHTML(list){
+  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 300세대 이상 단지만 집계)</div>';
+  return list.map((x,i)=>`
+    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</div>
+          <div class="rng" style="margin-top:2px">${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}</div>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
+        <tr><th>단지</th><th>평형</th><th class="tr-r">2개월 전</th><th class="tr-r">최근 평균</th></tr>
+        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평</td><td class="tr-r">${x.p3avg.toFixed(1)}억</td><td class="tr-r"><b style="color:var(--red)">${x.r3avg.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평</td><td class="tr-r">${p.p3avg.toFixed(1)}억</td><td class="tr-r">${p.r3avg.toFixed(1)}억</td></tr>`).join('')}
+      </table></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
+        <span class="rng">비교군 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.r3median.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.gapAmt.toFixed(1)}억</b> 낮음</span>
+        <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.gapPct}%</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderUpDown(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const rows = (arr, fmt) => arr.length
+    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
+  const fmtRow = x => `
+    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small>${esc(x.umd)}·${x.build}년 준공${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.mainPy)}</small></span>
+    <span class="val ${x.pct>=0?'up':'down'}">${x.pct>0?'+':''}${x.pct}%<small>평균 ${x.p3avg.toFixed(1)}→${x.r3avg.toFixed(1)}억</small></span>`;
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2>${esc(regionName)} 등락 랭킹</h2>
+      <div class="meta">${esc(d.period)} · 최근 2개월 평균가 vs 이전 2개월 평균가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+    </div>
+
+    <div class="sec">
+      <h3>단기 저평가 단지</h3>
+      <div class="rng" style="margin-bottom:4px">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:8px">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
+      ${divergenceHTML(d.divergence)}
+    </div>
+
+    <div class="sec">
+      <h3>상승률 상위</h3>
+      ${rows(d.up, fmtRow)}
+    </div>
+
+    <div class="sec">
+      <h3 style="background:var(--red)">하락률 상위</h3>
+      ${rows(d.down, fmtRow)}
+    </div>
+
+  </div>
+  <div class="src-note">최근 2개월 평균가 vs 이전 2개월 평균가 비교(각 2건 이상 표본 필요) · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
+function peakDivergenceHTML(list, prevLabel, recentLabel){
+  prevLabel = prevLabel || '이전 3개월 최고가';
+  recentLabel = recentLabel || '최근 3개월 최고가';
+  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 300세대 이상 단지만 집계)</div>';
+  return list.map((x,i)=>`
+    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</div>
+          <div class="rng" style="margin-top:2px">${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}</div>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
+        <tr><th>단지</th><th>평형</th><th class="tr-r">${prevLabel}</th><th class="tr-r">${recentLabel}</th></tr>
+        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평</td><td class="tr-r">${x.p3max.toFixed(1)}억</td><td class="tr-r"><b style="color:var(--red)">${x.r3max.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평</td><td class="tr-r">${p.p3max.toFixed(1)}억</td><td class="tr-r">${p.r3max.toFixed(1)}억</td></tr>`).join('')}
+      </table></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
+        <span class="rng">비교군 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.r3median.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.gapAmt.toFixed(1)}억</b> 낮음</span>
+        <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.gapPct}%</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderPeak(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2>${esc(regionName)} <span style="color:var(--yellow)">분기</span> 저평가</h2>
+      <div class="meta">${esc(d.period)} · 최근 3개월 최고가 vs 이전 3개월 최고가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}</div>
+    </div>
+
+    <div class="sec">
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 3개월 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 최근 3개월 최고가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
+      ${peakDivergenceHTML(d.divergence)}
+    </div>
+
+  </div>
+  <div class="src-note">최근 3개월 최고가 vs 이전 3개월 최고가 비교(각 2건 이상 표본 필요) · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
+function renderLongPeak(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2>${esc(regionName)} <span style="color:var(--yellow)">연간</span> 저평가</h2>
+      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}</div>
+    </div>
+
+    <div class="sec">
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중, ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
+      ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
+    </div>
+
+  </div>
+  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요) · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+</script>
+</body>
+</html>

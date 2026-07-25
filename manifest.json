@@ -1,0 +1,15 @@
+{
+  "name": "아파트썸 실거래 분석",
+  "short_name": "아파트썸",
+  "description": "국토부 실거래가 데이터 기반 무료 아파트 시세 분석",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F1F5F9",
+  "theme_color": "#0F2B3D",
+  "lang": "ko",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
