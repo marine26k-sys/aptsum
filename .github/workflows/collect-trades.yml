@@ -2,8 +2,9 @@ name: 실거래 데이터 배치 수집 (매매/분양권/전세)
 
 on:
   schedule:
-    # 매일 18:30 UTC = 03:30 KST (국토부 API·방문자 트래픽 모두 한산한 시간대)
-    - cron: "30 18 * * *"
+    # 하이브리드 모드: 과거 데이터(2개월 이전)만 채우면 되므로 매월 1일 03:30 KST에 월 1회만 실행
+    # (최근 2개월은 Netlify Function이 매 요청마다 실시간 호출로 커버 — netlify/functions/analyze·presale·rent.mjs 참고)
+    - cron: "30 18 1 * *"
   workflow_dispatch:
     inputs:
       months:
@@ -78,7 +79,9 @@ jobs:
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
         if: always()
         run: |
-          git add data/analyze data/presale data/rent
+          for d in data/analyze data/presale data/rent; do
+            [ -d "$d" ] && git add "$d"
+          done
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
