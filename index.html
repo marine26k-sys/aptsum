@@ -170,6 +170,39 @@
   body{ -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; }
   input, textarea, select{ -webkit-user-select:auto; -moz-user-select:auto; user-select:auto; -webkit-touch-callout:default; }
   img{ -webkit-user-drag:none; user-drag:none; pointer-events:auto; }
+  /* 커스텀 지역 선택 — 네이티브 select 드롭다운은 행 높이를 OS가 그려서 CSS로 못 줄이므로 직접 그린다 */
+  #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+  .rgpick{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;
+    background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+  .rgpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rgpick b{flex:0 0 auto;font-size:10px;color:var(--sub)}
+  .rgdim{position:fixed;inset:0;background:rgba(15,43,61,.45);z-index:120;display:none}
+  .rgdim.on{display:block}
+  .rgpanel{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:460px;
+    background:#fff;border-radius:16px 16px 0 0;z-index:121;display:none;flex-direction:column;max-height:82vh;overflow:hidden}
+  .rgpanel.on{display:flex}
+  .rghd{flex:0 0 auto;padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+  .rghd h4{margin:0 0 8px;font-size:14px;font-weight:800;color:var(--ink)}
+  .rgsearch{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;
+    padding:8px 10px;font-family:inherit;font-size:13px;outline:none}
+  .rgsearch:focus{border-color:var(--teal)}
+  .rgbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+  .rggrp{position:sticky;top:0;background:var(--slate-bg);color:var(--sub);
+    font-size:10px;font-weight:800;padding:4px 14px;letter-spacing:.3px;z-index:1}
+  /* 행간 초밀착: 세로 패딩 최소화 + line-height 1.15 → 행 높이 약 26px */
+  .rgitem{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:5px 14px;font-size:13px;line-height:1.15;color:var(--ink);cursor:pointer;border:0;background:none;
+    width:100%;box-sizing:border-box;font-family:inherit;text-align:left}
+  .rgitem:active{background:var(--teal-light-soft)}
+  .rgitem.sel{background:var(--teal-soft);color:var(--teal-dark);font-weight:800}
+  .rgitem.all{font-weight:800;color:var(--teal-dark)}
+  .rgitem .tick{flex:0 0 auto;font-size:12px;color:var(--teal);visibility:hidden}
+  .rgitem.sel .tick{visibility:visible}
+  .rgft{flex:0 0 auto;display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--line);background:#fff}
+  .rgft button{flex:1;border:0;border-radius:10px;padding:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .rgft .ok{background:var(--teal);color:#fff}
+  .rgft .cl{background:var(--slate-bg);color:var(--sub)}
 </style>
 </head>
 <body>
@@ -209,8 +242,10 @@
   <div class="search-box">
     <div class="row2" id="singleRow">
       <select id="lawd" style="flex:1;min-width:0"></select>
+      <button type="button" class="rgpick" id="rgPick" onclick="openRegionPicker()"><span id="rgPickTxt">지역 선택</span><b>▼</b></button>
       <button id="regionFavBtn" onclick="toggleFavRegion()" title="이 지역 즐겨찾기" style="flex:0 0 auto;width:38px;background:#fff;border:1.5px solid var(--line);border-radius:12px;color:#D97706;font-size:15px;cursor:pointer">☆</button>
     </div>
+    <div id="regionChips" style="display:none"></div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:9px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
@@ -544,14 +579,145 @@ document.getElementById('peakPwInput').addEventListener('keydown', e=>{ if(e.key
 })();
 
 const sel = document.getElementById('lawd');
+// 시·도 전체 통합 조회용 가상 코드 — 값이 'ALL:서울' 형태. 실제 조회 시 해당 시·도의 모든 구/시군 코드로 펼쳐진다.
+// 조회량이 지역 수만큼 배로 늘어나므로 지역 랭킹 탭에서만 노출한다(setMode 참조).
+const ALL_PREFIX = 'ALL:';
+function isAllScope(v){ return String(v||'').startsWith(ALL_PREFIX); }
+function lawdsOfScope(v){
+  const g = String(v).slice(ALL_PREFIX.length);
+  const hit = REGIONS.find(([name])=>name===g);
+  return hit ? hit[1].map(([n,c])=>({name:n, lawd:c})) : [];
+}
 REGIONS.forEach(([g,arr])=>{
   const og = document.createElement('optgroup'); og.label=g;
+  const all = document.createElement('option');
+  all.value = ALL_PREFIX+g; all.textContent = g+' 전체'; all.dataset.scope='all';
+  og.appendChild(all);
   arr.forEach(([n,c])=>{ const o=document.createElement('option'); o.value=c; o.textContent=n; og.appendChild(o); });
   sel.appendChild(og);
 });
 const lastRegionPref = getLastRegionPref();
+
+// ── 지역 랭킹 복수 선택 ──
+// 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
+// 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
+let regionSel = []; // [{name, lawd}]
+const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치
+function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
+function loadRegionSel(){
+  try{
+    const v = JSON.parse(localStorage.getItem('apc:regionSel')||'[]');
+    if(Array.isArray(v)) regionSel = v.filter(x=>x && x.lawd && x.name).slice(0, REGION_MAX);
+  }catch(e){ regionSel = []; }
+}
+function addRegion(v){
+  const add = isAllScope(v) ? lawdsOfScope(v) : (()=>{
+    const o = [...sel.options].find(x=>x.value===v);
+    return o ? [{name:o.textContent, lawd:o.value}] : [];
+  })();
+  let over = false;
+  add.forEach(t=>{
+    if(regionSel.some(x=>x.lawd===t.lawd)) return;
+    if(regionSel.length >= REGION_MAX){ over = true; return; }
+    regionSel.push(t);
+  });
+  if(over) showError(`지역은 최대 ${REGION_MAX}개까지 선택할 수 있습니다.`);
+  saveRegionSel(); renderRegionChips();
+}
+function removeRegion(lawd){
+  regionSel = regionSel.filter(x=>x.lawd!==lawd);
+  saveRegionSel(); renderRegionChips();
+}
+function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
+function renderRegionChips(){
+  if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
+  const box = document.getElementById('regionChips');
+  if(mode!=='region'){ box.style.display='none'; return; }
+  box.style.display = '';
+  if(!regionSel.length){
+    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:2px 0">
+      ${regionSel.map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick="removeRegion('${esc(x.lawd)}')" style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
+      <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
+    </div>
+    <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
+}
+loadRegionSel();
+
+// ── 커스텀 지역 선택 패널 ──
+// 네이티브 select 드롭다운은 행 높이를 OS가 그려서 CSS로 못 줄이므로(안드로이드에서 특히 넓게 나옴)
+// 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
+// DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
+function regionPickerLabel(){
+  if(mode==='region' && regionSel.length){
+    return regionSel.length===1 ? regionSel[0].name
+      : (regionSel.length<=3 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
+  }
+  const o = sel.options[sel.selectedIndex];
+  return o ? o.textContent : '지역 선택';
+}
+function syncRegionPickBtn(){
+  const el = document.getElementById('rgPickTxt');
+  if(el) el.textContent = regionPickerLabel();
+}
+function buildRegionPicker(){
+  const multi = (mode==='region');
+  const q = (document.getElementById('rgSearch').value||'').trim();
+  const body = document.getElementById('rgBody');
+  document.getElementById('rgTitle').textContent = multi ? '지역 선택 (복수 선택 가능)' : '지역 선택';
+  document.getElementById('rgFt').style.display = multi ? '' : 'none';
+  const picked = new Set(regionSel.map(x=>x.lawd));
+  let html = '';
+  REGIONS.forEach(([g,arr])=>{
+    const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
+    if(!hits.length) return;
+    html += `<div class="rggrp">${esc(g)}</div>`;
+    if(multi && !q){
+      html += `<button type="button" class="rgitem all" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">${esc(g)} 전체 추가<span class="tick">✓</span></button>`;
+    }
+    hits.forEach(([n,c])=>{
+      const on = multi ? picked.has(c) : (sel.value===c);
+      html += `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')">${esc(n)}<span class="tick">✓</span></button>`;
+    });
+  });
+  body.innerHTML = html || '<div class="rng" style="padding:12px 14px">검색 결과가 없습니다</div>';
+}
+function pickRegion(v){
+  if(mode==='region'){
+    // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
+    if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
+    else addRegion(v);
+    buildRegionPicker();
+    syncRegionPickBtn();
+    return;
+  }
+  sel.value = v;
+  sel.dispatchEvent(new Event('change'));
+  syncRegionPickBtn();
+  closeRegionPicker();
+}
+function openRegionPicker(){
+  document.getElementById('rgSearch').value = '';
+  buildRegionPicker();
+  document.getElementById('rgDim').classList.add('on');
+  document.getElementById('rgPanel').classList.add('on');
+}
+function closeRegionPicker(){
+  document.getElementById('rgDim').classList.remove('on');
+  document.getElementById('rgPanel').classList.remove('on');
+  syncRegionPickBtn();
+}
+
 sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '11680';
-sel.addEventListener('change', ()=>{ updateRegionFavBtn(); renderFavRegions(); });
+sel.addEventListener('change', ()=>{
+  updateRegionFavBtn(); renderFavRegions();
+  // 지역 랭킹에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
+  if(mode==='region') addRegion(sel.value);
+  if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
+});
 document.getElementById('pyBand').addEventListener('change', e=>{ if(mode==='region') savePyBandPref(e.target.value); }); // 거래량·등락 랭킹에서의 선택은 기억하지 않음(그 탭 안에서만 적용, 다음 방문 시 항상 전체 평형)
 
 // 평형 필터(pyBand) 마지막 선택값 기억 — 지역/거래량/등락 랭킹 세 탭이 공유
@@ -572,7 +738,16 @@ function setMode(m){
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
-  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak') ? '' : 'none';
+  // 평형 필터는 계산에 실제로 반영되는 탭에서만 노출 — 저평가(분기/연간)는 항상 20~39평 고정 계산이라 셀렉트를 아예 숨긴다(2026.07)
+  // '○○ 전체' 옵션은 지역 랭킹에서만 의미가 있다(단지 검색·거래량·등락·저평가는 단일 구 기준 계산).
+  // 다른 탭으로 이동했는데 전체가 선택돼 있으면 해당 시·도의 첫 번째 구로 자동 대체한다.
+  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = (m!=='region'); });
+  if(m!=='region' && isAllScope(sel.value)){
+    const first = lawdsOfScope(sel.value)[0];
+    if(first) sel.value = first.lawd;
+  }
+  renderRegionChips();
+  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가는 전체 평형)
@@ -1073,7 +1248,7 @@ function analyzeComplex(all, name, months, rawAll){
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
       recent:{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor},
       max, maxDate, quarters, trend,
-      // 신고가: 가장 최근 거래가 곧 최고가일 때만 표시
+      // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
   return { found:true, mode:'complex', name:officialName, umd:hits[0].umd, build:hits[0].build,
@@ -1085,24 +1260,25 @@ function analyzeComplex(all, name, months, rawAll){
 
 function analyzeRegion(all, months){
   const byApt={};
-  for(const t of all){ const k=`${t.apt}|${t.umd}`; (byApt[k]=byApt[k]||[]).push(t); }
+  // 시·도 전체 통합 조회에서는 서로 다른 구에 같은 단지명이 존재할 수 있으므로 구까지 키에 포함한다
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
   const r3set = new Set(months.slice(0,3)), p3set = new Set(months.slice(3,6));
   const topVolume = Object.entries(byApt).map(([k,arr])=>{
     const sorted = arr.slice().sort((a,b)=>dkey(b).localeCompare(dkey(a)));
     const pyCnt={}; sorted.forEach(t=>pyCnt[t.py]=(pyCnt[t.py]||0)+1);
     const mainPy = Object.entries(pyCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    const [apt,umd]=k.split('|');
+    const [apt,umd,gu]=k.split('|');
     const r3n = arr.filter(t=>r3set.has(t.ym)).length;
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
-    return {apt, umd, n:sorted.length, mainPy:`${mainPy}평`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
+    return {apt, umd, gu:gu||null, n:sorted.length, mainPy:`${mainPy}평`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).sort((a,b)=>b.n-a.n).slice(0,100);
   const seen=new Set(); const highDeals=[];
   for(const t of all.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))){
-    const k=`${t.apt}|${t.umd}`;
+    const k=`${t.apt}|${t.umd}|${t.gu||''}`;
     if(seen.has(k)) continue;
     seen.add(k);
-    highDeals.push({apt:t.apt, umd:t.umd, py:`${t.py}평`, amt:t.amt, date:`${ymLabel(t.ym)}.${t.d}`, floor:t.floor, build:t.build, kind:t.kind||null, isNew:isRecentDeal(t)});
+    highDeals.push({apt:t.apt, umd:t.umd, gu:t.gu||null, py:`${t.py}평`, amt:t.amt, date:`${ymLabel(t.ym)}.${t.d}`, floor:t.floor, build:t.build, kind:t.kind||null, isNew:isRecentDeal(t)});
     if(highDeals.length>=100) break;
   }
   return { found:true, mode:'region', total:all.length,
@@ -1459,7 +1635,17 @@ renderFavRegions();
 updateRegionFavBtn();
 refreshFavBadges();
 initFromURL();
-function quick(n){ setMode('complex'); document.getElementById('q').value=n; search(); }
+// guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
+// setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
+function quick(n, guName){
+  setMode('complex');
+  if(guName){
+    const opt = [...sel.options].find(o=>o.textContent===guName);
+    if(opt) sel.value = opt.value;
+  }
+  document.getElementById('q').value=n;
+  search();
+}
 
 async function search(){
   updateRegionFavBtn();
@@ -1486,7 +1672,14 @@ async function search(){
   // → 같은 지역에서 이 세 탭을 오가며 검토할 때(내부 검토용이라 자주 왔다갔다 함) 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
   // 표시상 개월수(neededMN)는 그대로 유지되고, 사용자가 36개월 이상을 직접 선택하면 그 값을 그대로 따른다(24는 하한선일 뿐 상한이 아님).
-  const effMN = (mode==='updown'||mode==='peak'||mode==='longpeak') ? 24 : Math.max(mN, 24);
+  // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
+  // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
+  // 지역 랭킹 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
+  const multiTargets = mode!=='region' ? []
+    : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
+  const allScope = multiTargets.length > 0;
+  const effMN = allScope ? mN
+    : (mode==='updown'||mode==='peak'||mode==='longpeak') ? 24 : Math.max(mN, 24);
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
@@ -1502,7 +1695,44 @@ async function search(){
     let rawP = [];
     let rawJ = [];
 
-    if(mode==='compare'){
+    if(allScope){
+      // 시·도 전체 통합 조회: 브라우저·서버 양쪽 부하를 감안해 한 번에 6개 지역씩 끊어서 조회한다
+      // (25~39개를 동시에 던지면 모바일에서 일부 요청이 타임아웃되거나 순서가 크게 밀림)
+      const targets = multiTargets;
+      const merged = [];
+      const failed = [];
+      const CHUNK = 6;
+      for(let i=0;i<targets.length;i+=CHUNK){
+        const part = targets.slice(i, i+CHUNK);
+        document.getElementById('loadMsg').textContent =
+          `${targets.length}개 지역 조회 중… (${Math.min(i+CHUNK,targets.length)}/${targets.length})`;
+        const got = await Promise.all(part.map(t =>
+          ensureMonths(t.lawd, effMN).catch(()=>{ failed.push(t.name); return []; })
+        ));
+        got.forEach((arr, k)=>{
+          const guName = part[k].name;
+          // 통합 랭킹에서는 어느 구인지 표시해야 하므로 거래마다 구 이름을 붙인다
+          for(const t of arr) merged.push({ ...t, gu: guName });
+        });
+      }
+      let items = floorF(windowF(merged));
+      const pb = document.getElementById('pyBand').value.split('-');
+      const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+      if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+      // 헤더 제목: 1~3개면 이름을 나열하고, 그보다 많으면 "○○ 외 N곳"으로 축약
+      const names = targets.map(t=>t.name);
+      const scopeLabel = regionSel.length
+        ? (names.length<=3 ? names.join(' · ') : `${names[0]} 외 ${names.length-1}곳`)
+        : sel.options[sel.selectedIndex].textContent;
+      if(!items.length){
+        d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간이나 평형을 조정해 보세요.'};
+      } else {
+        d = analyzeRegion(items, months);
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        d.scopeLabel = scopeLabel;
+        d.failedRegions = failed;
+      }
+    } else if(mode==='compare'){
       const uniq = [...new Set(cmpItems.map(x=>x.lawd))];
       const fetched = await Promise.all(uniq.map(ld=>ensureMonths(ld, effMN)));
       const byLawd = {};
@@ -1518,7 +1748,7 @@ async function search(){
       ]);
       rawP = rawPFetched;
       rawJ = rawJFetched;
-      // 분양권·입주권도 매매와 합쳐서 함께 분석 (평균·차트·최고가·신고가 전부 반영)
+      // 분양권·입주권도 매매와 합쳐서 함께 분석 (평균·차트·최고가 배지 전부 반영)
       // 매매 데이터가 아예 없는 "분양권 전용" 신축 단지(예: 아직 준공 전)도 조회 가능해야 하므로,
       // 매매·분양권 양쪽에서 독립적으로 이름 매칭을 시도한 뒤 병합한다 (매매 매칭 성공 여부와 무관하게 분양권도 항상 시도).
       let rawMerged = raw;
@@ -1906,7 +2136,7 @@ function pyTableHTML(d){
   return `<table>
     <tr><th>평형</th><th class="tr-r">${esc(qLabels[0])}</th><th class="tr-r">${esc(qLabels[1])}</th><th class="tr-r th-teal2">${esc(qLabels[2])}</th><th class="tr-r th-teal">${esc(qLabels[3])}</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">신고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r">${avgCell(p.quarters[0].avg)}</td>
       <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
       <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
@@ -1930,7 +2160,7 @@ function tradesHTML(d, footNote){
       const isMax = !t.ex && maxByPy[t.py] === t.amt && !maxMarked.has(t.py);
       if(isMax) maxMarked.add(t.py);
       const cls = t.ex ? ' class="exrow"' : '';
-      return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` ${t.area.toFixed(2)}㎡`:''}</span>${isMax?'<span class="nh">신고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` ${t.area.toFixed(2)}㎡`:''}</span>${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
@@ -2072,6 +2302,43 @@ function selectPy(i){
 }
 
 // 단지 분석 카드 안의 가변 영역(평형칩·요약표·차트·[단기추세·층별프리미엄]·거래내역) — 매매/전세 서브탭 전환 시 이 부분만 다시 그림
+// ── 전세가율(전세 뷰 전용) ──
+// 매매 데이터(lastData)와 전세 데이터(lastData.jeonse)에서 같은 평형끼리 최근 분기 평균가를 비교.
+// 매매 화면은 전혀 건드리지 않고 "전세" 토글을 눌렀을 때만 한 줄로 노출한다. (2026.07 추가)
+// 단일 최신 거래가 아니라 분기 평균을 쓰는 이유: 거래가 드문 단지에서 한 건의 저층·특이 거래로 비율이 크게 튀는 것을 막기 위함.
+function latestQAvg(p){
+  if(!p || !p.quarters) return null;
+  for(let i=p.quarters.length-1; i>=0; i--){ if(p.quarters[i].avg) return p.quarters[i].avg; } // 오래된→최신 순이므로 뒤에서부터
+  return null;
+}
+function jeonseRatioHTML(){
+  const sale = lastData, jeon = lastData && lastData.jeonse;
+  if(!sale || !jeon || !sale.byPy || !jeon.byPy) return '';
+  // 평형이 양쪽에 다 있는 경우만 비교 가능 — 전세 거래 건수가 가장 많은 평형을 대표로 삼는다
+  const rows = [];
+  jeon.byPy.forEach(jp=>{
+    const sp = sale.byPy.find(x=>x.py===jp.py);
+    if(!sp) return;
+    const jAvg = latestQAvg(jp), sAvg = latestQAvg(sp);
+    if(!jAvg || !sAvg || !sAvg.v) return;
+    rows.push({ py:jp.py, pct: Math.round(jAvg.v/sAvg.v*100), jv:jAvg.v, sv:sAvg.v, n:jp.n });
+  });
+  if(!rows.length) return '';
+  const rep = rows.slice().sort((a,b)=>b.n-a.n)[0]; // 전세 거래 최다 평형
+  const others = rows.filter(r=>r.py!==rep.py).sort((a,b)=>b.n-a.n)
+    .map(r=>`${esc(r.py)} ${r.pct}%`).join(' · ');
+  return `
+    <div class="sec" style="padding-bottom:0">
+      <h3>전세가율 — ${esc(rep.py)} (전세 거래 최다)</h3>
+      <div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 4px">
+        <span style="font-size:26px;font-weight:700;color:var(--teal)">${rep.pct}%</span>
+        <span class="rng">전세 ${rep.jv}억 ÷ 매매 ${rep.sv}억</span>
+      </div>
+      ${others? `<div class="rng">다른 평형 — ${others}</div>`:''}
+      <div class="rng" style="margin-top:4px">최근 분기 평균가 기준 · 매매·전세 거래가 모두 있는 평형만 계산</div>
+    </div>`;
+}
+
 function complexDynamicHTML(){
   const isSale = complexView==='sale';
   const priceLabel = isSale ? '매매가' : '전세가';
@@ -2081,6 +2348,7 @@ function complexDynamicHTML(){
   }
   const ci = chartTarget(d);
   return `
+    ${isSale ? '' : jeonseRatioHTML()}
     <div class="sec">
       <div class="chips" id="pyChips">
         <span class="chip on" onclick="selectPy(-1)">전체</span>
@@ -2315,7 +2583,7 @@ function renderCompare(d){
 }
 
 function renderRegion(d){
-  const regionName = sel.options[sel.selectedIndex].textContent;
+  const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
@@ -2328,12 +2596,13 @@ function renderRegion(d){
       </div>
       <h2>${esc(regionName)} 실거래 랭킹</h2>
       <div class="meta">${esc(d.period)} · 총 거래 ${d.total}건${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>기간 최고가 거래</h3>
       ${rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
     </div>
 
@@ -2470,7 +2739,7 @@ function renderPeak(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2>${esc(regionName)} <span style="color:var(--yellow)">분기</span> 저평가</h2>
-      <div class="meta">${esc(d.period)} · 최근 3개월 최고가 vs 이전 3개월 최고가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} · 최근 3개월 최고가 vs 이전 3개월 최고가 · <b style="color:#7FD4D9">20~39평</b></div>
     </div>
 
     <div class="sec">
@@ -2480,7 +2749,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">최근 3개월 최고가 vs 이전 3개월 최고가 비교(각 2건 이상 표본 필요) · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">최근 3개월 최고가 vs 이전 3개월 최고가 비교(각 2건 이상 표본 필요) · 20~39평 구간만 집계 · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -2494,7 +2763,7 @@ function renderLongPeak(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2>${esc(regionName)} <span style="color:var(--yellow)">연간</span> 저평가</h2>
-      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 · <b style="color:#7FD4D9">20~39평</b></div>
     </div>
 
     <div class="sec">
@@ -2504,9 +2773,21 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요) · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요) · 20~39평 구간만 집계 · 5층 이상 거래만 집계 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 </script>
+<div class="rgdim" id="rgDim" onclick="closeRegionPicker()"></div>
+<div class="rgpanel" id="rgPanel" role="dialog" aria-label="지역 선택">
+  <div class="rghd">
+    <h4 id="rgTitle">지역 선택</h4>
+    <input class="rgsearch" id="rgSearch" type="text" placeholder="지역명 검색 (예: 강남, 분당)" autocomplete="off" oninput="buildRegionPicker()">
+  </div>
+  <div class="rgbody" id="rgBody"></div>
+  <div class="rgft" id="rgFt" style="display:none">
+    <button type="button" class="cl" onclick="clearRegions();buildRegionPicker()">전체 해제</button>
+    <button type="button" class="ok" onclick="closeRegionPicker()">완료</button>
+  </div>
+</div>
 </body>
 </html>
