@@ -187,18 +187,22 @@
   .rgsearch{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;
     padding:8px 10px;font-family:inherit;font-size:13px;outline:none}
   .rgsearch:focus{border-color:var(--teal)}
-  .rgbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
-  .rggrp{position:sticky;top:0;background:var(--slate-bg);color:var(--sub);
-    font-size:10px;font-weight:800;padding:4px 14px;letter-spacing:.3px;z-index:1}
-  /* 행간 초밀착: 세로 패딩 최소화 + line-height 1.15 → 행 높이 약 26px */
-  .rgitem{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:5px 14px;font-size:13px;line-height:1.15;color:var(--ink);cursor:pointer;border:0;background:none;
-    width:100%;box-sizing:border-box;font-family:inherit;text-align:left}
+  .rgbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 10px 10px}
+  .rggrp{position:sticky;top:0;background:#fff;color:var(--sub);
+    font-size:11px;font-weight:800;padding:10px 4px 6px;letter-spacing:.3px;z-index:1}
+  .rgall{display:block;width:100%;box-sizing:border-box;text-align:left;font-family:inherit;
+    border:1.5px dashed var(--teal);border-radius:10px;background:var(--teal-light-soft);
+    color:var(--teal-dark);font-size:12.5px;font-weight:800;padding:8px 10px;margin-bottom:6px;cursor:pointer}
+  /* 칩 그리드: 세로로 쭉 훑는 대신 한 화면에 여러 개가 한꺼번에 보이도록 wrap 배치 (2026.07 개선) */
+  .rggrid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .rgitem{display:inline-flex;align-items:center;gap:4px;
+    padding:8px 12px;font-size:13px;line-height:1.2;color:var(--ink);cursor:pointer;
+    border:1.5px solid var(--line);background:#fff;border-radius:999px;
+    box-sizing:border-box;font-family:inherit;text-align:left;white-space:nowrap}
   .rgitem:active{background:var(--teal-light-soft)}
-  .rgitem.sel{background:var(--teal-soft);color:var(--teal-dark);font-weight:800}
-  .rgitem.all{font-weight:800;color:var(--teal-dark)}
-  .rgitem .tick{flex:0 0 auto;font-size:12px;color:var(--teal);visibility:hidden}
-  .rgitem.sel .tick{visibility:visible}
+  .rgitem.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:800}
+  .rgitem .tick{flex:0 0 auto;font-size:11px;display:none}
+  .rgitem.sel .tick{display:inline}
   .rgft{flex:0 0 auto;display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:10px;padding:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -323,6 +327,8 @@ const REGIONS = [
   ['경기', [['부천 원미구','BC-원미구'],['부천 소사구','BC-소사구'],['부천 오정구','BC-오정구'],['고양 덕양구','41281'],['고양 일산동구','41285'],['고양 일산서구','41287'],['과천시','41290'],['광명시','41210'],['광주시','41610'],['구리시','41310'],['군포시','41410'],['김포시','41570'],['남양주시','41360'],['성남 분당구','41135'],['성남 수정구','41131'],['성남 중원구','41133'],['수원 권선구','41113'],['수원 영통구','41117'],['수원 장안구','41111'],['수원 팔달구','41115'],['시흥시','41390'],['안산 단원구','41273'],['안산 상록구','41271'],['안양 동안구','41173'],['안양 만안구','41171'],['용인 기흥구','41463'],['용인 수지구','41465'],['용인 처인구','41461'],['의왕시','41430'],['의정부시','41150'],['이천시','41500'],['파주시','41480'],['평택시','41220'],['하남시','41450'],['화성 동탄구','HS-동탄구'],['화성 병점구','HS-병점구'],['화성 만세구','HS-만세구'],['화성 효행구','HS-효행구'],['오산시','41370']]],
   ['인천', [['제물포구','IC-제물포구'],['영종구','IC-영종구'],['미추홀구','28177'],['연수구','28185'],['남동구','28200'],['부평구','28237'],['계양구','28245'],['서해구','IC-서해구'],['검단구','IC-검단구'],['강화군','28710']]]
 ];
+// 그룹(서울/경기/인천) 순서는 유지하고, 각 그룹 내부 지역명만 가나다순 정렬 (2026.07)
+REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
 let mode = 'complex';
 let lastData = null;
 
@@ -473,12 +479,22 @@ function refreshFavBadges(){
 function getFavRegions(){ try{ return JSON.parse(localStorage.getItem('apc:favRegions')||'[]'); }catch(e){ return []; } }
 function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
-  const code = sel.value;
+  // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
+  // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
+  const useMulti = (mode==='region' && regionSel.length>0);
+  const targets = useMulti
+    ? regionSel.map(x=>({code:x.lawd, label:x.name}))
+    : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
   let favs = getFavRegions();
-  if(isFavRegion(code)) favs = favs.filter(x=>x.code!==code);
-  else {
-    const label = [...sel.options].find(o=>o.value===code)?.textContent || code;
-    favs.unshift({code, label});
+  const allFav = targets.every(t=>favs.some(f=>f.code===t.code));
+  if(allFav){
+    const codes = new Set(targets.map(t=>t.code));
+    favs = favs.filter(x=>!codes.has(x.code));
+  } else {
+    targets.forEach(t=>{
+      favs = favs.filter(x=>x.code!==t.code); // 중복 방지 후 맨 앞으로
+      favs.unshift(t);
+    });
     favs = favs.slice(0,20);
   }
   try{ localStorage.setItem('apc:favRegions', JSON.stringify(favs)); }catch(e){}
@@ -487,7 +503,13 @@ function toggleFavRegion(){
 }
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
-  if(btn) btn.textContent = isFavRegion(sel.value) ? '★' : '☆';
+  if(!btn) return;
+  if(mode==='region' && regionSel.length>0){
+    const favs = getFavRegions();
+    btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
+  } else {
+    btn.textContent = isFavRegion(sel.value) ? '★' : '☆';
+  }
 }
 function renderFavRegions(){
   const favs = getFavRegions();
@@ -631,6 +653,7 @@ function removeRegion(lawd){
 function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
+  if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
   if(mode!=='region'){ box.style.display='none'; return; }
   box.style.display = '';
@@ -676,14 +699,14 @@ function buildRegionPicker(){
     if(!hits.length) return;
     html += `<div class="rggrp">${esc(g)}</div>`;
     if(multi && !q){
-      html += `<button type="button" class="rgitem all" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">${esc(g)} 전체 추가<span class="tick">✓</span></button>`;
+      html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
-    hits.forEach(([n,c])=>{
+    html += `<div class="rggrid">` + hits.map(([n,c])=>{
       const on = multi ? picked.has(c) : (sel.value===c);
-      html += `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')">${esc(n)}<span class="tick">✓</span></button>`;
-    });
+      return `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
+    }).join('') + `</div>`;
   });
-  body.innerHTML = html || '<div class="rng" style="padding:12px 14px">검색 결과가 없습니다</div>';
+  body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
 }
 function pickRegion(v){
   if(mode==='region'){
@@ -1647,6 +1670,40 @@ function quick(n, guName){
   search();
 }
 
+// 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
+// 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
+// 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
+// (지역 복수 선택 통합 랭킹에서도 동일 로직을 써야 해서 2026.07 공용 함수로 분리)
+function mergeTradeAndPresaleForRanking(raw, rawP){
+  try{
+    const tradeNames = [...new Set(raw.map(t=>t.apt))];
+    const tradeNormMap = {};
+    tradeNames.forEach(n=>{ const norm=n.replace(/\s/g,''); if(!tradeNormMap[norm]) tradeNormMap[norm]=n; });
+
+    const presaleNames = [...new Set(rawP.map(t=>t.apt))];
+    const presaleCount = {}; rawP.forEach(t=>presaleCount[t.apt]=(presaleCount[t.apt]||0)+1);
+    const presaleNormRep = {};
+    presaleNames.forEach(n=>{
+      const norm = n.replace(/\s/g,'');
+      if(!presaleNormRep[norm] || presaleCount[n] > presaleCount[presaleNormRep[norm]]) presaleNormRep[norm] = n;
+    });
+
+    const nameMap = {};
+    presaleNames.forEach(pname=>{
+      const norm = pname.replace(/\s/g,'');
+      if(tradeNormMap[norm]){ nameMap[pname] = tradeNormMap[norm]; return; }
+      const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return tn.includes(norm)||norm.includes(tn); });
+      nameMap[pname] = matched || presaleNormRep[norm];
+    });
+
+    const convertedP = rawP.map(t=>({
+      apt:nameMap[t.apt], umd:t.umd, area:t.area, py:t.py, amt:t.amt, ym:t.ym, d:t.d,
+      floor:t.floor||'', build:'', direct:t.direct, kind:t.ownership||'분양권'
+    }));
+    return raw.concat(convertedP);
+  }catch(e){ return raw; }
+}
+
 async function search(){
   updateRegionFavBtn();
   renderFavRegions();
@@ -1706,13 +1763,17 @@ async function search(){
         const part = targets.slice(i, i+CHUNK);
         document.getElementById('loadMsg').textContent =
           `${targets.length}개 지역 조회 중… (${Math.min(i+CHUNK,targets.length)}/${targets.length})`;
-        const got = await Promise.all(part.map(t =>
-          ensureMonths(t.lawd, effMN).catch(()=>{ failed.push(t.name); return []; })
-        ));
-        got.forEach((arr, k)=>{
+        // 매매·분양권을 구별로 동시에 조회 — 이름 정규화 병합은 구 단위로 해야 한다(다른 구에 같은 단지명이
+        // 존재할 수 있어, 전체를 한꺼번에 정규화하면 서로 다른 구의 단지가 잘못 합쳐질 수 있음)
+        const gotPairs = await Promise.all(part.map(t => Promise.all([
+          ensureMonths(t.lawd, effMN).catch(()=>{ failed.push(t.name); return []; }),
+          ensureMonthsP(t.lawd, effMN).catch(()=>[]),
+        ])));
+        gotPairs.forEach(([tradeArr, presaleArr], k)=>{
           const guName = part[k].name;
+          const mergedGu = mergeTradeAndPresaleForRanking(tradeArr, presaleArr);
           // 통합 랭킹에서는 어느 구인지 표시해야 하므로 거래마다 구 이름을 붙인다
-          for(const t of arr) merged.push({ ...t, gu: guName });
+          for(const t of mergedGu) merged.push({ ...t, gu: guName });
         });
       }
       let items = floorF(windowF(merged));
@@ -1778,37 +1839,7 @@ async function search(){
           }
         }catch(e){ rawMerged = raw; }
       } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak'){
-        // 지역·등락 랭킹: 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화한다.
-        // 1) 분양권 단지명을 매매 쪽 표기에 맞춰 정규화(exact→substring)
-        // 2) 매매에 아예 없는(분양권 전용) 단지는, 분양권 데이터 안에서끼리도 표기를 통일
-        //    (예: "올림픽파크포레온" vs "올림픽파크 포레온"처럼 원본 API 자체가 표기가 갈릴 수 있음)
-        try{
-          const tradeNames = [...new Set(raw.map(t=>t.apt))];
-          const tradeNormMap = {};
-          tradeNames.forEach(n=>{ const norm=n.replace(/\s/g,''); if(!tradeNormMap[norm]) tradeNormMap[norm]=n; });
-
-          const presaleNames = [...new Set(rawP.map(t=>t.apt))];
-          const presaleCount = {}; rawP.forEach(t=>presaleCount[t.apt]=(presaleCount[t.apt]||0)+1);
-          const presaleNormRep = {};
-          presaleNames.forEach(n=>{
-            const norm = n.replace(/\s/g,'');
-            if(!presaleNormRep[norm] || presaleCount[n] > presaleCount[presaleNormRep[norm]]) presaleNormRep[norm] = n;
-          });
-
-          const nameMap = {};
-          presaleNames.forEach(pname=>{
-            const norm = pname.replace(/\s/g,'');
-            if(tradeNormMap[norm]){ nameMap[pname] = tradeNormMap[norm]; return; }
-            const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return tn.includes(norm)||norm.includes(tn); });
-            nameMap[pname] = matched || presaleNormRep[norm];
-          });
-
-          const convertedP = rawP.map(t=>({
-            apt:nameMap[t.apt], umd:t.umd, area:t.area, py:t.py, amt:t.amt, ym:t.ym, d:t.d,
-            floor:t.floor||'', build:'', direct:t.direct, kind:t.ownership||'분양권'
-          }));
-          rawMerged = raw.concat(convertedP);
-        }catch(e){ rawMerged = raw; }
+        rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
       if(mode==='region' || mode==='volume'){
@@ -2326,7 +2357,7 @@ function jeonseRatioHTML(){
   if(!rows.length) return '';
   const rep = rows.slice().sort((a,b)=>b.n-a.n)[0]; // 전세 거래 최다 평형
   const others = rows.filter(r=>r.py!==rep.py).sort((a,b)=>b.n-a.n)
-    .map(r=>`${esc(r.py)} ${r.pct}%`).join(' · ');
+    .map(r=>`${esc(r.py)} <b style="color:var(--teal)">${r.pct}%</b>`).join(' · ');
   return `
     <div class="sec" style="padding-bottom:0">
       <h3>전세가율 — ${esc(rep.py)} (전세 거래 최다)</h3>
