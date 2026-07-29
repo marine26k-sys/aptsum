@@ -84,11 +84,17 @@ function matchKapt(list, name) {
   const qn = name.replace(/\s/g, "");
   const exact = list.filter((a) => a.kaptName.replace(/\s/g, "") === qn);
   if (exact.length) return exact[0];
-  const cand = list.filter((a) => {
+  let cand = list.filter((a) => {
     const an = a.kaptName.replace(/\s/g, "");
     return an && (an.includes(qn) || qn.includes(an));
   });
   if (!cand.length) return null;
+  // 매매 실거래(analyze.mjs)에서 나온 단지명을 세대수와 매칭하는 함수이므로, 후보 중 임대 세대만
+  // 있는 단지(예: "두산3단지"가 임대, "두산1,2단지"가 일반분양인 봉천 두산아파트처럼 같은 이름을 쓰는
+  // 임대·분양 혼재 단지)는 배제한다 — 임대 세대는 애초에 매매로 거래될 수 없어, 여기 온 이름은
+  // 사실상 항상 분양 동 쪽을 가리킨다. 단, 후보가 임대 표기뿐이면(진짜 임대 단지를 조회한 경우) 그대로 둔다.
+  const nonRental = cand.filter((a) => !a.kaptName.includes("임대"));
+  if (nonRental.length) cand = nonRental;
   // 여러 후보가 있으면 이름 길이가 검색어와 가장 가까운 쪽 채택
   cand.sort((a, b) => Math.abs(a.kaptName.replace(/\s/g, "").length - qn.length) - Math.abs(b.kaptName.replace(/\s/g, "").length - qn.length));
   return cand[0];
