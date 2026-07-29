@@ -286,12 +286,6 @@
         <option value="20+">20년 초과</option>
       </select>
     </div>
-    <div class="row2" id="newHighRow" style="display:none">
-      <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--sub);background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer">
-        <input type="checkbox" id="newHighOnly" style="width:16px;height:16px;accent-color:var(--teal)">
-        선택 기간 내 최고가를 최근 7일 안에 갱신한 단지만
-      </label>
-    </div>
     <button class="go" id="btn" onclick="search()">분석</button>
   </div>
 
@@ -345,6 +339,10 @@ const REGIONS = [
 REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
 let mode = 'complex';
 let lastData = null;
+// 지역랭킹→단지분석처럼 이전 검색이 끝나기 전에(await 도중) 새 검색이 시작되면,
+// 먼저 시작된 검색이 나중에 끝나면서 최신 결과를 덮어써 "엉뚱한 표"가 뜨는 경합 문제 방지용 토큰.
+// (한 화면에 렌더링은 항상 한 번만 일어나야 하므로, 렌더 직전 자신이 여전히 최신 요청인지 확인 후 아니면 조용히 폐기)
+let searchToken = 0;
 
 // ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
 const viewStack = [];
@@ -546,6 +544,9 @@ function favRegionGo(code){
   if(mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
 function restoreView(vi){
+  // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
+  // 복원된 화면을 도로 덮어쓰는 것을 막기 위해 토큰을 무효화한다.
+  searchToken++;
   const v = viewStack[vi];
   if(!v){ // 초기 화면
     document.getElementById('result').classList.remove('on');
@@ -772,6 +773,9 @@ function savePyBandPref(v){ try{ localStorage.setItem('apc:pyBand', v); }catch(e
 
 // 게이트
 function setMode(m){
+  // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
+  // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
+  searchToken++;
   mode = m;
   document.getElementById('tabC').classList.toggle('on', m==='complex');
   document.getElementById('tabCmp').classList.toggle('on', m==='compare');
@@ -795,8 +799,6 @@ function setMode(m){
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
-  document.getElementById('newHighRow').style.display = (m==='region') ? '' : 'none';
-  if(m!=='region') document.getElementById('newHighOnly').checked = false;
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak') ? 'none' : '';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가는 전체 평형)
@@ -1196,14 +1198,6 @@ function buildYearLabel(){
   if(!v) return null;
   return v==='20+' ? '20년 초과' : `${v}년 이내`;
 }
-// 지역 랭킹 전용: "신고가 갱신" 체크박스가 켜져 있으면 기간 최고가 목록을 신고가 갱신 목록으로 교체
-function applyNewHighOnly(d){
-  if(mode!=='region') return;
-  const on = document.getElementById('newHighOnly').checked;
-  d.newHighOnly = on;
-  if(on && d.newHighDeals) d.highDeals = d.newHighDeals;
-}
-
 function markOutliers(arr, months){
   for(const t of arr){
     // ⚠️ 여기서 t.ex를 캐싱해 재계산을 건너뛰면 안 됨 — 거래 객체(t)는 monthCache에서 여러 화면(단지 분석/등락 랭킹/저평가)이
@@ -1350,18 +1344,13 @@ function analyzeRegion(all, months){
   const grouped = Object.entries(byApt).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
     const [apt,umd,gu] = k.split('|');
-    // 신고가 갱신 감지(newHighOnly 체크박스)용: 표본 3건 이상 + 그룹 최고가가 최근 7일 이내 계약일 때만 "갱신"으로 인정
-    // (신축 첫 거래가 트리비얼하게 걸리는 것 방지)
     return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
-      floor:top.floor, build:top.build, kind:top.kind||null, isNew:isRecentDeal(top), n:arr.length,
-      isNewHighRecent: arr.length>=3 && isRecentDeal(top, 7)};
+      floor:top.floor, build:top.build, kind:top.kind||null, isNew:isRecentDeal(top), n:arr.length};
   });
   const highDeals = grouped.slice().sort((a,b)=>b.amt-a.amt).slice(0,100);
-  // 전체 그룹(가격 상위 100개로 자르기 전)에서 뽑아야 중저가대 단지의 신고가 갱신도 놓치지 않는다
-  const newHighDeals = grouped.filter(x=>x.isNewHighRecent).sort((a,b)=>b.amt-a.amt).slice(0,100);
   return { found:true, mode:'region', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
-    topVolume, highDeals, newHighDeals };
+    topVolume, highDeals };
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산 — analyzeUpDown 내부에서 공용으로 사용
@@ -1760,6 +1749,7 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
 }
 
 async function search(){
+  const myToken = ++searchToken;
   updateRegionFavBtn();
   renderFavRegions();
   const name = document.getElementById('q').value.trim();
@@ -1850,7 +1840,6 @@ async function search(){
         d.buildYear = buildYearLabel();
         d.scopeLabel = scopeLabel;
         d.failedRegions = failed;
-        applyNewHighOnly(d);
       }
     } else if(mode==='compare'){
       const uniq = [...new Set(cmpItems.map(x=>x.lawd))];
@@ -1910,7 +1899,6 @@ async function search(){
         if(mode==='volume') d.mode = 'volume';
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         d.buildYear = buildYearLabel();
-        if(mode==='region') applyNewHighOnly(d);
         if(!items.length){ d = {found:false, note:'선택한 평형·층수·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='updown'){
         const itemsUnfiltered = items; // 평형 필터 적용 전 — "초단기 저평가 단지"는 이 데이터로 고정 계산
@@ -1961,10 +1949,11 @@ async function search(){
     // 2026.07: 목록형 화면(지역·거래량·등락 랭킹, 단지 비교)은 fetchHHCntBatch로 lawd당 한 번에 묶어서 조회
     // (예전엔 최대 12건 동시 개별 조회 큐를 썼는데, 그래도 결국 목록 크기만큼 서버가 같은 정적 파일을
     // 반복해서 읽어야 했음 — 배치 엔드포인트로 바뀌면서 이 큐는 저평가 계열의 조기 종료 배치에만 남겨둠).
+    // 2026.07 추가: 단지분석·지역/거래량/등락 랭킹·단지비교의 세대수는 표시용 부가 정보일 뿐 목록 자체를
+    // 바꾸지 않으므로, 여기서 기다리지 않고 렌더링 이후 attachHHCountsAsync()에서 비동기로 채워 넣는다
+    // (첫 화면이 뜨기까지 세대수 API 왕복 한 번만큼 더 안 기다려도 됨). 단, 아래 300세대 이상 필터처럼
+    // 세대수가 목록 구성 자체를 바꾸는 경우는 예외적으로 렌더링 전에 그대로 기다린다.
     const HH_CONCURRENCY = 12; // 저평가 계열(아래) 조기 종료용 배치 크기로만 사용
-    if(d.found && d.mode==='complex'){
-      d.hh = await fetchHHCnt(lawd, d.name);
-    }
     // 등락 랭킹의 "단기 저평가 단지"·분기/연간 저평가 탭도 동일하게 세대수 표시(비교 대상 목록 각 항목)
     // 저평가 계열(초단기·분기·연간) 세 로직은 모두 300세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
     // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 HH_CONCURRENCY만큼 배치로 세대수를 조회하면서
@@ -1983,37 +1972,6 @@ async function search(){
       }
       d.divergence = filtered;
     }
-    // 나머지 탭(지역 랭킹·거래량 랭킹·등락 랭킹 상승/하락 상위·단지 비교)에도 동일하게 세대수 표시.
-    if(d.found){
-      const attachAll = (list, lw, nameField) => list && list.length
-        ? fetchHHCntBatch(lw, list.map(x=>x[nameField||'apt'])).then(map=>{ list.forEach(x=>{ x.hh = map[x[nameField||'apt']] || null; }); })
-        : Promise.resolve();
-      // 지역 랭킹은 highDeals만, 거래량 랭킹은 topVolume만 실제로 화면에 렌더링되는데,
-      // 이전엔 현재 탭에서 안 보이는 나머지 리스트(각각 최대 100건)까지 세대수를 조회하고 있어서 불필요하게 느렸다.
-      // → 실제로 보여줄 리스트 하나만 조회하도록 분리(체감 로딩 시간이 대략 절반으로 줄어듦).
-      if(mode==='region'){
-        // highDeals 각 항목의 실제 lawd로 그룹핑해서 구별로 정확히 조회한다.
-        // (버그 이력: 복수 지역 통합 조회에서 이 부분이 셀렉트에 표시된 지역 하나로만 조회하고 있어서,
-        //  다른 구 단지의 세대수가 엉뚱하게 매칭되거나 안 채워지는 문제가 있었음 — 2026.07 수정)
-        const byLawd = {};
-        (d.highDeals||[]).forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
-        await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
-          const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
-          list.forEach(x=>{ x.hh = map[x.apt] || null; });
-        }));
-      } else if(mode==='volume'){
-        await attachAll(d.topVolume, lawd);
-      } else if(mode==='updown'){
-        await Promise.all([ attachAll(d.up, lawd), attachAll(d.down, lawd) ]);
-      } else if(mode==='compare' && d.complexes && d.complexes.length){
-        const byLawd = {};
-        d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
-        await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
-          const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
-          arr.forEach(c=>{ c.hh = map[c.name] || null; });
-        }));
-      }
-    }
 
 
     // 매매·병합 데이터로 매칭 실패했을 때, 분양권 원본(rawP)에서도 이름 유사 후보를 추가로 찾아 추천에 포함
@@ -2026,6 +1984,10 @@ async function search(){
         .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);
       d.suggest = [...(d.suggest||[]), ...pSugg];
     }
+
+    // 이 사이 더 최신 검색(예: 지역랭킹에서 단지명 클릭 → 단지분석 검색)이 이미 시작됐다면,
+    // 지금 결과는 낡은 것이므로 화면에 반영하지 않고 조용히 버린다.
+    if(myToken !== searchToken) return;
 
     if(!d.found){
       if(d.multi){
@@ -2045,11 +2007,60 @@ async function search(){
     if(d.mode==='complex' && isFav(lawd, d.name)){
       favTradeCount(lawd, d.name).then(n=>{ setFavSeenCount(lawd, d.name, n); renderFavs(); }).catch(()=>{});
     }
-  }catch(err){ showError('오류: ' + esc(err.message)); }
+    // 세대수는 표시용 부가 정보라 화면을 막지 않고 렌더링 이후 비동기로 채워 넣는다 (2026.07)
+    attachHHCountsAsync(d, myToken, lawd);
+  }catch(err){ if(myToken===searchToken) showError('오류: ' + esc(err.message)); }
   finally{
-    document.getElementById('loading').classList.remove('on');
-    document.getElementById('btn').disabled = false;
+    if(myToken===searchToken){
+      document.getElementById('loading').classList.remove('on');
+      document.getElementById('btn').disabled = false;
+    }
   }
+}
+
+// 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
+// 비동기로 채워 넣는다(2026.07 — 예전엔 이 API 응답을 기다린 뒤에야 표가 그려져서 체감 지연이 있었음).
+// myToken이 이미 낡았으면(그 사이 다른 검색·탭전환·뒤로가기가 있었으면) 아무것도 건드리지 않고 조용히 종료.
+// 단지 분석·단지 비교는 사용자가 이미 평형/서브탭을 조작했을 수 있어 전체 재렌더 대신 필요한 부분만 patch한다.
+async function attachHHCountsAsync(d, myToken, lawd){
+  try{
+    if(d.mode==='complex'){
+      d.hh = await fetchHHCnt(lawd, d.name);
+      if(myToken!==searchToken) return;
+      const el = document.getElementById('complexMeta');
+      if(el) el.innerHTML = `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+    } else if(d.mode==='region'){
+      // highDeals 각 항목의 실제 lawd로 그룹핑해서 구별로 정확히 조회(복수 지역 통합 조회 대응)
+      const byLawd = {};
+      (d.highDeals||[]).forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
+      await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
+        const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
+        list.forEach(x=>{ x.hh = map[x.apt] || null; });
+      }));
+      if(myToken===searchToken) renderRegion(d); // 목록 화면이라 상태 유실 없이 전체 재렌더 가능
+    } else if(d.mode==='volume'){
+      if(d.topVolume && d.topVolume.length){
+        const map = await fetchHHCntBatch(lawd, d.topVolume.map(x=>x.apt));
+        d.topVolume.forEach(x=>{ x.hh = map[x.apt] || null; });
+      }
+      if(myToken===searchToken) renderVolume(d);
+    } else if(d.mode==='updown'){
+      const attachAll = (list) => list && list.length
+        ? fetchHHCntBatch(lawd, list.map(x=>x.apt)).then(map=>{ list.forEach(x=>{ x.hh = map[x.apt] || null; }); })
+        : Promise.resolve();
+      await Promise.all([ attachAll(d.up), attachAll(d.down) ]);
+      if(myToken===searchToken) renderUpDown(d);
+    } else if(d.mode==='compare' && d.complexes && d.complexes.length){
+      const byLawd = {};
+      d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
+      await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
+        const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
+        arr.forEach(c=>{ c.hh = map[c.name] || null; });
+      }));
+      // renderCompare(d) 대신 drawCompare(d)만 다시 그려서, 사용자가 이미 선택해둔 단지별 평형(cmpPyMap)을 유지한다.
+      if(myToken===searchToken && document.getElementById('cmpChart')) drawCompare(d);
+    }
+  }catch(e){ /* 세대수 조회 실패는 무시 — 메인 표는 이미 떠 있으므로 화면엔 영향 없음 */ }
 }
 
 // ── 차트 호버 툴팁 ──
@@ -2506,7 +2517,7 @@ function renderComplex(d){
         <button onclick="shareCurrent()" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#fff;font-size:13px;cursor:pointer">⤴</button>
       </div>
       <h2 style="padding-right:70px">${esc(d.name)}</h2>
-      <div class="meta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta" id="complexMeta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec" style="padding-bottom:0">
@@ -2703,9 +2714,9 @@ function renderRegion(d){
     </div>
 
     <div class="sec">
-      <h3>${d.newHighOnly? '신고가 갱신 단지 (최근 7일)' : '기간 최고가 거래'}</h3>
-      ${d.newHighOnly && !d.highDeals.length? '<div class="rng" style="padding:6px 0">최근 7일 이내 선택 기간 내 최고가를 갱신한 단지가 없습니다</div>' : rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${d.newHighOnly?'<span class="nh" style="background:#DC2626">신고가</span>':(x.isNew?'<span class="nh" style="background:#00828A">신규</span>':'')}</span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+      <h3>기간 최고가 거래</h3>
+      ${rows(d.highDeals, x=>`
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
     </div>
 
@@ -2788,7 +2799,7 @@ function renderUpDown(d){
 
     <div class="sec">
       <h3>단기 저평가 단지</h3>
-      <div class="rng" style="margin-bottom:4px">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:4px">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5% 이상 낮은 단지</div>
       <div class="rng" style="margin-bottom:8px">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
       ${divergenceHTML(d.divergence)}
     </div>
@@ -2846,7 +2857,7 @@ function renderPeak(d){
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 3개월 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 최근 3개월 최고가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 3개월 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 최근 3개월 최고가가 비교군 중앙값보다 5% 이상 낮은 단지</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
       ${peakDivergenceHTML(d.divergence)}
     </div>
@@ -2870,7 +2881,7 @@ function renderLongPeak(d){
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중, ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5% 이상 낮아진 단지</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중, ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5% 이상 낮은 단지</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
       ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
     </div>
