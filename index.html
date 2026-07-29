@@ -1357,12 +1357,15 @@ function analyzeRegion(all, months){
 }
 
 // ═══ 신고가 탭 ═══
-// "선택 조회기간(고정 5년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매 실거래만 집계
-// (분양권·입주권은 프리미엄 구조가 매매와 달라 같은 "최고가" 기준으로 섞으면 오해 소지가 있어 제외).
+// "선택 조회기간(고정 5년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
+// (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
 function analyzeNewHigh(all, months){
   const byApt={};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
+  // 평형(py)을 키에 포함해야 함 — 안 그러면 같은 단지의 서로 다른 평형(예: 84㎡ vs 150㎡)이 한 그룹으로
+  // 섞여서 "이번 달 84㎡ 신고가"가 훨씬 비싼 150㎡의 과거 거래 때문에 최고가로 안 잡히는(혹은 반대로
+  // 잘못 잡히는) 문제가 있었음 — 평형 필터를 걸었을 때와 안 걸었을 때 결과 개수가 안 맞던 원인
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
   const results = [];
   for(const [k, arr] of Object.entries(byApt)){
     if(arr.length < 3) continue;
@@ -1373,14 +1376,14 @@ function analyzeNewHigh(all, months){
     const prevMax = sorted.slice(1).reduce((m,t)=>Math.max(m,t.amt), 0);
     const gapAmt = R1(top.amt - prevMax);
     if(gapAmt <= 0) continue; // 직전 최고가와 같거나 낮으면(동가 재현 등) "갱신"이 아니므로 제외
-    const [apt, umd, gu] = k.split('|');
+    const [apt, umd, py, gu] = k.split('|');
     results.push({
-      apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, amt:top.amt,
-      date:`${ymLabel(top.ym)}.${top.d}`, floor:top.floor, build:top.build, n:arr.length,
+      apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${py}평`, amt:top.amt,
+      date:`${ymLabel(top.ym)}.${top.d}`, floor:top.floor, build:top.build, kind:top.kind||null, n:arr.length,
       prevMax: prevMax || null, gapAmt, gapPct: prevMax? Math.round(gapAmt/prevMax*100) : null,
     });
   }
-  results.sort((a,b)=> b.gapAmt - a.gapAmt); // 갱신폭(금액) 큰 순
+  results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     newHigh: results.slice(0,100) };
@@ -1922,7 +1925,7 @@ async function search(){
             rawMerged = raw.concat(converted);
           }
         }catch(e){ rawMerged = raw; }
-      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak'){
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='newhigh'){
         rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
@@ -2824,9 +2827,9 @@ function renderNewHigh(d){
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※매매 실거래 기준(분양권·입주권 제외) · 표본 3건 이상만 집계</div>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계</div>
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><span class="nh" style="background:#DC2626">신고가</span></span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><span class="nh" style="background:#DC2626">신고가</span></span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${x.prevMax? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
