@@ -813,8 +813,17 @@ const FRESH_TTL_MS = 3600000; // 최신 4개월 재확인 주기: 1시간 (2026.
 const EMPTY_RETRY_TTL_MS = 1800000; // 과거월 캐시가 0건일 때만 재확인하는 주기(30분, 기존 유지) — API 일시 오류로 빈 캐시가 영구 박제되는 것 방지용, 최신월 TTL과는 별개
 const STALE_RETRY_TTL_MS = 604800000; // 과거월이 0건이 아니어도(=거래는 있었지만) 캐시가 7일 넘게 지났으면 한 번 재확인 (2026.07 추가 — 조회 시점엔 일부만 신고돼 있다가 나중에 추가·정정 신고되는 경우, "4개월 신선 구간"을 벗어난 뒤엔 영구 고정돼 못 잡던 문제 보완. 재확인 후 캐시 시각(t)이 갱신되므로 이후 다시 7일 주기로 반복 확인됨(완전한 1회성은 아님) — 신고 지연이 통상 며칠~한 달 단위라 7일이면 대부분 커버되면서도 과도한 재호출은 피하는 절충)
 function lastMonthsYm(n){
+  // ⚠️ day=31(등 말일)인 채로 setMonth(-1)을 반복하면, 다음 달 일수가 31일보다 적을 때
+  // JS Date가 그 다음 달로 자동 이월돼버려 같은 달이 중복 생성되는 버그가 있었음
+  // (예: 7/31 → setMonth(6-1=5,June) 했는데 6월엔 31일이 없어서 7/1로 튕겨나감 → 다음 반복에서 7월이 또 나옴).
+  // 매달 29~31일에 재현되며, 실제로 이 중복 때문에 API 요청 개월수 범위가 한 달씩 밀리고 불필요한 중복 조회가 발생했음(2026.07 발견·수정).
+  // → 첫 반복 이후 day를 1로 고정해서 이월 자체가 안 생기게 함(1일은 어떤 달에서 빼도 항상 유효).
   const out=[]; const d=new Date();
-  for(let i=0;i<n;i++){ out.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`); d.setMonth(d.getMonth()-1); }
+  for(let i=0;i<n;i++){
+    out.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`);
+    if(i===0) d.setDate(1);
+    d.setMonth(d.getMonth()-1);
+  }
   return out; // 최신→과거
 }
 const ymLabel = ym => `${ym.slice(2,4)}.${ym.slice(4)}`;
@@ -867,6 +876,20 @@ function lsSave(lawd){
   }
 }
 
+// 월 샤드(chunks)를 한 번에 다 병렬로 쏘지 않고 최대 CHUNK_CONCURRENCY개씩만 동시에 요청 —
+// 다른 탭은 2년치(3개 조각), 신고가 탭은 3년치(최대 4개 조각, 2026.07 5년→3년으로 축소)라
+// 완전 병렬이면 국토부 API·Netlify 함수에 순간적으로 동시 요청이 몰려 레이트리밋·타임아웃 위험이 있음(2026.07).
+// 4로 잡아서 신고가의 4개 조각은 한 번에(1라운드), 그 이상 조각이 필요한 경우(복수 지역 조회 등)만 여러 라운드로 나눔.
+const CHUNK_CONCURRENCY = 4;
+async function fetchChunksLimited(chunks, fetchFn, lawd){
+  const results = [];
+  for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
+    const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
+    results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c))));
+  }
+  return results;
+}
+
 async function ensureMonths(lawd, n){
   lsLoad(lawd);
   const yms = lastMonthsYm(n);
@@ -889,7 +912,7 @@ async function ensureMonths(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await Promise.all(chunks.map(c=>postFetch(lawd, c)));
+    const results = await fetchChunksLimited(chunks, postFetch, lawd);
     chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
     results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
     lsSave(lawd);
@@ -963,7 +986,7 @@ async function ensureMonthsP(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await Promise.all(chunks.map(c=>postFetchP(lawd, c)));
+    const results = await fetchChunksLimited(chunks, postFetchP, lawd);
     chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
     results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
     lsSaveP(lawd);
@@ -1038,7 +1061,7 @@ async function ensureMonthsJ(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await Promise.all(chunks.map(c=>postFetchJ(lawd, c)));
+    const results = await fetchChunksLimited(chunks, postFetchJ, lawd);
     chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
     results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
     lsSaveJ(lawd);
@@ -1312,7 +1335,7 @@ function analyzeRegion(all, months){
 }
 
 // ═══ 신고가 탭 ═══
-// "선택 조회기간(고정 5년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
+// "선택 조회기간(고정 3년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
 function analyzeNewHigh(all, months){
@@ -1771,9 +1794,11 @@ async function search(){
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
-  // 항상 최대 선택 가능 기간(5년=60개월, monthsN 셀렉트의 상한)을 고정으로 분석한다 — 그 안에서 최고가가 최근 한 달(30일) 이내
-  // 세워졌는지를 판단(완전한 전체 역대 최고가는 아니지만, RTMS 조회 가능 범위 안에서 근사)
-  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 6 : (mode==='longpeak' ? curMonthNum+12 : (mode==='newhigh' ? 60 : mN))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 분기 저평가는 최근 3개월 vs 이전 3개월 최고가(6개월) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가는 5년 고정
+  // 고정 기간으로 분석한다 — 그 안에서 최고가가 최근 한 달(30일) 이내 세워졌는지를 판단(완전한 전체 역대 최고가는
+  // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
+  // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
+  // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
+  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 6 : (mode==='longpeak' ? curMonthNum+12 : (mode==='newhigh' ? 36 : mN))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 분기 저평가는 최근 3개월 vs 이전 3개월 최고가(6개월) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -1785,7 +1810,7 @@ async function search(){
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   const allScope = multiTargets.length > 0;
   const effMN = allScope ? mN
-    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval') ? 24 : (mode==='newhigh' ? 60 : Math.max(mN, 24));
+    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval') ? 24 : (mode==='newhigh' ? 36 : Math.max(mN, 24));
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
@@ -2806,7 +2831,7 @@ function renderNewHigh(d){
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 5년 내 최고가 기준</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -2882,9 +2907,8 @@ function renderShortUndervalue(d){
     </div>
 
     <div class="sec">
-      <h3>단기 저평가 단지</h3>
-      <div class="rng" style="margin-bottom:4px">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5% 이상 낮은 단지</div>
-      <div class="rng" style="margin-bottom:8px">※매매 실거래 기준(분양권·입주권 제외) · 20~39평만 집계 · 최근 호가와 다를 수 있음</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5% 이상 낮은 단지</div>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※매매 실거래 기준(분양권·입주권 제외) · 20~39평만 집계 · 최근 호가와 다를 수 있음</div>
       ${divergenceHTML(d.divergence)}
     </div>
 
