@@ -82,19 +82,30 @@ async function fetchList(key, sgg) {
 // analyzeComplex의 matchComplex와 동일한 방식(정확 일치 → 부분 포함)으로 단지명 매칭
 function matchKapt(list, name) {
   const qn = name.replace(/\s/g, "");
-  const exact = list.filter((a) => a.kaptName.replace(/\s/g, "") === qn);
-  if (exact.length) return exact[0];
+  // v108에서 "임대 후보 배제"를 부분일치(cand) 단계에만 넣었었는데, 정확 일치(exact)가 먼저 return돼버려서
+  // 정확히 일치하는 이름이 하필 임대 동일 때(예: 두산3단지가 K-apt에 정확히 "두산"으로 등록돼 있고,
+  // 매매 대상인 1·2단지는 "두산1,2단지"처럼 다른 이름으로 등록돼 있는 경우) v108 수정이 전혀 적용되지
+  // 않는 문제가 있었다 — 정확/부분일치를 가리지 않고 후보를 다 모은 뒤 임대부터 배제하고,
+  // 그 다음에 정확 일치를 우선하도록 순서를 바꿈.
   let cand = list.filter((a) => {
     const an = a.kaptName.replace(/\s/g, "");
-    return an && (an.includes(qn) || qn.includes(an));
+    return an && (an === qn || an.includes(qn) || qn.includes(an));
   });
   if (!cand.length) return null;
+  // 디버그: 후보가 2개 이상(이름이 겹치는 단지가 여러 개)이면, 실제 K-apt 등록 이름이 어떻게 돼 있는지
+  // 매칭 로직을 또 고칠 일이 생길 때 바로 확인할 수 있게 로그로 남겨둔다(Netlify 함수 로그에서 확인 가능).
+  if (cand.length > 1) {
+    console.error(`[hhcnt] "${name}" 매칭 후보 ${cand.length}건:`, JSON.stringify(cand.map((a) => a.kaptName)));
+  }
   // 매매 실거래(analyze.mjs)에서 나온 단지명을 세대수와 매칭하는 함수이므로, 후보 중 임대 세대만
   // 있는 단지(예: "두산3단지"가 임대, "두산1,2단지"가 일반분양인 봉천 두산아파트처럼 같은 이름을 쓰는
   // 임대·분양 혼재 단지)는 배제한다 — 임대 세대는 애초에 매매로 거래될 수 없어, 여기 온 이름은
   // 사실상 항상 분양 동 쪽을 가리킨다. 단, 후보가 임대 표기뿐이면(진짜 임대 단지를 조회한 경우) 그대로 둔다.
   const nonRental = cand.filter((a) => !a.kaptName.includes("임대"));
   if (nonRental.length) cand = nonRental;
+  // 임대 배제 이후에도 정확히 이름이 같은 후보가 있으면 그걸 우선 채택(기존 "정확 일치 우선" 취지 유지)
+  const exact = cand.filter((a) => a.kaptName.replace(/\s/g, "") === qn);
+  if (exact.length) return exact[0];
   // 여러 후보가 있으면 이름 길이가 검색어와 가장 가까운 쪽 채택
   cand.sort((a, b) => Math.abs(a.kaptName.replace(/\s/g, "").length - qn.length) - Math.abs(b.kaptName.replace(/\s/g, "").length - qn.length));
   return cand[0];
