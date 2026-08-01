@@ -32,17 +32,17 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
   .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
-  header{padding:28px 0 6px;text-align:center}
-  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:var(--navy);letter-spacing:-.5px}
-  header p{font-size:11.5px;color:var(--sub);margin-top:4px}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18)}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
+  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
 
-  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 12px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;background:var(--teal-light-soft);border:1.5px solid var(--teal-light);border-radius:16px;padding:10px}
   .tab{flex:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:12px;font-weight:700;color:var(--sub);padding:7px 10px;border-radius:16px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;background:#fff;border:1.5px solid var(--line)}
   .tab svg{flex:none;width:13px;height:13px;stroke:currentColor}
   .tab.on{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 3px 10px rgba(0,130,138,.28)}
   .tab:not(.on):active{background:var(--teal-soft)}
 
-  .search-box{display:grid;gap:8px;margin-bottom:8px}
+  .search-box{display:grid;gap:8px;margin-bottom:8px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
   .row2{display:flex;gap:8px}
   select,input.q{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;background:#fff}
@@ -620,7 +620,9 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치
+const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치 (지역 랭킹 전용 상한)
+const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
+function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : REGION_MAX; }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -634,12 +636,13 @@ function addRegion(v){
     return o ? [{name:o.textContent, lawd:o.value}] : [];
   })();
   let over = false;
+  const max = regionSelMax();
   add.forEach(t=>{
     if(regionSel.some(x=>x.lawd===t.lawd)) return;
-    if(regionSel.length >= REGION_MAX){ over = true; return; }
+    if(regionSel.length >= max){ over = true; return; }
     regionSel.push(t);
   });
-  if(over) showError(`지역은 최대 ${REGION_MAX}개까지 선택할 수 있습니다.`);
+  if(over) showError(`지역은 최대 ${max}개까지 선택할 수 있습니다.`);
   saveRegionSel(); renderRegionChips();
 }
 function removeRegion(lawd){
@@ -686,7 +689,7 @@ function buildRegionPicker(){
   const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
-  document.getElementById('rgTitle').textContent = multi ? '지역 선택 (복수 선택 가능)' : '지역 선택';
+  document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
   document.getElementById('rgFt').style.display = multi ? '' : 'none';
   const picked = new Set(regionSel.map(x=>x.lawd));
   let html = '';
@@ -771,6 +774,10 @@ function setMode(m){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
+  // 저평가(단기/반기/연간)로 넘어왔는데 지역 랭킹에서 쌓아둔 칩이 상한(5개)보다 많으면 앞에서부터 5개만 남긴다
+  // (add 시점에만 상한을 걸면, 이미 더 많이 쌓인 상태로 탭만 전환했을 때 search()가 그대로 다 조회해버림)
+  const maxNow = regionSelMax();
+  if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh') ? '' : 'none';
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh') ? '' : 'none';
