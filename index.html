@@ -262,8 +262,8 @@
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
-    <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
+    <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabU" onclick="setMode('updown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>등락 랭킹</div>
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
@@ -606,6 +606,10 @@ function lawdsOfScope(v){
   const hit = REGIONS.find(([name])=>name===g);
   return hit ? hit[1].map(([n,c])=>({name:n, lawd:c})) : [];
 }
+// 저평가(단기/반기/연간) 탭은 항상 아무 지역도 선택 안 된 상태로 시작해야 해서(2026.07), 빈 값을 선택할 수 있는 플레이스홀더 옵션을 추가
+const lawdBlank = document.createElement('option');
+lawdBlank.value = ''; lawdBlank.textContent = '지역을 선택하세요';
+sel.appendChild(lawdBlank);
 REGIONS.forEach(([g,arr])=>{
   const og = document.createElement('optgroup'); og.label=g;
   const all = document.createElement('option');
@@ -733,7 +737,7 @@ function closeRegionPicker(){
   syncRegionPickBtn();
 }
 
-sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '11680';
+sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
@@ -751,6 +755,7 @@ function setMode(m){
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
+  const prevMode = mode;
   mode = m;
   document.getElementById('tabC').classList.toggle('on', m==='complex');
   document.getElementById('tabCmp').classList.toggle('on', m==='compare');
@@ -775,10 +780,23 @@ function setMode(m){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
-  // 저평가(단기/반기/연간)로 넘어왔는데 지역 랭킹에서 쌓아둔 칩이 상한(5개)보다 많으면 앞에서부터 5개만 남긴다
-  // (add 시점에만 상한을 걸면, 이미 더 많이 쌓인 상태로 탭만 전환했을 때 search()가 그대로 다 조회해버림)
-  const maxNow = regionSelMax();
-  if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
+  // 저평가(단기/반기/연간)로 "새로 전환해 들어올 때"는 항상 지역이 하나도 선택 안 된 상태로 시작한다(2026.07 요청) —
+  // 다른 탭에서 검색했던 지역이 그대로 남아있으면 사용자가 고르지도 않은 지역이 미리 채워진 것처럼 보였음.
+  // 단, 이미 그 탭에 있는 상태에서 탭 버튼을 다시 눌렀을 때(prevMode===m)는 방금 고른 선택을 지우면 안 되므로 제외.
+  const undervalueModes = ['shortval','peak','longpeak'];
+  if(prevMode !== m && undervalueModes.includes(m)){
+    regionSel = []; saveRegionSel();
+    sel.value = '';
+  } else {
+    // 이미 그 탭에 있던 상태(칩이 지역 랭킹 등에서 넘어와 상한을 초과한 경우 등)는 기존처럼 앞에서부터만 자른다
+    const maxNow = regionSelMax();
+    if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
+    // 저평가 탭(빈 상태)에서 다른 탭으로 나갈 때는 그 빈 값이 그대로 남으면 안 됨 — 기억된 지역이 있으면 복원, 없으면 빈 상태 유지
+    // (기본 지역을 임의로 지정하지 않음 — 특정 구를 아무렇지 않게 기본값 취급하는 게 부적절하다는 피드백으로 삭제)
+    if(!undervalueModes.includes(m) && !sel.value){
+      sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
+    }
+  }
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh') ? '' : 'none';
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh') ? '' : 'none';
@@ -1818,6 +1836,7 @@ async function search(){
     if(cmpItems.length<2){ showError('비교할 단지를 2개 이상 입력해 주세요.'); return; }
   }
   if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
+  if(mode!=='compare' && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   const mN = +document.getElementById('monthsN').value;
