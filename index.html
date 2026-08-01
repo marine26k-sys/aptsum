@@ -697,7 +697,7 @@ function buildRegionPicker(){
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
     html += `<div class="rggrp">${esc(g)}</div>`;
-    if(multi && !q){
+    if(multi && !q && mode==='region'){
       html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
@@ -766,11 +766,12 @@ function setMode(m){
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
   // 평형 필터는 계산에 실제로 반영되는 탭에서만 노출 — 저평가(단기/반기/연간)는 항상 20~39평 고정 계산이라 셀렉트를 아예 숨긴다(2026.07)
-  // '○○ 전체' 옵션은 지역 랭킹·저평가(단기/반기/연간)에서만 의미가 있다(2026.07 저평가 3탭도 복수 지역 지원 추가 — 단지 검색·거래량·등락·신고가는 여전히 단일 구 기준).
-  // 다른 탭으로 이동했는데 전체가 선택돼 있으면 해당 시·도의 첫 번째 구로 자동 대체한다.
-  const supportsAllScope = m==='region'||m==='shortval'||m==='peak'||m==='longpeak';
-  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScope; });
-  if(!supportsAllScope && isAllScope(sel.value)){
+  // '○○ 전체' 옵션은 지역 랭킹에서만 노출 — 저평가(단기/반기/연간)는 지역 5개 상한이라
+  // 한 번에 수십 개(서울 25개 등)를 추가하는 '전체' 옵션 자체가 앞뒤가 안 맞음(2026.07, 5개 상한 도입 후 발견).
+  // 개별 구를 여러 개 골라 담는 칩 방식(최대 5개)은 이 세 탭에서도 그대로 지원.
+  const supportsAllScopeOption = m==='region';
+  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
+  if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
@@ -1496,11 +1497,13 @@ function buildPeakRows(all, months){
     const r3 = arr.filter(t=>r3set.has(t.ym));
     const p3 = arr.filter(t=>p3set.has(t.ym));
     if(r3.length<2 || p3.length<2) return null;
-    const r3max = Math.max(...r3.map(t=>t.amt)), p3max = Math.max(...p3.map(t=>t.amt));
+    // 최근 구간 최고가를 세운 실제 거래를 따로 잡아둔다 — 분양권/입주권 배지 표시용(등락 랭킹과 달리 반기/연간 저평가는 분양권·입주권도 포함하므로)
+    const r3top = r3.reduce((best,t)=> (!best || t.amt>best.amt) ? t : best, null);
+    const r3max = r3top.amt, p3max = Math.max(...p3.map(t=>t.amt));
     if(!p3max) return null;
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, r3max:R1(r3max), p3max:R1(p3max), n:arr.length, r3n:r3.length, p3n:p3.length };
+    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r3top.kind||null, r3max:R1(r3max), p3max:R1(p3max), n:arr.length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
   const byApt = {};
   pyRows.forEach(r=>{
@@ -1560,11 +1563,12 @@ function buildLongPeakRows(all, months){
     const r12 = arr.filter(t=>r12set.has(t.ym));
     const p12 = arr.filter(t=>p12set.has(t.ym));
     if(r12.length<2 || p12.length<2) return null;
-    const r12max = Math.max(...r12.map(t=>t.amt)), p12max = Math.max(...p12.map(t=>t.amt));
+    const r12top = r12.reduce((best,t)=> (!best || t.amt>best.amt) ? t : best, null);
+    const r12max = r12top.amt, p12max = Math.max(...p12.map(t=>t.amt));
     if(!p12max) return null;
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, r3max:R1(r12max), p3max:R1(p12max), n:arr.length, r3n:r12.length, p3n:p12.length };
+    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r12top.kind||null, r3max:R1(r12max), p3max:R1(p12max), n:arr.length, r3n:r12.length, p3n:p12.length };
   }).filter(Boolean);
   const byApt = {};
   pyRows.forEach(r=>{
@@ -2976,7 +2980,7 @@ function peakDivergenceHTML(list, prevLabel, recentLabel){
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-          <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}</div>
+          <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
@@ -3001,7 +3005,7 @@ function renderPeak(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} <span style="color:var(--yellow)">반기</span> 저평가</h2>
-      <div class="meta">${esc(d.period)} · 최근 6개월 최고가 vs 이전 6개월 최고가 · <b style="color:#7FD4D9">20~39평</b></div>
+      <div class="meta">${esc(d.period)} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3026,7 +3030,7 @@ function renderLongPeak(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} <span style="color:var(--yellow)">연간</span> 저평가</h2>
-      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 · <b style="color:#7FD4D9">20~39평</b></div>
+      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
