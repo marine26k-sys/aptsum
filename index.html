@@ -46,6 +46,7 @@
   .search-box > *{min-width:0}
   .row2{display:flex;gap:8px}
   select,input.q{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;background:#fff}
+  #optRow select{font-size:13px;padding:11px 6px 11px 10px}
   select:focus,input.q:focus{outline:none;border-color:var(--teal)}
   select{flex:0 0 138px;width:100%}
   input.q{flex:1;min-width:0}
@@ -368,7 +369,8 @@ function pushView(){
     mN: document.getElementById('monthsN').value,
     fM: document.getElementById('floorMin').value,
     py: document.getElementById('pyBand').value,
-    cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value}))
+    cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
+    regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
   viewStack.push({data:lastData, inputs});
   try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
@@ -382,6 +384,8 @@ function buildShareURL(inp){
     p.set('r', inp.lawd);
     if(inp.mode==='complex') p.set('q', inp.q);
     if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='newhigh') && inp.py) p.set('py', inp.py);
+    // 복수 지역(칩) 선택 상태 — sel.value만으론 칩 선택이 안 잡히므로 별도 파라미터로 인코딩(2026.07)
+    if(inp.regionSel && inp.regionSel.length) p.set('rs', inp.regionSel.map(x=>x.lawd+':'+x.name).join('|'));
   }
   return location.pathname + '?' + p.toString();
 }
@@ -400,6 +404,12 @@ function initFromURL(){
     if(items.length>=2) search();
   } else {
     if(p.get('r')) sel.value = p.get('r');
+    // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함
+    if(p.get('rs')){
+      regionSel = p.get('rs').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
+      saveRegionSel(); renderRegionChips();
+    }
+    if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
     if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
@@ -445,6 +455,7 @@ function renderFavs(){
 function favGo(lawd, name){
   setMode('complex');
   sel.value = lawd;
+  if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value를 코드로 바꾸면 change 이벤트가 안 나서 화면 라벨을 직접 갱신해야 함
   document.getElementById('q').value = name;
   search();
   favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
@@ -500,7 +511,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -523,7 +534,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -534,11 +545,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     addRegion(code);
@@ -567,6 +578,10 @@ function restoreView(vi){
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
   document.getElementById('pyBand').value = inp.py;
+  // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
+  regionSel = (inp.regionSel || []).slice();
+  saveRegionSel(); renderRegionChips();
+  if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
     inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; r.querySelector('select').value=c.lawd; r.querySelector('input').value=c.name; });
@@ -626,7 +641,7 @@ const lastRegionPref = getLastRegionPref();
 let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치 (지역 랭킹 전용 상한)
 const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
-function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : REGION_MAX; }
+function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') ? REGION_MAX_UNDERVALUE : REGION_MAX; }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -658,7 +673,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -678,7 +693,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') && regionSel.length){
     return regionSel.length===1 ? regionSel[0].name
       : (regionSel.length<=3 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
   }
@@ -690,7 +705,7 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak');
+  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
   document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
@@ -712,7 +727,7 @@ function buildRegionPicker(){
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
 }
 function pickRegion(v){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -741,7 +756,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') addRegion(sel.value);
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') addRegion(sel.value);
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
 });
 document.getElementById('pyBand').addEventListener('change', e=>{ if(mode==='region') savePyBandPref(e.target.value); }); // 거래량·등락 랭킹에서의 선택은 기억하지 않음(그 탭 안에서만 적용, 다음 방문 시 항상 전체 평형)
@@ -783,7 +798,7 @@ function setMode(m){
   // 저평가(단기/반기/연간)로 "새로 전환해 들어올 때"는 항상 지역이 하나도 선택 안 된 상태로 시작한다(2026.07 요청) —
   // 다른 탭에서 검색했던 지역이 그대로 남아있으면 사용자가 고르지도 않은 지역이 미리 채워진 것처럼 보였음.
   // 단, 이미 그 탭에 있는 상태에서 탭 버튼을 다시 눌렀을 때(prevMode===m)는 방금 고른 선택을 지우면 안 되므로 제외.
-  const undervalueModes = ['shortval','peak','longpeak'];
+  const undervalueModes = ['shortval','peak','longpeak','newhigh'];
   if(prevMode !== m && undervalueModes.includes(m)){
     regionSel = []; saveRegionSel();
     sel.value = '';
@@ -1781,7 +1796,7 @@ function quick(n, guName){
   setMode('complex');
   if(guName){
     const opt = [...sel.options].find(o=>o.textContent===guName);
-    if(opt) sel.value = opt.value;
+    if(opt){ sel.value = opt.value; if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); } // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
   }
   document.getElementById('q').value=n;
   search();
@@ -1856,11 +1871,11 @@ async function search(){
   // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
   // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
-  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak') ? []
+  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   const allScope = multiTargets.length > 0;
   const effMN = allScope
-    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak') ? neededMN : mN) // 이 세 탭은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
+    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') ? neededMN : mN) // 이 네 탭은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval') ? 24 : (mode==='newhigh' ? 36 : Math.max(mN, 24));
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
@@ -1916,6 +1931,21 @@ async function search(){
           d = mode==='shortval' ? analyzeShortUndervalue(items, months, items)
             : mode==='peak' ? analyzePeakUndervalue(items, months, items)
             : analyzeLongPeakUndervalue(items, months, items);
+          d.scopeLabel = scopeLabel;
+          d.failedRegions = failed;
+        }
+      } else if(mode==='newhigh'){
+        // 신고가는 지역 랭킹과 마찬가지로 평형·연식 필터 UI가 있음
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        items = applyBuildYearFilter(items);
+        if(!items.length){
+          d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
+        } else {
+          d = analyzeNewHigh(items, months);
+          d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+          d.buildYear = buildYearLabel();
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
         }
@@ -2145,7 +2175,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       d.hh = await fetchHHCnt(lawd, d.name);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
-      if(el) el.innerHTML = `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+      if(el) el.innerHTML = `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
     } else if(d.mode==='region'){
       // highDeals 각 항목의 실제 lawd로 그룹핑해서 구별로 정확히 조회(복수 지역 통합 조회 대응)
       const byLawd = {};
@@ -2163,8 +2193,13 @@ async function attachHHCountsAsync(d, myToken, lawd){
       if(myToken===searchToken) renderVolume(d);
     } else if(d.mode==='newhigh'){
       if(d.newHigh && d.newHigh.length){
-        const map = await fetchHHCntBatch(lawd, d.newHigh.map(x=>x.apt));
-        d.newHigh.forEach(x=>{ x.hh = map[x.apt] || null; });
+        // 지역 복수선택 시 항목마다 실제 소속 구가 다를 수 있으므로 구별로 그룹핑해서 조회(2026.07 신고가 지역 복수선택 추가)
+        const byLawd = {};
+        d.newHigh.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
+        await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
+          const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
+          list.forEach(x=>{ x.hh = map[x.apt] || null; });
+        }));
       }
       if(myToken===searchToken) renderNewHigh(d);
     } else if(d.mode==='updown'){
@@ -2640,7 +2675,7 @@ function renderComplex(d){
         <button onclick="shareCurrent()" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#fff;font-size:13px;cursor:pointer">⤴</button>
       </div>
       <h2 style="padding-right:70px">${esc(d.name)}</h2>
-      <div class="meta" id="complexMeta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)} · 거래 ${d.count}건${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta" id="complexMeta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec" style="padding-bottom:0">
@@ -2832,7 +2867,7 @@ function renderRegion(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} 실거래 랭킹</h2>
-      <div class="meta">${esc(d.period)} · 총 거래 ${d.total}건${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -2861,7 +2896,7 @@ function renderVolume(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} 거래량 랭킹</h2>
-      <div class="meta">${esc(d.period)} · 총 거래 ${d.total}건${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec">
@@ -2879,7 +2914,7 @@ function renderVolume(d){
 
 
 function renderNewHigh(d){
-  const regionName = sel.options[sel.selectedIndex].textContent;
+  const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">최근 한 달 이내 신고가를 기록한 단지가 없습니다</div>';
@@ -2892,13 +2927,14 @@ function renderNewHigh(d){
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} 신고가</h2>
       <div class="meta">${esc(d.period)} 중 최고가 · 최근 한 달 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
       <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계</div>
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·<b style="color:var(--ink)">${esc(x.py)}</b>${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·<b style="color:var(--ink)">${esc(x.py)}</b>${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${x.prevMax? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
