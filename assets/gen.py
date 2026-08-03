@@ -6,6 +6,9 @@ NAVY = (15, 43, 61)
 SLATE = (241, 245, 249)
 WHITE = (255, 255, 255)
 SUB = (100, 116, 139)
+# 2026.07: 헤더/공유 로고를 앱 상단 타이틀 로고(v136)와 동일한 색으로 통일
+LOGO_TEAL = (0, 169, 180)     # #00A9B4
+LOGO_TEAL_LIGHT = (127, 212, 217)  # #7FD4D9
 
 FONT_BLACK = "/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc"
 FONT_BOLD = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
@@ -57,18 +60,18 @@ d.rectangle([0, 0, W, 210], fill=NAVY)
 
 # logo mark (top-left of band)
 lx, ly, s = 72, 68, 3.6
-bars = [(7, 17, 12, 27, TEAL), (14, 10, 19, 27, WHITE), (21, 5, 26, 27, TEAL)]
+bars = [(7, 17, 12, 27, LOGO_TEAL), (14, 10, 19, 27, LOGO_TEAL_LIGHT), (21, 5, 26, 27, LOGO_TEAL)]
 for x0, y0, x1, y1, c in bars:
     d.rounded_rectangle([lx + x0 * s, ly + y0 * s, lx + x1 * s, ly + y1 * s], radius=4, fill=c)
 
 d.text((lx + 120, ly + 18), "아파트썸 실거래 분석", font=font(FONT_BLACK, 46), fill=WHITE)
-d.text((lx + 120, ly + 78), "aptsum RTMS Lab", font=font(FONT_MED, 22), fill=(127, 212, 217))
+d.text((lx + 120, ly + 78), "aptsum RTMS Lab", font=font(FONT_MED, 22), fill=LOGO_TEAL_LIGHT)
 
-# body: value props
+# body: value props (2026.07 — 탭이 9개로 늘어난 현재 구성에 맞게 갱신)
 items = [
     "국토부 실거래가 데이터 기반 · 완전 무료",
-    "단지 분석 · 단지 비교 · 지역 랭킹",
-    "이상치(직거래·저가) 자동 제외, 신고가 자동 감지",
+    "단지 분석 · 비교 · 지역/거래량/등락 랭킹",
+    "신고가 · 단기/반기/연간 저평가 단지 자동 감지",
 ]
 y = 268
 for line in items:
