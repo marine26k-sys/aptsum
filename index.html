@@ -2992,7 +2992,7 @@ function renderNewHigh(d){
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
       <h2 style="padding-right:70px">${esc(regionName)} 신고가</h2>
-      <div class="meta">${esc(d.period)} 중 최고가 · 최근 한 달 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3000,8 +3000,8 @@ function renderNewHigh(d){
       <h3>신고가 갱신 단지</h3>
       <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계</div>
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--ink)">${esc(x.py)}${x.area?`(전용 ${Math.round(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val">${x.amt.toFixed(1)}억<small>${x.prevMax? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.round(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
@@ -3018,7 +3018,7 @@ function divergenceHTML(list){
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-          <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${x.gu?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
@@ -3101,7 +3101,7 @@ function peakDivergenceHTML(list, prevLabel, recentLabel){
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-          <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(x.mainPy)}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${x.gu?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
