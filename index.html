@@ -32,7 +32,11 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
   .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
-  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18)}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
+  .header-share{position:absolute;top:50%;right:14px;transform:translateY(-50%);
+    background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;
+    color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .header-share:active{background:rgba(255,255,255,.28)}
   .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
   header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
 
@@ -220,6 +224,19 @@
   .rgft button{flex:1;border:0;border-radius:10px;padding:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
   .rgft .cl{background:var(--slate-bg);color:var(--sub)}
+  /* ── 관심 단지 요약 대시보드 (2026.08) ── */
+  #favDashBtn{display:none;width:100%;box-sizing:border-box;margin:2px 0 8px;padding:9px 10px;
+    border:1.5px dashed var(--teal);border-radius:12px;background:var(--teal-light-soft);
+    color:var(--teal-dark);font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+  .fdcard{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;
+    background:#fff;cursor:pointer}
+  .fdcard:active{background:var(--teal-light-soft)}
+  .fdcard-hd{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:4px}
+  .fdcard-hd b{font-size:13.5px;color:var(--navy)}
+  .fdcard-hd .lb{font-size:11px;color:var(--sub);white-space:nowrap}
+  .fdcard-skel{height:64px;background:linear-gradient(90deg,var(--slate-bg) 25%,#eef2f6 37%,var(--slate-bg) 63%);
+    background-size:400% 100%;animation:fdshimmer 1.4s ease infinite;border-radius:12px;margin-bottom:8px}
+  @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 </head>
 <body>
@@ -262,6 +279,7 @@
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
       아파트썸 실거래 분석
     </div>
+    <button class="header-share" onclick="shareCurrent()" title="공유">⤴</button>
   </header>
 
   <div class="tabs">
@@ -330,6 +348,7 @@
 
   <div class="chips" id="favRegions" style="margin:2px 0 6px"></div>
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
+  <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
   <div class="error" id="error"></div>
@@ -465,6 +484,70 @@ function renderFavs(){
     const nb = favBadges[favKey(x.lawd,x.name)];
     const badge = nb>0 ? `<span class="nh">신규 ${nb}</span>` : '';
     return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(x.name)}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
+  }).join('');
+  const dashBtn = document.getElementById('favDashBtn');
+  if(dashBtn) dashBtn.style.display = favs.length ? '' : 'none';
+}
+
+// ── 관심 단지 요약 대시보드 — 즐겨찾기 단지들을 한 화면에서 최근 시세·등락률로 모아보기 ──
+// 등락 랭킹과 동일한 buildRepRows(대표 평형 최근 2개월 vs 이전 2개월 평균) 로직을 재사용해 일관성 유지.
+// 이미 refreshFavBadges()가 로드 시 각 즐겨찾기의 12개월치를 캐시해두므로 대부분 추가 API 호출 없이 즉시 뜬다.
+function favDashCard(f, inner){
+  return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}')">
+    <div class="fdcard-hd"><b>${esc(f.name)}</b><span class="lb">${esc(f.label)}</span></div>
+    <div>${inner}</div>
+  </div>`;
+}
+function openFavDash(){
+  document.getElementById('favDashDim').classList.add('on');
+  document.getElementById('favDashPanel').classList.add('on');
+  renderFavDash();
+}
+function closeFavDash(){
+  document.getElementById('favDashDim').classList.remove('on');
+  document.getElementById('favDashPanel').classList.remove('on');
+}
+async function renderFavDash(){
+  const favs = getFavs();
+  const body = document.getElementById('favDashBody');
+  document.getElementById('favDashTitle').textContent = `관심 단지 요약 (${favs.length}개)`;
+  if(!favs.length){ body.innerHTML = `<div class="rng" style="padding:12px 4px">즐겨찾기한 단지가 없습니다</div>`; return; }
+  body.innerHTML = favs.map(()=>`<div class="fdcard-skel"></div>`).join('');
+  const months = lastMonthsYm(12);
+  const results = await Promise.all(favs.map(async f=>{
+    try{
+      const items = await ensureMonths(f.lawd, 12);
+      const m = matchComplex(items, f.name);
+      if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
+      const rows = buildRepRows(m.hits, months);
+      if(!rows.length){
+        // 최근 2+2개월 비교가 안 나올 만큼 거래가 뜸한 단지는 등락률 대신 가장 최근 단건 거래만 보여준다
+        const sorted = m.hits.slice().sort((a,b)=>dkey(b).localeCompare(dkey(a)));
+        const last = sorted[0];
+        return { ...f, state:'sparse', last };
+      }
+      const rep = rows.slice().sort((a,b)=> (b.r3n+b.p3n) - (a.r3n+a.p3n))[0];
+      return { ...f, state:'ok', rep };
+    }catch(e){ return { ...f, state:'error' }; }
+  }));
+  body.innerHTML = results.map(r=>{
+    if(r.state==='error') return favDashCard(r, `<span style="color:var(--sub);font-size:12px">조회 실패 · 눌러서 다시 확인</span>`);
+    if(r.state==='nodata') return favDashCard(r, `<span style="color:var(--sub);font-size:12px">최근 12개월 거래 없음</span>`);
+    if(r.state==='sparse'){
+      const last = r.last;
+      return favDashCard(r, last
+        ? `<b style="font-size:15px;color:var(--navy)">${last.amt.toFixed(1)}억</b>
+           <span style="font-size:11px;color:var(--sub);margin-left:6px">${esc(last.py)}평 · ${esc(ymLabel(last.ym))}.${esc(last.d)}</span>
+           <div style="font-size:10.5px;color:var(--sub);margin-top:2px">최근 등락 산출 불가(거래 부족)</div>`
+        : `<span style="color:var(--sub);font-size:12px">거래 데이터 부족</span>`);
+    }
+    const x = r.rep;
+    const dir = x.pct>0?'up':(x.pct<0?'down':'');
+    return favDashCard(r, `
+      <b style="font-size:16px;color:var(--navy)">${x.r3avg.toFixed(1)}억</b>
+      <span class="${dir}" style="font-weight:800;font-size:13px;margin-left:6px">${x.pct>0?'+':''}${x.pct}%</span>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:2px">${esc(x.py)}평 대표 · 최근 2개월 ${x.r3n}건 (이전 ${x.p3avg.toFixed(1)}억→최근 ${x.r3avg.toFixed(1)}억)</div>
+    `);
   }).join('');
 }
 function favGo(lawd, name){
@@ -836,7 +919,6 @@ function setMode(m){
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
-  const prevMode = mode;
   mode = m;
   document.getElementById('tabC').classList.toggle('on', m==='complex');
   document.getElementById('tabCmp').classList.toggle('on', m==='compare');
@@ -861,22 +943,13 @@ function setMode(m){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
-  // 저평가(단기/반기/연간)로 "새로 전환해 들어올 때"는 항상 지역이 하나도 선택 안 된 상태로 시작한다(2026.07 요청) —
-  // 다른 탭에서 검색했던 지역이 그대로 남아있으면 사용자가 고르지도 않은 지역이 미리 채워진 것처럼 보였음.
-  // 단, 이미 그 탭에 있는 상태에서 탭 버튼을 다시 눌렀을 때(prevMode===m)는 방금 고른 선택을 지우면 안 되므로 제외.
+  // 모든 탭이 선택 지역을 공유·고정 기억한다(2026.08 변경) — 탭을 넘나들어도 regionSel/sel.value를 그대로 유지.
+  // 저평가(단기/반기/연간)만 상한이 낮으므로(5개) 넘어오는 칩이 많으면 앞에서부터만 잘라서 맞춘다.
   const undervalueModes = ['shortval','peak','longpeak','newhigh'];
-  if(prevMode !== m && undervalueModes.includes(m)){
-    regionSel = []; saveRegionSel();
-    sel.value = '';
-  } else {
-    // 이미 그 탭에 있던 상태(칩이 지역 랭킹 등에서 넘어와 상한을 초과한 경우 등)는 기존처럼 앞에서부터만 자른다
-    const maxNow = regionSelMax();
-    if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
-    // 저평가 탭(빈 상태)에서 다른 탭으로 나갈 때는 그 빈 값이 그대로 남으면 안 됨 — 기억된 지역이 있으면 복원, 없으면 빈 상태 유지
-    // (기본 지역을 임의로 지정하지 않음 — 특정 구를 아무렇지 않게 기본값 취급하는 게 부적절하다는 피드백으로 삭제)
-    if(!undervalueModes.includes(m) && !sel.value){
-      sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
-    }
+  const maxNow = regionSelMax();
+  if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
+  if(!sel.value){
+    sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
   }
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
@@ -902,7 +975,11 @@ function setMode(m){
 }
 
 function regionSelectHTML(){
-  return REGIONS.map(([g,arr])=>`<optgroup label="${g}">${arr.map(([n,c])=>`<option value="${c}">${n}</option>`).join('')}</optgroup>`).join('');
+  // 메인 지역 select(#lawd)에는 빈 값용 플레이스홀더 옵션("지역을 선택하세요")이 있는데
+  // 비교 탭 행의 select는 REGIONS만으로 만들어져 그 옵션이 없었음 — sel.value가 ''일 때
+  // 매칭되는 옵션이 없어 화면에 아무 텍스트도 안 뜨는 버그였음(2026.08 수정).
+  return `<option value="">지역을 선택하세요</option>` +
+    REGIONS.map(([g,arr])=>`<optgroup label="${g}">${arr.map(([n,c])=>`<option value="${c}">${n}</option>`).join('')}</optgroup>`).join('');
 }
 function addCmpRow(){
   const rows = document.querySelectorAll('.cmp-row');
@@ -3176,6 +3253,16 @@ function renderLongPeak(d){
   <div class="rgft" id="rgFt" style="display:none">
     <button type="button" class="cl" onclick="clearRegions();buildRegionPicker()">전체 해제</button>
     <button type="button" class="ok" onclick="closeRegionPicker()">완료</button>
+  </div>
+</div>
+<div class="rgdim" id="favDashDim" onclick="closeFavDash()"></div>
+<div class="rgpanel" id="favDashPanel" role="dialog" aria-label="관심 단지 요약">
+  <div class="rghd">
+    <h4 id="favDashTitle">관심 단지 요약</h4>
+  </div>
+  <div class="rgbody" id="favDashBody"></div>
+  <div class="rgft">
+    <button type="button" class="cl" onclick="closeFavDash()">닫기</button>
   </div>
 </div>
 </body>
