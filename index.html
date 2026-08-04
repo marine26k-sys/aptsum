@@ -486,7 +486,7 @@ function renderFavs(){
     return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(x.name)}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
   }).join('');
   const dashBtn = document.getElementById('favDashBtn');
-  if(dashBtn) dashBtn.style.display = favs.length ? '' : 'none';
+  if(dashBtn) dashBtn.style.display = favs.length ? 'block' : 'none';
 }
 
 // ── 관심 단지 요약 대시보드 — 즐겨찾기 단지들을 한 화면에서 최근 시세·등락률로 모아보기 ──
@@ -650,9 +650,15 @@ function favRegionGo(code){
   if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
+    // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
     addRegion(code);
   } else {
     sel.value = code;
+    // 싱글 전용 탭에서 즐겨찾기 지역을 고르면, 멀티 탭(지역랭킹 등) 칩도 이 지역 하나로 맞춰서
+    // 나중에 그 탭으로 넘어갔을 때 예전에 담아뒀던 다른 지역이 아니라 방금 고른 지역이 보이게 한다(2026.08)
+    const opt = [...sel.options].find(o=>o.value===code);
+    regionSel = opt ? [{lawd:code, name:opt.textContent}] : [];
+    saveRegionSel(); renderRegionChips();
   }
   updateRegionFavBtn();
   renderFavRegions();
@@ -763,6 +769,9 @@ function addRegion(v){
     regionSel.push(t);
   });
   if(over) showError(`지역은 최대 ${max}개까지 선택할 수 있습니다.`);
+  // 싱글 전용 탭(단지분석·단지비교·거래량·등락)도 방금 칩에 추가한 지역으로 바로 갱신되도록 sel.value까지 맞춰준다
+  // (2026.08 — 전에는 칩만 갱신되고 sel.value는 그대로라 다른 탭으로 넘어가면 예전 지역이 남아있었음)
+  if(!isAllScope(v) && add.length) sel.value = v;
   saveRegionSel(); renderRegionChips();
 }
 function removeRegion(lawd){
@@ -857,7 +866,15 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') addRegion(sel.value);
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'){
+    addRegion(sel.value);
+  } else if(sel.value){
+    // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
+    // 나중에 그 탭으로 넘어갔을 때 예전 칩이 아니라 방금 고른 지역이 보이게 한다(2026.08)
+    const opt = [...sel.options].find(o=>o.value===sel.value);
+    regionSel = opt ? [{lawd:sel.value, name:opt.textContent}] : [];
+    saveRegionSel(); renderRegionChips();
+  }
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
 });
 document.getElementById('pyBand').addEventListener('change', e=>{ if(mode==='region') savePyBandPref(e.target.value); }); // 거래량·등락 랭킹에서의 선택은 기억하지 않음(그 탭 안에서만 적용, 다음 방문 시 항상 전체 평형)
@@ -944,12 +961,20 @@ function setMode(m){
     if(first) sel.value = first.lawd;
   }
   // 모든 탭이 선택 지역을 공유·고정 기억한다(2026.08 변경) — 탭을 넘나들어도 regionSel/sel.value를 그대로 유지.
-  // 저평가(단기/반기/연간)만 상한이 낮으므로(5개) 넘어오는 칩이 많으면 앞에서부터만 잘라서 맞춘다.
-  const undervalueModes = ['shortval','peak','longpeak','newhigh'];
+  // 단, 지역 선택 방식이 탭마다 다르다: 지역랭킹·저평가 3탭·신고가는 칩(regionSel, 복수), 단지분석·단지비교·거래량·등락은 단일 셀렉트(sel.value) —
+  // 그동안 이 둘을 서로 이어주는 로직이 없어서 한쪽에서 고른 지역이 다른 쪽 탭엔 전혀 안 보이는 문제가 있었음(2026.08 수정).
+  const multiModes = ['region','shortval','peak','longpeak','newhigh'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
-  if(!sel.value){
-    sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
+  if(multiModes.includes(m)){
+    // 칩이 비어있고 단일 셀렉트 쪽에 지역이 있으면 그걸 첫 칩으로 이어받는다
+    if(!regionSel.length && sel.value && !isAllScope(sel.value)) addRegion(sel.value);
+  } else {
+    // 싱글 전용 탭(단지분석·단지비교·거래량·등락) 진입 시 셀렉트가 비어있고 칩이 있으면 그 중 첫 지역을 이어받는다
+    if(!sel.value && regionSel.length) sel.value = regionSel[0].lawd;
+    if(!sel.value){
+      sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
+    }
   }
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
