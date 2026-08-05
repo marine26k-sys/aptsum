@@ -1317,7 +1317,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // matchKapt() 코드만 고치고 배포해도 이미 캐시된 옛(오매칭) 결과가 그대로 재사용돼 버그가 안 고쳐진 것처럼 보인다
 // (실제 사례: 두산아파트 임대/분양 오매칭 수정 후에도 캐시 때문에 여전히 옛 세대수가 보이던 문제).
 // 버전을 올리면 localStorage 키가 바뀌어 옛 캐시를 자동으로 안 쓰게 되고, 쿼리에도 반영돼 CDN 캐시 키도 달라진다.
-const HH_CACHE_VER = 3;
+const HH_CACHE_VER = 4;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
