@@ -79,7 +79,12 @@ async function fetchList(key, sgg) {
   }
 }
 
-// analyzeComplex의 matchComplex와 동일한 방식(정확 일치 → 부분 포함)으로 단지명 매칭
+// analyzeComplex의 matchComplex와 동일한 방식(정확 일치 → 부분 포함)으로 단지명 매칭.
+// 반환값은 "합산해야 할 후보들의 배열" — 대개 1개뿐이지만, 실거래 데이터의 단지명은 "두산"처럼
+// 포괄적인데 K-apt엔 "두산1차"/"두산2차"처럼 블록을 나눠 따로 등록된 경우(예: 봉천동 두산아파트 —
+// 실거래상 한 단지로 묶여 거래되는데 세대수는 그중 한 블록만 잡혀 실제보다 훨씬 작게 나오는 문제가 있었음),
+// 후보 중 하나만 골라 반환하면 세대수가 부당하게 작게 나온다. 검색어로 시작하고 남는 꼬리가 짧으면서
+// 숫자를 포함하는("1차","2단지" 등) "형제 단지" 패턴이 여럿 감지되면 전부 합산 대상으로 반환한다(2026.08).
 function matchKapt(list, name) {
   const qn = name.replace(/\s/g, "");
   // v108에서 "임대 후보 배제"를 부분일치(cand) 단계에만 넣었었는데, 정확 일치(exact)가 먼저 return돼버려서
@@ -91,7 +96,7 @@ function matchKapt(list, name) {
     const an = a.kaptName.replace(/\s/g, "");
     return an && (an === qn || an.includes(qn) || qn.includes(an));
   });
-  if (!cand.length) return null;
+  if (!cand.length) return [];
   // 디버그: 후보가 2개 이상(이름이 겹치는 단지가 여러 개)이면, 실제 K-apt 등록 이름이 어떻게 돼 있는지
   // 매칭 로직을 또 고칠 일이 생길 때 바로 확인할 수 있게 로그로 남겨둔다(Netlify 함수 로그에서 확인 가능).
   if (cand.length > 1) {
@@ -105,10 +110,20 @@ function matchKapt(list, name) {
   if (nonRental.length) cand = nonRental;
   // 임대 배제 이후에도 정확히 이름이 같은 후보가 있으면 그걸 우선 채택(기존 "정확 일치 우선" 취지 유지)
   const exact = cand.filter((a) => a.kaptName.replace(/\s/g, "") === qn);
-  if (exact.length) return exact[0];
+  if (exact.length) return [exact[0]];
+  // "형제 단지" 감지 — 후보명이 qn으로 시작하고 남는 꼬리가 짧으면서(4자 이하) 숫자를 포함하면
+  // ("두산1차","두산2단지" 등) 한 복합단지를 나눠 등록한 것으로 보고 전부 합산한다.
+  // "두산위브"처럼 꼬리에 숫자가 없는 건 별개 개발단지일 뿐이므로 제외된다.
+  const siblings = cand.filter((a) => {
+    const an = a.kaptName.replace(/\s/g, "");
+    if (!an.startsWith(qn)) return false;
+    const rest = an.slice(qn.length);
+    return rest.length > 0 && rest.length <= 4 && /[0-9]/.test(rest);
+  });
+  if (siblings.length > 1) return siblings;
   // 여러 후보가 있으면 이름 길이가 검색어와 가장 가까운 쪽 채택
   cand.sort((a, b) => Math.abs(a.kaptName.replace(/\s/g, "").length - qn.length) - Math.abs(b.kaptName.replace(/\s/g, "").length - qn.length));
-  return cand[0];
+  return [cand[0]];
 }
 
 async function fetchBasis(key, kaptCode) {
@@ -138,6 +153,24 @@ async function fetchBasis(key, kaptCode) {
     console.error(`[hhcnt] getAphusBassInfoV4(${kaptCode}) fetch 실패:`, e.message);
     return null;
   }
+}
+
+// matchKapt가 "형제 단지"로 판단해 후보를 여러 개 돌려줄 때, 정적 캐시 항목(이미 hhcnt 계산됨)들을 합산
+function mergeFull(fulls) {
+  const hh = fulls.reduce((s, f) => s + (f.hhcnt || 0), 0);
+  if (!hh) return null;
+  const dongCnt = fulls.reduce((s, f) => s + (f.dongCnt || 0), 0) || null;
+  const useDate = fulls.map((f) => f.useDate).filter(Boolean).sort()[0] || null; // 가장 이른 사용승인일
+  return { hhcnt: hh, dongCnt, useDate };
+}
+// 위와 동일하되 라이브 조회(fetchBasis) 결과들을 합산
+function mergeBasis(bases) {
+  const valid = bases.filter(Boolean);
+  if (!valid.length) return null;
+  const hh = valid.reduce((s, b) => s + b.hhcnt, 0);
+  const dongCnt = valid.reduce((s, b) => s + (b.dongCnt || 0), 0) || null;
+  const useDate = valid.map((b) => b.useDate).filter(Boolean).sort()[0] || null;
+  return { hhcnt: hh, dongCnt, useDate };
 }
 
 export default async (req) => {
@@ -170,11 +203,12 @@ export default async (req) => {
         if (staticItems.length) {
           const staticList = staticItems.map((it) => ({ kaptCode: it.kaptCode, kaptName: it.name }));
           for (const nm of [...remaining]) {
-            const hit = matchKapt(staticList, nm);
-            if (!hit) continue;
-            const full = staticItems.find((it) => it.kaptCode === hit.kaptCode);
-            if (!full) continue;
-            results[nm] = { found: true, name: full.name, hhcnt: full.hhcnt, dongCnt: full.dongCnt, useDate: full.useDate };
+            const hits = matchKapt(staticList, nm);
+            if (!hits.length) continue;
+            const fulls = hits.map((h) => staticItems.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
+            const merged = fulls.length ? mergeFull(fulls) : null;
+            if (!merged) continue;
+            results[nm] = { found: true, name: nm, ...merged };
             remaining.delete(nm);
           }
         }
@@ -187,20 +221,20 @@ export default async (req) => {
       try {
         const lists = await Promise.all(sggs.map((s) => fetchList(key, s)));
         const allItems = lists.flat();
-        const matched = {}; // kaptCode → [name, ...]
+        const matched = {}; // nm → [kaptCode, ...] (형제 단지면 여러 개)
         for (const nm of remaining) {
-          const hit = matchKapt(allItems, nm);
-          if (!hit) { results[nm] = { found: false }; continue; }
-          (matched[hit.kaptCode] ||= []).push(nm);
+          const hits = matchKapt(allItems, nm);
+          if (!hits.length) { results[nm] = { found: false }; continue; }
+          matched[nm] = hits.map((h) => h.kaptCode);
         }
-        const codes = Object.keys(matched);
-        const bases = await Promise.all(codes.map((c) => fetchBasis(key, c)));
-        codes.forEach((code, i) => {
-          const basis = bases[i];
-          for (const nm of matched[code]) {
-            results[nm] = basis ? { found: true, name: nm, ...basis } : { found: false };
-          }
-        });
+        const allCodes = [...new Set(Object.values(matched).flat())];
+        const bases = await Promise.all(allCodes.map((c) => fetchBasis(key, c)));
+        const basisByCode = {};
+        allCodes.forEach((c, i) => { basisByCode[c] = bases[i]; });
+        for (const nm of Object.keys(matched)) {
+          const merged = mergeBasis(matched[nm].map((c) => basisByCode[c]));
+          results[nm] = merged ? { found: true, name: nm, ...merged } : { found: false };
+        }
       } catch (e) {
         for (const nm of remaining) results[nm] = { found: false };
       }
@@ -244,10 +278,11 @@ export default async (req) => {
       const staticJ = await staticR.json();
       const staticList = (staticJ && Array.isArray(staticJ.items)) ? staticJ.items.map((it) => ({ kaptCode: it.kaptCode, kaptName: it.name })) : [];
       if (staticList.length) {
-        const hit = matchKapt(staticList, name);
-        if (hit) {
-          const full = staticJ.items.find((it) => it.kaptCode === hit.kaptCode);
-          if (full) return new Response(JSON.stringify({ found: true, name: full.name, hhcnt: full.hhcnt, dongCnt: full.dongCnt, useDate: full.useDate }), { headers: cacheHeadersFound });
+        const hits = matchKapt(staticList, name);
+        if (hits.length) {
+          const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
+          const merged = fulls.length ? mergeFull(fulls) : null;
+          if (merged) return new Response(JSON.stringify({ found: true, name, ...merged }), { headers: cacheHeadersFound });
         }
       }
     }
@@ -256,8 +291,8 @@ export default async (req) => {
   try {
     const lists = await Promise.all(sggs.map((s) => fetchList(key, s)));
     const allItems = lists.flat();
-    const hit = matchKapt(allItems, name);
-    if (!hit) {
+    const hits = matchKapt(allItems, name);
+    if (!hits.length) {
       // 임시 디버그: 목록엔 항목이 있는데(=API 자체는 정상) 이 단지명만 못 찾은 경우,
       // 후보 목록 중 이름이 비슷한 것들을 로그로 남겨 "미등록"인지 "표기 차이"인지 구분
       const qn = name.replace(/\s/g, "");
@@ -267,9 +302,10 @@ export default async (req) => {
         .slice(0, 15);
       console.error(`[hhcnt] "${name}" 매칭 실패. 목록 총 ${allItems.length}건. 비슷한 이름 후보:`, JSON.stringify(similar));
     }
-    const basis = hit ? await fetchBasis(key, hit.kaptCode) : null;
-    if (!hit || !basis) return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
-    return new Response(JSON.stringify({ found: true, name: hit.kaptName, ...basis }), { headers: cacheHeadersFound });
+    const bases = hits.length ? await Promise.all(hits.map((h) => fetchBasis(key, h.kaptCode))) : [];
+    const merged = mergeBasis(bases);
+    if (!merged) return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
+    return new Response(JSON.stringify({ found: true, name, ...merged }), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });

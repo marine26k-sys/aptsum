@@ -2254,13 +2254,13 @@ async function search(){
     // 반복해서 읽어야 했음 — 배치 엔드포인트로 바뀌면서 이 큐는 저평가 계열의 조기 종료 배치에만 남겨둠).
     // 2026.07 추가: 단지분석·지역/거래량/등락 랭킹·단지비교의 세대수는 표시용 부가 정보일 뿐 목록 자체를
     // 바꾸지 않으므로, 여기서 기다리지 않고 렌더링 이후 attachHHCountsAsync()에서 비동기로 채워 넣는다
-    // (첫 화면이 뜨기까지 세대수 API 왕복 한 번만큼 더 안 기다려도 됨). 단, 아래 300세대 이상 필터처럼
+    // (첫 화면이 뜨기까지 세대수 API 왕복 한 번만큼 더 안 기다려도 됨). 단, 아래 400세대 이상 필터처럼
     // 세대수가 목록 구성 자체를 바꾸는 경우는 예외적으로 렌더링 전에 그대로 기다린다.
     const HH_CONCURRENCY = 12; // 저평가 계열(아래) 조기 종료용 배치 크기로만 사용
     // 등락 랭킹의 "단기 저평가 단지"·반기/연간 저평가 탭도 동일하게 세대수 표시(비교 대상 목록 각 항목)
-    // 저평가 계열(단기·반기·연간) 세 로직은 모두 300세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
+    // 저평가 계열(단기·반기·연간) 세 로직은 모두 400세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
     // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 HH_CONCURRENCY만큼 배치로 세대수를 조회하면서
-    // 300세대 이상 조건을 만족하는 상위 30개(2026.07 10→30으로 확대)가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
+    // 400세대 이상 조건을 만족하는 상위 30개(2026.07 10→30으로 확대)가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
     // (이전처럼 전체 후보의 세대수를 다 조회한 뒤 거르는 방식보다) 로딩이 느려지지 않는다.
     const DIVERGENCE_CAP = 30;
     if(d.found && (mode==='shortval'||mode==='peak'||mode==='longpeak') && d.divergence && d.divergence.length){
@@ -2269,7 +2269,7 @@ async function search(){
         const batch = d.divergence.slice(i, i+HH_CONCURRENCY);
         // 지역 복수선택 시 배치 안에 서로 다른 구의 단지가 섞여 있을 수 있으므로, 각 항목이 실제로 속한
         // 구(x.lawd)별로 나눠서 조회한다 — 항상 셀렉트에 표시된 지역(lawd) 하나로만 조회하면 다른 구 단지는
-        // 세대수 매칭에 실패해 300세대 조건을 통과 못 하고 부당하게 누락됨(2026.07 지역 복수선택 추가 시 발견).
+        // 세대수 매칭에 실패해 400세대 조건을 통과 못 하고 부당하게 누락됨(2026.07 지역 복수선택 추가 시 발견).
         const byLawd = {};
         batch.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
         await Promise.all(Object.entries(byLawd).map(async ([lw, items])=>{
@@ -2278,7 +2278,7 @@ async function search(){
         }));
         for(const x of batch){
           if(filtered.length>=DIVERGENCE_CAP) break;
-          if(x.hh && x.hh.hhcnt>=300) filtered.push(x);
+          if(x.hh && x.hh.hhcnt>=400) filtered.push(x);
         }
       }
       d.divergence = filtered;
@@ -3114,7 +3114,7 @@ function renderNewHigh(d){
 
 
 function divergenceHTML(list){
-  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 300세대 이상 단지만 집계)</div>';
+  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 400세대 이상 단지만 집계)</div>';
   return list.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div style="display:flex;gap:8px;align-items:flex-start">
@@ -3197,7 +3197,7 @@ function renderShortUndervalue(d){
 function peakDivergenceHTML(list, prevLabel, recentLabel){
   prevLabel = prevLabel || '이전 6개월 최고가';
   recentLabel = recentLabel || '최근 6개월 최고가';
-  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 300세대 이상 단지만 집계)</div>';
+  if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 400세대 이상 단지만 집계)</div>';
   return list.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div style="display:flex;gap:8px;align-items:flex-start">
