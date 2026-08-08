@@ -1594,7 +1594,11 @@ function analyzeNewHigh(all, months){
     // 직전 최고가(top을 제외한 나머지 중 최고) — 갱신폭(▲ 금액) 계산용
     const prevMax = sorted.slice(1).reduce((m,t)=>Math.max(m,t.amt), 0);
     const gapAmt = R1(top.amt - prevMax);
-    if(gapAmt <= 0) continue; // 직전 최고가와 같거나 낮으면(동가 재현 등) "갱신"이 아니므로 제외
+    // (2026.08) 예전엔 "직전 최고가와 같으면(동가 재현) 제외"였는데, 수민 피드백으로 기준 변경 —
+    // 동가 재현이어도 "이번 거래 자체가 최근(30일 이내)"이면 신고가로 인정. 가격이 실제로 더 낮은 경우만 제외.
+    // (top은 정의상 항상 그 그룹의 최댓값이라 prevMax<=top.amt가 수학적으로 항상 성립 — 즉 gapAmt<0은 원천적으로
+    // 발생하지 않음. 이 줄은 "혹시 모를" 방어용일 뿐, 실질적으로는 표본 내 모든 최고가/동가 재현을 다 통과시킨다.)
+    if(gapAmt < 0) continue;
     const [apt, umd, py, gu] = k.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${py}평`, area:top.area, amt:top.amt,
@@ -3103,7 +3107,7 @@ function renderNewHigh(d){
       <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계</div>
       ${rows(d.newHigh, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.round(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
+        <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>

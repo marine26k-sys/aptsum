@@ -31,11 +31,13 @@ def make_icon(size, corner_ratio, out, bg=NAVY, pad_ratio=0.0):
     r = int(size * corner_ratio)
     d.rounded_rectangle([0, 0, size, size], radius=r, fill=bg)
     # three bars, same proportions as favicon (32-wide grid)
+    # 2026.08: 헤더/공유 이미지와 동일하게 청록(LOGO_TEAL)+민트(LOGO_TEAL_LIGHT)+청록으로 통일
+    # (예전엔 청록+흰색+청록이라 공유·홈화면 아이콘만 색이 따로 놀았음)
     def sx(v): return v / 32 * size
     bars = [
-        (sx(7), sx(17), sx(12), sx(27), TEAL),
-        (sx(14), sx(10), sx(19), sx(27), WHITE),
-        (sx(21), sx(5), sx(26), sx(27), TEAL),
+        (sx(7), sx(17), sx(12), sx(27), LOGO_TEAL),
+        (sx(14), sx(10), sx(19), sx(27), LOGO_TEAL_LIGHT),
+        (sx(21), sx(5), sx(26), sx(27), LOGO_TEAL),
     ]
     br = max(1, int(size * 1.2 / 32))
     for x0, y0, x1, y1, c in bars:
