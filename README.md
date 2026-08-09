@@ -206,7 +206,7 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - `/assets/favicon.svg`, `/assets/icon-192.png`, `/assets/icon-512.png`, `/assets/apple-touch-icon.png`, `/assets/og-image.png` — 브랜드 컬러(네이비/틸)로 생성한 아이콘·공유 카드 이미지
 - `/manifest.json` — 홈 화면 추가 시 아이콘·스플래시 적용 (PWA `standalone` 모드)
 - `index.html` `<head>`에 OG·트위터 카드 메타 태그 추가 → 카톡·인스타 DM으로 링크 공유 시 미리보기 노출
-- **주의**: `og:image`/`og:url`이 `https://aptsumprice.netlify.app`로 하드코딩되어 있음. 커스텀 도메인 쓰면 `index.html`에서 두 값 교체 필요
+- **참고**: `og:image`/`og:url`이 `https://aptsum.netlify.app`로 설정되어 있음(2026.08 도메인 변경 반영). 도메인을 또 바꾸면 `index.html`의 두 값 + `assets/gen.py`의 og-image 하단 텍스트까지 함께 교체하고 `python3 gen.py`로 `og-image.png` 재생성 필요
 - 아이콘·OG 이미지를 다시 만들려면 `assets/gen.py` 실행 (Pillow 필요)
 
 ## 속도·호출 구조 (v2 아키텍처)

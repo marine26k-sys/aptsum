@@ -110,7 +110,7 @@ for p in pts:
     d.ellipse([p[0] - 8, p[1] - 8, p[0] + 8, p[1] + 8], fill=WHITE, outline=TEAL, width=5)
 d.text((cx0, cy0 - 40), "월평균 시세 추이", font=font(FONT_BOLD, 24), fill=SUB)
 
-d.text((MX, H - 64), "aptsumprice.netlify.app", font=font(FONT_MED, 24), fill=SUB)
+d.text((MX, H - 64), "aptsum.netlify.app", font=font(FONT_MED, 24), fill=SUB)
 
 img.save("og-image.png")
 print("done")

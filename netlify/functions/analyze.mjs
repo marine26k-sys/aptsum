@@ -101,15 +101,21 @@ function parseItems(xml, ymFallback) {
   return items;
 }
 
+const FETCH_TIMEOUT_MS = 8000; // 국토부 API가 느려질 때 무한 대기하지 않도록 요청당 타임아웃
+
 async function fetchText(key, lawd, ym, retries = 2) {
   for (let i = 0; i <= retries; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
     try {
-      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`);
+      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`, { signal: ac.signal });
       const t = await r.text();
       if (t && /<item[\s>]|<header>|SERVICE/.test(t)) return { text: t, failed: false }; // 정상 응답(빈 결과 포함) 형태 확인
       if (i === retries) return { text: t || "", failed: true }; // 형식이 이상한 응답 — 마지막 시도까지 실패로 간주
     } catch (e) {
-      if (i === retries) return { text: "", failed: true };
+      if (i === retries) return { text: "", failed: true }; // 타임아웃(abort) 포함 — 마지막 시도까지 실패로 간주
+    } finally {
+      clearTimeout(timer);
     }
     await new Promise((res) => setTimeout(res, 300 * (i + 1))); // 재시도 전 짧게 대기
   }
