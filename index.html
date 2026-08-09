@@ -275,7 +275,7 @@
     })();
   </script>
   <header>
-    <div class="logo">
+    <div class="logo" id="logoTapZone" onclick="handleLogoTap()" style="cursor:pointer">
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
       아파트썸 실거래 분석
     </div>
@@ -292,6 +292,7 @@
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
+    <div class="tab" id="tabGap" style="display:none" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
   </div>
 
   <div class="search-box">
@@ -414,7 +415,7 @@ function buildShareURL(inp){
   } else {
     p.set('r', inp.lawd);
     if(inp.mode==='complex') p.set('q', inp.q);
-    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='newhigh') && inp.py) p.set('py', inp.py);
+    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='newhigh'||inp.mode==='gap') && inp.py) p.set('py', inp.py);
     // 복수 지역(칩) 선택 상태 — sel.value만으론 칩 선택이 안 잡히므로 별도 파라미터로 인코딩(2026.07)
     if(inp.regionSel && inp.regionSel.length) p.set('rs', inp.regionSel.map(x=>x.lawd+':'+x.name).join('|'));
     // 신고가 탭 전용 평형 다중 선택
@@ -427,7 +428,7 @@ function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
   if(!m) return;
-  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':'complex'))))))));
+  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':(m==='gap'?'gap':'complex')))))))));
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(m==='compare'){
@@ -444,18 +445,44 @@ function initFromURL(){
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
     if(m==='newhigh' && p.get('pym')){ pyBandMultiSel = p.get('pym').split(',').filter(Boolean); renderPyBandMultiBtn(); }
-    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
+    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='gap'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
 }
 async function shareCurrent(){
   const url = location.origin + location.pathname + location.search;
+  // 데스크톱 웹(특히 Windows Chrome/Edge)에서 navigator.share()를 부르면 OS 자체 공유 패널이 뜨는데,
+  // 공유 대상 앱 목록을 불러오다 로딩 스피너에서 멈추거나 아예 안 뜨는 경우가 있어(2026.08 리포트) —
+  // 모바일(터치 기기)에서만 네이티브 공유 시트를 쓰고, 데스크톱은 항상 클립보드 복사로 처리한다.
+  const isMobile = matchMedia('(pointer: coarse)').matches;
   try{
-    if(navigator.share){ await navigator.share({title:'아파트썸 실거래 분석', url}); return; }
+    if(isMobile && navigator.share){ await navigator.share({title:'아파트썸 실거래 분석', url}); return; }
     await navigator.clipboard.writeText(url);
     alert('분석 링크가 복사되었습니다');
   }catch(e){}
 }
+
+// ── 숨김 탭(갭투자 랭킹) 잠금 해제 — 로고를 짧은 시간 안에 5번 연속 탭하면 비밀번호 입력창이 뜬다(2026.08).
+// 한 번 해금하면 그 기기에선 계속 보이도록 localStorage에 남겨둔다(비공개 탭이라 매번 다시 탭하게 하면 번거로움).
+const GAP_TAB_PASSWORD = 'aptsum26';
+let logoTapCount = 0, logoTapTimer = null;
+function handleLogoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(()=>{ logoTapCount = 0; }, 600); // 600ms 안에 다음 탭이 없으면 카운트 리셋
+  if(logoTapCount >= 5){
+    logoTapCount = 0;
+    const tab = document.getElementById('tabGap');
+    if(tab && tab.style.display === 'none'){
+      const pw = prompt('비밀번호를 입력하세요');
+      if(pw !== GAP_TAB_PASSWORD) return; // 틀리면 아무 반응 없이 조용히 무시(오답 힌트를 안 줌)
+      tab.style.display = '';
+      try{ localStorage.setItem('apc:gapUnlocked','1'); }catch(e){}
+      alert('전세가율 랭킹 탭이 열렸습니다');
+    }
+  }
+}
+try{ if(localStorage.getItem('apc:gapUnlocked')==='1'){ const t=document.getElementById('tabGap'); if(t) t.style.display=''; } }catch(e){}
 
 // ── 즐겨찾기 ──
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
@@ -704,6 +731,7 @@ function restoreView(vi){
   else if(v.data.mode==='longpeak') renderLongPeak(v.data);
   else if(v.data.mode==='volume') renderVolume(v.data);
   else if(v.data.mode==='newhigh') renderNewHigh(v.data);
+  else if(v.data.mode==='gap') renderGap(v.data);
   else renderRegion(v.data);
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
@@ -946,6 +974,7 @@ function setMode(m){
   document.getElementById('tabSU').classList.toggle('on', m==='shortval');
   document.getElementById('tabP').classList.toggle('on', m==='peak');
   document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
+  document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
@@ -977,14 +1006,14 @@ function setMode(m){
     }
   }
   renderRegionChips();
-  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown') ? '' : 'none';
+  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap') ? '' : 'none';
   document.getElementById('pyBandMultiWrap').style.display = (m==='newhigh') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   if(m!=='newhigh'){ pyBandMultiSel = []; } // 다른 탭으로 나가면 초기화(신고가 재진입 시 항상 "전체 평형"로 시작, 다른 랭킹 탭과 동일한 컨벤션)
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh') ? '' : 'none';
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='shortval') ? 'none' : '';
-  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='shortval') ? 'none' : '';
+  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='shortval'||m==='gap') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='shortval'||m==='gap') ? 'none' : '';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
   document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
   document.getElementById('floorMin').value = '0';
@@ -1650,6 +1679,51 @@ function analyzeUpDown(all, months){
     up, down };
 }
 
+// ═══ 갭투자(전세가율) 랭킹 (2026.08 신규 — 비공개, 탭 버튼 없이 URL(?m=gap&r=lawd)로만 접근) ═══
+// 매매·전세 실거래를 각각 "단지+동+평형+구" 단위로 묶어 최근 2개월 평균가를 낸 뒤(2026.08, 12개월→2개월로 변경),
+// 같은 단위끼리 짝지어 전세가율(전세평균÷매매평균)을 계산 — 갭투자(적은 시드로 매매) 소재용 랭킹. 표본이 적으면
+// (매매·전세 각 2건 미만) 극단치 왜곡이 크므로 그 그룹은 아예 제외. 1~4층은 저층 할인 왜곡 방지를 위해 매매 쪽만
+// 제외(전세는 원래도 표본이 얇아 층수까지 거르면 남는 그룹이 너무 적어짐).
+function avgGroupA(items, months, minN){
+  const ms = new Set(months);
+  const byKey = {};
+  for(const t of items){
+    if(!ms.has(t.ym)) continue;
+    const k = `${t.apt}|${t.umd}|${t.py}|${t.gu||''}`;
+    (byKey[k]=byKey[k]||[]).push(t);
+  }
+  const out = {};
+  for(const [k,arrRaw] of Object.entries(byKey)){
+    const clean = markOutliers(arrRaw, months);
+    const arr = clean.length ? clean : arrRaw;
+    if(arr.length < minN) continue;
+    // 그룹 내 가장 흔한 전용면적을 대표값으로(등락 랭킹 buildRepRows와 동일한 방식)
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    out[k] = { avg: R1(avgA(arr)), n: arr.length, area };
+  }
+  return out;
+}
+function analyzeGapRanking(saleAll, rentAll, months){
+  const saleBy = avgGroupA(saleAll.filter(t=>parseInt(t.floor,10)>=5), months, 2);
+  const rentBy = avgGroupA(rentAll, months, 2);
+  const rows = [];
+  for(const k of Object.keys(rentBy)){
+    const s = saleBy[k], r = rentBy[k];
+    if(!s || !s.avg) continue;
+    const [apt,umd,py,gu] = k.split('|');
+    rows.push({
+      apt, umd, py, gu: gu||null, area: s.area,
+      saleAvg: s.avg, rentAvg: r.avg, saleN: s.n, rentN: r.n,
+      pct: Math.round(r.avg/s.avg*100), gapAmt: R1(s.avg-r.avg),
+    });
+  }
+  rows.sort((a,b)=> b.pct - a.pct); // 전세가율 높은(=갭 작은) 순
+  return { found:true, mode:'gap', total:saleAll.length,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    rows: rows.slice(0,30) };
+}
+
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
 // - 매매 실거래만 사용(분양권·입주권은 준공 전 시세·전매 이슈 등 매매와 무관한 요인으로 움직여서 왜곡 소지가 큼 → 완전히 제외)
 // - 20~37평 구간만 비교(초소형·초대형은 표본이 적고 가격 스케일이 달라 같은 비교군으로 묶기 부적절)
@@ -2031,7 +2105,7 @@ async function search(){
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   const mN = +document.getElementById('monthsN').value;
-  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='shortval') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='shortval'||mode==='gap') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
@@ -2039,7 +2113,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : (mode==='longpeak' ? curMonthNum+12 : (mode==='newhigh' ? 36 : mN))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화)
+  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : (mode==='longpeak' ? curMonthNum+12 : (mode==='newhigh' ? 36 : (mode==='gap' ? 2 : mN)))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -2052,7 +2126,7 @@ async function search(){
   const allScope = multiTargets.length > 0;
   const effMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh') ? neededMN : mN) // 이 네 탭은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
-    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval') ? 24 : (mode==='newhigh' ? 36 : Math.max(mN, 24));
+    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval'||mode==='gap') ? 24 : (mode==='newhigh' ? 36 : Math.max(mN, 24));
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
@@ -2150,7 +2224,7 @@ async function search(){
       const [raw, rawPFetched, rawJFetched] = await Promise.all([
         ensureMonths(lawd, effMN),
         ensureMonthsP(lawd, effMN).catch(()=>[]),
-        mode==='complex' ? ensureMonthsJ(lawd, effMN).catch(()=>[]) : Promise.resolve([]),
+        (mode==='complex'||mode==='gap') ? ensureMonthsJ(lawd, effMN).catch(()=>[]) : Promise.resolve([]),
       ]);
       rawP = rawPFetched;
       rawJ = rawJFetched;
@@ -2183,7 +2257,7 @@ async function search(){
             rawMerged = raw.concat(converted);
           }
         }catch(e){ rawMerged = raw; }
-      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='newhigh'){
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='newhigh' || mode==='gap'){
         rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
@@ -2233,6 +2307,15 @@ async function search(){
         d = analyzeLongPeakUndervalue(items, months, itemsUnfiltered);
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+      } else if(mode==='gap'){
+        // 비공개 탭(2026.08) — 매매·전세 실거래를 짝지어 전세가율(갭투자) 랭킹.
+        const pb = document.getElementById('pyBand').value.split('-');
+        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
+        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
+        const rentItems = windowF(rawJ);
+        d = analyzeGapRanking(items, rentItems, months);
+        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
         d = analyzeComplex(items, name, months, rawMerged);
         // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
@@ -2315,7 +2398,7 @@ async function search(){
       return;
     }
     lastData = d;
-    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else renderRegion(d);
+    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
     // 내용만 단지분석으로 바뀌어서 화면 중간(차트 아래쪽 등)부터 보이고, 그 위에 있는 평형별 요약표가 안 보이는
     // 것처럼 느껴지는 문제가 있었음 — 새 결과를 그릴 때마다 스크롤을 맨 위로 되돌린다.
@@ -3084,6 +3167,33 @@ function renderVolume(d){
 }
 
 
+
+function renderGap(d){
+  const regionName = sel.options[sel.selectedIndex].textContent;
+  const rows = d.rows.length
+    ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal)">${esc(x.py)}평</b>(전용 ${x.area}㎡) · ${esc(x.umd)}${x.gu?` · ${esc(x.gu)}`:''}</small></span>
+        <span class="val"><b style="color:var(--teal)">${x.pct}%</b><small>매매 ${x.saleAvg.toFixed(1)}억 · 전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
+      </div>`).join('')
+    : '<div class="rng" style="padding:6px 0">매매·전세가 모두 있는 단지가 없습니다</div>';
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      <div style="position:absolute;top:16px;right:18px;display:flex;align-items:center;gap:4px;opacity:.9">
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
+      </div>
+      <h2 style="padding-right:70px">${esc(regionName)} 전세가율 랭킹</h2>
+      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · 비공개(테스트) 탭</div>
+    </div>
+    <div class="sec">
+      <h3>전세가율 상위 (매매·전세 각 2건 이상 표본)</h3>
+      ${rows}
+    </div>
+  </div>
+  <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가(조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
 
 function renderNewHigh(d){
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
