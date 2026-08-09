@@ -242,7 +242,7 @@
 <body>
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px">
-    <a href="https://aptsumbiz.netlify.app" style="font-size:12px;font-weight:700;color:#fff;background:var(--teal);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,130,138,.28)">📩 비즈니스 문의</a>
+    <a href="https://aptsumbiz.netlify.app" style="font-size:12px;font-weight:700;color:#fff;background:var(--teal);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,130,138,.28)">📩 채널 소개 & 비즈니스 문의</a>
     <div style="display:flex;gap:5px;align-items:center">
       <img src="https://visitor-badge.laobi.icu/badge?page_id=aptsum.netlify.app&text=Total" alt="전체 방문자 수" loading="lazy" style="height:14px;opacity:.8">
       <img id="dailyBadge" alt="오늘 방문자 수" loading="lazy" style="height:14px;opacity:.8">
@@ -277,7 +277,7 @@
   <header>
     <div class="logo" id="logoTapZone" onclick="handleLogoTap()" style="cursor:pointer">
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-      아파트썸 실거래 분석
+      <span style="color:#00C2C2">아파트썸</span> 실거래 분석
     </div>
     <button class="header-share" onclick="shareCurrent()" title="공유">⤴</button>
   </header>
@@ -1660,12 +1660,8 @@ function buildRepRows(all, months){
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, pct, r3avg:R1(r3avg), p3avg:R1(p3avg), n:arr.length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
-  const byApt = {};
-  pyRows.forEach(r=>{
-    const k = r.apt+'|'+r.umd+'|'+(r.gu||'');
-    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
-  });
-  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+  // 2026.08: 단지당 거래량 최다 평형 하나만 남기던 로직 제거 — 평형마다 독립적으로 등락/저평가 판정(다른 평형에 가려 누락되는 문제 방지)
+  return pyRows.map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
 }
 
 // all: 평형 필터가 적용된 데이터(상승률·하락률 랭킹용) / allUnfiltered: 필터 적용 전 원본(초단기 저평가 단지용)
@@ -1700,7 +1696,7 @@ function avgGroupA(items, months, minN){
     // 그룹 내 가장 흔한 전용면적을 대표값으로(등락 랭킹 buildRepRows와 동일한 방식)
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    out[k] = { avg: R1(avgA(arr)), n: arr.length, area };
+    out[k] = { avg: R1(avgA(arr)), n: arr.length, area, build: arr[0].build, lawd: arr[0].lawd||null };
   }
   return out;
 }
@@ -1713,7 +1709,7 @@ function analyzeGapRanking(saleAll, rentAll, months){
     if(!s || !s.avg) continue;
     const [apt,umd,py,gu] = k.split('|');
     rows.push({
-      apt, umd, py, gu: gu||null, area: s.area,
+      apt, umd, py, gu: gu||null, area: s.area, build: s.build, lawd: s.lawd,
       saleAvg: s.avg, rentAvg: r.avg, saleN: s.n, rentN: r.n,
       pct: Math.round(r.avg/s.avg*100), gapAmt: R1(s.avg-r.avg),
     });
@@ -1788,12 +1784,8 @@ function buildPeakRows(all, months){
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r3top.kind||null, r3max:R1(r3max), p3max:R1(p3max), n:arr.length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
-  const byApt = {};
-  pyRows.forEach(r=>{
-    const k = r.apt+'|'+r.umd+'|'+(r.gu||'');
-    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
-  });
-  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+  // 2026.08: 단지당 거래량 최다 평형 하나만 남기던 로직 제거 — 평형마다 독립적으로 저평가 판정(다른 평형에 가려 누락되는 문제 방지)
+  return pyRows.map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
 }
 
 function analyzePeakUndervalue(all, months, allUnfiltered){
@@ -1853,12 +1845,8 @@ function buildLongPeakRows(all, months){
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r12top.kind||null, r3max:R1(r12max), p3max:R1(p12max), n:arr.length, r3n:r12.length, p3n:p12.length };
   }).filter(Boolean);
-  const byApt = {};
-  pyRows.forEach(r=>{
-    const k = r.apt+'|'+r.umd+'|'+(r.gu||'');
-    if(!byApt[k] || r.n > byApt[k].n) byApt[k] = r;
-  });
-  return Object.values(byApt).map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
+  // 2026.08: 단지당 거래량 최다 평형 하나만 남기던 로직 제거 — 평형마다 독립적으로 저평가 판정(다른 평형에 가려 누락되는 문제 방지)
+  return pyRows.map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
 }
 
 function analyzeLongPeakUndervalue(all, months, allUnfiltered){
@@ -2463,6 +2451,16 @@ async function attachHHCountsAsync(d, myToken, lawd){
         : Promise.resolve();
       await Promise.all([ attachAll(d.up), attachAll(d.down) ]);
       if(myToken===searchToken) renderUpDown(d);
+    } else if(d.mode==='gap') {
+      if(d.rows && d.rows.length){
+        const byLawd = {};
+        d.rows.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
+        await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
+          const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
+          list.forEach(x=>{ x.hh = map[x.apt] || null; });
+        }));
+      }
+      if(myToken===searchToken) renderGap(d);
     } else if(d.mode==='compare' && d.complexes && d.complexes.length){
       const byLawd = {};
       d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
@@ -3172,8 +3170,8 @@ function renderGap(d){
   const regionName = sel.options[sel.selectedIndex].textContent;
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal)">${esc(x.py)}평</b>(전용 ${x.area}㎡) · ${esc(x.umd)}${x.gu?` · ${esc(x.gu)}`:''}</small></span>
-        <span class="val"><b style="color:var(--teal)">${x.pct}%</b><small>매매 ${x.saleAvg.toFixed(1)}억 · 전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal)">${esc(x.py)}평</b>(전용 ${x.area}㎡) · ${esc(x.umd)}${x.gu?` · ${esc(x.gu)}`:''}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="val"><small style="display:inline">매매 ${x.saleAvg.toFixed(1)}억</small> <b style="color:var(--teal)">${x.pct}%</b><small style="display:block">전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">매매·전세가 모두 있는 단지가 없습니다</div>';
   const html = `
