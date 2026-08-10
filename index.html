@@ -1560,7 +1560,7 @@ function analyzeComplex(all, name, months, rawAll){
       const rawClean = markOutliers(rawMatch, recentMonths);
       floorBand = floorBands(rawClean);
     }
-    return { py:`${py}평`, area:`전용 ${Math.round(recent.area)}㎡`, n:arr.length,
+    return { py:`${py}평`, area:`전용 ${Math.floor(recent.area)}㎡`, n:arr.length,
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
       recent:{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor},
       max, maxDate, quarters, trend,
@@ -1658,7 +1658,7 @@ function buildRepRows(all, months){
     const r3avg = avgA(r3), p3avg = avgA(p3);
     if(!p3avg) return null;
     const pct = Math.round((r3avg-p3avg)/p3avg*100);
-    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, pct, r3avg:R1(r3avg), p3avg:R1(p3avg), n:arr.length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
@@ -1696,7 +1696,7 @@ function avgGroupA(items, months, minN){
     const arr = clean.length ? clean : arrRaw;
     if(arr.length < minN) continue;
     // 그룹 내 가장 흔한 전용면적을 대표값으로(등락 랭킹 buildRepRows와 동일한 방식)
-    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     out[k] = { avg: R1(avgA(arr)), n: arr.length, area, build: arr[0].build, lawd: arr[0].lawd||null };
   }
@@ -1782,7 +1782,7 @@ function buildPeakRows(all, months){
     const r3top = r3.reduce((best,t)=> (!best || t.amt>best.amt) ? t : best, null);
     const r3max = r3top.amt, p3max = Math.max(...p3.map(t=>t.amt));
     if(!p3max) return null;
-    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r3top.kind||null, r3max:R1(r3max), p3max:R1(p3max), n:arr.length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
@@ -1843,7 +1843,7 @@ function buildLongPeakRows(all, months){
     const r12top = r12.reduce((best,t)=> (!best || t.amt>best.amt) ? t : best, null);
     const r12max = r12top.amt, p12max = Math.max(...p12.map(t=>t.amt));
     if(!p12max) return null;
-    const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1);
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:r12top.kind||null, r3max:R1(r12max), p3max:R1(p12max), n:arr.length, r3n:r12.length, p3n:p12.length };
   }).filter(Boolean);
@@ -1913,7 +1913,7 @@ function analyzeCompare(itemsByLawd, targets, months){
         const mA = arr.filter(t=>t.ym===ym);
         return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
       }).filter(Boolean);
-      const areaCnt={}; arr.forEach(t=>areaCnt[Math.round(t.area)]=(areaCnt[Math.round(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
+      const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
       const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
       return { py:`${py}평`, area, n:arr.length,
         avg3: a3.length? {v:R1(avgA(a3)), n:a3.length} : null,
@@ -3216,7 +3216,7 @@ function renderNewHigh(d){
       <h3>신고가 갱신 단지</h3>
       <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계</div>
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.round(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
