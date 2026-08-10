@@ -2004,6 +2004,21 @@ document.addEventListener('input', e=>{
 document.addEventListener('focusin', e=>{
   if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
 });
+// 모바일 키보드가 올라올 때 입력창이 가려지는 문제 방지 — 키보드 애니메이션(약 300ms) 끝난 뒤 화면 중앙으로 스크롤
+document.addEventListener('focusin', e=>{
+  if(e.target.matches('#q') || e.target.matches('.cmp-row input') || e.target.matches('input.q')){
+    setTimeout(()=> e.target.scrollIntoView({block:'center', behavior:'smooth'}), 300);
+  }
+});
+// iOS 등에서 visualViewport가 키보드에 맞춰 줄어들 때도 같은 방식으로 재보정(브라우저마다 focusin 타이밍이 달라 이중 안전장치)
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', ()=>{
+    const active = document.activeElement;
+    if(active && (active.matches('#q') || active.matches('.cmp-row input') || active.matches('input.q'))){
+      active.scrollIntoView({block:'center', behavior:'smooth'});
+    }
+  });
+}
 document.addEventListener('click', e=>{
   if(!e.target.closest('#ac') && !e.target.matches('#q') && !e.target.matches('.cmp-row input')) acHide();
 });
@@ -2646,7 +2661,7 @@ function pyTableHTML(d){
   return `<table>
     <tr><th>평형</th><th class="tr-r">${esc(qLabels[0])}</th><th class="tr-r">${esc(qLabels[1])}</th><th class="tr-r th-teal2">${esc(qLabels[2])}</th><th class="tr-r th-teal">${esc(qLabels[3])}</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}(${esc(p.area)})${p.isNewHigh?'<span class="nh">최고가</span>':''}</td>
+      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r">${avgCell(p.quarters[0].avg)}</td>
       <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
       <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
