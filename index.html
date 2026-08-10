@@ -275,7 +275,7 @@
     })();
   </script>
   <header>
-    <div class="logo" id="logoTapZone" onclick="handleLogoTap()" style="cursor:pointer">
+    <div class="logo" id="logoTapZone">
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
       <span style="color:#00C2C2">아파트썸</span> 실거래 분석
     </div>
@@ -292,7 +292,7 @@
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
-    <div class="tab" id="tabGap" style="display:none" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
+    <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
   </div>
 
   <div class="search-box">
@@ -462,27 +462,7 @@ async function shareCurrent(){
   }catch(e){}
 }
 
-// ── 숨김 탭(갭투자 랭킹) 잠금 해제 — 로고를 짧은 시간 안에 5번 연속 탭하면 비밀번호 입력창이 뜬다(2026.08).
-// 한 번 해금하면 그 기기에선 계속 보이도록 localStorage에 남겨둔다(비공개 탭이라 매번 다시 탭하게 하면 번거로움).
-const GAP_TAB_PASSWORD = 'aptsum26';
-let logoTapCount = 0, logoTapTimer = null;
-function handleLogoTap(){
-  logoTapCount++;
-  clearTimeout(logoTapTimer);
-  logoTapTimer = setTimeout(()=>{ logoTapCount = 0; }, 600); // 600ms 안에 다음 탭이 없으면 카운트 리셋
-  if(logoTapCount >= 5){
-    logoTapCount = 0;
-    const tab = document.getElementById('tabGap');
-    if(tab && tab.style.display === 'none'){
-      const pw = prompt('비밀번호를 입력하세요');
-      if(pw !== GAP_TAB_PASSWORD) return; // 틀리면 아무 반응 없이 조용히 무시(오답 힌트를 안 줌)
-      tab.style.display = '';
-      try{ localStorage.setItem('apc:gapUnlocked','1'); }catch(e){}
-      alert('전세가율 랭킹 탭이 열렸습니다');
-    }
-  }
-}
-try{ if(localStorage.getItem('apc:gapUnlocked')==='1'){ const t=document.getElementById('tabGap'); if(t) t.style.display=''; } }catch(e){}
+// (2026.08 히든 탭 잠금해제 로직 — 전세가율 탭 공개 전환으로 제거)
 
 // ── 즐겨찾기 ──
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
@@ -564,7 +544,7 @@ async function renderFavDash(){
       const last = r.last;
       return favDashCard(r, last
         ? `<b style="font-size:15px;color:var(--navy)">${last.amt.toFixed(1)}억</b>
-           <span style="font-size:11px;color:var(--sub);margin-left:6px">${esc(last.py)}평 · ${esc(ymLabel(last.ym))}.${esc(last.d)}</span>
+           <span style="font-size:11px;color:var(--sub);margin-left:6px">${esc(last.py)}평${last.area?`(전용 ${Math.floor(last.area)}㎡)`:''} · ${esc(ymLabel(last.ym))}.${esc(last.d)}</span>
            <div style="font-size:10.5px;color:var(--sub);margin-top:2px">최근 등락 산출 불가(거래 부족)</div>`
         : `<span style="color:var(--sub);font-size:12px">거래 데이터 부족</span>`);
     }
@@ -573,7 +553,7 @@ async function renderFavDash(){
     return favDashCard(r, `
       <b style="font-size:16px;color:var(--navy)">${x.r3avg.toFixed(1)}억</b>
       <span class="${dir}" style="font-weight:800;font-size:13px;margin-left:6px">${x.pct>0?'+':''}${x.pct}%</span>
-      <div style="font-size:10.5px;color:var(--sub);margin-top:2px">${esc(x.py)}평 대표 · 최근 2개월 ${x.r3n}건 (이전 ${x.p3avg.toFixed(1)}억→최근 ${x.r3avg.toFixed(1)}억)</div>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:2px">${esc(x.mainPy)} 대표 · 최근 2개월 ${x.r3n}건 (이전 ${x.p3avg.toFixed(1)}억→최근 ${x.r3avg.toFixed(1)}억)</div>
     `);
   }).join('');
 }
@@ -1583,16 +1563,19 @@ function analyzeRegion(all, months){
     const sorted = arr.slice().sort((a,b)=>dkey(b).localeCompare(dkey(a)));
     const pyCnt={}; sorted.forEach(t=>pyCnt[t.py]=(pyCnt[t.py]||0)+1);
     const mainPy = Object.entries(pyCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    const mainPyTrades = sorted.filter(t=>t.py===mainPy);
+    const areaCnt={}; mainPyTrades.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 주력 평형 내 가장 흔한 전용면적을 대표값으로
+    const mainArea = Object.keys(areaCnt).length ? +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0] : null;
     const [apt,umd,gu]=k.split('|');
     const r3n = arr.filter(t=>r3set.has(t.ym)).length;
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
-    return {apt, umd, gu:gu||null, n:sorted.length, mainPy:`${mainPy}평`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
+    return {apt, umd, gu:gu||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?`(전용 ${mainArea}㎡)`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).sort((a,b)=>b.n-a.n).slice(0,100);
   const grouped = Object.entries(byApt).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
     const [apt,umd,gu] = k.split('|');
-    return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
+    return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, area:top.area, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
       floor:top.floor, build:top.build, kind:top.kind||null, isNew:isRecentDeal(top), n:arr.length};
   });
   const highDeals = grouped.slice().sort((a,b)=>b.amt-a.amt).slice(0,100);
@@ -1677,7 +1660,7 @@ function analyzeUpDown(all, months){
     up, down };
 }
 
-// ═══ 갭투자(전세가율) 랭킹 (2026.08 신규 — 비공개, 탭 버튼 없이 URL(?m=gap&r=lawd)로만 접근) ═══
+// ═══ 갭투자(전세가율) 랭킹 (2026.08 신규, 2026.08 공개 탭으로 전환) ═══
 // 매매·전세 실거래를 각각 "단지+동+평형+구" 단위로 묶어 최근 2개월 평균가를 낸 뒤(2026.08, 12개월→2개월로 변경),
 // 같은 단위끼리 짝지어 전세가율(전세평균÷매매평균)을 계산 — 갭투자(적은 시드로 매매) 소재용 랭킹. 표본이 적으면
 // (매매·전세 각 2건 미만) 극단치 왜곡이 크므로 그 그룹은 아예 제외. 1~4층은 저층 할인 왜곡 방지를 위해 매매 쪽만
@@ -2298,7 +2281,7 @@ async function search(){
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='gap'){
-        // 비공개 탭(2026.08) — 매매·전세 실거래를 짝지어 전세가율(갭투자) 랭킹.
+        // 공개 탭(2026.08) — 매매·전세 실거래를 짝지어 전세가율(갭투자) 랭킹.
         const pb = document.getElementById('pyBand').value.split('-');
         const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
         if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
@@ -2663,7 +2646,7 @@ function pyTableHTML(d){
   return `<table>
     <tr><th>평형</th><th class="tr-r">${esc(qLabels[0])}</th><th class="tr-r">${esc(qLabels[1])}</th><th class="tr-r th-teal2">${esc(qLabels[2])}</th><th class="tr-r th-teal">${esc(qLabels[3])}</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td>${esc(p.py)}(${esc(p.area)})${p.isNewHigh?'<span class="nh">최고가</span>':''}</td>
       <td class="tr-r">${avgCell(p.quarters[0].avg)}</td>
       <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
       <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
@@ -3129,7 +3112,7 @@ function renderRegion(d){
     <div class="sec">
       <h3>기간 최고가 거래</h3>
       ${rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${esc(x.py)}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
     </div>
 
@@ -3157,7 +3140,7 @@ function renderVolume(d){
     <div class="sec">
       <h3>거래량 상위</h3>
       ${rows(d.topVolume, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}·${d.pyBand? `주력 ${esc(x.mainPy)}` : '전체 평형'}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${d.pyBand? `<b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·`:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${!d.pyBand? '·전체 평형':''}</small></span>
         <span class="val">${x.n}건</span>`)}
     </div>
 
@@ -3172,7 +3155,7 @@ function renderGap(d){
   const regionName = sel.options[sel.selectedIndex].textContent;
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal)">${esc(x.py)}평</b>(전용 ${x.area}㎡) · ${esc(x.umd)}${x.gu?` · ${esc(x.gu)}`:''}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}평(전용 ${x.area}㎡)</b> · ${esc(x.umd)}${x.gu?` · ${esc(x.gu)}`:''}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
         <span class="val"><small style="display:inline">매매 ${x.saleAvg.toFixed(1)}억</small> <b style="color:var(--teal)">${x.pct}%</b><small style="display:block">전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">매매·전세가 모두 있는 단지가 없습니다</div>';
