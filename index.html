@@ -122,6 +122,16 @@
   .channels-links .chip{display:inline-flex;align-items:center;gap:4px;text-decoration:none;white-space:nowrap;font-size:10px;padding:3px 9px}
   .channels-links .chip-icon{flex:none;display:block;width:13px;height:13px}
   .channels-links .chip:hover{border-color:var(--teal);color:var(--teal-dark)}
+  #pwaInstallBtn{display:none;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--teal-dark);background:#fff;border:1.4px solid var(--teal);border-radius:8px;padding:5px 10px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 4px rgba(0,130,138,.12)}
+  #pwaInstallBtn:hover{background:var(--teal-light-soft)}
+  #pwaInstallBtn svg{flex:none;width:14px;height:14px}
+  #pwaModalBg{display:none;position:fixed;inset:0;background:rgba(15,43,61,.55);z-index:999;align-items:center;justify-content:center;padding:20px}
+  #pwaModal{background:#fff;border-radius:14px;max-width:340px;width:100%;padding:20px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  #pwaModal h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+  #pwaModal p{margin:0 0 8px;font-size:13px;color:var(--ink);line-height:1.55}
+  #pwaModal .step{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
+  #pwaModal .step-num{flex:none;width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  #pwaModal button{margin-top:6px;width:100%;padding:9px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
   .chart-wrap{overflow:hidden}
   .chart-note{font-size:10px;color:var(--sub);text-align:right;margin-top:2px}
   circle[data-tip]{touch-action:none}
@@ -241,11 +251,24 @@
 </head>
 <body>
 <div class="wrap">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px">
-    <a href="https://aptsumbiz.netlify.app" style="font-size:12px;font-weight:700;color:#fff;background:var(--teal);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,130,138,.28)">📩 채널 소개 & 비즈니스 문의</a>
-    <div style="display:flex;gap:5px;align-items:center">
+  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px 8px">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <a href="https://aptsumbiz.netlify.app" style="font-size:12px;font-weight:700;color:#fff;background:var(--teal);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,130,138,.28)">📩 채널 소개 & 비즈니스 문의</a>
+      <button id="pwaInstallBtn" onclick="handlePwaInstallClick()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+        홈 화면에 추가
+      </button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
       <img src="https://visitor-badge.laobi.icu/badge?page_id=aptsum.netlify.app&text=Total" alt="전체 방문자 수" loading="lazy" style="height:14px;opacity:.8">
       <img id="dailyBadge" alt="오늘 방문자 수" loading="lazy" style="height:14px;opacity:.8">
+    </div>
+  </div>
+  <div id="pwaModalBg" onclick="if(event.target===this)closePwaModal()">
+    <div id="pwaModal">
+      <h3>📲 홈 화면에 추가하기</h3>
+      <p id="pwaModalBody"></p>
+      <button onclick="closePwaModal()">확인</button>
     </div>
   </div>
   <div class="channels-links">
@@ -273,6 +296,66 @@
       const ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
       document.getElementById('dailyBadge').src = `https://visitor-badge.laobi.icu/badge?page_id=aptsum.netlify.app-daily-${ymd}&text=Today`;
     })();
+  </script>
+  <script>
+    // ---- PWA 설치: 서비스워커 등록 + 홈 화면 추가 버튼 ----
+    (function(){
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+
+      const btn = document.getElementById('pwaInstallBtn');
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      if (isStandalone) {
+        // 이미 앱으로 설치되어 실행 중이면 버튼 자체를 숨김
+        window.__pwaDeferredPrompt = null;
+      } else if (isIOS) {
+        // iOS Safari는 beforeinstallprompt를 지원하지 않아 안내 모달로 대체
+        btn.style.display = 'inline-flex';
+      } else {
+        // 안드로이드/데스크톱 Chrome 등: 브라우저가 설치 가능하다고 판단하면 이벤트 발생
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          window.__pwaDeferredPrompt = e;
+          btn.style.display = 'inline-flex';
+        });
+        window.addEventListener('appinstalled', () => {
+          btn.style.display = 'none';
+          window.__pwaDeferredPrompt = null;
+        });
+      }
+    })();
+
+    async function handlePwaInstallClick(){
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (window.__pwaDeferredPrompt) {
+        window.__pwaDeferredPrompt.prompt();
+        await window.__pwaDeferredPrompt.userChoice;
+        window.__pwaDeferredPrompt = null;
+        document.getElementById('pwaInstallBtn').style.display = 'none';
+        return;
+      }
+      if (isIOS) {
+        document.getElementById('pwaModalBody').innerHTML =
+          '<div class="step"><div class="step-num">1</div><div>하단 <b>공유 버튼</b>(<svg style="display:inline;vertical-align:-3px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00828A" stroke-width="2"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>)을 눌러주세요.</div></div>' +
+          '<div class="step"><div class="step-num">2</div><div>메뉴에서 <b>\'홈 화면에 추가\'</b>를 선택해주세요.</div></div>' +
+          '<div class="step"><div class="step-num">3</div><div>오른쪽 위 <b>\'추가\'</b>를 누르면 완료!</div></div>';
+        document.getElementById('pwaModalBg').style.display = 'flex';
+        return;
+      }
+      // 이벤트가 아직 안 온 브라우저(설치 조건 미충족 등) 대비 안내
+      document.getElementById('pwaModalBody').innerHTML =
+        '<div>브라우저 메뉴(⋮)에서 <b>\'앱 설치\'</b> 또는 <b>\'홈 화면에 추가\'</b>를 선택해주세요.</div>';
+      document.getElementById('pwaModalBg').style.display = 'flex';
+    }
+
+    function closePwaModal(){
+      document.getElementById('pwaModalBg').style.display = 'none';
+    }
   </script>
   <header>
     <div class="logo" id="logoTapZone">
@@ -524,7 +607,10 @@ async function renderFavDash(){
   const results = await Promise.all(favs.map(async f=>{
     try{
       const items = await ensureMonths(f.lawd, 12);
-      const m = matchComplex(items, f.name);
+      let itemsP = [];
+      try{ itemsP = await ensureMonthsP(f.lawd, 12); }catch(e){} // 매매 실거래가 없는 분양권 전용 즐겨찾기 단지도 요약에 반영
+      const merged = mergeTradeAndPresaleForRanking(items, itemsP);
+      const m = matchComplex(merged, f.name);
       if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
       const rows = buildRepRows(m.hits, months);
       if(!rows.length){
@@ -2202,9 +2288,16 @@ async function search(){
       }
     } else if(mode==='compare'){
       const uniq = [...new Set(cmpItems.map(x=>x.lawd))];
-      const fetched = await Promise.all(uniq.map(ld=>ensureMonths(ld, effMN)));
+      // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
+      const [fetched, fetchedP] = await Promise.all([
+        Promise.all(uniq.map(ld=>ensureMonths(ld, effMN))),
+        Promise.all(uniq.map(ld=>ensureMonthsP(ld, effMN).catch(()=>[]))),
+      ]);
       const byLawd = {};
-      uniq.forEach((ld,i)=>byLawd[ld]=floorF(windowF(fetched[i])));
+      uniq.forEach((ld,i)=>{
+        const merged = mergeTradeAndPresaleForRanking(fetched[i], fetchedP[i]);
+        byLawd[ld]=floorF(windowF(merged));
+      });
       d = analyzeCompare(byLawd, cmpItems, months);
     } else {
       // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
