@@ -402,10 +402,10 @@
     <div class="tab" id="tabNL" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>신저가</div>
     <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabU" onclick="setMode('updown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>등락 랭킹</div>
+    <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
-    <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
   </div>
 
   <div class="search-box">
@@ -871,9 +871,10 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치 (지역 랭킹 전용 상한)
+const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
+const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
-function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow') ? REGION_MAX_UNDERVALUE : REGION_MAX; }
+function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow') ? REGION_MAX_RANK : REGION_MAX; }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -1763,7 +1764,9 @@ function analyzeNewLow(all, months){
     // 직전 최저가(bottom을 제외한 나머지 중 최저) — 하락폭(▼ 금액) 계산용
     const prevMin = sorted.slice(1).reduce((m,t)=>Math.min(m,t.amt), Infinity);
     const gapAmt = isFinite(prevMin) ? R1(prevMin - bottom.amt) : 0; // 양수면 직전 최저가보다 더 떨어졌다는 뜻
-    if(gapAmt < 0) continue; // bottom은 정의상 항상 최솟값이라 이론상 발생하지 않는 방어 코드(신고가와 동일 원칙)
+    // 신고가와 달리 신저가는 "동일가 재현"(gapAmt===0)을 인정하지 않음(수민 요청) — 실제로 더 낮은 가격을
+    // 새로 찍은 경우만 신저가로 인정. gapAmt<0은 bottom이 정의상 항상 최솟값이라 이론상 발생하지 않는 방어 코드.
+    if(gapAmt <= 0) continue;
     const [apt, umd, py, gu] = k.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:bottom.lawd||null, py:`${py}평`, area:bottom.area, amt:bottom.amt,
@@ -2517,6 +2520,19 @@ async function search(){
       d.divergence = filtered;
     }
 
+    // 신저가 탭: 300세대 이상 단지만 집계 — 소규모 단지는 표본이 얇아 개별 거래 하나로도
+    // "신저가"가 쉽게 왜곡될 수 있어 저평가 계열(400세대 기준)과 동일한 취지로 세대수 하한을 둔다.
+    // 신고가 탭은 세대수 조건 없음(수민 요청 — 신저가에만 적용).
+    if(d.found && mode==='newlow' && d.newLow && d.newLow.length){
+      const byLawd = {};
+      d.newLow.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
+      await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
+        const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
+        list.forEach(x=>{ x.hh = map[x.apt] || null; });
+      }));
+      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300);
+    }
+
 
     // 매매·병합 데이터로 매칭 실패했을 때, 분양권 원본(rawP)에서도 이름 유사 후보를 추가로 찾아 추천에 포함
     // (표기 순서가 뒤바뀐 경우 등 substring 매칭조차 실패하는 오타성 불일치를 "혹시 이 단지?"로 구제)
@@ -2604,16 +2620,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       }
       if(myToken===searchToken) renderNewHigh(d);
     } else if(d.mode==='newlow'){
-      if(d.newLow && d.newLow.length){
-        // 신고가와 동일한 방식 — 지역 복수선택 시 구별로 그룹핑해서 조회
-        const byLawd = {};
-        d.newLow.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
-        await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
-          const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
-          list.forEach(x=>{ x.hh = map[x.apt] || null; });
-        }));
-      }
-      if(myToken===searchToken) renderNewLow(d);
+      // 신저가는 300세대 필터 적용을 위해 search() 단계에서 이미 세대수를 조회·부착해뒀으므로(위 참고) 여기선 재조회 불필요
     } else if(d.mode==='updown'){
       const attachAll = (list) => list && list.length
         ? fetchHHCntBatch(lawd, list.map(x=>x.apt)).then(map=>{ list.forEach(x=>{ x.hh = map[x.apt] || null; }); })
@@ -3411,10 +3418,10 @@ function renderNewLow(d){
 
     <div class="sec">
       <h3>신저가 갱신 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 1~5층 제외(층수 할인 왜곡 방지) · 급매 등 시세 하락 신호로 참고</div>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 동일가 재현 제외(실제 하락한 거래만) · 급매 등 시세 하락 신호로 참고</div>
       ${rows(d.newLow, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--red)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val down">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
+        <span class="val down">${x.amt.toFixed(1)}억<small>${x.prevMax? `▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
