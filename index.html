@@ -73,7 +73,7 @@
   .card{background:#fff;border-radius:16px;box-shadow:0 2px 14px rgba(15,43,61,.07);margin-bottom:12px}
   .card-hd{background:var(--navy);color:#fff;padding:15px 18px;border-radius:16px 16px 0 0;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(15,43,61,.15)}
   .card-hd h2{font-size:18px;font-weight:900;letter-spacing:-.5px}
-  .card-hd .meta{font-size:11px;opacity:.75;margin-top:2px}
+  .card-hd .meta{font-size:11px;opacity:.75;margin-top:2px;text-align:center}
   .sec{padding:14px 18px}
   .sec+.sec{border-top:1px solid var(--line)}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
@@ -1835,8 +1835,13 @@ function analyzePricePerPyeong(all, months){
   // 1) 단지+평형(유닛 타입 구분용 py 라벨)별 3년 최고가 산출 (동가면 최근 계약일 우선)
   //    ※ py는 여기서 "같은 평면구조 유닛인지 묶는 그룹핑 키"로만 쓰고, 아래 평단가 계산 자체에는 쓰지 않음
   const byPy = {};
+  // pyCount: (단지|동|구|평형)별 표본 개수 — 딱 1건뿐인 평형은 뒤에서 이상치로 간주해 제외
+  // (예: 국토부 원본 데이터에 단지 공식 평형과 무관한 소형 전용면적 1건이 섞여 들어오면, 분모가 작다는
+  //  이유만으로 평단가가 비정상적으로 튀어 "가장 높은 평단가" 대표로 잘못 뽑히는 문제가 있었음)
+  const pyCount = {};
   for(const t of all){
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${t.py}`;
+    pyCount[pk] = (pyCount[pk]||0) + 1;
     const cur = byPy[pk];
     if(!cur || t.amt > cur.amt || (t.amt===cur.amt && dkey(t) > dkey(cur))) byPy[pk] = t;
   }
@@ -1844,6 +1849,8 @@ function analyzePricePerPyeong(all, months){
   const byComplex = {};
   for(const t of Object.values(byPy)){
     if(!t.area) continue; // 전용면적 정보 없는 거래는 평단가 계산 불가
+    const pk = `${t.apt}|${t.umd}|${t.gu||''}|${t.py}`;
+    if((pyCount[pk]||0) < 2) continue; // 표본 1건뿐인 평형은 이상치 방지를 위해 대표 후보에서 제외
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
     const pyExact = R1(t.area / SQM_PER_PY); // 전용면적(㎡) → 전용평형(정밀, 보간 없음)
     const pricePerPy = Math.round(t.amt*10000/pyExact); // 억 → 만원 환산 후 전용평형으로 나눔 = 만원/전용평
@@ -3392,10 +3399,10 @@ function renderRegion(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">실거래 랭킹</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">실거래 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
@@ -3423,10 +3430,10 @@ function renderVolume(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">거래량 랭킹</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">거래량 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
@@ -3458,10 +3465,10 @@ function renderGap(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">전세가율 랭킹</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">전세가율 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · <b style="color:#7FD4D9">최근 2개월 평균</b></div>
@@ -3484,10 +3491,10 @@ function renderNewHigh(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">신고가</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">신고가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} 중 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
@@ -3516,10 +3523,10 @@ function renderNewLow(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">신저가</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">신저가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} 중 최저가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
@@ -3548,10 +3555,10 @@ function renderPricePerPyeong(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">전용면적 평단가</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">전용면적 평단가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} 중 3년 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
@@ -3560,7 +3567,7 @@ function renderPricePerPyeong(d){
 
     <div class="sec">
       <h3>전용면적 평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 단지당 평단가가 가장 높은 평형 1개만 대표로 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형(전용면적÷3.3058, 공급면적 아님)</div>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 단지당 평단가가 가장 높은 평형 1개만 대표로 표시 · 평형별 표본 2건 이상만 집계(이상치 방지) · 평단가 = 3년 내 최고가 ÷ 전용평형(전용면적÷3.3058, 공급면적 아님)</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">전용 ${Math.round(x.pyExact)}평(${x.area?Math.floor(x.area):''}㎡)</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
@@ -3608,10 +3615,10 @@ function renderUpDown(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">등락 랭킹</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">등락 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} · 최근 2개월 평균가 vs 이전 2개월 평균가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
@@ -3638,10 +3645,10 @@ function renderShortUndervalue(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff">단기 저평가</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff">단기 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} · 최근 2개월 평균가 vs 이전 2개월 평균가</div>
@@ -3689,10 +3696,10 @@ function renderPeak(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff"><span style="color:var(--yellow)">반기</span> 저평가</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff"><span style="color:var(--yellow)">반기</span> 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
@@ -3716,10 +3723,10 @@ function renderLongPeak(d){
   <div class="card">
     <div class="card-hd">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:12px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:12px;font-weight:800;color:#fff"><span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
+        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
+        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
+        <span style="font-size:16px;font-weight:800;color:#fff"><span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
