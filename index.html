@@ -386,15 +386,17 @@
       document.getElementById('pwaInAppBanner').style.display = 'none';
     }
 
-    // ---- 신저가 탭 비밀모드: 로고 5번 빠르게 탭하면 노출 ----
-    // 팔로워 전체 공개 기능이 아니라 운영자 확인용이라, 탭에 상시 노출하지 않고 이 제스처로만 접근한다(2026.08).
+    // ---- 신저가·연간 저평가 탭 비밀모드: 로고 5번 빠르게 탭하면 노출 ----
+    // 팔로워 전체 공개 기능이 아니라 운영자 확인용이라, 탭에 상시 노출하지 않고 이 제스처로만 접근한다
+    // (신저가 2026.08 최초 추가, 연간 저평가도 2026.08 같은 방식으로 비공개 전환).
     // 한 번 해제하면 이 브라우저에서는 계속 노출(localStorage) — 새로고침·재방문 때마다 다시 탭할 필요 없음.
     // header/tabs 마크업이 이 스크립트보다 뒤에 나오므로(아직 DOM에 없음) DOMContentLoaded 이후에 바인딩한다.
     document.addEventListener('DOMContentLoaded', function(){
-      const SECRET_KEY = 'apc:secretNewLow';
-      const tabNL = document.getElementById('tabNL');
-      if (!tabNL) return;
-      if (localStorage.getItem(SECRET_KEY) === '1') { tabNL.style.display = ''; }
+      const SECRET_KEY = 'apc:secretNewLow'; // 신저가 때 만든 키를 그대로 재사용 — 한 번 탭 해제하면 두 탭 다 같이 풀림
+      const secretTabIds = ['tabNL', 'tabLPD'];
+      const secretTabs = secretTabIds.map(id => document.getElementById(id)).filter(Boolean);
+      if (!secretTabs.length) return;
+      if (localStorage.getItem(SECRET_KEY) === '1') { secretTabs.forEach(t => { t.style.display = ''; }); }
 
       let taps = 0, lastTap = 0;
       const zone = document.getElementById('logoTapZone');
@@ -405,7 +407,7 @@
           lastTap = now;
           if (taps >= 5) {
             taps = 0;
-            tabNL.style.display = '';
+            secretTabs.forEach(t => { t.style.display = ''; });
             try{ localStorage.setItem(SECRET_KEY, '1'); }catch(e){}
           }
         });
@@ -425,7 +427,7 @@
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
-    <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</div>
+    <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>전용면적 평단가</div>
     <div class="tab" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>신저가</div>
     <!-- 신저가 탭: 화면에서만 숨김(2026.08) — 로직·데이터 처리는 그대로 유지, 버튼만 비노출. 재노출하려면 위 style="display:none" 제거 -->
     <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
@@ -434,6 +436,8 @@
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
+    <div class="tab" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
+    <!-- 연간 저평가(동일 동) 탭: 비공개(2026.08) — 기존 공개 "연간 저평가" 탭은 그대로 두고, 같은 동 기준 비교 로직만 별도 탭으로 분리 -->
   </div>
 
   <div class="search-box">
@@ -556,7 +560,7 @@ function buildShareURL(inp){
   } else {
     p.set('r', inp.lawd);
     if(inp.mode==='complex') p.set('q', inp.q);
-    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='newhigh'||inp.mode==='newlow'||inp.mode==='gap') && inp.py) p.set('py', inp.py);
+    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='longpeakdong'||inp.mode==='newhigh'||inp.mode==='newlow'||inp.mode==='gap') && inp.py) p.set('py', inp.py);
     // 복수 지역(칩) 선택 상태 — sel.value만으론 칩 선택이 안 잡히므로 별도 파라미터로 인코딩(2026.07)
     if(inp.regionSel && inp.regionSel.length) p.set('rs', inp.regionSel.map(x=>x.lawd+':'+x.name).join('|'));
     // 신고가 탭 전용 평형 다중 선택
@@ -760,7 +764,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -783,7 +787,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -794,11 +798,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -814,7 +818,7 @@ function favRegionGo(code){
   updateRegionFavBtn();
   renderFavRegions();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
-  if(mode==='region'||mode==='volume'||mode==='updown'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
+  if(mode==='region'||mode==='volume'||mode==='updown'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
@@ -853,6 +857,7 @@ function restoreView(vi){
   else if(v.data.mode==='shortval') renderShortUndervalue(v.data);
   else if(v.data.mode==='peak') renderPeak(v.data);
   else if(v.data.mode==='longpeak') renderLongPeak(v.data);
+  else if(v.data.mode==='longpeakdong') renderLongPeak(v.data);
   else if(v.data.mode==='volume') renderVolume(v.data);
   else if(v.data.mode==='newhigh') renderNewHigh(v.data);
   else if(v.data.mode==='newlow') renderNewLow(v.data);
@@ -903,7 +908,7 @@ let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
-function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? REGION_MAX_RANK : REGION_MAX; }
+function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? REGION_MAX_RANK : REGION_MAX; }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -938,7 +943,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -958,7 +963,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length){
     return regionSel.length===1 ? regionSel[0].name
       : (regionSel.length<=3 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
   }
@@ -970,7 +975,7 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice');
+  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
   document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
@@ -992,7 +997,7 @@ function buildRegionPicker(){
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
 }
 function pickRegion(v){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -1021,7 +1026,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -1103,6 +1108,7 @@ function setMode(m){
   document.getElementById('tabSU').classList.toggle('on', m==='shortval');
   document.getElementById('tabP').classList.toggle('on', m==='peak');
   document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
+  document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
@@ -1810,32 +1816,42 @@ function analyzeNewLow(all, months){
     newLow: results.slice(0,100) };
 }
 
-// ═══ 평단가 탭 ═══
-// 단지별로 "3년 내 최고가" 기준 평단가(만원/평)를 평형별로 계산한 뒤, 그중 평단가가 가장 높은 평형
-// 딱 1개만 그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평단가가 높은 경우가 흔해서
-// (동일 단지 안에서도 평형별 프리미엄 차이가 큼) 대표 평형을 고정하지 않고 "가장 비싼 평단가"로 자동 선정.
+// ═══ 전용면적 평단가 탭 ═══
+// 단지별로 "3년 내 최고가" 기준 전용면적 평단가(만원/전용평)를 평형(유닛 타입)별로 계산한 뒤, 그중 평단가가
+// 가장 높은 평형 딱 1개만 그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평단가가 높은 경우가
+// 흔해서(동일 단지 안에서도 평형별 프리미엄 차이가 큼) 대표 평형을 고정하지 않고 "가장 비싼 평단가"로 자동 선정.
 // 결과는 단지 1개당 1행, 평단가 높은 순 정렬.
+//
+// [2026.08] "평단가"는 관행적으로 공급면적(전용+공용) 기준인데, 국토부 실거래 API는 전용면적만 제공하고
+// 공급면적은 아예 주지 않음. 기존엔 "84㎡→33평"처럼 공급면적 관행 라벨로 역산하는 보간표(areaToPy)를 그대로
+// 나눗셈에 썼는데, 이 라벨 자체가 근사치라 평단가 계산(나눗셈)에 쓰면 오차가 그대로 증폭되는 문제가 있었음.
+// → 보간·근사 없이, 가진 데이터(전용면적) 그대로 "전용면적÷3.3058"로 정밀 환산한 전용평형으로 나눔.
+// 계산의 정확성은 확보되지만, 사람들이 흔히 말하는 "평당가"(공급면적 기준)보다는 낮게 나올 수 있어
+// 화면·제목에 "전용면적 평단가"라고 명시해 기준을 분명히 한다.
+const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (전용면적 → 전용평형 정밀 환산 상수, 보간 없음)
 function analyzePricePerPyeong(all, months){
   // 직거래는 최고가를 왜곡할 수 있어 제외 — 신고가 탭과 동일한 원칙.
   all = all.filter(t=>!t.direct);
-  // 1) 단지+평형별 3년 최고가 산출 (동가면 최근 계약일 우선)
+  // 1) 단지+평형(유닛 타입 구분용 py 라벨)별 3년 최고가 산출 (동가면 최근 계약일 우선)
+  //    ※ py는 여기서 "같은 평면구조 유닛인지 묶는 그룹핑 키"로만 쓰고, 아래 평단가 계산 자체에는 쓰지 않음
   const byPy = {};
   for(const t of all){
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${t.py}`;
     const cur = byPy[pk];
     if(!cur || t.amt > cur.amt || (t.amt===cur.amt && dkey(t) > dkey(cur))) byPy[pk] = t;
   }
-  // 2) 단지별로 평단가(만원/평) 계산 후, 평단가가 가장 높은 평형 1개만 대표로 채택
+  // 2) 단지별로 전용면적 평단가(만원/전용평) 계산 후, 평단가가 가장 높은 평형 1개만 대표로 채택
   const byComplex = {};
   for(const t of Object.values(byPy)){
-    if(!t.py) continue; // 평형 정보 없는 거래는 평단가 계산 불가
+    if(!t.area) continue; // 전용면적 정보 없는 거래는 평단가 계산 불가
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
-    const pricePerPy = Math.round(t.amt*10000/t.py); // 억 → 만원 환산 후 평으로 나눔 = 만원/평
+    const pyExact = R1(t.area / SQM_PER_PY); // 전용면적(㎡) → 전용평형(정밀, 보간 없음)
+    const pricePerPy = Math.round(t.amt*10000/pyExact); // 억 → 만원 환산 후 전용평형으로 나눔 = 만원/전용평
     const cur = byComplex[ck];
-    if(!cur || pricePerPy > cur.pricePerPy) byComplex[ck] = {...t, pricePerPy};
+    if(!cur || pricePerPy > cur.pricePerPy) byComplex[ck] = {...t, pricePerPy, pyExact};
   }
   const results = Object.values(byComplex).map(t=>({
-    apt:t.apt, umd:t.umd, gu:t.gu||null, lawd:t.lawd||null, py:`${t.py}평`, area:t.area, amt:t.amt,
+    apt:t.apt, umd:t.umd, gu:t.gu||null, lawd:t.lawd||null, py:`${t.py}평`, pyExact:t.pyExact, area:t.area, amt:t.amt,
     date:`${ymLabel(t.ym)}.${t.d}`, floor:t.floor, build:t.build, kind:t.kind||null, pricePerPy:t.pricePerPy,
   }));
   results.sort((a,b)=> b.pricePerPy - a.pricePerPy); // 평단가 높은 순
@@ -2052,7 +2068,7 @@ function buildLongPeakRows(all, months){
   return pyRows.map(r=>({ ...r, mainPy:`${r.py}평(전용 ${r.area}㎡)` }));
 }
 
-function analyzeLongPeakUndervalue(all, months, allUnfiltered){
+function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
   const tradeOnly = (allUnfiltered||all).filter(t=>{
     const py = parseInt(t.py,10);
     return py>=20 && py<=39; // 2026.07 층수 제한(5층 이상) 삭제 — 전 층 포함 / 2026.08 상한 37→39평(30평대 전체 포괄)
@@ -2066,8 +2082,10 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered){
   const MIN_PEER_N = 2;
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
-        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외
+      .filter(o=> o!==r && (!sameDongOnly || o.umd===r.umd) && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외.
+        // sameDongOnly=true(비공개 "연간 저평가·동일 동" 탭 전용, 2026.08)일 땐 같은 동(umd)까지 일치해야 비교군으로 인정 —
+        // 학군·역세권 등 입지 차이가 큰 다른 동 단지가 섞여 중앙값이 왜곡되는 걸 막기 위함. 기존 공개 "연간 저평가" 탭은 그대로(구·시 전체 비교) 유지.
       .sort((a,b)=> Math.abs(a.p3max-r.p3max) - Math.abs(b.p3max-r.p3max))
       .slice(0,5);
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
@@ -2087,9 +2105,9 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered){
   const recentYearLabel = `${String(recentYearNum).slice(-2)}년`;
   const prevYearLabel = `${String(recentYearNum-1).slice(-2)}년`;
 
-  return { found:true, mode:'longpeak', total:all.length,
+  return { found:true, mode: sameDongOnly ? 'longpeakdong' : 'longpeak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
-    recentYearLabel, prevYearLabel,
+    recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
     divergence };
 }
 
@@ -2311,7 +2329,7 @@ async function search(){
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   const mN = +document.getElementById('monthsN').value;
-  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
@@ -2319,7 +2337,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : (mode==='longpeak' ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 24 : (mode==='gap' ? 2 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 2년 고정(2026.08, 수민 요청) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
+  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 24 : (mode==='gap' ? 2 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 2년 고정(2026.08, 수민 요청) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -2327,12 +2345,12 @@ async function search(){
   // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
   // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
-  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? []
+  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   const allScope = multiTargets.length > 0;
   const effMN = allScope
-    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? neededMN : mN) // 이 네 탭은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
-    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='shortval'||mode==='gap'||mode==='newlow') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : Math.max(mN, 24));
+    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? neededMN : mN) // 이 네 탭은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
+    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : Math.max(mN, 24));
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
@@ -2379,14 +2397,14 @@ async function search(){
       const scopeLabel = regionSel.length
         ? (names.length<=3 ? names.join(' · ') : `${names[0]} 외 ${names.length-1}곳`)
         : sel.options[sel.selectedIndex].textContent;
-      if(mode==='shortval'||mode==='peak'||mode==='longpeak'){
+      if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
         // 이 세 탭은 평형(20~39평 고정, 20평대/30평대 평대별)·연식 필터 UI가 없어 items를 그대로 각자의 분석 함수에 넘긴다(단일 지역 조회와 동일한 방식)
         if(!items.length){
           d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간을 조정해 보세요.'};
         } else {
           d = mode==='shortval' ? analyzeShortUndervalue(items, months, items)
             : mode==='peak' ? analyzePeakUndervalue(items, months, items)
-            : analyzeLongPeakUndervalue(items, months, items);
+            : analyzeLongPeakUndervalue(items, months, items, mode==='longpeakdong');
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
         }
@@ -2481,7 +2499,7 @@ async function search(){
             rawMerged = raw.concat(converted);
           }
         }catch(e){ rawMerged = raw; }
-      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap'){
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='longpeakdong' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap'){
         rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
@@ -2528,12 +2546,12 @@ async function search(){
         d = analyzePeakUndervalue(items, months, itemsUnfiltered);
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
-      } else if(mode==='longpeak'){
+      } else if(mode==='longpeak'||mode==='longpeakdong'){
         const itemsUnfiltered = items; // 평형 필터 적용 전 — "연간 저평가"는 이 데이터로 고정 계산
         const pb = document.getElementById('pyBand').value.split('-');
         const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
         if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
-        d = analyzeLongPeakUndervalue(items, months, itemsUnfiltered);
+        d = analyzeLongPeakUndervalue(items, months, itemsUnfiltered, mode==='longpeakdong');
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='gap'){
@@ -2579,7 +2597,7 @@ async function search(){
     // 400세대 이상 조건을 만족하는 상위 30개(2026.07 10→30으로 확대)가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
     // (이전처럼 전체 후보의 세대수를 다 조회한 뒤 거르는 방식보다) 로딩이 느려지지 않는다.
     const DIVERGENCE_CAP = 30;
-    if(d.found && (mode==='shortval'||mode==='peak'||mode==='longpeak') && d.divergence && d.divergence.length){
+    if(d.found && (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong') && d.divergence && d.divergence.length){
       const filtered = [];
       for(let i=0; i<d.divergence.length && filtered.length<DIVERGENCE_CAP; i+=HH_CONCURRENCY){
         const batch = d.divergence.slice(i, i+HH_CONCURRENCY);
@@ -2640,7 +2658,7 @@ async function search(){
       return;
     }
     lastData = d;
-    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
+    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
     // 내용만 단지분석으로 바뀌어서 화면 중간(차트 아래쪽 등)부터 보이고, 그 위에 있는 평형별 요약표가 안 보이는
     // 것처럼 느껴지는 문제가 있었음 — 새 결과를 그릴 때마다 스크롤을 맨 위로 되돌린다.
@@ -3523,21 +3541,21 @@ function renderPricePerPyeong(d){
         <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
-      <h2 style="padding:0 70px;text-align:center">${esc(regionName)} 평단가</h2>
+      <h2 style="padding:0 70px;text-align:center">${esc(regionName)} 전용면적 평단가</h2>
       <div class="meta">${esc(d.period)} 중 3년 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 단지당 평단가가 가장 높은 평형 1개만 대표로 표시 · 평단가 = 3년 내 최고가 ÷ 평형</div>
+      <h3>전용면적 평단가 랭킹</h3>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 단지당 평단가가 가장 높은 평형 1개만 대표로 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형(전용면적÷3.3058, 공급면적 아님)</div>
       ${rows(d.pyPrice, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/평</span><small>${x.amt.toFixed(1)}억 · ${esc(x.date)}</small></span>`)}
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">전용 ${x.pyExact.toFixed(1)}평(${x.area?Math.floor(x.area):''}㎡)</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span><small>${x.amt.toFixed(1)}억 · ${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 전용면적 기준(공급면적 아님)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -3683,19 +3701,19 @@ function renderLongPeak(d){
         <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
         <span style="font-size:11px;font-weight:700;color:#00C2C2">아파트썸</span>
       </div>
-      <h2 style="padding:0 70px;text-align:center">${esc(regionName)} <span style="color:var(--yellow)">연간</span> 저평가</h2>
+      <h2 style="padding:0 70px;text-align:center">${esc(regionName)} <span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</h2>
       <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중, ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5~15% 낮은 단지</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.sameDongOnly? '같은 동 안에서, ' : ''}${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중 ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5~15% 낮은 단지</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">※실거래가 기준으로 최근 호가와 다를 수 있음</div>
       ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
     </div>
 
   </div>
-  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 </script>
