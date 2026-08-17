@@ -2688,6 +2688,22 @@ async function search(){
   }
 }
 
+// 단지 상세 헤더(#complexMeta)의 지하철 표시 조각. hhcnt.mjs가 subwayLines(배열)/subwayStation/subwayWalk를
+// 함께 내려주므로(2026.08 추가) 세대수 옆에 이어붙인다. 정보가 하나도 없으면 빈 문자열(기존처럼 표시 안 함).
+function subwayMetaHTML(hh){
+  if(!hh || !hh.subwayLines || !hh.subwayLines.length) return '';
+  const lines = hh.subwayLines.join('·');
+  const station = hh.subwayStation ? `${esc(hh.subwayStation)}역 ` : '';
+  const walk = hh.subwayWalk ? `도보${esc(hh.subwayWalk)}` : '';
+  const detail = (station || walk) ? ` (${station}${walk})` : '';
+  return ` · <b style="color:#7FD4D9">${esc(lines)}</b>${detail}`;
+}
+// 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
+// attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
+function complexMetaHTML(d){
+  return `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+}
+
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
 // 비동기로 채워 넣는다(2026.07 — 예전엔 이 API 응답을 기다린 뒤에야 표가 그려져서 체감 지연이 있었음).
 // myToken이 이미 낡았으면(그 사이 다른 검색·탭전환·뒤로가기가 있었으면) 아무것도 건드리지 않고 조용히 종료.
@@ -2698,7 +2714,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       d.hh = await fetchHHCnt(lawd, d.name);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
-      if(el) el.innerHTML = `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+      if(el) el.innerHTML = complexMetaHTML(d);
     } else if(d.mode==='region'){
       // highDeals 각 항목의 실제 lawd로 그룹핑해서 구별로 정확히 조회(복수 지역 통합 조회 대응)
       const byLawd = {};
@@ -3212,7 +3228,7 @@ function renderComplex(d){
         <button onclick="shareCurrent()" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#fff;font-size:13px;cursor:pointer">⤴</button>
       </div>
       <h2 style="padding:0 70px;text-align:center">${esc(d.name)}</h2>
-      <div class="meta" id="complexMeta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta" id="complexMeta">${complexMetaHTML(d)}</div>
     </div>
 
     <div class="sec" style="padding-bottom:0">

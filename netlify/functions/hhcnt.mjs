@@ -13,6 +13,9 @@ export const config = {
 
 const LIST_URL = "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList3";
 const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4";
+// 지하철호선/도보시간은 getAphusBassInfoV4(기본정보)가 아니라 getAphusDtlInfoV4(상세정보)에만 있음
+// (2026.08 확인 — 두 API가 같은 kaptCode를 받지만 응답 필드가 서로 다름, 별도 호출 필요)
+const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4";
 
 // analyze.mjs의 SPLIT_REGIONS와 동일한 신규 구코드 매핑(목록조회는 단일 코드만 필요하므로 신규코드 우선,
 // 화성·부천은 통합 폐지코드로 폴백 — K-apt 등록정보가 아직 옛 구코드에 남아있을 수 있어서)
@@ -155,22 +158,68 @@ async function fetchBasis(key, kaptCode) {
   }
 }
 
+// 지하철호선("1호선, 4호선" 형태 문자열)·역까지 도보시간(구간 텍스트, 예: "15~20분이내")·역명을 조회.
+// subwayStation(역명)은 값이 있는 단지도 있고 null인 단지도 있어(2026.08 확인 — 아파트별로 등록 상태가 다름),
+// 있으면 쓰고 없으면 호선/도보시간만으로 표시.
+// 세대수 조회(fetchBasis)와 달리 이 값이 없어도 치명적이지 않으므로 실패 시 조용히 null 반환.
+async function fetchDtl(key, kaptCode) {
+  try {
+    const r = await fetch(`${DTL_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`);
+    const text = await r.text();
+    let json;
+    try { json = JSON.parse(text); } catch (e) {
+      console.error(`[hhcnt] getAphusDtlInfoV4(${kaptCode}) JSON 파싱 실패. 응답 앞부분:`, text.slice(0, 500));
+      return null;
+    }
+    const rawItems = extractItems(json);
+    if (!rawItems || !rawItems.length) return null;
+    const it = rawItems[0];
+    const subwayLines = String(it.subwayLine || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const subwayWalk = (it.kaptdWtimesub && String(it.kaptdWtimesub).trim()) || null;
+    const subwayStation = (it.subwayStation && String(it.subwayStation).trim()) || null;
+    if (!subwayLines.length && !subwayWalk && !subwayStation) return null;
+    return { subwayLines, subwayWalk, subwayStation };
+  } catch (e) {
+    console.error(`[hhcnt] getAphusDtlInfoV4(${kaptCode}) fetch 실패:`, e.message);
+    return null;
+  }
+}
+
+// 형제 단지(같은 복합단지가 여러 kaptCode로 나뉜 경우) 지하철 정보 합산: 호선은 합집합,
+// 도보시간·역명은 먼저 값이 있는 쪽을 채택(어차피 같은 위치라 사실상 동일한 값)
+function mergeSubway(list) {
+  const lines = new Set();
+  let walk = null;
+  let station = null;
+  for (const f of list) {
+    if (!f) continue;
+    (f.subwayLines || []).forEach((l) => lines.add(l));
+    if (!walk && f.subwayWalk) walk = f.subwayWalk;
+    if (!station && f.subwayStation) station = f.subwayStation;
+  }
+  if (!lines.size && !walk && !station) return {};
+  return { subwayLines: [...lines], subwayWalk: walk, subwayStation: station };
+}
+
 // matchKapt가 "형제 단지"로 판단해 후보를 여러 개 돌려줄 때, 정적 캐시 항목(이미 hhcnt 계산됨)들을 합산
 function mergeFull(fulls) {
   const hh = fulls.reduce((s, f) => s + (f.hhcnt || 0), 0);
   if (!hh) return null;
   const dongCnt = fulls.reduce((s, f) => s + (f.dongCnt || 0), 0) || null;
   const useDate = fulls.map((f) => f.useDate).filter(Boolean).sort()[0] || null; // 가장 이른 사용승인일
-  return { hhcnt: hh, dongCnt, useDate };
+  return { hhcnt: hh, dongCnt, useDate, ...mergeSubway(fulls) };
 }
-// 위와 동일하되 라이브 조회(fetchBasis) 결과들을 합산
-function mergeBasis(bases) {
+// 위와 동일하되 라이브 조회(fetchBasis) 결과들을 합산 (subways는 별도 fetchDtl 결과 배열을 받아 합침)
+function mergeBasis(bases, subways = []) {
   const valid = bases.filter(Boolean);
   if (!valid.length) return null;
   const hh = valid.reduce((s, b) => s + b.hhcnt, 0);
   const dongCnt = valid.reduce((s, b) => s + (b.dongCnt || 0), 0) || null;
   const useDate = valid.map((b) => b.useDate).filter(Boolean).sort()[0] || null;
-  return { hhcnt: hh, dongCnt, useDate };
+  return { hhcnt: hh, dongCnt, useDate, ...mergeSubway(subways) };
 }
 
 export default async (req) => {
@@ -228,11 +277,15 @@ export default async (req) => {
           matched[nm] = hits.map((h) => h.kaptCode);
         }
         const allCodes = [...new Set(Object.values(matched).flat())];
-        const bases = await Promise.all(allCodes.map((c) => fetchBasis(key, c)));
+        const [bases, subways] = await Promise.all([
+          Promise.all(allCodes.map((c) => fetchBasis(key, c))),
+          Promise.all(allCodes.map((c) => fetchDtl(key, c))),
+        ]);
         const basisByCode = {};
-        allCodes.forEach((c, i) => { basisByCode[c] = bases[i]; });
+        const subwayByCode = {};
+        allCodes.forEach((c, i) => { basisByCode[c] = bases[i]; subwayByCode[c] = subways[i]; });
         for (const nm of Object.keys(matched)) {
-          const merged = mergeBasis(matched[nm].map((c) => basisByCode[c]));
+          const merged = mergeBasis(matched[nm].map((c) => basisByCode[c]), matched[nm].map((c) => subwayByCode[c]));
           results[nm] = merged ? { found: true, name: nm, ...merged } : { found: false };
         }
       } catch (e) {
@@ -302,8 +355,13 @@ export default async (req) => {
         .slice(0, 15);
       console.error(`[hhcnt] "${name}" 매칭 실패. 목록 총 ${allItems.length}건. 비슷한 이름 후보:`, JSON.stringify(similar));
     }
-    const bases = hits.length ? await Promise.all(hits.map((h) => fetchBasis(key, h.kaptCode))) : [];
-    const merged = mergeBasis(bases);
+    const [bases, subways] = hits.length
+      ? await Promise.all([
+          Promise.all(hits.map((h) => fetchBasis(key, h.kaptCode))),
+          Promise.all(hits.map((h) => fetchDtl(key, h.kaptCode))),
+        ])
+      : [[], []];
+    const merged = mergeBasis(bases, subways);
     if (!merged) return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
     return new Response(JSON.stringify({ found: true, name, ...merged }), { headers: cacheHeadersFound });
   } catch (e) {
