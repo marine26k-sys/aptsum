@@ -72,8 +72,14 @@
   @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .card{background:#fff;border-radius:16px;box-shadow:0 2px 14px rgba(15,43,61,.07);margin-bottom:12px}
   .card-hd{background:var(--navy);color:#fff;padding:15px 18px;border-radius:16px 16px 0 0;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(15,43,61,.15)}
-  .card-hd h2{font-size:18px;font-weight:900;letter-spacing:-.5px}
-  .card-hd .meta{font-size:11px;opacity:.75;margin-top:2px;text-align:center}
+  .card-hd h2{font-size:20px;font-weight:900;letter-spacing:-.5px;text-align:center;margin-bottom:2px}
+  .card-hd .meta{font-size:11px;color:#fff;opacity:.6;text-align:center}
+  .hd-top{position:relative;display:flex;align-items:center;justify-content:center;min-height:22px;margin-bottom:10px}
+  .hd-logo{position:absolute;left:0;display:inline-flex;align-items:center;gap:4px}
+  .hd-logo span{font-size:13px;font-weight:800;color:#00C2C2}
+  .hd-badge{font-size:13px;font-weight:800;color:#fff;background:var(--teal);padding:6px 13px;border-radius:16px}
+  .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px}
+  .hd-vs span{font-size:13px;font-weight:500;color:#7FD4D9}
   .sec{padding:14px 18px}
   .sec+.sec{border-top:1px solid var(--line)}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
@@ -527,6 +533,8 @@ const REGIONS = [
   ['경기', [['부천 원미구','BC-원미구'],['부천 소사구','BC-소사구'],['부천 오정구','BC-오정구'],['고양 덕양구','41281'],['고양 일산동구','41285'],['고양 일산서구','41287'],['과천시','41290'],['광명시','41210'],['광주시','41610'],['구리시','41310'],['군포시','41410'],['김포시','41570'],['남양주시','41360'],['성남 분당구','41135'],['성남 수정구','41131'],['성남 중원구','41133'],['수원 권선구','41113'],['수원 영통구','41117'],['수원 장안구','41111'],['수원 팔달구','41115'],['시흥시','41390'],['안산 단원구','41273'],['안산 상록구','41271'],['안양 동안구','41173'],['안양 만안구','41171'],['용인 기흥구','41463'],['용인 수지구','41465'],['용인 처인구','41461'],['의왕시','41430'],['의정부시','41150'],['이천시','41500'],['파주시','41480'],['평택시','41220'],['하남시','41450'],['화성 동탄구','HS-동탄구'],['화성 병점구','HS-병점구'],['화성 만세구','HS-만세구'],['화성 효행구','HS-효행구'],['오산시','41370']]],
   ['인천', [['제물포구','IC-제물포구'],['영종구','IC-영종구'],['미추홀구','28177'],['연수구','28185'],['남동구','28200'],['부평구','28237'],['계양구','28245'],['서해구','IC-서해구'],['검단구','IC-검단구'],['강화군','28710']]]
 ];
+// (2026.08) 지역 선택 패널·즐겨찾기 칩·드롭다운에는 도시명이 있어야 "동안구"가 어디인지 알 수 있어
+// 원래대로 도시명 포함 라벨 유지. 결과 헤더 제목만 구 이름으로 축약해서 보여주고 싶으면 shortRegionLabel() 사용.
 // 그룹(서울/경기/인천) 순서는 유지하고, 각 그룹 내부 지역명만 가나다순 정렬 (2026.07)
 REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
 let mode = 'complex';
@@ -965,7 +973,7 @@ loadRegionSel();
 function regionPickerLabel(){
   if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') && regionSel.length){
     return regionSel.length===1 ? regionSel[0].name
-      : (regionSel.length<=3 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
+      : (regionSel.length<=4 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
   }
   const o = sel.options[sel.selectedIndex];
   return o ? o.textContent : '지역 선택';
@@ -1482,12 +1490,16 @@ async function ensureMonthsJ(lawd, n){
 // 단, 못 찾은 경우(v=null)는 TTL을 짧게(1일) 둬서 일시적 API 오류로 인한 미스가 영구 고정되지 않게 함
 const HH_TTL_FOUND_MS = 1000*60*60*24*180; // 180일
 const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
-// ⚠️ HH_CACHE_VER 체크리스트 — matchKapt()의 매칭 로직(예: 임대/분양 우선순위 판정)이 바뀔 때마다 반드시 +1 할 것.
+// ⚠️ HH_CACHE_VER 체크리스트 — matchKapt()의 매칭 로직(예: 임대/분양 우선순위 판정)이 바뀌거나,
+// hhcnt.mjs 응답에 새 필드가 추가되는 등 응답 형태 자체가 바뀔 때도 반드시 +1 할 것
+// (2026.08 subwayLines/subwayStation/subwayWalk 필드 추가 시 4→5로 올림 — 필드만 추가돼도 옛 캐시엔
+// 그 필드가 아예 없어서, 버전을 안 올리면 브라우저 localStorage(180일)·CDN(90일) 양쪽 다 새 필드 없는
+// 옛 응답을 계속 돌려줘 화면에 지하철 정보가 영원히 안 뜨는 문제가 있었음)
 // 세대수는 브라우저 localStorage에 180일, hhcnt.mjs의 GET 엔드포인트는 Netlify CDN에 90일(durable) 캐시돼 있어서,
 // matchKapt() 코드만 고치고 배포해도 이미 캐시된 옛(오매칭) 결과가 그대로 재사용돼 버그가 안 고쳐진 것처럼 보인다
 // (실제 사례: 두산아파트 임대/분양 오매칭 수정 후에도 캐시 때문에 여전히 옛 세대수가 보이던 문제).
 // 버전을 올리면 localStorage 키가 바뀌어 옛 캐시를 자동으로 안 쓰게 되고, 쿼리에도 반영돼 CDN 캐시 키도 달라진다.
-const HH_CACHE_VER = 4;
+const HH_CACHE_VER = 5;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -2171,6 +2183,38 @@ function analyzeCompare(itemsByLawd, targets, months){
 }
 
 function esc(s){ return String(s??'').replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// 결과 헤더 h2 제목 전용 축약 — 선택 패널·즐겨찾기 칩·드롭다운은 "성남 분당구"처럼 도시명을 유지해야
+// 어느 도시인지 알 수 있지만(2026.08, "지역 선택" 패널에서 도시명 없이 구 이름만 뜨면 못 알아본다는 피드백),
+// 이미 지역을 고르고 난 뒤의 결과 헤더는 서울처럼 구 이름만 보여도 문맥상 충분해서 이 지점에서만 축약.
+// "A · B · C", "A 외 N곳" 형태(복수 지역 선택 시)도 각 지역명을 개별로 축약한 뒤 그대로 이어붙임.
+function shortRegionOne(s){
+  const m = String(s||'').match(/^(\S+)\s(\S+구)$/);
+  return m ? m[2] : s;
+}
+function shortRegionLabel(s){
+  s = String(s||'');
+  const m = s.match(/^(.+?)( 외 \d+곳)$/);
+  if(m) return shortRegionOne(m[1]) + m[2];
+  if(s.includes(' · ')) return s.split(' · ').map(shortRegionOne).join(' · ');
+  return shortRegionOne(s);
+}
+
+// 랭킹류 탭(지역/거래량/전세가율/신고가/신저가/평단가/등락/저평가 3종/단지비교) 헤더 상단 공용 조각 —
+// 로고(왼쪽, 흐리게)·탭 배지(오른쪽, 청록 알약)를 한 줄로. 2026.08 리디자인: 예전엔 로고가 중앙-배지와
+// 자리를 다투며 배지를 가운데 정렬시켜야 했는데, 로고를 왼쪽 고정하며 배지를 오른쪽으로 옮겨 서로 안 겹치게 함.
+function hdTop(badgeLabel){
+  return `<div class="hd-top">
+    <span class="hd-logo"><svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg><span>아파트썸</span></span>
+    <span class="hd-badge">${esc(badgeLabel)}</span>
+  </div>`;
+}
+// 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
+// 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
+function hdVs(prevLabel, recentLabel){
+  return `<div class="hd-vs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7FD4D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11M18 7l-3-3M18 7l-3 3"/><path d="M17 17H6M6 17l3-3M6 17l3 3"/></svg><span>${esc(prevLabel)} <span style="opacity:.6">vs</span> ${esc(recentLabel)}</span></div>`;
+}
+
 function showError(html){ const e=document.getElementById('error'); e.innerHTML=html; e.classList.add('on'); }
 
 // ── 단지명 자동완성 ──
@@ -2416,10 +2460,10 @@ async function search(){
         });
       }
       let items = floorF(windowF(merged));
-      // 헤더 제목: 1~3개면 이름을 나열하고, 그보다 많으면 "○○ 외 N곳"으로 축약
+      // 헤더 제목: 1~4개면 이름을 나열하고, 그보다 많으면 "○○ 외 N곳"으로 축약 (2026.08 3→4개로 확대)
       const names = targets.map(t=>t.name);
       const scopeLabel = regionSel.length
-        ? (names.length<=3 ? names.join(' · ') : `${names[0]} 외 ${names.length-1}곳`)
+        ? (names.length<=4 ? names.join(' · ') : `${names[0]} 외 ${names.length-1}곳`)
         : sel.options[sel.selectedIndex].textContent;
       if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
         // 이 세 탭은 평형(20~39평 고정, 20평대/30평대 평대별)·연식 필터 UI가 없어 items를 그대로 각자의 분석 함수에 넘긴다(단일 지역 조회와 동일한 방식)
@@ -2688,6 +2732,25 @@ async function search(){
   }
 }
 
+// 단지 상세 헤더(#complexMeta)의 지하철 표시 조각. hhcnt.mjs가 subwayLines(배열)/subwayStation/subwayWalk를
+// 함께 내려주므로(2026.08 추가) 세대수 옆에 이어붙인다. 정보가 하나도 없으면 빈 문자열(기존처럼 표시 안 함).
+function subwayMetaHTML(hh){
+  if(!hh || !hh.subwayLines || !hh.subwayLines.length) return '';
+  const lines = hh.subwayLines.join('·');
+  // subwayStation 원본이 "범계"처럼 역명만 있을 수도, "범계역"처럼 이미 "역"이 붙어있을 수도 있어(국토부 K-apt
+  // 자유입력 필드라 단지마다 표기가 다름) — 이미 "역"으로 끝나면 중복으로 덧붙이지 않음(2026.08 "범계역역" 버그 수정)
+  const rawStation = hh.subwayStation ? esc(hh.subwayStation).trim() : '';
+  const station = rawStation ? `${rawStation}${rawStation.endsWith('역')? '' : '역'} ` : '';
+  const walk = hh.subwayWalk ? `도보${esc(hh.subwayWalk)}` : '';
+  const detail = (station || walk) ? ` (${station}${walk})` : '';
+  return ` · <b style="color:#7FD4D9">${esc(lines)}</b>${detail}`;
+}
+// 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
+// attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
+function complexMetaHTML(d){
+  return `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+}
+
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
 // 비동기로 채워 넣는다(2026.07 — 예전엔 이 API 응답을 기다린 뒤에야 표가 그려져서 체감 지연이 있었음).
 // myToken이 이미 낡았으면(그 사이 다른 검색·탭전환·뒤로가기가 있었으면) 아무것도 건드리지 않고 조용히 종료.
@@ -2698,7 +2761,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       d.hh = await fetchHHCnt(lawd, d.name);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
-      if(el) el.innerHTML = `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+      if(el) el.innerHTML = complexMetaHTML(d);
     } else if(d.mode==='region'){
       // highDeals 각 항목의 실제 lawd로 그룹핑해서 구별로 정확히 조회(복수 지역 통합 조회 대응)
       const byLawd = {};
@@ -2993,7 +3056,7 @@ function trendHTML(d){
     return `<div class="trend" style="margin-bottom:8px">
       <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'+':''}${t.pct}%</span>
       <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
-      <span class="d">최근 2개월 평균 <b>${t.recentAvg.toFixed(1)}억</b><br>이전 2개월 평균 <b>${t.prevAvg.toFixed(1)}억</b></span>
+      <span class="d">이전 2개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 2개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
     </div>`;
   }).join('');
   return rows || '<div class="rng">데이터 없음</div>';
@@ -3173,7 +3236,7 @@ function complexDynamicHTML(){
     </div>
     ${isSale ? `
     <div class="sec">
-      <h3>단기 추세 — 평형별 (최근 2개월 vs 이전 2개월)</h3>
+      <h3>단기 추세 — 평형별 (이전 2개월 vs 최근 2개월)</h3>
       <div id="trendBox">${trendHTML(d)}</div>
       <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
     </div>
@@ -3212,7 +3275,7 @@ function renderComplex(d){
         <button onclick="shareCurrent()" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#fff;font-size:13px;cursor:pointer">⤴</button>
       </div>
       <h2 style="padding:0 70px;text-align:center">${esc(d.name)}</h2>
-      <div class="meta" id="complexMeta">${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta" id="complexMeta">${complexMetaHTML(d)}</div>
     </div>
 
     <div class="sec" style="padding-bottom:0">
@@ -3371,7 +3434,8 @@ function renderCompare(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <h2 style="text-align:center">단지 시세 비교</h2>
+      ${hdTop('단지 비교')}
+      <h2>단지 시세 비교</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
     </div>
 
@@ -3399,14 +3463,8 @@ function renderRegion(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">실거래 랭킹</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('실거래 랭킹')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -3431,14 +3489,8 @@ function renderVolume(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">거래량 랭킹</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('거래량 랭킹')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
@@ -3467,14 +3519,8 @@ function renderGap(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전세가율 랭킹</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('전세가율 랭킹')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · <b style="color:#7FD4D9">최근 2개월 평균</b></div>
     </div>
     <div class="sec">
@@ -3494,14 +3540,8 @@ function renderNewHigh(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신고가</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('신고가')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -3527,14 +3567,8 @@ function renderNewLow(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신저가</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('신저가')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 최저가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -3560,21 +3594,15 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전용면적 평단가</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
+      ${hdTop('전용면적 평단가')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>전용면적 평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 단지당 평단가가 가장 높은 평형 1개만 대표로 표시 · 평형별 표본 2건 이상만 집계(이상치 방지) · 평단가 = 3년 내 최고가 ÷ 전용평형(전용면적÷3.3058, 공급면적 아님)</div>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">전용 ${Math.round(x.pyExact)}평(${x.area?Math.floor(x.area):''}㎡)</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
@@ -3621,15 +3649,10 @@ function renderUpDown(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">등락 랭킹</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 2개월 평균가 vs 이전 2개월 평균가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      ${hdTop('등락 랭킹')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
+      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      ${hdVs('이전 2개월 평균가', '최근 2개월 평균가')}
     </div>
 
     <div class="sec">
@@ -3643,7 +3666,7 @@ function renderUpDown(d){
     </div>
 
   </div>
-  <div class="src-note">최근 2개월 평균가 vs 이전 2개월 평균가 비교(각 2건 이상 표본 필요) · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교(각 2건 이상 표본 필요) · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -3652,15 +3675,10 @@ function renderShortUndervalue(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">단기 저평가</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 2개월 평균가 vs 이전 2개월 평균가</div>
+      ${hdTop('단기 저평가')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
+      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      ${hdVs('이전 2개월 평균가', '최근 2개월 평균가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3671,7 +3689,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">최근 2개월 평균가 vs 이전 2개월 평균가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -3704,15 +3722,10 @@ function renderPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">반기 저평가</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
+      ${hdTop('반기 저평가')}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
+      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      ${hdVs('이전 6개월 최고가', '최근 6개월 최고가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3723,7 +3736,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">최근 6개월 최고가 vs 이전 6개월 최고가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -3732,15 +3745,10 @@ function renderLongPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
-        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
-          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">연간 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
-      </div>
-      <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
+      ${hdTop(`연간 저평가${d.sameDongOnly? ' (동일 동)':''}`)}
+      <h2>${esc(shortRegionLabel(regionName))}</h2>
+      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      ${hdVs(`${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3751,7 +3759,7 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가 비교(각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교(각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 </script>
