@@ -51,8 +51,6 @@ function commitProgress(message) {
 
 const LIST_URL = "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList3";
 const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4";
-// hhcnt.mjs와 동일: 지하철호선/도보시간은 getAphusDtlInfoV4(상세정보)에만 있음 (기본정보 API엔 없음)
-const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4";
 const DIR = "data/hhcnt";
 
 // hhcnt.mjs의 SPLIT_FALLBACK과 동일 (목록조회는 시군구코드 하나면 되므로 신규코드 우선 + 통합폐지코드 폴백)
@@ -121,26 +119,6 @@ async function fetchBasis(key, kaptCode) {
   } catch { return null; }
 }
 
-// subwayStation(역명)은 값 있는 단지도 있고 null인 단지도 있음(2026.08 확인) — 있으면 저장
-async function fetchDtl(key, kaptCode) {
-  try {
-    const r = await fetch(`${DTL_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`, {
-      signal: AbortSignal.timeout(20000),
-    });
-    const text = await r.text();
-    let json;
-    try { json = JSON.parse(text); } catch { return {}; }
-    const rawItems = extractItems(json);
-    if (!rawItems || !rawItems.length) return {};
-    const it = rawItems[0];
-    const subwayLines = String(it.subwayLine || "").split(",").map((s) => s.trim()).filter(Boolean);
-    const subwayWalk = (it.kaptdWtimesub && String(it.kaptdWtimesub).trim()) || null;
-    const subwayStation = (it.subwayStation && String(it.subwayStation).trim()) || null;
-    if (!subwayLines.length && !subwayWalk && !subwayStation) return {};
-    return { subwayLines, subwayWalk, subwayStation };
-  } catch { return {}; }
-}
-
 async function pool(items, limit, worker) {
   let i = 0;
   async function run() { while (i < items.length) { const idx = i++; await worker(items[idx]); } }
@@ -170,8 +148,8 @@ async function main() {
 
     const out = [];
     await pool(complexes, 8, async (c) => {
-      const [basis, dtl] = await Promise.all([fetchBasis(key, c.kaptCode), fetchDtl(key, c.kaptCode)]);
-      if (basis) out.push({ name: c.kaptName, kaptCode: c.kaptCode, ...basis, ...dtl });
+      const basis = await fetchBasis(key, c.kaptCode);
+      if (basis) out.push({ name: c.kaptName, kaptCode: c.kaptCode, ...basis });
     });
 
     await writeFile(path.join(DIR, `${lawd}.json`), JSON.stringify({ items: out, updatedAt: new Date().toISOString() }));
