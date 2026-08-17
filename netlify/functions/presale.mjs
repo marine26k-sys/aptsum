@@ -10,6 +10,9 @@ export const config = {
 
 const RTMS = "https://apis.data.go.kr/1613000/RTMSDataSvcSilvTrade/getRTMSDataSvcSilvTrade";
 
+// 공급면적 실측값 캐시 — 값이 있으면 정확한 평형, 없으면 아래 areaToPy 보간으로 폴백 (shared/supply-area.mjs 참고)
+import { resolvePy } from "../../shared/supply-area.mjs";
+
 // 행정구역 개편 지역: analyze.mjs와 동일 설정 (화성시 2026.02 분구 / 부천시 2024.01 구 재설치 / 인천 2026.07 행정체제 개편)
 const SPLIT_REGIONS = {
   "HS-": {
@@ -82,12 +85,13 @@ function parseItems(xml, ymFallback) {
     const apt = xtag(b, "aptNm");
     if (!apt) continue; // 단지명 미확정 건(초기 분양권 등)은 집계 불가하므로 제외
     const area = parseFloat(xtag(b, "excluUseAr")) || 0;
+    const umd = xtag(b, "umdNm");
     const gbn = xtag(b, "ownershipGbn"); // "분"(분양권) | "입"(입주권)
     items.push({
       apt,
-      umd: xtag(b, "umdNm"),
+      umd,
       area,
-      py: areaToPy(Math.round(area)),
+      py: resolvePy(apt, umd, area, areaToPy),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"),
