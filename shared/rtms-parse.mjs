@@ -1,9 +1,6 @@
 // 국토부 실거래 XML 파싱 공용 유틸 — scripts/collect-trades.mjs 전용
 // (netlify/functions/*.mjs의 로직과 동일하지만, 서버 함수 코드는 건드리지 않기 위해 별도 사본으로 둔다)
 
-// 공급면적 실측값 캐시 — 값이 있으면 정확한 평형, 없으면 아래 areaToPy 보간으로 폴백 (이 파일의 supply-area.mjs 참고)
-import { resolvePy } from "./supply-area.mjs";
-
 const PY_ANCHORS = [
   [39, 18], [49, 21], [59, 25], [74, 30], [84, 33],
   [99, 38], [110, 42], [130, 49], [150, 58], [165, 65],
@@ -40,12 +37,8 @@ export function parseTrade(xml, ymFallback) {
     if (!amtRaw) continue;
     if (xtag(b, "cdealType") === "O") continue;
     const area = parseFloat(xtag(b, "excluUseAr")) || 0;
-    const apt = xtag(b, "aptNm");
-    const umd = xtag(b, "umdNm");
-    // 건축HUB 전유공용면적 API 조회(지번 기반)용 — 실측 공급면적 배치 수집에 사용, RTMS 원본에 이미 있는 필드라 그대로 추출만 함
-    const jibun = xtag(b, "jibun");
     items.push({
-      apt, umd, jibun, area, py: resolvePy(apt, umd, area, areaToPy),
+      apt: xtag(b, "aptNm"), umd: xtag(b, "umdNm"), area, py: areaToPy(Math.round(area)),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"), floor: xtag(b, "floor"), build: xtag(b, "buildYear"),
@@ -67,11 +60,9 @@ export function parsePresale(xml, ymFallback) {
     const apt = xtag(b, "aptNm");
     if (!apt) continue;
     const area = parseFloat(xtag(b, "excluUseAr")) || 0;
-    const umd = xtag(b, "umdNm");
-    const jibun = xtag(b, "jibun");
     const gbn = xtag(b, "ownershipGbn");
     items.push({
-      apt, umd, jibun, area, py: resolvePy(apt, umd, area, areaToPy),
+      apt, umd: xtag(b, "umdNm"), area, py: areaToPy(Math.round(area)),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"), floor: xtag(b, "floor"),
@@ -95,10 +86,8 @@ export function parseRent(xml, ymFallback) {
     const monthlyRentRaw = xtag(b, "monthlyRent").replace(/,/g, "");
     if (monthlyRentRaw && parseInt(monthlyRentRaw, 10) > 0) continue;
     const area = parseFloat(xtag(b, "excluUseAr")) || 0;
-    const umd = xtag(b, "umdNm");
-    const jibun = xtag(b, "jibun");
     items.push({
-      apt, umd, jibun, area, py: resolvePy(apt, umd, area, areaToPy),
+      apt, umd: xtag(b, "umdNm"), area, py: areaToPy(Math.round(area)),
       amt: R1(parseInt(depositRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"), floor: xtag(b, "floor"), build: xtag(b, "buildYear"),

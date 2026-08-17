@@ -8,9 +8,6 @@ export const config = {
 
 const RTMS = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev";
 
-// 공급면적 실측값 캐시 — 값이 있으면 정확한 평형, 없으면 아래 areaToPy 보간으로 폴백 (shared/supply-area.mjs 참고)
-import { resolvePy } from "../../shared/supply-area.mjs";
-
 // 행정구역 개편 지역: 구코드·신코드 병합 조회 설정
 // 화성시 2026.02 분구 / 부천시 2024.01 구 재설치 / 인천 2026.07 행정체제 개편
 const SPLIT_REGIONS = {
@@ -88,13 +85,11 @@ function parseItems(xml, ymFallback) {
     if (!amtRaw) continue;
     if (xtag(b, "cdealType") === "O") continue;
     const area = parseFloat(xtag(b, "excluUseAr")) || 0;
-    const apt = xtag(b, "aptNm");
-    const umd = xtag(b, "umdNm");
     items.push({
-      apt,
-      umd,
+      apt: xtag(b, "aptNm"),
+      umd: xtag(b, "umdNm"),
       area,
-      py: resolvePy(apt, umd, area, areaToPy),
+      py: areaToPy(Math.round(area)),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"),
