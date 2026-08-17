@@ -1228,10 +1228,10 @@ function lastMonthsYm(n){
 }
 const ymLabel = ym => `${ym.slice(2,4)}.${ym.slice(4)}`;
 // months 배열(조회 기간의 YYYYMM 목록)을 "N년"/"N개월" 형태로 표시 — 탭 헤더에 조회 기간이 몇 년치인지 항상 표기하기 위함
+// 정확히 12의 배수일 때만 "N년"으로, 그 외에는(반기/연간 저평가처럼 두 기간 길이가 달라 딱 떨어지지 않는 경우 포함) 항상 "N개월"로 표시 — 다른 탭과 동일한 표기 방식 유지
 const yearsLabel = months => {
   const n = months.length;
-  if(n % 12 === 0) return `${n/12}년`;
-  return n < 12 ? `${n}개월` : `${(n/12).toFixed(1)}년`;
+  return n % 12 === 0 ? `${n/12}년` : `${n}개월`;
 };
 async function postFetch(lawd, yms){
   // GET + 정렬된 yms → 사용자 간 동일 URL로 CDN 캐시 적중률 확보
@@ -3399,11 +3399,11 @@ function renderRegion(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">실거래 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3431,11 +3431,11 @@ function renderVolume(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">거래량 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3467,11 +3467,11 @@ function renderGap(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전세가율 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3494,11 +3494,11 @@ function renderNewHigh(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신고가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3527,11 +3527,11 @@ function renderNewLow(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신저가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3560,11 +3560,11 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전용면적 평단가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3621,11 +3621,11 @@ function renderUpDown(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">등락 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3652,11 +3652,11 @@ function renderShortUndervalue(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
         <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">단기 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
@@ -3704,12 +3704,12 @@ function renderPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)"><span style="color:var(--yellow)">반기</span> 저평가</span>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">반기 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
@@ -3732,12 +3732,12 @@ function renderLongPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
-        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)"><span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:24px;margin-bottom:8px">
+        <span style="position:absolute;left:0;display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+          <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">연간 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
