@@ -1142,9 +1142,9 @@ function setMode(m){
   }
   renderRegionChips();
   document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap') ? '' : 'none';
-  document.getElementById('pyBandMultiWrap').style.display = (m==='newhigh'||m==='newlow') ? '' : 'none';
+  document.getElementById('pyBandMultiWrap').style.display = (m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
-  if(m!=='newhigh' && m!=='newlow'){ pyBandMultiSel = []; } // 다른 탭으로 나가면 초기화(신고가·신저가 재진입 시 항상 "전체 평형"로 시작, 다른 랭킹 탭과 동일한 컨벤션)
+  if(m!=='newhigh' && m!=='newlow' && m!=='pyprice'){ pyBandMultiSel = []; } // 다른 탭으로 나가면 초기화(신고가·신저가·평단가 재진입 시 항상 "전체 평형"로 시작, 다른 랭킹 탭과 동일한 컨벤션)
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap') ? 'none' : '';
@@ -1227,6 +1227,12 @@ function lastMonthsYm(n){
   return out; // 최신→과거
 }
 const ymLabel = ym => `${ym.slice(2,4)}.${ym.slice(4)}`;
+// months 배열(조회 기간의 YYYYMM 목록)을 "N년"/"N개월" 형태로 표시 — 탭 헤더에 조회 기간이 몇 년치인지 항상 표기하기 위함
+const yearsLabel = months => {
+  const n = months.length;
+  if(n % 12 === 0) return `${n/12}년`;
+  return n < 12 ? `${n}개월` : `${(n/12).toFixed(1)}년`;
+};
 async function postFetch(lawd, yms){
   // GET + 정렬된 yms → 사용자 간 동일 URL로 CDN 캐시 적중률 확보
   const q = yms.slice().sort().join(',');
@@ -1705,6 +1711,7 @@ function analyzeComplex(all, name, months, rawAll){
   return { found:true, mode:'complex', name:officialName, umd:hits[0].umd, build:hits[0].build,
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     byPy,
     trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
 }
@@ -1736,6 +1743,7 @@ function analyzeRegion(all, months){
   const highDeals = grouped.slice().sort((a,b)=>b.amt-a.amt).slice(0,100);
   return { found:true, mode:'region', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     topVolume, highDeals };
 }
 
@@ -1778,6 +1786,7 @@ function analyzeNewHigh(all, months){
   results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     newHigh: results.slice(0,100) };
 }
 
@@ -1813,6 +1822,7 @@ function analyzeNewLow(all, months){
   results.sort((a,b)=> a.amt - b.amt); // 가격 낮은 순
   return { found:true, mode:'newlow', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     newLow: results.slice(0,100) };
 }
 
@@ -1864,6 +1874,7 @@ function analyzePricePerPyeong(all, months){
   results.sort((a,b)=> b.pricePerPy - a.pricePerPy); // 평단가 높은 순
   return { found:true, mode:'pyprice', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     pyPrice: results.slice(0,100) };
 }
 
@@ -1898,6 +1909,7 @@ function analyzeUpDown(all, months){
   const down = rows.filter(r=>r.pct<0).sort((a,b)=>a.pct-b.pct).slice(0,10);
   return { found:true, mode:'updown', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     up, down };
 }
 
@@ -1943,6 +1955,7 @@ function analyzeGapRanking(saleAll, rentAll, months){
   rows.sort((a,b)=> b.pct - a.pct); // 전세가율 높은(=갭 작은) 순
   return { found:true, mode:'gap', total:saleAll.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     rows: rows.slice(0,30) };
 }
 
@@ -1984,6 +1997,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
 
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     divergence };
 }
 
@@ -2046,6 +2060,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
 
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     divergence };
 }
 
@@ -2114,6 +2129,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
 
   return { found:true, mode: sameDongOnly ? 'longpeakdong' : 'longpeak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
     divergence };
 }
@@ -2150,6 +2166,7 @@ function analyzeCompare(itemsByLawd, targets, months){
   }
   return { found:complexes.length>0, mode:'compare',
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
     complexes, missing };
 }
 
@@ -2415,26 +2432,15 @@ async function search(){
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
         }
-      } else if(mode==='newhigh'||mode==='newlow'){
-        // 신고가·신저가는 지역 랭킹과 마찬가지로 연식 필터 UI가 있고, 평형은 다중 선택(pyBandMultiSel) 사용
+      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
+        // 신고가·신저가·전용면적 평단가는 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         if(!items.length){
           d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
         } else {
-          d = mode==='newhigh' ? analyzeNewHigh(items, months) : analyzeNewLow(items, months);
+          d = mode==='newhigh' ? analyzeNewHigh(items, months) : mode==='newlow' ? analyzeNewLow(items, months) : analyzePricePerPyeong(items, months);
           d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
-          d.buildYear = buildYearLabel();
-          d.scopeLabel = scopeLabel;
-          d.failedRegions = failed;
-        }
-      } else if(mode==='pyprice'){
-        // 평단가는 단지당 "가장 비싼 평형" 1개를 자동 선정하는 로직이라 평형 다중선택 필터(pyBandMultiSel)는 사용하지 않음(연식 필터만 적용)
-        items = applyBuildYearFilter(items);
-        if(!items.length){
-          d = {found:false, note:'선택한 연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
-        } else {
-          d = analyzePricePerPyeong(items, months);
           d.buildYear = buildYearLabel();
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
@@ -2520,18 +2526,13 @@ async function search(){
         d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·층수·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
-      } else if(mode==='newhigh'||mode==='newlow'){
+      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
-        d = mode==='newhigh' ? analyzeNewHigh(items, months) : analyzeNewLow(items, months);
+        d = mode==='newhigh' ? analyzeNewHigh(items, months) : mode==='newlow' ? analyzeNewLow(items, months) : analyzePricePerPyeong(items, months);
         d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
-      } else if(mode==='pyprice'){
-        items = applyBuildYearFilter(items);
-        d = analyzePricePerPyeong(items, months);
-        d.buildYear = buildYearLabel();
-        if(!items.length){ d = {found:false, note:'선택한 연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='shortval'){
         // 평형 필터 UI가 없는 탭(내부적으로 20~39평 고정, 20평대/30평대 평대별) — peak/longpeak와 동일한 패턴
         d = analyzeShortUndervalue(items, months, items);
@@ -3371,7 +3372,7 @@ function renderCompare(d){
   <div class="card">
     <div class="card-hd">
       <h2 style="text-align:center">단지 시세 비교</h2>
-      <div class="meta">${esc(d.period)} · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
     </div>
 
     <div class="sec">
@@ -3398,14 +3399,15 @@ function renderRegion(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">실거래 랭킹</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">실거래 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3429,14 +3431,15 @@ function renderVolume(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">거래량 랭킹</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">거래량 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec">
@@ -3464,14 +3467,15 @@ function renderGap(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">전세가율 랭킹</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전세가율 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · <b style="color:#7FD4D9">최근 2개월 평균</b></div>
+      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · <b style="color:#7FD4D9">최근 2개월 평균</b></div>
     </div>
     <div class="sec">
       <h3>전세가율 상위 (매매·전세 각 2건 이상 표본)</h3>
@@ -3490,14 +3494,15 @@ function renderNewHigh(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">신고가</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신고가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3522,14 +3527,15 @@ function renderNewLow(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">신저가</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">신저가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 최저가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} 최저가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3554,14 +3560,15 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">전용면적 평단가</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">전용면적 평단가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} 중 3년 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3614,14 +3621,15 @@ function renderUpDown(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">등락 랭킹</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">등락 랭킹</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} · 최근 2개월 평균가 vs 이전 2개월 평균가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 2개월 평균가 vs 이전 2개월 평균가${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec">
@@ -3644,14 +3652,15 @@ function renderShortUndervalue(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff">단기 저평가</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)">단기 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} · 최근 2개월 평균가 vs 이전 2개월 평균가</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 2개월 평균가 vs 이전 2개월 평균가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3695,14 +3704,15 @@ function renderPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff"><span style="color:var(--yellow)">반기</span> 저평가</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)"><span style="color:var(--yellow)">반기</span> 저평가</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · 최근 6개월 최고가 vs 이전 6개월 최고가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -3722,14 +3732,15 @@ function renderLongPeak(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px">
-        <svg width="16" height="16" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#00C2C2">아파트썸</span>
-        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.4)">·</span>
-        <span style="font-size:16px;font-weight:800;color:#fff"><span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>
+        <span style="font-size:13px;font-weight:800;color:#00C2C2">아파트썸</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:6px 12px;border-radius:16px;box-shadow:0 3px 10px rgba(0,130,138,.28)"><span style="color:var(--yellow)">연간</span> 저평가${d.sameDongOnly? ' (동일 동)':''}</span>
       </div>
       <h2 style="text-align:center">${esc(regionName)}</h2>
-      <div class="meta">${esc(d.period)} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.recentYearLabel} 최고가 vs ${d.prevYearLabel} 최고가</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
