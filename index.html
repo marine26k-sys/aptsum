@@ -398,8 +398,8 @@
     // 한 번 해제하면 이 브라우저에서는 계속 노출(localStorage) — 새로고침·재방문 때마다 다시 탭할 필요 없음.
     // header/tabs 마크업이 이 스크립트보다 뒤에 나오므로(아직 DOM에 없음) DOMContentLoaded 이후에 바인딩한다.
     document.addEventListener('DOMContentLoaded', function(){
-      const SECRET_KEY = 'apc:secretNewLow'; // 신저가 때 만든 키를 그대로 재사용 — 한 번 탭 해제하면 두 탭 다 같이 풀림
-      const secretTabIds = ['tabNL', 'tabLPD'];
+      const SECRET_KEY = 'apc:secretNewLow'; // 신저가 때 만든 키를 그대로 재사용 — 한 번 탭 해제하면 세 탭 다 같이 풀림(2026.08 지하철 검색 탭 추가)
+      const secretTabIds = ['tabNL', 'tabLPD', 'tabSub'];
       const secretTabs = secretTabIds.map(id => document.getElementById(id)).filter(Boolean);
       if (!secretTabs.length) return;
       if (localStorage.getItem(SECRET_KEY) === '1') { secretTabs.forEach(t => { t.style.display = ''; }); }
@@ -444,6 +444,8 @@
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
     <div class="tab" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
     <!-- 연간 저평가(동일 동) 탭: 비공개(2026.08) — 기존 공개 "연간 저평가" 탭은 그대로 두고, 같은 동 기준 비교 로직만 별도 탭으로 분리 -->
+    <div class="tab" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>지하철 검색</div>
+    <!-- 지하철 검색 탭: 비공개(2026.08) — 팔로워 공개 기능이 아니라 운영자 확인용, 로고 5번 탭 제스처로만 노출(신저가·연간 저평가(동일 동)와 동일 방식) -->
   </div>
 
   <div class="search-box">
@@ -456,6 +458,14 @@
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:9px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
+    <div class="row2" id="subwayRow" style="display:none">
+      <select id="subwayLine" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()"><option value="">호선 전체</option></select>
+      <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
+        <option value="5">도보 5분 이내</option>
+        <option value="10" selected>도보 10분 이내</option>
+        <option value="15">도보 15분 이내</option>
+      </select>
+    </div>
     <div class="row2" id="optRow">
       <select id="monthsN" style="flex:1.3;min-width:0">
         <option value="12">최근 1년</option>
@@ -1118,6 +1128,7 @@ function setMode(m){
   document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
   document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
+  document.getElementById('tabSub').classList.toggle('on', m==='subway');
   document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
@@ -1155,13 +1166,14 @@ function setMode(m){
   if(m!=='newhigh' && m!=='newlow' && m!=='pyprice'){ pyBandMultiSel = []; } // 다른 탭으로 나가면 초기화(신고가·신저가·평단가 재진입 시 항상 "전체 평형"로 시작, 다른 랭킹 탭과 동일한 컨벤션)
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap') ? 'none' : '';
-  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap') ? 'none' : '';
+  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway') ? 'none' : '';
+  document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
   document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
   document.getElementById('floorMin').value = '0';
   document.getElementById('pyBand').value = m==='region' ? (getPyBandPref() ?? '32-36') : '';
-  document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : ((m==='updown'||m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회'));
+  document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='updown'||m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
     else document.querySelectorAll('.cmp-row').forEach(r=>{
@@ -2347,6 +2359,96 @@ function quick(n, guName){
   search();
 }
 
+// ── 지하철 검색(비공개 탭) ──
+// data/hhcnt/<lawd>.json은 매매 실거래 API와 무관한 별도 정적 배치(collect-hhcnt.mjs)라
+// 이 탭에서만 쓰는 전용 캐시(lawd → items[])를 따로 둔다. 필터(호선·도보시간)를 바꿀 때마다
+// 다시 fetch하지 않도록 세션 내 메모리에만 유지(새로고침하면 비워짐 — 세대수 데이터 자체가
+// 자주 안 바뀌는 값이라 무거운 영속 캐시까지는 불필요).
+const subwayDataCache = {};
+async function loadSubwayData(lawd){
+  if(subwayDataCache[lawd]) return subwayDataCache[lawd];
+  const r = await fetch(`/data/hhcnt/${encodeURIComponent(lawd)}.json`);
+  if(!r.ok) throw new Error('데이터 조회 실패');
+  const j = await r.json().catch(()=>null);
+  const items = (j && Array.isArray(j.items)) ? j.items : [];
+  subwayDataCache[lawd] = items;
+  return items;
+}
+// subwayWalk는 K-apt 원본 텍스트 그대로("5분이내"/"15~20분이내"/"20분이상" 등 케이스가 섞여 있음) —
+// "○○분 이내" 필터는 최악값(범위면 상한, 단일값이면 그 값, "이상/초과"면 무한대) 기준으로 판단해야
+// "15~20분이내"인 단지가 "15분 이내" 필터에 잘못 걸리는 일이 없다.
+function parseSubwayWalk(raw){
+  if(!raw) return null;
+  const nums = (String(raw).match(/\d+/g) || []).map(Number);
+  if(!nums.length) return null;
+  if(nums.length >= 2) return { min: nums[0], max: nums[1] };
+  const open = /이상|초과/.test(raw);
+  return open ? { min: nums[0], max: Infinity } : { min: 0, max: nums[0] };
+}
+// 지역마다 실제로 등장하는 호선이 달라(K-apt 표기도 지역마다 제각각) 하드코딩하지 않고
+// 방금 불러온 지역 데이터에서 실제 등장하는 호선만 뽑아 드롭다운을 채운다.
+function populateSubwayLineSelect(items){
+  const set = new Set();
+  items.forEach(it => (it.subwayLines || []).forEach(l => set.add(l)));
+  const lines = [...set].sort((a,b) => {
+    const an = parseInt(a,10), bn = parseInt(b,10);
+    if(!isNaN(an) && !isNaN(bn)) return an - bn;
+    if(!isNaN(an)) return -1;
+    if(!isNaN(bn)) return 1;
+    return a.localeCompare(b, 'ko');
+  });
+  const sel2 = document.getElementById('subwayLine');
+  const cur = sel2.value;
+  sel2.innerHTML = `<option value="">호선 전체</option>` + lines.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+  if(lines.includes(cur)) sel2.value = cur;
+}
+async function searchSubway(){
+  const lawd = sel.value;
+  if(!lawd){ showError('지역을 선택해 주세요.'); return; }
+  document.getElementById('error').classList.remove('on');
+  const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
+  document.getElementById('loadMsg').textContent = '지하철 데이터 조회 중…';
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('btn').disabled = true;
+  try{
+    const items = await loadSubwayData(lawd);
+    populateSubwayLineSelect(items);
+    const lineF = document.getElementById('subwayLine').value;
+    const maxWalk = +document.getElementById('subwayWalkMax').value;
+    const rows = items
+      .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
+      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)))
+      .sort((a,b) => (a.walk.max - b.walk.max) || (a.walk.min - b.walk.min) || a.name.localeCompare(b.name, 'ko'));
+    renderSubway({ regionName: sel.options[sel.selectedIndex].textContent, lineF, maxWalk, rows });
+  }catch(e){
+    showError('지하철 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }finally{
+    document.getElementById('loading').classList.remove('on');
+    document.getElementById('btn').disabled = false;
+  }
+}
+function renderSubway(d){
+  const rows = d.rows.length
+    ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).join('·'))}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="val">도보${esc(x.subwayWalk)}</span>
+      </div>`).join('')
+    : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
+  const html = `
+  <div class="card">
+    <div class="card-hd">
+      ${hdTop('지하철 검색')}
+      <h2>${esc(shortRegionLabel(d.regionName))}</h2>
+      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · ${d.rows.length}개 단지</div>
+    </div>
+    <div class="sec">
+      ${rows}
+    </div>
+  </div>
+  <div class="src-note">출처: 국토교통부 공동주택관리정보시스템(K-apt) · data/hhcnt 배치 기준</div>`;
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+}
+
 // 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
 // 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
 // 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
@@ -2382,6 +2484,9 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
 }
 
 async function search(){
+  // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
+  // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
+  if(mode==='subway') return searchSubway();
   const myToken = ++searchToken;
   updateRegionFavBtn();
   renderFavRegions();
