@@ -1514,7 +1514,13 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.08 5→6: data/hhcnt 정적 배치를 수동 재수집(강남구 등)한 뒤에도, 배치 실행 전에 이미 조회했던 지역은
 // 지하철 필드 없는 옛 응답이 localStorage(180일)에 그대로 남아있어 새로고침해도 안 보이는 문제 — 버전을 올려
 // 기존 사용자 전원의 로컬 캐시를 강제 무효화)
-const HH_CACHE_VER = 6;
+// (2026.08 6→7: 도봉동 "한신" matchKapt 오매칭 수동 보정(MANUAL_OVERRIDE) 추가 — 이미 캐시된 옛(오매칭) 응답이
+// 남아있으면 서버 로직을 고쳐도 그대로 재사용돼 화면엔 여전히 틀린 세대수·지하철 정보가 보임)
+// (2026.08 7→8: 봉천동 두산 PARTIAL_OVERRIDE 추가(임대 3단지 560세대로 오매칭 → 2,001세대로 고정) —
+// 이미 캐시된 옛 560세대 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
+// (2026.08 8→9: 평촌목련2단지아파트 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 경춘선 오기입 제거) —
+// 이미 캐시된 옛(경춘선 포함) 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
+const HH_CACHE_VER = 9;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -2365,12 +2371,21 @@ function quick(n, guName){
 // 다시 fetch하지 않도록 세션 내 메모리에만 유지(새로고침하면 비워짐 — 세대수 데이터 자체가
 // 자주 안 바뀌는 값이라 무거운 영속 캐시까지는 불필요).
 const subwayDataCache = {};
+// K-apt 원본 데이터 자체의 오기입을 보정 — hhcnt.mjs의 PARTIAL_OVERRIDE와 같은 케이스를 여기서도 고쳐야 함
+// (이 탭은 data/hhcnt/<lawd>.json을 hhcnt.mjs 경유 없이 직접 읽으므로, 서버 쪽 보정만으론 여기 반영 안 됨)
+// key: kaptName 그대로(공백 포함, data/hhcnt items의 name 필드와 정확히 일치해야 함)
+const SUBWAY_LINE_FIX = {
+  "평촌목련2단지아파트": ["4호선"], // 안양 동안구 — 원본에 경춘선이 잘못 섞여 있음(2026.08)
+};
+function applySubwayLineFix(items){
+  return items.map(it => SUBWAY_LINE_FIX[it.name] ? { ...it, subwayLines: SUBWAY_LINE_FIX[it.name] } : it);
+}
 async function loadSubwayData(lawd){
   if(subwayDataCache[lawd]) return subwayDataCache[lawd];
   const r = await fetch(`/data/hhcnt/${encodeURIComponent(lawd)}.json`);
   if(!r.ok) throw new Error('데이터 조회 실패');
   const j = await r.json().catch(()=>null);
-  const items = (j && Array.isArray(j.items)) ? j.items : [];
+  const items = applySubwayLineFix((j && Array.isArray(j.items)) ? j.items : []);
   subwayDataCache[lawd] = items;
   return items;
 }
@@ -2402,6 +2417,20 @@ function populateSubwayLineSelect(items){
   sel2.innerHTML = `<option value="">호선 전체</option>` + lines.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
   if(lines.includes(cur)) sel2.value = cur;
 }
+// 실거래 단지명(analyzePricePerPyeong 결과의 apt)과 K-apt 단지명(subwayLines 등)은 표기가 달라서
+// (예: 실거래 "한신" vs K-apt "도봉한신"), matchKapt()와 같은 취지로 정확일치→부분일치 순으로 매칭한다.
+// 여러 후보가 걸리면 평단가가 더 높은 쪽을 채택(과소평가보다는 존재하는 값을 보여주는 쪽이 안전).
+function matchPricePerPy(priceMap, name){
+  const qn = name.replace(/\s/g, '');
+  if(priceMap[qn] !== undefined) return priceMap[qn];
+  let best = null;
+  for(const k in priceMap){
+    if(k.includes(qn) || qn.includes(k)){
+      if(best === null || priceMap[k] > best) best = priceMap[k];
+    }
+  }
+  return best;
+}
 async function searchSubway(){
   const lawd = sel.value;
   if(!lawd){ showError('지역을 선택해 주세요.'); return; }
@@ -2415,10 +2444,30 @@ async function searchSubway(){
     populateSubwayLineSelect(items);
     const lineF = document.getElementById('subwayLine').value;
     const maxWalk = +document.getElementById('subwayWalkMax').value;
-    const rows = items
+    let rows = items
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
-      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)))
-      .sort((a,b) => (a.walk.max - b.walk.max) || (a.walk.min - b.walk.min) || a.name.localeCompare(b.name, 'ko'));
+      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
+
+    // 평단가(전용면적 평단가 탭과 동일 로직) 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    let priceMap = {};
+    try{
+      document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
+      const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
+      const trades = await ensureMonths(lawd, 36);
+      const pyRes = analyzePricePerPyeong(trades, months);
+      pyRes.pyPrice.forEach(x=>{
+        const k = x.apt.replace(/\s/g, '');
+        if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
+      });
+    }catch(e){ /* 평단가 조회 실패 — priceMap 비워둔 채 아래에서 도보시간 순으로 폴백 */ }
+
+    rows = rows.map(x => ({ ...x, pricePerPy: matchPricePerPy(priceMap, x.name) }));
+    rows.sort((a,b) => {
+      if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
+      if(a.pricePerPy == null) return 1; // 가격 정보 없는 단지는 뒤로
+      if(b.pricePerPy == null) return -1;
+      return b.pricePerPy - a.pricePerPy; // 평단가 높은 순
+    });
     renderSubway({ regionName: sel.options[sel.selectedIndex].textContent, lineF, maxWalk, rows });
   }catch(e){
     showError('지하철 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -2430,8 +2479,8 @@ async function searchSubway(){
 function renderSubway(d){
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).join('·'))}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
-        <span class="val">도보${esc(x.subwayWalk)}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).join('·'))} · 도보${esc(x.subwayWalk)}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="val" style="color:var(--teal-dark)">${x.pricePerPy!=null? `${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span>` : '<small style="color:var(--sub)">가격 정보 없음</small>'}</span>
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
@@ -2439,13 +2488,13 @@ function renderSubway(d){
     <div class="card-hd">
       ${hdTop('지하철 검색')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · ${d.rows.length}개 단지</div>
+      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순 · ${d.rows.length}개 단지</div>
     </div>
     <div class="sec">
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 공동주택관리정보시스템(K-apt) · data/hhcnt 배치 기준</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 

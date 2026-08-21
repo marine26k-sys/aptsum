@@ -26,6 +26,46 @@ const SPLIT_FALLBACK = {
   "IC-": { codes: { "제물포구": "28125", "영종구": "28155", "서해구": "28275", "검단구": "28290" }, old: null },
 };
 
+// ── 자동 매칭 수동 보정 목록 ──
+// "한신"처럼 이름이 짧으면 matchKapt()가 K-apt에 등록된 동명의 다른(대개 더 작은) 단지와 계속 충돌해
+// 엉뚱한 세대수·지하철 정보를 돌려주는 경우가 있다. 이런 케이스는 자동 매칭 로직을 아예 우회하고
+// 확인된 값을 고정 반환한다 — 정적 배치·라이브 조회 둘 다보다 먼저 확인.
+// key: `${lawd}|${검색어 공백 제거}`
+// (2026.08 도봉동 한신 — 실거래 단지명 "한신"이 짧아 도봉구 내 동명 소규모 단지와 충돌, 202세대·4호선
+// 쌍문역으로 잘못 매칭되고 있었음. 실제로는 2,678세대, 1997년 준공, 1호선·7호선 도봉산역 도보 10분권.)
+const MANUAL_OVERRIDE = {
+  "11320|한신": { hhcnt: 2678, dongCnt: null, useDate: null, subwayLines: ["1호선", "7호선"], subwayWalk: "10분이내", subwayStation: "도봉산" },
+};
+function checkOverride(lawd, name) {
+  return MANUAL_OVERRIDE[`${lawd}|${name.replace(/\s/g, "")}`] || null;
+}
+// 위 MANUAL_OVERRIDE는 "전체" 보정(자동 매칭 자체를 생략)용이고, 이건 "부분" 보정 —
+// 자동 매칭은 그대로 실행하되(지하철 등 나머지 필드는 정상적으로 채워지므로), 특정 필드만 확인된 값으로
+// 덮어쓴다. 세대수만 틀리고 지하철 등 나머지는 맞는 경우(전체 override로 처리하면 그 값들을 다시
+// 수동으로 채워야 하는 번거로움) 이쪽을 쓴다.
+// (2026.08 봉천동 두산 — 실거래 단지명 "두산"이 K-apt의 "두산1,2단지"(분양, 2,001세대)와 "두산3단지"
+// (임대, 560세대) 두 후보와 겹치는데, matchKapt()의 "형제 단지 합산" 감지가 "1,2단지"(5자)까지는 못 잡고
+// "3단지"(3자)만 잡아 후보가 1개뿐이라 합산 조건(siblings.length>1)을 못 만족 → 이름 길이가 검색어에
+// 더 가까운(짧은) "두산3단지"(임대)로 잘못 채택되고 있었음.
+// matchKapt의 임대 배제 필터는 후보명에 "임대"라는 글자가 실제로 들어있어야 걸리는데, K-apt엔
+// "두산3단지"처럼 임대 여부가 이름에 안 드러나는 경우가 있어 이 사례는 못 걸러냄 — 이름만으로 분양/임대를
+// 구분하는 건 근본적으로 한계가 있어(오매칭될 때마다 다른 임대단지명 패턴일 수 있음) 형제단지 정규식을
+// 넓히는 대신(그러면 임대까지 합산돼 2,561세대로 오히려 더 틀어짐) 이 단지는 확인된 값으로 직접 고정한다.)
+const PARTIAL_OVERRIDE = {
+  "11620|두산": { hhcnt: 2001 },
+  // 안양 동안구 평촌목련2단지아파트 — 세대수(994) 매칭 자체는 정상인데, K-apt 원본 subwayLine 필드에
+  // "4호선,경춘선"으로 경춘선이 잘못 들어가 있음(안양은 경춘선과 지리적으로 무관 — 원천 데이터 오기입으로 보임).
+  // 실제로는 범계역 4호선 초역세권. data/hhcnt 정적 배치·지하철 검색 탭 양쪽 다 이 값을 그대로 읽으므로
+  // 두 군데 모두 보정 필요(지하철 검색 탭은 index.html의 SUBWAY_LINE_FIX 참고, 2026.08).
+  "41173|평촌목련2단지아파트": { subwayLines: ["4호선"] },
+};
+function applyPartialOverride(lawd, name, result) {
+  const ov = PARTIAL_OVERRIDE[`${lawd}|${name.replace(/\s/g, "")}`];
+  if (!ov) return result;
+  const base = (result && result.found) ? result : { found: true, name };
+  return { ...base, ...ov, found: true, name };
+}
+
 function resolveSigungu(lawd) {
   if (/^\d{5}$/.test(lawd)) return [lawd];
   const prefix = Object.keys(SPLIT_FALLBACK).find((p) => lawd.startsWith(p));
@@ -242,6 +282,12 @@ export default async (req) => {
     const results = {};
     const remaining = new Set(names);
 
+    // 수동 보정 목록에 있는 이름은 정적/라이브 조회를 아예 건너뛰고 확정값으로 채운다
+    for (const nm of [...remaining]) {
+      const ov = checkOverride(lawd, nm);
+      if (ov) { results[nm] = { found: true, name: nm, ...ov }; remaining.delete(nm); }
+    }
+
     // 정적 배치 파일을 딱 한 번만 읽어서, 그 안에서 요청받은 이름을 전부 매칭 시도
     // (data/hhcnt/<lawd>.json에는 세대수까지 이미 포함돼 있어 매칭만 되면 추가 API 호출이 필요 없음)
     try {
@@ -293,6 +339,9 @@ export default async (req) => {
       }
     }
 
+    // 부분 보정(PARTIAL_OVERRIDE) 대상은 static/live 어느 경로로 채워졌든 마지막에 한 번에 덮어쓴다
+    for (const nm of names) results[nm] = applyPartialOverride(lawd, nm, results[nm]);
+
     // 배치 응답은 요청마다 이름 조합이 달라 CDN 캐시 효율이 낮으므로 캐시하지 않음
     // (개별 결과는 이미 위에서 static/basis 단계의 CDN 캐시 대상 데이터를 그대로 활용한 것이라 손해 없음)
     return Response.json({ results });
@@ -305,6 +354,11 @@ export default async (req) => {
   const sggs = resolveSigungu(lawd);
   if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (name.length < 2) return Response.json({ error: "단지명 오류" }, { status: 400 });
+
+  const ov = checkOverride(lawd, name);
+  if (ov) return new Response(JSON.stringify({ found: true, name, ...ov }), {
+    headers: { "Content-Type": "application/json", "Netlify-CDN-Cache-Control": "public, durable, max-age=7776000", "Cache-Control": "public, max-age=0, must-revalidate" },
+  });
 
   // 세대수·동수는 사실상 고정값(재건축 전까지 안 바뀜) — CDN에 길게 캐시 (클라이언트 localStorage 캐시와 별개로,
   // 캐시가 없는 신규 방문자·다른 브라우저 요청도 최대한 API 재호출 없이 처리되도록)
@@ -335,7 +389,7 @@ export default async (req) => {
         if (hits.length) {
           const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
           const merged = fulls.length ? mergeFull(fulls) : null;
-          if (merged) return new Response(JSON.stringify({ found: true, name, ...merged }), { headers: cacheHeadersFound });
+          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, { found: true, name, ...merged })), { headers: cacheHeadersFound });
         }
       }
     }
@@ -362,8 +416,11 @@ export default async (req) => {
         ])
       : [[], []];
     const merged = mergeBasis(bases, subways);
-    if (!merged) return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
-    return new Response(JSON.stringify({ found: true, name, ...merged }), { headers: cacheHeadersFound });
+    if (!merged) {
+      const patched = applyPartialOverride(lawd, name, { found: false });
+      return new Response(JSON.stringify(patched), { headers: patched.found ? cacheHeadersFound : cacheHeadersMiss });
+    }
+    return new Response(JSON.stringify(applyPartialOverride(lawd, name, { found: true, name, ...merged })), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
