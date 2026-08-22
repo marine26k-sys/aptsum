@@ -138,9 +138,6 @@
   #pwaModal .step{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
   #pwaModal .step-num{flex:none;width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
   #pwaModal button{margin-top:6px;width:100%;padding:9px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
-  #pwaInAppBanner{display:none;align-items:flex-start;gap:8px;background:#FFF7E6;border:1px solid #F5B400;border-radius:10px;padding:9px 10px;margin:6px 0 2px;font-size:11.5px;line-height:1.5;color:#5A4200}
-  #pwaInAppBanner svg{flex:none;width:16px;height:16px;margin-top:1px}
-  #pwaInAppBanner .close{flex:none;background:none;border:none;color:#5A4200;font-size:15px;cursor:pointer;padding:0 2px;line-height:1}
   .chart-wrap{overflow:hidden}
   .chart-note{font-size:10px;color:var(--sub);text-align:right;margin-top:2px}
   circle[data-tip]{touch-action:none}
@@ -298,11 +295,6 @@
       쓰레드
     </a>
   </div>
-  <div id="pwaInAppBanner">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#5A4200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
-    <div style="flex:1">앱 내장 브라우저에서는 홈 화면 추가가 안 돼요. 오른쪽 위 <b>⋮(점 3개)</b> 또는 <b>공유 아이콘</b> → <b>'다른 브라우저에서 열기'</b>를 눌러주세요.</div>
-    <button class="close" onclick="closePwaInAppBanner()">✕</button>
-  </div>
   <script>
     // 오늘 날짜를 page_id에 포함시켜, 날짜가 바뀌면 새 카운터로 자동 리셋되는 방식으로 "일일 방문자"를 구현
     (function(){
@@ -334,8 +326,8 @@
       } else if (isInAppBrowser) {
         // 인앱 브라우저에서는 beforeinstallprompt가 안 뜨므로, 버튼을 항상 노출해
         // 눌렀을 때 "정식 브라우저로 열어주세요" 안내로 대체(아래 handlePwaInstallClick)
+        // (2026.08 수민 요청으로 자동 노출 경고 배너는 제거 — 안내는 설치 버튼 클릭 시 모달로만 표시)
         btn.style.display = 'inline-flex';
-        document.getElementById('pwaInAppBanner').style.display = 'flex';
       } else if (isIOS) {
         // iOS Safari는 beforeinstallprompt를 지원하지 않아 안내 모달로 대체
         btn.style.display = 'inline-flex';
@@ -388,10 +380,6 @@
     function closePwaModal(){
       document.getElementById('pwaModalBg').style.display = 'none';
     }
-    function closePwaInAppBanner(){
-      document.getElementById('pwaInAppBanner').style.display = 'none';
-    }
-
     // ---- 신저가·연간 저평가 탭 비밀모드: 로고 5번 빠르게 탭하면 노출 ----
     // 팔로워 전체 공개 기능이 아니라 운영자 확인용이라, 탭에 상시 노출하지 않고 이 제스처로만 접근한다
     // (신저가 2026.08 최초 추가, 연간 저평가도 2026.08 같은 방식으로 비공개 전환).
@@ -2476,11 +2464,19 @@ async function searchSubway(){
     document.getElementById('btn').disabled = false;
   }
 }
+// 지하철 도보시간 표시 공용 — "5~10분이내"처럼 범위로 된 원본 텍스트를 "10분이내"(상한만)로 축약해서 보여준다.
+// (필터링 자체는 parseSubwayWalk()의 상한 기준 그대로, 이건 화면 표시만 간결하게 바꾸는 것)
+// 지하철 검색 탭(renderSubway)과 단지 분석 탭(subwayMetaHTML) 양쪽에서 공용으로 사용(2026.08).
+function formatWalkDisplay(raw){
+  if(!raw) return '';
+  const nums = (String(raw).match(/\d+/g) || []).map(Number);
+  if(nums.length >= 2) return `${nums[1]}분이내`;
+  return raw;
+}
 function renderSubway(d){
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).join('·'))} · 도보${esc(x.subwayWalk)}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
-        <span class="val" style="color:var(--teal-dark)">${x.pricePerPy!=null? `${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span>` : '<small style="color:var(--sub)">가격 정보 없음</small>'}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).slice(0,3).join('·'))} · 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
@@ -2893,12 +2889,12 @@ async function search(){
 // 함께 내려주므로(2026.08 추가) 세대수 옆에 이어붙인다. 정보가 하나도 없으면 빈 문자열(기존처럼 표시 안 함).
 function subwayMetaHTML(hh){
   if(!hh || !hh.subwayLines || !hh.subwayLines.length) return '';
-  const lines = hh.subwayLines.join('·');
+  const lines = hh.subwayLines.slice(0,3).join('·'); // 최대 3개까지만 표시(지하철 검색 탭과 동일 규칙, 2026.08)
   // subwayStation 원본이 "범계"처럼 역명만 있을 수도, "범계역"처럼 이미 "역"이 붙어있을 수도 있어(국토부 K-apt
   // 자유입력 필드라 단지마다 표기가 다름) — 이미 "역"으로 끝나면 중복으로 덧붙이지 않음(2026.08 "범계역역" 버그 수정)
   const rawStation = hh.subwayStation ? esc(hh.subwayStation).trim() : '';
   const station = rawStation ? `${rawStation}${rawStation.endsWith('역')? '' : '역'} ` : '';
-  const walk = hh.subwayWalk ? `도보${esc(hh.subwayWalk)}` : '';
+  const walk = hh.subwayWalk ? `도보${esc(formatWalkDisplay(hh.subwayWalk))}` : ''; // 범위는 상한만 표시(지하철 검색 탭과 동일, 2026.08)
   const detail = (station || walk) ? ` (${station}${walk})` : '';
   return ` · <b style="color:#7FD4D9">${esc(lines)}</b>${detail}`;
 }
