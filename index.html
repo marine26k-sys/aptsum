@@ -1647,8 +1647,12 @@ function floorBands(arr){
 }
 
 // 사업 진행 중 개명된 단지(옛 이름으로 등록된 과거 실거래도 함께 찾도록) — 공백 제거 기준, canonical: [옛 이름들]
+// 2026.08: 개명이 아니라 K-apt 등록명과 국토부 실거래 등록명이 서로 다른 경우도 이 메커니즘으로 함께 대응
+// (인덕원삼성 — K-apt엔 "인덕원삼성", 실거래엔 "인덕원마을삼성"으로 등록돼 있어 역세권 탭에서 클릭해도
+// 단지 분석에서 못 찾던 문제)
 const APT_ALIASES = {
   '흑석자이': ['흑석리버파크자이'],
+  '인덕원마을삼성': ['인덕원삼성'],
 };
 const APT_ALIAS_CANON = {}; // 별칭 → canonical 정규화 키
 Object.entries(APT_ALIASES).forEach(([canon, arr])=>{ arr.forEach(a=>{ APT_ALIAS_CANON[a.replace(/\s/g,'')] = canon; }); });
@@ -2409,23 +2413,25 @@ function populateSubwayLineSelect(items){
   if(lines.includes(cur)) sel2.value = cur;
 }
 // 실거래 단지명(analyzePricePerPyeong 결과의 apt)과 K-apt 단지명(subwayLines 등)은 표기가 달라서
-// (예: 실거래 "한신" vs K-apt "도봉한신") 표기가 어긋나는 경우가 있는데, 부분일치까지 허용했다가
-// 완전히 다른 단지의 가격을 잘못 끌어오는 사고가 있었음(2026.08, "귀인마을현대홀타운"은 84㎡ 타입 자체가
-// 없는데 이름이 비슷한 다른 단지의 84㎡ 거래가를 잘못 표시) — 정확일치만 허용하도록 축소.
-// 데이터가 없으면 표시를 생략하는 게, 다른 단지 가격을 잘못 붙이는 것보다 훨씬 안전함.
-function exactNameLookup(map, name){
+// (예: 실거래 "한신" vs K-apt "도봉한신") 표기가 어긋나는 경우가 있어 부분일치를 허용했다가, 완전히 다른
+// 단지의 가격을 잘못 끌어온 사고가 있었음(2026.08, "귀인마을현대홀타운"은 84㎡ 타입 자체가 없는데 이름이
+// 비슷한 다른 단지의 84㎡ 거래가를 잘못 표시) — 일단 정확일치만 허용하도록 축소했었으나, 여전히 표기 차이로
+// 놓치는 케이스가 있어 수민 확인 후 재도입(2026.08): 부분일치는 후보가 "정확히 1개"일 때만 허용 — 2개 이상
+// 걸리면 어느 쪽인지 애매하므로 아예 매칭을 포기(빈 값)한다. 후보 1개짜리 부분일치도 100% 안전하진 않지만
+// (전혀 다른 단지가 우연히 유일한 부분일치일 수 있음), 최소한 "여러 후보 중 아무거나 골라잡는" 것보다는 낫다.
+function safeNameLookup(map, name){
   const qn = name.replace(/\s/g, '');
-  return map[qn] !== undefined ? map[qn] : null;
+  if(map[qn] !== undefined) return map[qn];
+  const partial = Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
+  return partial.length === 1 ? map[partial[0]] : null;
 }
-function matchPricePerPy(priceMap, name){ return exactNameLookup(priceMap, name); }
-function matchLatestTrade(tradeMap, name){ return exactNameLookup(tradeMap, name); }
-// 전용 59/84㎡의 단지별 최근 거래 1건씩 뽑는다 — 단지마다 실제 전용면적이 59.xx/84.xx로 조금씩 달라서
-// 정확히 59.00/84.00이 아니라 범위(55~60/80~85, 2026.08 57~60/83~85→확대)로 매칭(수민 요청 — py 앵커(25/33평) 매칭은 areaToPy
-// 보간값이라 실제 면적과 어긋날 수 있어 이걸로 교체). 매매만 대상(분양권/입주권은 준공 전 시세라 제외).
+function matchPricePerPy(priceMap, name){ return safeNameLookup(priceMap, name); }
+// 단지별로 지정된 전용면적 구간의 최근 거래 1건씩 뽑는다(수민이 지정한 4개 구간: 45~54/55~60/80~85/86~105㎡).
+// 매매만 대상(분양권/입주권은 준공 전 시세라 제외).
 function latestByArea(trades, minA, maxA){
   const map = {};
   trades.forEach(t=>{
-    if(t.kind) return;
+    if(t.kind || !t.area) return;
     if(t.area < minA || t.area > maxA) return;
     const k = t.apt.replace(/\s/g, '');
     const cur = map[k];
@@ -2450,8 +2456,8 @@ async function searchSubway(){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
 
-    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 48/59/84 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
-    let priceMap = {}, latest48Map = {}, latest59Map = {}, latest84Map = {};
+    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 45~54/55~60/80~85/86~105 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    let priceMap = {}, latest48Map = {}, latest59Map = {}, latest84Map = {}, latest105Map = {};
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
       const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
@@ -2464,14 +2470,16 @@ async function searchSubway(){
       latest48Map = latestByArea(trades, 45, 54); // 전용 45~54㎡
       latest59Map = latestByArea(trades, 55, 60); // 전용 55~60㎡
       latest84Map = latestByArea(trades, 80, 85); // 전용 80~85㎡
-    }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 59/84 가격은 표시 생략 */ }
+      latest105Map = latestByArea(trades, 86, 105); // 전용 86~105㎡
+    }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
     rows = rows.map(x => ({
       ...x,
       pricePerPy: matchPricePerPy(priceMap, x.name),
-      latest48: matchLatestTrade(latest48Map, x.name),
-      latest59: matchLatestTrade(latest59Map, x.name),
-      latest84: matchLatestTrade(latest84Map, x.name),
+      latest48: safeNameLookup(latest48Map, x.name),
+      latest59: safeNameLookup(latest59Map, x.name),
+      latest84: safeNameLookup(latest84Map, x.name),
+      latest105: safeNameLookup(latest105Map, x.name),
     }));
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
@@ -2498,10 +2506,9 @@ function formatWalkDisplay(raw){
 }
 function renderSubway(d){
   const priceBadges = x => {
-    const parts = [];
-    if(x.latest48) parts.push(`<div>전용${Math.floor(x.latest48.area)} <b style="color:var(--teal-dark)">${x.latest48.amt.toFixed(1)}억</b></div>`);
-    if(x.latest59) parts.push(`<div>전용${Math.floor(x.latest59.area)} <b style="color:var(--teal-dark)">${x.latest59.amt.toFixed(1)}억</b></div>`);
-    if(x.latest84) parts.push(`<div>전용${Math.floor(x.latest84.area)} <b style="color:var(--teal-dark)">${x.latest84.amt.toFixed(1)}억</b></div>`);
+    // 55~85 구간(전용59·84) 우선 노출, 최대 2개까지만 — 부족하면 48·105로 채움(수민 요청, 2026.08)
+    const candidates = [x.latest59, x.latest84, x.latest48, x.latest105].filter(Boolean).slice(0,2).sort((a,b)=>a.area-b.area);
+    const parts = candidates.map(t => `<div>전용${Math.floor(t.area)} <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
   const rows = d.rows.length
@@ -2521,7 +2528,7 @@ function renderSubway(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 48/59/84 최근 실거래가, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 45~105 최근 실거래가 중 최대 2개, 55~85 우선, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
