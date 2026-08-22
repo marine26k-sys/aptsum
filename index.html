@@ -432,8 +432,8 @@
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
     <div class="tab" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
     <!-- 연간 저평가(동일 동) 탭: 비공개(2026.08) — 기존 공개 "연간 저평가" 탭은 그대로 두고, 같은 동 기준 비교 로직만 별도 탭으로 분리 -->
-    <div class="tab" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>지하철 검색</div>
-    <!-- 지하철 검색 탭: 비공개(2026.08) — 팔로워 공개 기능이 아니라 운영자 확인용, 로고 5번 탭 제스처로만 노출(신저가·연간 저평가(동일 동)와 동일 방식) -->
+    <div class="tab" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
+    <!-- 역세권(구 "지하철 검색") 탭: 비공개(2026.08) — 팔로워 공개 기능이 아니라 운영자 확인용, 로고 5번 탭 제스처로만 노출(신저가·연간 저평가(동일 동)와 동일 방식). 내부 함수/변수명(searchSubway 등)은 그대로 유지, 화면 표시 라벨만 변경(2026.08) -->
   </div>
 
   <div class="search-box">
@@ -452,6 +452,7 @@
         <option value="5">도보 5분 이내</option>
         <option value="10" selected>도보 10분 이내</option>
         <option value="15">도보 15분 이내</option>
+        <option value="20">도보 20분 이내</option>
       </select>
     </div>
     <div class="row2" id="optRow">
@@ -1508,7 +1509,8 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // 이미 캐시된 옛 560세대 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
 // (2026.08 8→9: 평촌목련2단지아파트 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 경춘선 오기입 제거) —
 // 이미 캐시된 옛(경춘선 포함) 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
-const HH_CACHE_VER = 9;
+// (2026.08 9→10: 한가람한양6차 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 의정부경전철 오기입 제거))
+const HH_CACHE_VER = 10;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -1990,7 +1992,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   const tradeOnly = (allUnfiltered||all).filter(t=>{
     if(t.kind) return false;
     const py = parseInt(t.py,10);
-    return py>=20 && py<=39;
+    return py>=20 && py<=37; // 2026.08 상한 39→37평, 저평가 3탭 전부 20~37평으로 통일
   });
   const rowsAll = buildRepRows(tradeOnly, months);
   const median = arr => { // 표준 중앙값 (짝수 개수일 때 가운데 두 값의 평균)
@@ -2052,7 +2054,7 @@ function buildPeakRows(all, months){
 function analyzePeakUndervalue(all, months, allUnfiltered){
   const tradeOnly = (allUnfiltered||all).filter(t=>{
     const py = parseInt(t.py,10);
-    return py>=20 && py<=39; // 2026.07 층수 제한(5층 이상) 삭제 — 전 층 포함 (연간 저평가와 동일하게 통일) / 2026.08 상한 37→39평(30평대 전체 포괄)
+    return py>=20 && py<=37; // 2026.07 층수 제한(5층 이상) 삭제 — 전 층 포함 (연간 저평가와 동일하게 통일) / 2026.08 상한 39→37평, 저평가 3탭 전부 20~37평으로 통일
   });
   const rowsAll = buildPeakRows(tradeOnly, months);
   const median = arr => {
@@ -2114,7 +2116,7 @@ function buildLongPeakRows(all, months){
 function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
   const tradeOnly = (allUnfiltered||all).filter(t=>{
     const py = parseInt(t.py,10);
-    return py>=20 && py<=39; // 2026.07 층수 제한(5층 이상) 삭제 — 전 층 포함 / 2026.08 상한 37→39평(30평대 전체 포괄)
+    return py>=20 && py<=37; // 2026.07 층수 제한(5층 이상) 삭제 — 전 층 포함 / 2026.08 상한 39→37평, 저평가 3탭 전부 20~37평으로 통일
   });
   const rowsAll = buildLongPeakRows(tradeOnly, months);
   const median = arr => {
@@ -2364,6 +2366,7 @@ const subwayDataCache = {};
 // key: kaptName 그대로(공백 포함, data/hhcnt items의 name 필드와 정확히 일치해야 함)
 const SUBWAY_LINE_FIX = {
   "평촌목련2단지아파트": ["4호선"], // 안양 동안구 — 원본에 경춘선이 잘못 섞여 있음(2026.08)
+  "한가람한양6차": ["4호선"], // 안양 동안구 — 원본에 의정부경전철이 잘못 섞여 있음(2026.08)
 };
 function applySubwayLineFix(items){
   return items.map(it => SUBWAY_LINE_FIX[it.name] ? { ...it, subwayLines: SUBWAY_LINE_FIX[it.name] } : it);
@@ -2407,17 +2410,40 @@ function populateSubwayLineSelect(items){
 }
 // 실거래 단지명(analyzePricePerPyeong 결과의 apt)과 K-apt 단지명(subwayLines 등)은 표기가 달라서
 // (예: 실거래 "한신" vs K-apt "도봉한신"), matchKapt()와 같은 취지로 정확일치→부분일치 순으로 매칭한다.
+function fuzzyMatchKeys(map, name){
+  const qn = name.replace(/\s/g, '');
+  if(map[qn] !== undefined) return [qn];
+  return Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
+}
 // 여러 후보가 걸리면 평단가가 더 높은 쪽을 채택(과소평가보다는 존재하는 값을 보여주는 쪽이 안전).
 function matchPricePerPy(priceMap, name){
-  const qn = name.replace(/\s/g, '');
-  if(priceMap[qn] !== undefined) return priceMap[qn];
-  let best = null;
-  for(const k in priceMap){
-    if(k.includes(qn) || qn.includes(k)){
-      if(best === null || priceMap[k] > best) best = priceMap[k];
-    }
-  }
-  return best;
+  const keys = fuzzyMatchKeys(priceMap, name);
+  if(!keys.length) return null;
+  return keys.reduce((best,k) => (best===null || priceMap[k]>best) ? priceMap[k] : best, null);
+}
+// 여러 후보가 걸리면 더 최근 거래를 채택(가장 최근 시세가 실제 물어보는 값에 가까움).
+function matchLatestTrade(tradeMap, name){
+  const keys = fuzzyMatchKeys(tradeMap, name);
+  if(!keys.length) return null;
+  return keys.reduce((best,k) => {
+    const t = tradeMap[k];
+    if(!best) return t;
+    return (t.ym > best.ym || (t.ym === best.ym && t.d > best.d)) ? t : best;
+  }, null);
+}
+// 전용 59/84㎡의 단지별 최근 거래 1건씩 뽑는다 — 단지마다 실제 전용면적이 59.xx/84.xx로 조금씩 달라서
+// 정확히 59.00/84.00이 아니라 범위(57~60/83~85)로 매칭(수민 요청, 2026.08 — py 앵커(25/33평) 매칭은 areaToPy
+// 보간값이라 실제 면적과 어긋날 수 있어 이걸로 교체). 매매만 대상(분양권/입주권은 준공 전 시세라 제외).
+function latestByArea(trades, minA, maxA){
+  const map = {};
+  trades.forEach(t=>{
+    if(t.kind) return;
+    if(t.area < minA || t.area > maxA) return;
+    const k = t.apt.replace(/\s/g, '');
+    const cur = map[k];
+    if(!cur || t.ym > cur.ym || (t.ym === cur.ym && t.d > cur.d)) map[k] = t;
+  });
+  return map;
 }
 async function searchSubway(){
   const lawd = sel.value;
@@ -2436,8 +2462,8 @@ async function searchSubway(){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
 
-    // 평단가(전용면적 평단가 탭과 동일 로직) 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
-    let priceMap = {};
+    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 59/84 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    let priceMap = {}, latest59Map = {}, latest84Map = {};
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
       const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
@@ -2447,9 +2473,16 @@ async function searchSubway(){
         const k = x.apt.replace(/\s/g, '');
         if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
       });
-    }catch(e){ /* 평단가 조회 실패 — priceMap 비워둔 채 아래에서 도보시간 순으로 폴백 */ }
+      latest59Map = latestByArea(trades, 57, 60); // 전용 57~60㎡
+      latest84Map = latestByArea(trades, 83, 85); // 전용 83~85㎡
+    }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 59/84 가격은 표시 생략 */ }
 
-    rows = rows.map(x => ({ ...x, pricePerPy: matchPricePerPy(priceMap, x.name) }));
+    rows = rows.map(x => ({
+      ...x,
+      pricePerPy: matchPricePerPy(priceMap, x.name),
+      latest59: matchLatestTrade(latest59Map, x.name),
+      latest84: matchLatestTrade(latest84Map, x.name),
+    }));
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
       if(a.pricePerPy == null) return 1; // 가격 정보 없는 단지는 뒤로
@@ -2474,23 +2507,30 @@ function formatWalkDisplay(raw){
   return raw;
 }
 function renderSubway(d){
+  const priceBadges = x => {
+    const parts = [];
+    if(x.latest59) parts.push(`<div>59 <b style="color:var(--teal-dark)">${x.latest59.amt.toFixed(1)}억</b></div>`);
+    if(x.latest84) parts.push(`<div>84 <b style="color:var(--teal-dark)">${x.latest84.amt.toFixed(1)}억</b></div>`);
+    return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
+  };
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).slice(0,3).join('·'))} · 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        ${priceBadges(x)}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('지하철 검색')}
+      ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순 · ${d.rows.length}개 단지</div>
+      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순</div>
     </div>
     <div class="sec">
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 59/84 최근 실거래가, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 

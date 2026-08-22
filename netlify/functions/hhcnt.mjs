@@ -58,6 +58,10 @@ const PARTIAL_OVERRIDE = {
   // 실제로는 범계역 4호선 초역세권. data/hhcnt 정적 배치·지하철 검색 탭 양쪽 다 이 값을 그대로 읽으므로
   // 두 군데 모두 보정 필요(지하철 검색 탭은 index.html의 SUBWAY_LINE_FIX 참고, 2026.08).
   "41173|평촌목련2단지아파트": { subwayLines: ["4호선"] },
+  // 안양 동안구 한가람한양6차 — 관양동, 다른 "한가람" 계열 단지들과 동일하게 4호선 권역인데 K-apt 원본에
+  // "의정부경전철"이 잘못 섞여 있음(의정부시 소재 노선이라 안양과 지리적으로 완전히 무관). 위 평촌목련2단지와
+  // 동일한 유형의 원천 데이터 오기입 — SUBWAY_LINE_FIX에도 동일하게 반영(2026.08).
+  "41173|한가람한양6차": { subwayLines: ["4호선"] },
 };
 function applyPartialOverride(lawd, name, result) {
   const ov = PARTIAL_OVERRIDE[`${lawd}|${name.replace(/\s/g, "")}`];
