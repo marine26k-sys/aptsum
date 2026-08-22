@@ -2409,30 +2409,18 @@ function populateSubwayLineSelect(items){
   if(lines.includes(cur)) sel2.value = cur;
 }
 // 실거래 단지명(analyzePricePerPyeong 결과의 apt)과 K-apt 단지명(subwayLines 등)은 표기가 달라서
-// (예: 실거래 "한신" vs K-apt "도봉한신"), matchKapt()와 같은 취지로 정확일치→부분일치 순으로 매칭한다.
-function fuzzyMatchKeys(map, name){
+// (예: 실거래 "한신" vs K-apt "도봉한신") 표기가 어긋나는 경우가 있는데, 부분일치까지 허용했다가
+// 완전히 다른 단지의 가격을 잘못 끌어오는 사고가 있었음(2026.08, "귀인마을현대홀타운"은 84㎡ 타입 자체가
+// 없는데 이름이 비슷한 다른 단지의 84㎡ 거래가를 잘못 표시) — 정확일치만 허용하도록 축소.
+// 데이터가 없으면 표시를 생략하는 게, 다른 단지 가격을 잘못 붙이는 것보다 훨씬 안전함.
+function exactNameLookup(map, name){
   const qn = name.replace(/\s/g, '');
-  if(map[qn] !== undefined) return [qn];
-  return Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
+  return map[qn] !== undefined ? map[qn] : null;
 }
-// 여러 후보가 걸리면 평단가가 더 높은 쪽을 채택(과소평가보다는 존재하는 값을 보여주는 쪽이 안전).
-function matchPricePerPy(priceMap, name){
-  const keys = fuzzyMatchKeys(priceMap, name);
-  if(!keys.length) return null;
-  return keys.reduce((best,k) => (best===null || priceMap[k]>best) ? priceMap[k] : best, null);
-}
-// 여러 후보가 걸리면 더 최근 거래를 채택(가장 최근 시세가 실제 물어보는 값에 가까움).
-function matchLatestTrade(tradeMap, name){
-  const keys = fuzzyMatchKeys(tradeMap, name);
-  if(!keys.length) return null;
-  return keys.reduce((best,k) => {
-    const t = tradeMap[k];
-    if(!best) return t;
-    return (t.ym > best.ym || (t.ym === best.ym && t.d > best.d)) ? t : best;
-  }, null);
-}
+function matchPricePerPy(priceMap, name){ return exactNameLookup(priceMap, name); }
+function matchLatestTrade(tradeMap, name){ return exactNameLookup(tradeMap, name); }
 // 전용 59/84㎡의 단지별 최근 거래 1건씩 뽑는다 — 단지마다 실제 전용면적이 59.xx/84.xx로 조금씩 달라서
-// 정확히 59.00/84.00이 아니라 범위(57~60/83~85)로 매칭(수민 요청, 2026.08 — py 앵커(25/33평) 매칭은 areaToPy
+// 정확히 59.00/84.00이 아니라 범위(55~60/80~85, 2026.08 57~60/83~85→확대)로 매칭(수민 요청 — py 앵커(25/33평) 매칭은 areaToPy
 // 보간값이라 실제 면적과 어긋날 수 있어 이걸로 교체). 매매만 대상(분양권/입주권은 준공 전 시세라 제외).
 function latestByArea(trades, minA, maxA){
   const map = {};
@@ -2473,8 +2461,8 @@ async function searchSubway(){
         const k = x.apt.replace(/\s/g, '');
         if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
       });
-      latest59Map = latestByArea(trades, 57, 60); // 전용 57~60㎡
-      latest84Map = latestByArea(trades, 83, 85); // 전용 83~85㎡
+      latest59Map = latestByArea(trades, 55, 60); // 전용 55~60㎡
+      latest84Map = latestByArea(trades, 80, 85); // 전용 80~85㎡
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 59/84 가격은 표시 생략 */ }
 
     rows = rows.map(x => ({
