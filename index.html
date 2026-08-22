@@ -2450,8 +2450,8 @@ async function searchSubway(){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
 
-    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 59/84 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
-    let priceMap = {}, latest59Map = {}, latest84Map = {};
+    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 48/59/84 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    let priceMap = {}, latest48Map = {}, latest59Map = {}, latest84Map = {};
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
       const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
@@ -2461,6 +2461,7 @@ async function searchSubway(){
         const k = x.apt.replace(/\s/g, '');
         if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
       });
+      latest48Map = latestByArea(trades, 45, 54); // 전용 45~54㎡
       latest59Map = latestByArea(trades, 55, 60); // 전용 55~60㎡
       latest84Map = latestByArea(trades, 80, 85); // 전용 80~85㎡
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 59/84 가격은 표시 생략 */ }
@@ -2468,6 +2469,7 @@ async function searchSubway(){
     rows = rows.map(x => ({
       ...x,
       pricePerPy: matchPricePerPy(priceMap, x.name),
+      latest48: matchLatestTrade(latest48Map, x.name),
       latest59: matchLatestTrade(latest59Map, x.name),
       latest84: matchLatestTrade(latest84Map, x.name),
     }));
@@ -2497,8 +2499,9 @@ function formatWalkDisplay(raw){
 function renderSubway(d){
   const priceBadges = x => {
     const parts = [];
-    if(x.latest59) parts.push(`<div>59 <b style="color:var(--teal-dark)">${x.latest59.amt.toFixed(1)}억</b></div>`);
-    if(x.latest84) parts.push(`<div>84 <b style="color:var(--teal-dark)">${x.latest84.amt.toFixed(1)}억</b></div>`);
+    if(x.latest48) parts.push(`<div>전용${Math.floor(x.latest48.area)} <b style="color:var(--teal-dark)">${x.latest48.amt.toFixed(1)}억</b></div>`);
+    if(x.latest59) parts.push(`<div>전용${Math.floor(x.latest59.area)} <b style="color:var(--teal-dark)">${x.latest59.amt.toFixed(1)}억</b></div>`);
+    if(x.latest84) parts.push(`<div>전용${Math.floor(x.latest84.area)} <b style="color:var(--teal-dark)">${x.latest84.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
   const rows = d.rows.length
@@ -2518,7 +2521,7 @@ function renderSubway(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 59/84 최근 실거래가, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 48/59/84 최근 실거래가, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
