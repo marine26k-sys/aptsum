@@ -1819,8 +1819,9 @@ function analyzeNewHigh(all, months){
 
 // ═══ 신저가 탭 ═══
 // [2026.08 로직 전면 변경 — 수민 요청] 기존엔 "직전 최저가보다 더 낮은 가격을 새로 찍었는지"를 봤는데,
-// 이제는 "1년 내 최고가 대비 최근 한 달 이내 거래가 -10%~-30% 하락했는지"로 기준을 바꿈(최초엔 2년으로
-// 구현했다가 수민 요청으로 1년으로 축소, 이후 -30% 이상 하락한 거래는 이상치로 제외하는 상한도 추가) —
+// 이제는 "1년 내 최고가 대비 최근 한 달 이내 거래가 -10%~-25% 하락했는지"로 기준을 바꿈(최초엔 2년으로
+// 구현했다가 수민 요청으로 1년으로 축소, 이후 -30% 이상 하락한 거래는 이상치로 제외하는 상한도 추가했다가
+// 다시 -25%로 더 좁힘) —
 // 급격한 하락을 더 뚜렷하게 포착하기 위함(직전 최저가 대비는 하락폭이 미미해도 잡히던 반면, 이 방식은
 // 실제 눈에 띄는 하락만 남음). analyzeNewHigh와 공유하는 원칙(직거래 제외, 표본 3건 이상, 1~5층 제외)은
 // 그대로 유지.
@@ -1832,16 +1833,16 @@ function analyzeNewLow(all, months){
   const byApt={};
   for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
   const DROP_THRESHOLD = 0.10; // -10% 이상 하락만 신저가로 인정
-  // -30% 이상 빠진 거래는 오히려 제외(2026.08 수민 요청) — 시세보다 지나치게 낮은 거래는 특수관계 매매(가족간
+  // -25% 이상 빠진 거래는 오히려 제외(2026.08 수민 요청, 최초 -30%에서 -25%로 더 좁힘) — 시세보다 지나치게 낮은 거래는 특수관계 매매(가족간
   // 저가 양도 등, direct 필드로 못 걸러지는 경우도 있음)나 급전 필요에 의한 이례적 급매일 가능성이 높아,
-  // "완만하지만 뚜렷한" 하락 신호(10~30%)만 신저가로 인정하고 그보다 더 크게 빠진 이상치는 걸러낸다.
-  const MAX_DROP = 0.30;
+  // "완만하지만 뚜렷한" 하락 신호(10~25%)만 신저가로 인정하고 그보다 더 크게 빠진 이상치는 걸러낸다.
+  const MAX_DROP = 0.25;
   const results = [];
   for(const [k, arr] of Object.entries(byApt)){
     if(arr.length < 3) continue;
     // 1년 최고가(peak) — months가 12개월 고정이므로 arr 전체가 곧 "1년 표본"
     const peak = arr.reduce((m,t)=> t.amt>m.amt ? t : m, arr[0]);
-    // 최근 30일 이내 계약이면서 최고가 대비 10% 이상 ~ 30% 미만 하락한 거래만 후보로(그 이상은 이상치로 배제)
+    // 최근 30일 이내 계약이면서 최고가 대비 10% 이상 ~ 25% 미만 하락한 거래만 후보로(그 이상은 이상치로 배제)
     const candidates = arr.filter(t=> isRecentDeal(t, 30) && t.amt <= peak.amt*(1-DROP_THRESHOLD) && t.amt > peak.amt*(1-MAX_DROP));
     if(!candidates.length) continue;
     // 후보 중 하락폭이 가장 큰(가격이 가장 낮은) 거래를 대표로 — 동가면 최근 계약일 우선
@@ -3769,20 +3770,20 @@ function renderNewLow(d){
     <div class="card-hd">
       ${hdTop('하락 거래')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 대비 최근 한 달 이내 -10%↓ 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>하락 거래 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 1년 내 최고가 대비 10~30% 하락한 최근(30일 이내) 거래만 집계(30% 이상은 특수관계·이례적 급매 가능성으로 제외) · 급매 등 시세 하락 신호로 참고</div>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 1년 내 최고가 대비 10~25% 하락한 최근(30일 이내) 거래만 집계(25% 이상은 특수관계·이례적 급매 가능성으로 제외) · 급매 등 시세 하락 신호로 참고</div>
       ${rows(d.newLow, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
+        <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~30% 하락 기준 · 직거래 제외</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~25% 하락 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
