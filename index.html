@@ -422,7 +422,7 @@
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
     <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>전용면적 평단가</div>
-    <div class="tab" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>신저가</div>
+    <div class="tab" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <!-- 신저가 탭: 화면에서만 숨김(2026.08) — 로직·데이터 처리는 그대로 유지, 버튼만 비노출. 재노출하려면 위 style="display:none" 제거 -->
     <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabU" onclick="setMode('updown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>등락 랭킹</div>
@@ -1818,8 +1818,12 @@ function analyzeNewHigh(all, months){
 }
 
 // ═══ 신저가 탭 ═══
-// analyzeNewHigh와 완전히 동일한 원칙(직거래 제외, 표본 3건 이상, 최근 30일 이내 계약)을 그대로 적용하되
-// "최고가" 대신 "최저가"를 기준으로 판정 — 급매·하락 거래를 빠르게 포착하기 위한 용도.
+// [2026.08 로직 전면 변경 — 수민 요청] 기존엔 "직전 최저가보다 더 낮은 가격을 새로 찍었는지"를 봤는데,
+// 이제는 "1년 내 최고가 대비 최근 한 달 이내 거래가 -10%~-30% 하락했는지"로 기준을 바꿈(최초엔 2년으로
+// 구현했다가 수민 요청으로 1년으로 축소, 이후 -30% 이상 하락한 거래는 이상치로 제외하는 상한도 추가) —
+// 급격한 하락을 더 뚜렷하게 포착하기 위함(직전 최저가 대비는 하락폭이 미미해도 잡히던 반면, 이 방식은
+// 실제 눈에 띄는 하락만 남음). analyzeNewHigh와 공유하는 원칙(직거래 제외, 표본 3건 이상, 1~5층 제외)은
+// 그대로 유지.
 function analyzeNewLow(all, months){
   // 직거래(중개 없이 당사자끼리 신고, 특수관계 거래 가능성 있음)는 신저가 판정에서도 제외 — 신고가와 동일한 이유.
   // 1~5층은 층수 할인(구조적으로 항상 싼 저층)이 "실제 시세 하락"처럼 잘못 잡히는 것을 막기 위해 제외.
@@ -1827,26 +1831,31 @@ function analyzeNewLow(all, months){
   all = all.filter(t=>!t.direct && parseInt(t.floor,10)>=6);
   const byApt={};
   for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
+  const DROP_THRESHOLD = 0.10; // -10% 이상 하락만 신저가로 인정
+  // -30% 이상 빠진 거래는 오히려 제외(2026.08 수민 요청) — 시세보다 지나치게 낮은 거래는 특수관계 매매(가족간
+  // 저가 양도 등, direct 필드로 못 걸러지는 경우도 있음)나 급전 필요에 의한 이례적 급매일 가능성이 높아,
+  // "완만하지만 뚜렷한" 하락 신호(10~30%)만 신저가로 인정하고 그보다 더 크게 빠진 이상치는 걸러낸다.
+  const MAX_DROP = 0.30;
   const results = [];
   for(const [k, arr] of Object.entries(byApt)){
     if(arr.length < 3) continue;
-    const sorted = arr.slice().sort((a,b)=>a.amt-b.amt || dkey(b).localeCompare(dkey(a))); // 최저가순, 동가면 최근 계약일 우선
-    const bottom = sorted[0];
-    if(!isRecentDeal(bottom, 30)) continue; // 그 기간 내 최저가 거래 자체가 최근 한 달(30일) 이내여야 "방금 갱신"으로 인정
-    // 직전 최저가(bottom을 제외한 나머지 중 최저) — 하락폭(▼ 금액) 계산용
-    const prevMin = sorted.slice(1).reduce((m,t)=>Math.min(m,t.amt), Infinity);
-    const gapAmt = isFinite(prevMin) ? R1(prevMin - bottom.amt) : 0; // 양수면 직전 최저가보다 더 떨어졌다는 뜻
-    // 신고가와 달리 신저가는 "동일가 재현"(gapAmt===0)을 인정하지 않음(수민 요청) — 실제로 더 낮은 가격을
-    // 새로 찍은 경우만 신저가로 인정. gapAmt<0은 bottom이 정의상 항상 최솟값이라 이론상 발생하지 않는 방어 코드.
-    if(gapAmt <= 0) continue;
+    // 1년 최고가(peak) — months가 12개월 고정이므로 arr 전체가 곧 "1년 표본"
+    const peak = arr.reduce((m,t)=> t.amt>m.amt ? t : m, arr[0]);
+    // 최근 30일 이내 계약이면서 최고가 대비 10% 이상 ~ 30% 미만 하락한 거래만 후보로(그 이상은 이상치로 배제)
+    const candidates = arr.filter(t=> isRecentDeal(t, 30) && t.amt <= peak.amt*(1-DROP_THRESHOLD) && t.amt > peak.amt*(1-MAX_DROP));
+    if(!candidates.length) continue;
+    // 후보 중 하락폭이 가장 큰(가격이 가장 낮은) 거래를 대표로 — 동가면 최근 계약일 우선
+    const bottom = candidates.slice().sort((a,b)=> a.amt-b.amt || dkey(b).localeCompare(dkey(a)))[0];
+    const gapAmt = R1(peak.amt - bottom.amt);
+    const gapPct = Math.round(gapAmt/peak.amt*100);
     const [apt, umd, py, gu] = k.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:bottom.lawd||null, py:`${py}평`, area:bottom.area, amt:bottom.amt,
       date:`${ymLabel(bottom.ym)}.${bottom.d}`, floor:bottom.floor, build:bottom.build, kind:bottom.kind||null, n:arr.length,
-      prevMax: isFinite(prevMin) ? prevMin : null, gapAmt, gapPct: (isFinite(prevMin) && prevMin) ? Math.round(gapAmt/prevMin*100) : null,
+      prevMax: peak.amt, gapAmt, gapPct,
     });
   }
-  results.sort((a,b)=> a.amt - b.amt); // 가격 낮은 순
+  results.sort((a,b)=> b.gapPct - a.gapPct); // 하락률 큰 순
   return { found:true, mode:'newlow', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -2596,7 +2605,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 24 : (mode==='gap' ? 2 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 2년 고정(2026.08, 수민 요청) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
+  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 2 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -3754,26 +3763,26 @@ function renderNewLow(d){
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
-    : '<div class="rng" style="padding:6px 0">최근 한 달 이내 신저가를 기록한 단지가 없습니다</div>';
+    : '<div class="rng" style="padding:6px 0">최근 한 달 이내 하락 거래를 기록한 단지가 없습니다</div>';
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('신저가')}
+      ${hdTop('하락 거래')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 최저가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 대비 최근 한 달 이내 -10%↓ 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>신저가 갱신 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 동일가 재현 제외(실제 하락한 거래만) · 급매 등 시세 하락 신호로 참고</div>
+      <h3>하락 거래 단지</h3>
+      <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 1년 내 최고가 대비 10~30% 하락한 최근(30일 이내) 거래만 집계(30% 이상은 특수관계·이례적 급매 가능성으로 제외) · 급매 등 시세 하락 신호로 참고</div>
       ${rows(d.newLow, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--red)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val down">${x.amt.toFixed(1)}억<small>${x.prevMax? `▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최저가 기준</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~30% 하락 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
