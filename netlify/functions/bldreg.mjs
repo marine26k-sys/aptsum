@@ -50,7 +50,7 @@ function parseAreaXml(xml) {
     items.push({
       dong: xtag(b, "dongNm"),
       ho: xtag(b, "hoNm"),
-      gb: xtag(b, "expsPubuseGbCdNm"), // "전유" | "공용"
+      gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 테스트로 필드명 확인 완료(2026.08)
       area: parseFloat(xtag(b, "area")) || 0,
       etcStrct: xtag(b, "etcStrct"),
     });
@@ -78,7 +78,10 @@ export default async (req) => {
   }
 
   try {
-    const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${encodeURIComponent(sigunguCd)}&bjdongCd=${encodeURIComponent(bjdongCd)}&bun=${encodeURIComponent(bun)}&ji=${encodeURIComponent(ji)}&numOfRows=100`;
+    const pageNo = (url.searchParams.get("pageNo") || "1").trim();
+    // numOfRows=100을 요청해도 서버가 계속 1건만 돌려주는 현상 확인 중(2026.08) — pageNo로 여러 페이지를
+    // 넘겨가며 다른 동/호가 나오는지 테스트하기 위해 파라미터로 노출
+    const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${encodeURIComponent(sigunguCd)}&bjdongCd=${encodeURIComponent(bjdongCd)}&bun=${encodeURIComponent(bun)}&ji=${encodeURIComponent(ji)}&numOfRows=100&pageNo=${encodeURIComponent(pageNo)}`;
     const r = await fetch(`${AREA_URL}?${q}`);
     const text = await r.text();
     // ?debug=1 — 실제 필드명 확인용. exclusiveArea/commonArea가 계속 0으로 나오면 이 모드로
