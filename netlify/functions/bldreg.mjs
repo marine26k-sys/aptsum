@@ -81,6 +81,11 @@ export default async (req) => {
     const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${encodeURIComponent(sigunguCd)}&bjdongCd=${encodeURIComponent(bjdongCd)}&bun=${encodeURIComponent(bun)}&ji=${encodeURIComponent(ji)}&numOfRows=100`;
     const r = await fetch(`${AREA_URL}?${q}`);
     const text = await r.text();
+    // ?debug=1 — 실제 필드명 확인용. exclusiveArea/commonArea가 계속 0으로 나오면 이 모드로
+    // 원본 XML을 직접 보고 parseAreaXml()의 필드명(area/expsPubuseGbCdNm 등)을 맞춰야 함(2026.08).
+    if (url.searchParams.get("debug") === "1") {
+      return Response.json({ rawXmlSnippet: text.slice(0, 4000) });
+    }
     const items = parseAreaXml(text);
     if (!items.length) return Response.json({ found: false });
 
