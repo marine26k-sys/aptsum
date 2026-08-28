@@ -92,28 +92,37 @@ function extractItems(json) {
   return Array.isArray(item) ? item : [item];
 }
 
-async function fetchList(key, sgg) {
-  try {
-    const r = await fetch(`${LIST_URL}?serviceKey=${encodeURIComponent(key)}&sigunguCode=${sgg}&pageNo=1&numOfRows=1000&_type=json`, {
-      signal: AbortSignal.timeout(20000), // 응답 없이 무한 대기해 pool() 전체가 안 끝나는 것 방지
-    });
-    const text = await r.text();
-    if (!r.ok) { noteFail("LIST_HTTP_" + r.status, text.slice(0, 200)); return []; }
-    let json;
-    try { json = JSON.parse(text); } catch { noteFail("LIST_JSON_PARSE_실패", text.slice(0, 200)); return []; }
-    const header = json?.response?.header;
-    if (header && header.resultCode && header.resultCode !== "00") {
-      noteFail("LIST_API_" + header.resultCode, header.resultMsg); return [];
+async function fetchList(key, sgg, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch(`${LIST_URL}?serviceKey=${encodeURIComponent(key)}&sigunguCode=${sgg}&pageNo=1&numOfRows=1000&_type=json`, {
+        signal: AbortSignal.timeout(20000), // 응답 없이 무한 대기해 pool() 전체가 안 끝나는 것 방지
+      });
+      const text = await r.text();
+      if (!r.ok) { noteFail("LIST_HTTP_" + r.status, text.slice(0, 200)); return []; } // HTTP 에러는 재시도해도 대개 똑같이 실패라 바로 포기
+      let json;
+      try { json = JSON.parse(text); } catch { noteFail("LIST_JSON_PARSE_실패", text.slice(0, 200)); return []; }
+      const header = json?.response?.header;
+      if (header && header.resultCode && header.resultCode !== "00") {
+        noteFail("LIST_API_" + header.resultCode, header.resultMsg); return [];
+      }
+      const rawItems = extractItems(json);
+      if (!rawItems) { noteFail("LIST_빈_응답", JSON.stringify(json).slice(0, 200)); return []; }
+      return rawItems
+        .map((it) => ({ kaptCode: it.kaptCode || it.kaptcode || "", kaptName: it.kaptName || it.kaptname || "" }))
+        .filter((it) => it.kaptCode && it.kaptName);
+    } catch (e) {
+      // "fetch failed" 같은 네트워크 레벨 예외는 일시적일 수 있어 재시도(2026.08 추가 — 한 번의 순간적
+      // 네트워크 문제로 지역 전체가 0개가 되는 걸 막기 위함). HTTP 에러/API 에러코드는 재시도해도
+      // 똑같을 가능성이 높아 위에서 바로 return — 여긴 순수 네트워크 예외만 옴.
+      if (attempt === retries) {
+        noteFail("LIST_EXCEPTION", `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}`);
+        return [];
+      }
+      await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
     }
-    const rawItems = extractItems(json);
-    if (!rawItems) { noteFail("LIST_빈_응답", JSON.stringify(json).slice(0, 200)); return []; }
-    return rawItems
-      .map((it) => ({ kaptCode: it.kaptCode || it.kaptcode || "", kaptName: it.kaptName || it.kaptname || "" }))
-      .filter((it) => it.kaptCode && it.kaptName);
-  } catch (e) {
-    noteFail("LIST_EXCEPTION", e.message);
-    return []; // 타임아웃/네트워크 오류로 한 지역 목록조회가 실패해도 전체 스크립트가 죽지 않게
   }
+  return [];
 }
 
 // 실패 원인을 집계해서 마지막에 요약 출력(2026.08 추가 — 지금까지는 실패해도 조용히 null만 반환해서
@@ -128,32 +137,42 @@ function noteFail(reason, detail) {
   }
 }
 
-async function fetchBasis(key, kaptCode) {
-  try {
-    const r = await fetch(`${BASIS_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`, {
-      signal: AbortSignal.timeout(20000),
-    });
-    const text = await r.text();
-    if (!r.ok) { noteFail("HTTP_" + r.status, text.slice(0, 200)); return null; }
-    let json;
-    try { json = JSON.parse(text); } catch { noteFail("JSON_PARSE_실패", text.slice(0, 200)); return null; }
-    const header = json?.response?.header;
-    if (header && header.resultCode && header.resultCode !== "00") {
-      noteFail("API_" + header.resultCode, header.resultMsg); return null;
+async function fetchBasis(key, kaptCode, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch(`${BASIS_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`, {
+        signal: AbortSignal.timeout(20000),
+      });
+      const text = await r.text();
+      if (!r.ok) { noteFail("HTTP_" + r.status, text.slice(0, 200)); return null; }
+      let json;
+      try { json = JSON.parse(text); } catch { noteFail("JSON_PARSE_실패", text.slice(0, 200)); return null; }
+      const header = json?.response?.header;
+      if (header && header.resultCode && header.resultCode !== "00") {
+        noteFail("API_" + header.resultCode, header.resultMsg); return null;
+      }
+      const rawItems = extractItems(json);
+      if (!rawItems || !rawItems.length) { noteFail("빈_응답(item_없음)", JSON.stringify(json).slice(0, 200)); return null; }
+      const it = rawItems[0];
+      const hh = parseInt(String(it.kaptdaCnt ?? "").replace(/,/g, ""), 10);
+      if (!hh) { noteFail("kaptdaCnt_없거나_0", JSON.stringify(it).slice(0, 200)); return null; }
+      const dongRaw = parseInt(String(it.kaptDongCnt ?? "").replace(/,/g, ""), 10);
+      // kaptAddr(지번주소)·bjdCode(법정동코드)는 세대수 표시엔 안 쓰지만, 2026.08부터 공급면적 배치
+      // (collect-supply-area.mjs)가 건축HUB API 호출용 주소 코드를 만드는 데 재사용 — 같은 API 응답에
+      // 이미 포함돼 있어 추가 호출 없이 그냥 같이 저장해두는 것
+      const kaptAddr = (it.kaptAddr && String(it.kaptAddr).trim()) || null;
+      const bjdCode = (it.bjdCode && String(it.bjdCode).trim()) || null;
+      return { hhcnt: hh, dongCnt: dongRaw || null, useDate: it.kaptUsedate || null, kaptAddr, bjdCode };
+    } catch (e) {
+      // 네트워크 레벨 예외("fetch failed" 등)만 재시도 — HTTP/API 에러는 위에서 이미 바로 return 됨(2026.08)
+      if (attempt === retries) {
+        noteFail("EXCEPTION", `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}`);
+        return null;
+      }
+      await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
     }
-    const rawItems = extractItems(json);
-    if (!rawItems || !rawItems.length) { noteFail("빈_응답(item_없음)", JSON.stringify(json).slice(0, 200)); return null; }
-    const it = rawItems[0];
-    const hh = parseInt(String(it.kaptdaCnt ?? "").replace(/,/g, ""), 10);
-    if (!hh) { noteFail("kaptdaCnt_없거나_0", JSON.stringify(it).slice(0, 200)); return null; }
-    const dongRaw = parseInt(String(it.kaptDongCnt ?? "").replace(/,/g, ""), 10);
-    // kaptAddr(지번주소)·bjdCode(법정동코드)는 세대수 표시엔 안 쓰지만, 2026.08부터 공급면적 배치
-    // (collect-supply-area.mjs)가 건축HUB API 호출용 주소 코드를 만드는 데 재사용 — 같은 API 응답에
-    // 이미 포함돼 있어 추가 호출 없이 그냥 같이 저장해두는 것
-    const kaptAddr = (it.kaptAddr && String(it.kaptAddr).trim()) || null;
-    const bjdCode = (it.bjdCode && String(it.bjdCode).trim()) || null;
-    return { hhcnt: hh, dongCnt: dongRaw || null, useDate: it.kaptUsedate || null, kaptAddr, bjdCode };
-  } catch (e) { noteFail("EXCEPTION", e.message); return null; }
+  }
+  return null;
 }
 
 // subwayStation(역명)은 값 있는 단지도 있고 null인 단지도 있음(2026.08 확인) — 있으면 저장
