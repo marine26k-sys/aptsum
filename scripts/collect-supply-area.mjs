@@ -135,18 +135,20 @@ async function loadKnownAreasByComplex(lawd) {
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
   // 초당 요청 제한(429) 재시도 — 이 스크립트가 단지당 최대 MAX_PAGES번 연달아 호출하는 구조라
-  // collect-hhcnt.mjs에서 실제로 겪었던 429 문제에 가장 취약함(2026.08)
-  for (let attempt = 0; attempt <= 3; attempt++) {
+  // collect-hhcnt.mjs에서 실제로 겪었던 429 문제에 가장 취약함(2026.08). 재시도를 다 써도 429면
+  // rateLimited:true를 같이 돌려줘서, 호출부가 "데이터가 진짜 없음"과 구분할 수 있게 함(2026.08 추가 —
+  // 이전엔 둘 다 빈 배열로 똑같이 취급해서 대량 429 상황을 "정상적으로 데이터 없음"이라고 잘못 로그에 남겼음).
+  for (let attempt = 0; attempt <= 5; attempt++) {
     const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
     if (r.status === 429) {
-      if (attempt === 3) return [];
-      await new Promise((res) => setTimeout(res, 800 * (attempt + 1)));
+      if (attempt === 5) return { rows: [], rateLimited: true };
+      await new Promise((res) => setTimeout(res, 1000 * (attempt + 1))); // 1s,2s,3s...6s로 더 길게
       continue;
     }
     const text = await r.text();
-    return parseAreaXml(text);
+    return { rows: parseAreaXml(text), rateLimited: false };
   }
-  return [];
+  return { rows: [], rateLimited: true };
 }
 
 // 한 단지의 대표 타입별 공급면적을 찾는다. targetAreas(정수 반올림 전용면적 집합)에 있는 값과 일치하는
@@ -156,12 +158,15 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   const foundTypes = new Set();
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
   let pagesScanned = 0;
+  let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429로 결국 못 받아옴"을 구분하기 위한 플래그
   for (let page = 1; page <= MAX_PAGES; page++) {
-    let rows;
-    try { rows = await fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, page); }
+    let res;
+    try { res = await fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, page); }
     catch { break; } // 네트워크 오류 시 이번 단지는 지금까지 찾은 것만으로 마무리
-    if (!rows.length) break; // 더 이상 페이지 없음
-    pagesScanned = page;
+    pagesScanned = page; // 요청은 실제로 나갔으니(성공이든 rateLimited든) 여기서 기록 — "0페이지"라는 오해 방지
+    if (res.rateLimited) { rateLimited = true; break; } // 재시도 다 썼는데도 429 — 더 진행해봐야 소용없음
+    const rows = res.rows;
+    if (!rows.length) break; // 더 이상 페이지 없음(진짜 끝)
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
@@ -181,7 +186,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b) } }; // debug는 2026.08 진단용(main()에서 못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited } }; // debug는 2026.08 진단용(main()에서 못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -222,7 +227,10 @@ async function main() {
     // 끝낸 반면 이건 단지당 최대 30페이지를 순서대로 도느라 훨씬 느렸음 — 같은 방식(동시 3개)으로 병렬화.
     const remaining = Math.max(0, limit - processed);
     const batch = targets.slice(0, remaining);
-    await pool(batch, 3, async (c) => {
+    // 2026.08: 동시 3개로도 대량 연속 처리(56개+) 시 429가 다시 발생 — 2로 낮추고, 워커가 다음 단지로
+    // 넘어갈 때도 살짝 쉬어가도록(단지 내부 페이지 사이 딜레이만으론 부족했음)
+    await pool(batch, 2, async (c) => {
+      await new Promise((res) => setTimeout(res, 200)); // 워커가 이전 단지 끝내자마자 바로 다음 단지 시작하지 않게(2026.08)
       const bj = parseBunJi(c.kaptAddr);
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
       const targetAreas = knownAreas[norm(c.name)];
@@ -235,6 +243,10 @@ async function main() {
         if (Object.keys(types).length) {
           out.items[c.name] = Object.values(types);
           console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
+        } else if (debug.rateLimited) {
+          // 2026.08 — "데이터가 없음"이 아니라 "429 재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
+          // out.items에 저장 안 하므로 다음 실행 때 자동으로 재시도됨(영구 실패 아님).
+          console.log(`  ${c.name}: 속도 제한으로 조회 실패(나중에 자동 재시도됨)`);
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
