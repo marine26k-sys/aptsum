@@ -117,7 +117,12 @@ async function fetchBasis(key, kaptCode) {
     const hh = parseInt(String(it.kaptdaCnt ?? "").replace(/,/g, ""), 10);
     if (!hh) return null;
     const dongRaw = parseInt(String(it.kaptDongCnt ?? "").replace(/,/g, ""), 10);
-    return { hhcnt: hh, dongCnt: dongRaw || null, useDate: it.kaptUsedate || null };
+    // kaptAddr(지번주소)·bjdCode(법정동코드)는 세대수 표시엔 안 쓰지만, 2026.08부터 공급면적 배치
+    // (collect-supply-area.mjs)가 건축HUB API 호출용 주소 코드를 만드는 데 재사용 — 같은 API 응답에
+    // 이미 포함돼 있어 추가 호출 없이 그냥 같이 저장해두는 것
+    const kaptAddr = (it.kaptAddr && String(it.kaptAddr).trim()) || null;
+    const bjdCode = (it.bjdCode && String(it.bjdCode).trim()) || null;
+    return { hhcnt: hh, dongCnt: dongRaw || null, useDate: it.kaptUsedate || null, kaptAddr, bjdCode };
   } catch { return null; }
 }
 
