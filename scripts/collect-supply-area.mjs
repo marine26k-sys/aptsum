@@ -154,17 +154,21 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
 async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targetAreas) {
   const units = {}; // "동|호" -> {exclu, pubuse, matchedType}
   const foundTypes = new Set();
+  const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
+  let pagesScanned = 0;
   for (let page = 1; page <= MAX_PAGES; page++) {
     let rows;
     try { rows = await fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, page); }
     catch { break; } // 네트워크 오류 시 이번 단지는 지금까지 찾은 것만으로 마무리
     if (!rows.length) break; // 더 이상 페이지 없음
+    pagesScanned = page;
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
       if (row.gb.includes("전유")) u.exclu += row.area;
       else if (row.gb.includes("공용")) u.pubuse += row.area;
       const rounded = Math.round(u.exclu);
+      if (rounded > 0) seenAreas.add(rounded);
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
     }
     if (foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약)
@@ -177,7 +181,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return result;
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b) } }; // debug는 2026.08 진단용(main()에서 못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -220,12 +224,14 @@ async function main() {
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); continue; }
       const targetAreas = knownAreas[norm(c.name)];
       try {
-        const result = await collectComplexSupplyArea(bldKey, lawd, c.bjdCode, bj.bun, bj.ji, targetAreas);
-        if (Object.keys(result).length) {
-          out.items[c.name] = Object.values(result);
-          console.log(`  ${c.name}: ${Object.keys(result).length}/${targetAreas.size}개 타입 확보`);
+        const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, c.bjdCode, bj.bun, bj.ji, targetAreas);
+        if (Object.keys(types).length) {
+          out.items[c.name] = Object.values(types);
+          console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
         } else {
-          console.log(`  ${c.name}: 못 찾음(0/${targetAreas.size})`);
+          // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
+          // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
+          console.log(`  ${c.name}: 못 찾음(0/${targetAreas.size}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
         }
       } catch (e) {
         console.error(`  ${c.name}: 조회 실패 -`, e.message);
