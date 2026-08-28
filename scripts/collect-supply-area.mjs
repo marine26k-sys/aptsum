@@ -150,7 +150,7 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
       const text = await r.text();
       return { rows: parseAreaXml(text), rateLimited: false };
     } catch (e) {
-      if (attempt === 5) return { rows: [], rateLimited: true, error: e.message }; // 429와 동일하게 "재시도 다 씀" 취급 — 다음 실행 때 자동 재시도됨
+      if (attempt === 5) return { rows: [], rateLimited: true, error: `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}` }; // 429와 동일하게 "재시도 다 씀" 취급 — 다음 실행 때 자동 재시도됨
       await new Promise((res) => setTimeout(res, 1000 * (attempt + 1)));
     }
   }
