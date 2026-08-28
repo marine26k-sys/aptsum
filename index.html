@@ -504,6 +504,17 @@
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
+
+  <!-- 카카오 애드핏 배너(320x50) — #result 밖에 둬서 tab 전환/재검색 때 innerHTML이 갈아끼워져도
+       광고 슬롯 자체는 안 지워지고 유지됨(2026.08 추가) -->
+  <div style="margin:10px 0 2px;text-align:center">
+    <div style="font-size:9px;color:var(--sub);margin-bottom:2px">광고</div>
+    <ins class="kakao_ad_area" style="display:none;"
+      data-ad-unit="DAN-nB65FgILxBVcaHpn"
+      data-ad-width="320"
+      data-ad-height="50"></ins>
+    <script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
+  </div>
 </div>
 
 <div id="ac"></div>
@@ -586,7 +597,7 @@ function initFromURL(){
   if(m==='compare'){
     const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
     document.getElementById('cmpRows').innerHTML='';
-    items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; r.querySelector('select').value=c.lawd; r.querySelector('input').value=c.name; });
+    items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
     if(items.length>=2) search();
   } else {
     if(p.get('r')) sel.value = p.get('r');
@@ -853,7 +864,7 @@ function restoreView(vi){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
-    inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; r.querySelector('select').value=c.lawd; r.querySelector('input').value=c.name; });
+    inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
   }
   lastData = v.data;
   updateRegionFavBtn();
@@ -997,13 +1008,31 @@ function buildRegionPicker(){
       html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
-      const on = multi ? picked.has(c) : (sel.value===c);
+      const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
       return `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
     }).join('') + `</div>`;
   });
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
 }
+let cmpPickerRow = null; // 단지 비교 탭에서 특정 행(cmp-row)의 지역을 고르는 중이면 그 행의 hidden select를 가리킴(2026.08 추가)
+function regionNameByLawd(code){
+  for(const [,arr] of REGIONS){ const hit = arr.find(([,c])=>c===code); if(hit) return hit[0]; }
+  return code ? code : '지역 선택';
+}
+// 단지 비교 탭 각 행의 hidden select 값 + 눈에 보이는 버튼 라벨을 함께 맞춘다(값만 바꾸고 라벨을 안 맞추면
+// "지역 선택" 버튼에 옛 지역명이 계속 남아있게 됨 — URL 공유 복원(p.get('c'))·즐겨찾기 복원 양쪽에서 사용)
+function setCmpRowLawd(row, lawd){
+  const selEl = row.querySelector('select');
+  selEl.value = lawd;
+  const label = row.querySelector('.rgpick-txt');
+  if(label) label.textContent = lawd ? regionNameByLawd(lawd) : '지역 선택';
+}
 function pickRegion(v){
+  if(cmpPickerRow){
+    setCmpRowLawd(cmpPickerRow.closest('.cmp-row'), v);
+    closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
+    return;
+  }
   if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
@@ -1017,7 +1046,8 @@ function pickRegion(v){
   syncRegionPickBtn();
   closeRegionPicker();
 }
-function openRegionPicker(){
+function openRegionPicker(rowSelectEl){
+  cmpPickerRow = rowSelectEl || null; // 단지 비교 탭 행 버튼에서 호출되면 그 행의 select를 넘겨받음
   document.getElementById('rgSearch').value = '';
   buildRegionPicker();
   document.getElementById('rgDim').classList.add('on');
@@ -1027,6 +1057,7 @@ function closeRegionPicker(){
   document.getElementById('rgDim').classList.remove('on');
   document.getElementById('rgPanel').classList.remove('on');
   syncRegionPickBtn();
+  cmpPickerRow = null; // 다음에 singleRow의 "지역 선택"을 열 때 cmp 모드로 잘못 남아있지 않도록 항상 리셋
 }
 
 sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
@@ -1184,10 +1215,13 @@ function addCmpRow(){
   if(rows.length >= 4) return;
   const div = document.createElement('div');
   div.className = 'cmp-row';
-  div.innerHTML = `<select>${regionSelectHTML()}</select>
+  // 다른 탭과 동일한 "지역 선택" 버튼 + 모달 피커를 재사용(2026.08 — 예전엔 이 행만 밋밋한 <select> 드롭다운이었음).
+  // 기존 코드(search()·URL 공유 복원·즐겨찾기 복원 등)가 전부 `.cmp-row select`.value를 읽으므로,
+  // 그 select는 그대로 두되 화면엔 안 보이게 숨기고 버튼만 노출한다.
+  div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
     <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter')search()" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
-  div.querySelector('select').value = sel.value; // 기본: 현재 선택 지역
+  setCmpRowLawd(div, sel.value); // 기본: 현재 선택 지역(값+버튼 라벨 함께 설정)
   document.getElementById('cmpRows').appendChild(div);
 }
 
@@ -1200,7 +1234,9 @@ function addCmpRow(){
 //    올리지 않으면 브라우저에 캐시된 옛 포맷 데이터가 새 코드로 그대로 읽혀 오류가 날 수 있음.
 // 브라우저 localStorage 키 + API 요청 쿼리에 모두 반영되어, CDN의 durable 캐시와
 // 브라우저의 영구 캐시를 동시에 무효화한다 (재배포만으로는 두 캐시 다 안 지워짐).
-const CACHE_VER = 5;
+// (2026.08 4→5는 이전 변경, 5→6: analyze.mjs의 parseItems()에 bonbun/bubun 필드 추가(건축HUB 연동 준비) —
+// 필드만 늘어도 옛 캐시엔 이 필드가 없어 버전을 안 올리면 새로고침해도 안 채워짐)
+const CACHE_VER = 6;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
