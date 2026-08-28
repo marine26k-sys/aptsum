@@ -134,19 +134,25 @@ async function loadKnownAreasByComplex(lawd) {
 
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
-  // 초당 요청 제한(429) 재시도 — 이 스크립트가 단지당 최대 MAX_PAGES번 연달아 호출하는 구조라
-  // collect-hhcnt.mjs에서 실제로 겪었던 429 문제에 가장 취약함(2026.08). 재시도를 다 써도 429면
-  // rateLimited:true를 같이 돌려줘서, 호출부가 "데이터가 진짜 없음"과 구분할 수 있게 함(2026.08 추가 —
-  // 이전엔 둘 다 빈 배열로 똑같이 취급해서 대량 429 상황을 "정상적으로 데이터 없음"이라고 잘못 로그에 남겼음).
+  // 초당 요청 제한(429) + 네트워크 레벨 예외("fetch failed" 등) 둘 다 재시도(2026.08) — 처음엔 429만
+  // 다뤘는데, 실전에서 대부분의 "0페이지" 실패가 사실 fetch() 자체가 던지는 일반 네트워크 예외였음이
+  // 드러남(collect-hhcnt.mjs에서 겪었던 것과 동일 증상) — try 밖에 있던 fetch가 던지면 이 함수 전체가
+  // 예외로 빠져나가 호출부의 catch{break}에 조용히 삼켜지고 pagesScanned=0/rateLimited=false로 남아
+  // "속도 제한"인지 "그냥 실패"인지조차 구분이 안 됐음.
   for (let attempt = 0; attempt <= 5; attempt++) {
-    const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
-    if (r.status === 429) {
-      if (attempt === 5) return { rows: [], rateLimited: true };
-      await new Promise((res) => setTimeout(res, 1000 * (attempt + 1))); // 1s,2s,3s...6s로 더 길게
-      continue;
+    try {
+      const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
+      if (r.status === 429) {
+        if (attempt === 5) return { rows: [], rateLimited: true };
+        await new Promise((res) => setTimeout(res, 1000 * (attempt + 1))); // 1s,2s,3s...6s로 더 길게
+        continue;
+      }
+      const text = await r.text();
+      return { rows: parseAreaXml(text), rateLimited: false };
+    } catch (e) {
+      if (attempt === 5) return { rows: [], rateLimited: true, error: e.message }; // 429와 동일하게 "재시도 다 씀" 취급 — 다음 실행 때 자동 재시도됨
+      await new Promise((res) => setTimeout(res, 1000 * (attempt + 1)));
     }
-    const text = await r.text();
-    return { rows: parseAreaXml(text), rateLimited: false };
   }
   return { rows: [], rateLimited: true };
 }
@@ -158,13 +164,14 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   const foundTypes = new Set();
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
   let pagesScanned = 0;
-  let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429로 결국 못 받아옴"을 구분하기 위한 플래그
+  let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429/네트워크 예외로 결국 못 받아옴"을 구분하기 위한 플래그
+  let lastError = null;
   for (let page = 1; page <= MAX_PAGES; page++) {
     let res;
     try { res = await fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, page); }
-    catch { break; } // 네트워크 오류 시 이번 단지는 지금까지 찾은 것만으로 마무리
+    catch (e) { lastError = e.message; break; } // fetchAreaPage 자체는 이제 거의 안 던지지만(재시도 다 내부에서 처리) 안전망으로 유지
     pagesScanned = page; // 요청은 실제로 나갔으니(성공이든 rateLimited든) 여기서 기록 — "0페이지"라는 오해 방지
-    if (res.rateLimited) { rateLimited = true; break; } // 재시도 다 썼는데도 429 — 더 진행해봐야 소용없음
+    if (res.rateLimited) { rateLimited = true; lastError = res.error || null; break; } // 재시도 다 썼는데도 실패 — 더 진행해봐야 소용없음
     const rows = res.rows;
     if (!rows.length) break; // 더 이상 페이지 없음(진짜 끝)
     for (const row of rows) {
@@ -186,7 +193,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited } }; // debug는 2026.08 진단용(main()에서 못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -246,7 +253,7 @@ async function main() {
         } else if (debug.rateLimited) {
           // 2026.08 — "데이터가 없음"이 아니라 "429 재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
           // out.items에 저장 안 하므로 다음 실행 때 자동으로 재시도됨(영구 실패 아님).
-          console.log(`  ${c.name}: 속도 제한으로 조회 실패(나중에 자동 재시도됨)`);
+          console.log(`  ${c.name}: 속도 제한/네트워크 오류로 조회 실패(나중에 자동 재시도됨)${debug.lastError ? ` — ${debug.lastError}` : ""}`);
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
