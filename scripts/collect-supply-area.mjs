@@ -218,10 +218,13 @@ async function main() {
       return areas && areas.size > 0; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
     });
 
-    for (const c of targets) {
-      if (processed >= limit) break;
+    // 2026.08: 원래 순차 처리(하나씩)였는데, collect-hhcnt.mjs(동시 3개 병렬)는 9,763개 단지를 11분만에
+    // 끝낸 반면 이건 단지당 최대 30페이지를 순서대로 도느라 훨씬 느렸음 — 같은 방식(동시 3개)으로 병렬화.
+    const remaining = Math.max(0, limit - processed);
+    const batch = targets.slice(0, remaining);
+    await pool(batch, 3, async (c) => {
       const bj = parseBunJi(c.kaptAddr);
-      if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); continue; }
+      if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
       const targetAreas = knownAreas[norm(c.name)];
       try {
         // K-apt(getAphusBassInfoV5)의 bjdCode는 "시군구코드(5)+동코드(5)" 합친 10자리 전체 코드로 옴
@@ -246,7 +249,7 @@ async function main() {
         await writeFile(outFile, JSON.stringify(out));
         commitProgress(`chore: 공급면적 배치 수집 중간 커밋 (${processed}/${limit}) ${new Date().toISOString()} [skip ci]`);
       }
-    }
+    });
 
     out.updatedAt = new Date().toISOString();
     await writeFile(outFile, JSON.stringify(out));
