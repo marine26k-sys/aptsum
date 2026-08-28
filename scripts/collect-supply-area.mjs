@@ -224,7 +224,11 @@ async function main() {
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); continue; }
       const targetAreas = knownAreas[norm(c.name)];
       try {
-        const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, c.bjdCode, bj.bun, bj.ji, targetAreas);
+        // K-apt(getAphusBassInfoV5)의 bjdCode는 "시군구코드(5)+동코드(5)" 합친 10자리 전체 코드로 옴
+        // (실전 확인: "2638010100" 같은 형태) — 건축HUB의 bjdongCd 파라미터는 동 코드 5자리만 받아서
+        // 10자리를 그대로 넘기면 존재하지 않는 코드가 되어 매번 빈 응답(0페이지)이 나왔음(2026.08 발견).
+        const bjdongCd5 = c.bjdCode.length === 10 ? c.bjdCode.slice(5) : c.bjdCode;
+        const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas);
         if (Object.keys(types).length) {
           out.items[c.name] = Object.values(types);
           console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
