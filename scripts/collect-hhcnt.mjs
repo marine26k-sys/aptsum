@@ -49,10 +49,17 @@ function commitProgress(message) {
   }
 }
 
-const LIST_URL = "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList3";
-const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4";
-// hhcnt.mjs와 동일: 지하철호선/도보시간은 getAphusDtlInfoV4(상세정보)에만 있음 (기본정보 API엔 없음)
-const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4";
+// (2026.08 V3→V4 전환: V3 서비스 접근이 갑자기 전체 지역에서 0건으로 실패하기 시작 — 확인해보니 수민의
+// V3 "공동주택 단지 목록제공 서비스" 승인이 만료되고 같은 날 V4로 새로 승인받은 상태였음. 파라미터명은
+// V3와 동일(sigunguCode)일 것으로 추정되나 실전 검증 전 — 이 호출도 0건이 계속되면 미리보기로 확인 필요)
+const LIST_URL = "https://apis.data.go.kr/1613000/AptListService4/getSigunguAptList4";
+// (2026.08 V4→V5 전환: V3 목록 API와 같은 시점에 승인이 갱신된 것으로 보여 같이 전환. 수민이 캡처해준
+// 실제 승인 화면의 End Point/오퍼레이션명 그대로 사용(getAphusBassInfoV5/getAphusDtlInfoV5) — 필드명은
+// V4와 동일할 것으로 추정되나(응답 구조 자체가 바뀌었단 언급 없었음) 실전 검증 전이라 결과 필드가
+// 비어있게 나오면(hh===0 등) 여기부터 의심할 것)
+const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusBassInfoV5";
+// hhcnt.mjs와 동일: 지하철호선/도보시간은 getAphusDtlInfoV5(상세정보)에만 있음 (기본정보 API엔 없음)
+const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusDtlInfoV5";
 const DIR = "data/hhcnt";
 
 // hhcnt.mjs의 SPLIT_FALLBACK과 동일 (목록조회는 시군구코드 하나면 되므로 신규코드 우선 + 통합폐지코드 폴백)

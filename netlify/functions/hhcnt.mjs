@@ -1,8 +1,11 @@
 // Netlify Function — 국토교통부 공동주택 단지목록/기본정보 API로 세대수 조회
 // 매매·분양권 실거래 API(analyze.mjs/presale.mjs)와는 완전히 다른 별도 API 군(둘 다 JSON 응답):
-//   1) AptListService3/getSigunguAptList3: 시군구코드 → 그 구에 등록된 단지의 kaptCode 목록
-//   2) AptBasisInfoServiceV4/getAphusBassInfoV4: kaptCode → 세대수(kaptdaCnt)·동수·사용승인일 등
+//   1) AptListService4/getSigunguAptList4: 시군구코드 → 그 구에 등록된 단지의 kaptCode 목록
+//   2) AptBasisInfoServiceV5/getAphusBassInfoV5: kaptCode → 세대수(kaptdaCnt)·동수·사용승인일 등
 // (2026.07 data.go.kr 활용신청 승인 스펙 기준으로 V2/V3→V3/V4 갱신, XML→JSON 전환)
+// (2026.08 V3/V4→V4/V5 재갱신 — 수민의 구버전 승인이 만료되고 같은 날 새 버전으로 재승인된 것을
+// collect-hhcnt.mjs 배치가 전 지역 0건으로 실패하면서 발견함. 파라미터명·응답 필드명은 이전 버전과
+// 동일할 것으로 추정되나 실전 검증 전 — 매칭 실패가 갑자기 늘면 여기부터 의심할 것)
 // K-apt(공동주택관리정보시스템) 가입 단지만 나오므로, 여기 없는 단지는 세대수를 못 찾을 수 있음
 // (의무관리대상 미달 소규모 단지 등) — 매칭 실패 시 조용히 세대수만 비워서 반환, 나머지 분석엔 영향 없음
 // 환경변수: DATA_GO_KR_KEY(필수, analyze.mjs·presale.mjs와 공용)
@@ -11,11 +14,11 @@ export const config = {
   path: "/api/hhcnt",
 };
 
-const LIST_URL = "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList3";
-const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4";
-// 지하철호선/도보시간은 getAphusBassInfoV4(기본정보)가 아니라 getAphusDtlInfoV4(상세정보)에만 있음
+const LIST_URL = "https://apis.data.go.kr/1613000/AptListService4/getSigunguAptList4";
+const BASIS_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusBassInfoV5";
+// 지하철호선/도보시간은 getAphusBassInfoV5(기본정보)가 아니라 getAphusDtlInfoV5(상세정보)에만 있음
 // (2026.08 확인 — 두 API가 같은 kaptCode를 받지만 응답 필드가 서로 다름, 별도 호출 필요)
-const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4";
+const DTL_URL = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusDtlInfoV5";
 
 // analyze.mjs의 SPLIT_REGIONS와 동일한 신규 구코드 매핑(목록조회는 단일 코드만 필요하므로 신규코드 우선,
 // 화성·부천은 통합 폐지코드로 폴백 — K-apt 등록정보가 아직 옛 구코드에 남아있을 수 있어서)
