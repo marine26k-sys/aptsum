@@ -82,8 +82,16 @@ export default async (req) => {
     // numOfRows=100을 요청해도 서버가 계속 1건만 돌려주는 현상 확인 중(2026.08) — pageNo로 여러 페이지를
     // 넘겨가며 다른 동/호가 나오는지 테스트하기 위해 파라미터로 노출
     const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${encodeURIComponent(sigunguCd)}&bjdongCd=${encodeURIComponent(bjdongCd)}&bun=${encodeURIComponent(bun)}&ji=${encodeURIComponent(ji)}&numOfRows=100&pageNo=${encodeURIComponent(pageNo)}`;
-    const r = await fetch(`${AREA_URL}?${q}`);
-    const text = await r.text();
+    // 초당 요청 제한(429 LIMITED_NUMBER_OF_SERVICE_REQUESTS_PER_SECOND_EXCEEDS_ERROR)에 걸릴 수 있어
+    // 재시도 추가(2026.08 — collect-hhcnt.mjs에서 같은 계열 API 호출 시 실제로 겪은 문제)
+    let r, text;
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      r = await fetch(`${AREA_URL}?${q}`);
+      text = await r.text();
+      if (r.status !== 429) break;
+      if (attempt === 3) return Response.json({ error: "요청 제한 초과(재시도 소진)" }, { status: 429 });
+      await new Promise((res) => setTimeout(res, 800 * (attempt + 1)));
+    }
     // ?debug=1 — 실제 필드명 확인용. exclusiveArea/commonArea가 계속 0으로 나오면 이 모드로
     // 원본 XML을 직접 보고 parseAreaXml()의 필드명(area/expsPubuseGbCdNm 등)을 맞춰야 함(2026.08).
     if (url.searchParams.get("debug") === "1") {

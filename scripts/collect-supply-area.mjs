@@ -125,9 +125,19 @@ async function loadKnownAreasByComplex(lawd) {
 
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
-  const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
-  const text = await r.text();
-  return parseAreaXml(text);
+  // 초당 요청 제한(429) 재시도 — 이 스크립트가 단지당 최대 MAX_PAGES번 연달아 호출하는 구조라
+  // collect-hhcnt.mjs에서 실제로 겪었던 429 문제에 가장 취약함(2026.08)
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
+    if (r.status === 429) {
+      if (attempt === 3) return [];
+      await new Promise((res) => setTimeout(res, 800 * (attempt + 1)));
+      continue;
+    }
+    const text = await r.text();
+    return parseAreaXml(text);
+  }
+  return [];
 }
 
 // 한 단지의 대표 타입별 공급면적을 찾는다. targetAreas(정수 반올림 전용면적 집합)에 있는 값과 일치하는
@@ -149,6 +159,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
     }
     if (foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약)
+    if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 150)); // 초당 요청 제한 여유를 위한 페이스 조절(2026.08)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
   const result = {}; // roundedExclusiveArea -> {exclusiveArea, supplyArea}

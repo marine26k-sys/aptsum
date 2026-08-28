@@ -92,14 +92,19 @@ function extractItems(json) {
   return Array.isArray(item) ? item : [item];
 }
 
-async function fetchList(key, sgg, retries = 2) {
+async function fetchList(key, sgg, retries = 3) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const r = await fetch(`${LIST_URL}?serviceKey=${encodeURIComponent(key)}&sigunguCode=${sgg}&pageNo=1&numOfRows=1000&_type=json`, {
         signal: AbortSignal.timeout(20000), // 응답 없이 무한 대기해 pool() 전체가 안 끝나는 것 방지
       });
       const text = await r.text();
-      if (!r.ok) { noteFail("LIST_HTTP_" + r.status, text.slice(0, 200)); return []; } // HTTP 에러는 재시도해도 대개 똑같이 실패라 바로 포기
+      if (r.status === 429) { // 초당 요청 제한 초과 — 잠깐 쉬었다 재시도(2026.08 확인된 주요 실패 원인)
+        if (attempt === retries) { noteFail("LIST_HTTP_429_재시도소진", text.slice(0, 200)); return []; }
+        await new Promise((res) => setTimeout(res, 800 * (attempt + 1)));
+        continue;
+      }
+      if (!r.ok) { noteFail("LIST_HTTP_" + r.status, text.slice(0, 200)); return []; } // 429 외 HTTP 에러는 재시도해도 대개 똑같이 실패라 바로 포기
       let json;
       try { json = JSON.parse(text); } catch { noteFail("LIST_JSON_PARSE_실패", text.slice(0, 200)); return []; }
       const header = json?.response?.header;
@@ -137,14 +142,19 @@ function noteFail(reason, detail) {
   }
 }
 
-async function fetchBasis(key, kaptCode, retries = 2) {
+async function fetchBasis(key, kaptCode, retries = 3) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const r = await fetch(`${BASIS_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`, {
         signal: AbortSignal.timeout(20000),
       });
       const text = await r.text();
-      if (!r.ok) { noteFail("HTTP_" + r.status, text.slice(0, 200)); return null; }
+      if (r.status === 429) { // 초당 요청 제한 초과 — 잠깐 쉬었다 재시도하면 대부분 성공(2026.08 확인된 주요 실패 원인)
+        if (attempt === retries) { noteFail("HTTP_429_재시도소진", text.slice(0, 200)); return null; }
+        await new Promise((res) => setTimeout(res, 800 * (attempt + 1)));
+        continue;
+      }
+      if (!r.ok) { noteFail("HTTP_" + r.status, text.slice(0, 200)); return null; } // 429 외 HTTP 에러는 재시도해도 대개 동일 실패라 바로 포기
       let json;
       try { json = JSON.parse(text); } catch { noteFail("JSON_PARSE_실패", text.slice(0, 200)); return null; }
       const header = json?.response?.header;
@@ -223,7 +233,9 @@ async function main() {
     }
 
     const out = [];
-    await pool(complexes, 8, async (c) => {
+    // 2026.08: 동시성 8은 API의 "초당 요청 제한"(429 LIMITED_NUMBER_OF_SERVICE_REQUESTS_PER_SECOND_EXCEEDS_ERROR)을
+    // 넘겨서 233개 중 208개가 이걸로 실패한 적 있음 — 3으로 낮춤(fetchBasis 내부 429 재시도와 함께 이중 안전장치)
+    await pool(complexes, 3, async (c) => {
       const [basis, dtl] = await Promise.all([fetchBasis(key, c.kaptCode), fetchDtl(key, c.kaptCode)]);
       if (basis) out.push({ name: c.kaptName, kaptCode: c.kaptCode, ...basis, ...dtl });
     });
