@@ -110,19 +110,36 @@ async function fetchList(key, sgg) {
   }
 }
 
+// 실패 원인을 집계해서 마지막에 요약 출력(2026.08 추가 — 지금까지는 실패해도 조용히 null만 반환해서
+// "233개 중 33개만 성공" 같은 결과가 나와도 왜 실패하는지 로그에 전혀 안 남았음)
+const failReasons = {};
+let failSampleShown = 0;
+function noteFail(reason, detail) {
+  failReasons[reason] = (failReasons[reason] || 0) + 1;
+  if (failSampleShown < 5) { // 처음 5건만 상세 출력(전체 다 찍으면 로그가 너무 길어짐)
+    console.error(`  [fetchBasis 실패 샘플] ${reason}${detail ? ": " + detail : ""}`);
+    failSampleShown++;
+  }
+}
+
 async function fetchBasis(key, kaptCode) {
   try {
     const r = await fetch(`${BASIS_URL}?serviceKey=${encodeURIComponent(key)}&kaptCode=${encodeURIComponent(kaptCode)}&_type=json`, {
       signal: AbortSignal.timeout(20000),
     });
     const text = await r.text();
+    if (!r.ok) { noteFail("HTTP_" + r.status, text.slice(0, 200)); return null; }
     let json;
-    try { json = JSON.parse(text); } catch { return null; }
+    try { json = JSON.parse(text); } catch { noteFail("JSON_PARSE_실패", text.slice(0, 200)); return null; }
+    const header = json?.response?.header;
+    if (header && header.resultCode && header.resultCode !== "00") {
+      noteFail("API_" + header.resultCode, header.resultMsg); return null;
+    }
     const rawItems = extractItems(json);
-    if (!rawItems || !rawItems.length) return null;
+    if (!rawItems || !rawItems.length) { noteFail("빈_응답(item_없음)", JSON.stringify(json).slice(0, 200)); return null; }
     const it = rawItems[0];
     const hh = parseInt(String(it.kaptdaCnt ?? "").replace(/,/g, ""), 10);
-    if (!hh) return null;
+    if (!hh) { noteFail("kaptdaCnt_없거나_0", JSON.stringify(it).slice(0, 200)); return null; }
     const dongRaw = parseInt(String(it.kaptDongCnt ?? "").replace(/,/g, ""), 10);
     // kaptAddr(지번주소)·bjdCode(법정동코드)는 세대수 표시엔 안 쓰지만, 2026.08부터 공급면적 배치
     // (collect-supply-area.mjs)가 건축HUB API 호출용 주소 코드를 만드는 데 재사용 — 같은 API 응답에
@@ -130,7 +147,7 @@ async function fetchBasis(key, kaptCode) {
     const kaptAddr = (it.kaptAddr && String(it.kaptAddr).trim()) || null;
     const bjdCode = (it.bjdCode && String(it.bjdCode).trim()) || null;
     return { hhcnt: hh, dongCnt: dongRaw || null, useDate: it.kaptUsedate || null, kaptAddr, bjdCode };
-  } catch { return null; }
+  } catch (e) { noteFail("EXCEPTION", e.message); return null; }
 }
 
 // subwayStation(역명)은 값 있는 단지도 있고 null인 단지도 있음(2026.08 확인) — 있으면 저장
@@ -197,6 +214,10 @@ async function main() {
     }
   }
 
+  if (Object.keys(failReasons).length) {
+    console.log("\n[hhcnt] fetchBasis 실패 원인 집계:");
+    for (const [reason, count] of Object.entries(failReasons)) console.log(`  ${reason}: ${count}건`);
+  }
   commitProgress(`chore: 세대수 배치 수집 완료 커밋 ${new Date().toISOString()}`);
 }
 
