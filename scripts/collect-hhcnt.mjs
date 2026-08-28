@@ -98,14 +98,20 @@ async function fetchList(key, sgg) {
       signal: AbortSignal.timeout(20000), // 응답 없이 무한 대기해 pool() 전체가 안 끝나는 것 방지
     });
     const text = await r.text();
+    if (!r.ok) { noteFail("LIST_HTTP_" + r.status, text.slice(0, 200)); return []; }
     let json;
-    try { json = JSON.parse(text); } catch { return []; }
+    try { json = JSON.parse(text); } catch { noteFail("LIST_JSON_PARSE_실패", text.slice(0, 200)); return []; }
+    const header = json?.response?.header;
+    if (header && header.resultCode && header.resultCode !== "00") {
+      noteFail("LIST_API_" + header.resultCode, header.resultMsg); return [];
+    }
     const rawItems = extractItems(json);
-    if (!rawItems) return [];
+    if (!rawItems) { noteFail("LIST_빈_응답", JSON.stringify(json).slice(0, 200)); return []; }
     return rawItems
       .map((it) => ({ kaptCode: it.kaptCode || it.kaptcode || "", kaptName: it.kaptName || it.kaptname || "" }))
       .filter((it) => it.kaptCode && it.kaptName);
-  } catch {
+  } catch (e) {
+    noteFail("LIST_EXCEPTION", e.message);
     return []; // 타임아웃/네트워크 오류로 한 지역 목록조회가 실패해도 전체 스크립트가 죽지 않게
   }
 }
