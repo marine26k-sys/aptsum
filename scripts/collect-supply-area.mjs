@@ -82,12 +82,21 @@ function parseAreaXml(xml) {
 // kaptAddr(예: "서울특별시 강남구 대치동 316" / "...산 24-3")는 자유입력 텍스트라 형식이 들쭉날쭉함.
 // "숫자[-숫자]"로 끝나는 표준 지번만 파싱하고, "산" 번지나 파싱 실패는 null(스킵) 처리 —
 // 잘못 자른 번지로 엉뚱한 건물을 조회하는 것보다 건너뛰는 게 안전(오늘 하루 종일 배운 원칙과 동일).
+// kaptAddr(예: "서울특별시 강남구 대치동 316 은마아파트")는 "...번지 단지명"까지 붙어서 오는 게 실제 형식임
+// (2026.08 실전 테스트로 확인 — 처음엔 "주소 끝이 곧 번지"라고 잘못 가정해서 100% 파싱 실패했음, 끝은
+// 항상 단지명 텍스트였음). 그래서 "끝에서 숫자 찾기"가 아니라 "공백으로 나눈 토큰 중 순수 숫자(-숫자
+// 포함) 토큰을 앞에서부터 찾기"로 변경 — 시도/시군구/동 이름은 전부 한글이라 숫자만으로 된 토큰은
+// 번지뿐이라는 전제(단, "성수동1가"처럼 숫자가 글자에 붙어있는 동명은 토큰 전체가 숫자가 아니라서
+// 안전하게 건너뜀).
 function parseBunJi(kaptAddr) {
   if (!kaptAddr) return null;
   if (/\s산\s/.test(kaptAddr) || /\s산\d/.test(kaptAddr)) return null; // "산" 번지는 platGbCd가 달라 별도 처리 필요 — 일단 스킵
-  const m = kaptAddr.trim().match(/(\d+)(?:-(\d+))?\s*$/);
-  if (!m) return null;
-  return { bun: m[1].padStart(4, "0"), ji: (m[2] || "0").padStart(4, "0") };
+  const tokens = kaptAddr.trim().split(/\s+/).filter(Boolean);
+  for (const tok of tokens) {
+    const m = tok.match(/^(\d+)(?:-(\d+))?-?$/); // "344" / "138-"(부번 생략, 끝 대시만 있음) / "24-3" 등
+    if (m) return { bun: m[1].padStart(4, "0"), ji: (m[2] || "0").padStart(4, "0") };
+  }
+  return null;
 }
 
 // 최근 N개월 실거래 파일에서 단지별 "실제 관측된 전용면적" 집합을 만든다(정수 반올림 — 84.92/84.96처럼
