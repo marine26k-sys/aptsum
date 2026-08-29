@@ -65,17 +65,17 @@ function areaToPy(area) {
   const A = PY_ANCHORS;
   if (area <= A[0][0]) {
     const [a0, p0] = A[0], [a1, p1] = A[1];
-    return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+    return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
   }
   for (let i = 0; i < A.length - 1; i++) {
     const [a0, p0] = A[i], [a1, p1] = A[i + 1];
     if (area >= a0 && area <= a1) {
-      return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+      return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
     }
   }
   const [a0, p0] = A[A.length - 2], [a1, p1] = A[A.length - 1];
   const slope = (p1 - p0) / (a1 - a0);
-  return Math.round(p1 + (area - a1) * slope);
+  return Math.floor(p1 + (area - a1) * slope);
 }
 
 // 공급면적 정확화(2026.08) — data/supply-area/<lawd>.json에 그 단지·면적타입의 건축HUB 실측
@@ -88,7 +88,7 @@ function resolvePy(supplyMap, apt, area) {
   const measured = supplyMap && supplyMap[norm(apt)];
   if (measured) {
     const hit = measured.find((t) => Math.round(t.exclusiveArea) === rounded);
-    if (hit) return Math.round(hit.supplyArea / SQM_PER_PY);
+    if (hit) return Math.floor(hit.supplyArea / SQM_PER_PY); // 2026.08 — 평수 라운드다운(반올림 X)
   }
   return areaToPy(rounded);
 }
