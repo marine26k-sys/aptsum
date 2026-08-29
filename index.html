@@ -1004,7 +1004,10 @@ function buildRegionPicker(){
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
     html += `<div class="rggrp">${esc(g)}</div>`;
-    if(multi && !q){
+    // 상한 25개인 탭에서만 '전체' 버튼 노출(2026.08) — 상한 5개(단기/반기/연간 저평가)는 서울(25구)조차
+    // 다 못 담아서 이 버튼 자체가 실효성 없음(수민 요청으로 제외). supportsAllScopeOption(setMode 쪽)과
+    // 동일 기준이라 regionSelMax()로 판단.
+    if(multi && !q && regionSelMax()>=REGION_MAX_RANK){
       html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
@@ -1158,7 +1161,10 @@ function setMode(m){
   // 수민 요청으로 지역 랭킹 전용에서 확장). 저평가(상한 5)처럼 시/도 전체 개수보다 낮은 상한을 가진 탭에서는
   // addRegion()의 기존 over-limit 경고("지역은 최대 N개까지 선택할 수 있습니다")가 그대로 안내해주므로,
   // 상한을 넘는 시/도를 선택해도 조용히 잘리지 않고 명확히 알려짐 — 그래서 안전하게 전체 탭에 노출 가능.
-  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice');
+  // '○○ 전체' 옵션 — 상한 25개인 탭에서만 노출(2026.08 재조정): 지역 랭킹·신고가·하락 거래·전용면적 평단가·
+  // 연간 저평가(동일 동, 2026.08 25로 상향). 상한 5개인 단기/반기/연간 저평가는 서울(25)조차 다 못 담아서
+  // '전체' 버튼 자체가 실효성 없다고 판단해 제외(수민 요청) — 개별 구를 여러 개 골라 담는 칩 방식(최대 5개)은 그대로 지원.
+  const supportsAllScopeOption = (m==='region'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -2563,7 +2569,7 @@ function renderSubway(d){
   };
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>${x.subwayStation? `${esc(x.subwayStation)}역 · `:''}${esc((x.subwayLines||[]).slice(0,3).join('·'))} · 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>지하철 도보${esc(formatWalkDisplay(x.subwayWalk))} 이내${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${priceBadges(x)}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
@@ -2887,9 +2893,9 @@ async function search(){
     // 등락 랭킹의 "단기 저평가 단지"·반기/연간 저평가 탭도 동일하게 세대수 표시(비교 대상 목록 각 항목)
     // 저평가 계열(단기·반기·연간) 세 로직은 모두 400세대 이상 단지에만 적용 — 소규모 단지는 표본이 얇아 비교군·최고가 흐름이 쉽게 왜곡되어 저평가로 오탐되는 사례가 많음.
     // divergence는 이미 격차 큰 순으로 정렬돼 있으므로, 앞에서부터 HH_CONCURRENCY만큼 배치로 세대수를 조회하면서
-    // 400세대 이상 조건을 만족하는 상위 30개(2026.07 10→30으로 확대)가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
+    // 400세대 이상 조건을 만족하는 상위 50개(2026.07 10→30, 2026.08 30→50으로 확대)가 모이면 즉시 멈춘다 — 후보가 수십~수백 개여도 대부분 앞쪽 몇 배치만 조회하고 끝나서
     // (이전처럼 전체 후보의 세대수를 다 조회한 뒤 거르는 방식보다) 로딩이 느려지지 않는다.
-    const DIVERGENCE_CAP = 30;
+    const DIVERGENCE_CAP = 50;
     if(d.found && (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong') && d.divergence && d.divergence.length){
       const filtered = [];
       for(let i=0; i<d.divergence.length && filtered.length<DIVERGENCE_CAP; i+=HH_CONCURRENCY){
@@ -2976,15 +2982,12 @@ async function search(){
 // 단지 상세 헤더(#complexMeta)의 지하철 표시 조각. hhcnt.mjs가 subwayLines(배열)/subwayStation/subwayWalk를
 // 함께 내려주므로(2026.08 추가) 세대수 옆에 이어붙인다. 정보가 하나도 없으면 빈 문자열(기존처럼 표시 안 함).
 function subwayMetaHTML(hh){
-  if(!hh || !hh.subwayLines || !hh.subwayLines.length) return '';
-  const lines = hh.subwayLines.slice(0,3).join('·'); // 최대 3개까지만 표시(지하철 검색 탭과 동일 규칙, 2026.08)
-  // subwayStation 원본이 "범계"처럼 역명만 있을 수도, "범계역"처럼 이미 "역"이 붙어있을 수도 있어(국토부 K-apt
-  // 자유입력 필드라 단지마다 표기가 다름) — 이미 "역"으로 끝나면 중복으로 덧붙이지 않음(2026.08 "범계역역" 버그 수정)
-  const rawStation = hh.subwayStation ? esc(hh.subwayStation).trim() : '';
-  const station = rawStation ? `${rawStation}${rawStation.endsWith('역')? '' : '역'} ` : '';
-  const walk = hh.subwayWalk ? `도보${esc(formatWalkDisplay(hh.subwayWalk))}` : ''; // 범위는 상한만 표시(지하철 검색 탭과 동일, 2026.08)
-  const detail = (station || walk) ? ` (${station}${walk})` : '';
-  return ` · <b style="color:#7FD4D9">${esc(lines)}</b>${detail}`;
+  if(!hh || !hh.subwayWalk) return ''; // 역명/호선명 표시는 2026.08부터 전면 중단(K-apt 원본 데이터에 반복되는
+  // 오기입 문제 — 경춘선(평촌목련2단지), 의정부경전철(한가람한양6차), 양평역(동탄 소재 단지) 등, 계속
+  // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "지하철 도보 N분 이내"처럼
+  // 구체적 역명/호선 없이 도보시간만 안내. subwayLines는 역세권 탭 필터링(호선 선택)에는 계속 쓰이지만,
+  // 화면 표시에서는 이제 안 씀.
+  return ` · 지하철 도보${esc(formatWalkDisplay(hh.subwayWalk))} 이내`;
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
