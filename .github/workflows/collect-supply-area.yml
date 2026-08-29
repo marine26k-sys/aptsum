@@ -9,6 +9,12 @@ on:
         description: '이번 실행에서 처리할 단지 수(비우면 최대한 다 처리)'
         required: false
         default: '99999'
+  schedule:
+    # 전체 재수집이 끝날 때까지는 매일 반복 실행해서 이어서 채우고(74개 지역 전체를 한 번에 못 끝내므로),
+    # 다 채워진 뒤에는(2026.08 재수집 완료 후) collect-trades.yml처럼 월 1회 등으로 다시 줄여도 됨.
+    # 20:00 UTC = 05:00 KST — collect-trades.yml(03:30 KST)·collect-hhcnt.yml과 겹치지 않는 시간대로 배치,
+    # 어차피 concurrency group으로 직렬화되니 겹쳐도 안전하지만 대기 시간을 줄이기 위함.
+    - cron: '0 20 * * *'
 permissions:
   contents: write
 concurrency:
