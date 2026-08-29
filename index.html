@@ -2512,8 +2512,21 @@ async function searchSubway(){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
 
-    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용 45~54/55~60/80~85/86~105 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
-    let priceMap = {}, latest48Map = {}, latest59Map = {}, latest84Map = {}, latest105Map = {};
+    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
+    // "국민평형대"가 아닌 단지는 아무 가격도 안 뜨는 문제(예: 압구정미성2차, 전용74/118/140㎡) — 20~200㎡을
+    // 빈틈없이 이어붙인 7구간으로 확장해서 어떤 평형대든 최소 하나는 걸리도록 함(수민 요청)
+    const AREA_BANDS = [
+      { key: 'b1', min: 20, max: 44 },
+      { key: 'b2', min: 45, max: 54 },
+      { key: 'b3', min: 55, max: 65 },  // 국민평형(59㎡대) 포함 — 아래 priceBadges에서 우선순위 1
+      { key: 'b4', min: 66, max: 79 },
+      { key: 'b5', min: 80, max: 95 },  // 국민평형(84㎡대) 포함 — 아래 priceBadges에서 우선순위 2
+      { key: 'b6', min: 96, max: 130 },
+      { key: 'b7', min: 131, max: 200 },
+    ];
+    let priceMap = {};
+    const bandMaps = {};
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
       const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
@@ -2523,19 +2536,13 @@ async function searchSubway(){
         const k = x.apt.replace(/\s/g, '');
         if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
       });
-      latest48Map = latestByArea(trades, 45, 54); // 전용 45~54㎡
-      latest59Map = latestByArea(trades, 55, 60); // 전용 55~60㎡
-      latest84Map = latestByArea(trades, 80, 85); // 전용 80~85㎡
-      latest105Map = latestByArea(trades, 86, 105); // 전용 86~105㎡
+      AREA_BANDS.forEach(b => { bandMaps[b.key] = latestByArea(trades, b.min, b.max); });
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
     rows = rows.map(x => ({
       ...x,
       pricePerPy: matchPricePerPy(priceMap, x.name),
-      latest48: safeNameLookup(latest48Map, x.name),
-      latest59: safeNameLookup(latest59Map, x.name),
-      latest84: safeNameLookup(latest84Map, x.name),
-      latest105: safeNameLookup(latest105Map, x.name),
+      bandResults: AREA_BANDS.map(b => ({ key: b.key, trade: safeNameLookup(bandMaps[b.key], x.name) })).filter(r=>r.trade),
     }));
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
@@ -2562,14 +2569,21 @@ function formatWalkDisplay(raw){
 }
 function renderSubway(d){
   const priceBadges = x => {
-    // 55~85 구간(전용59·84) 우선 노출, 최대 2개까지만 — 부족하면 48·105로 채움(수민 요청, 2026.08)
-    const candidates = [x.latest59, x.latest84, x.latest48, x.latest105].filter(Boolean).slice(0,2).sort((a,b)=>a.area-b.area);
-    const parts = candidates.map(t => `<div>전용${Math.floor(t.area)} <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
+    // 국민평형대(b3=55~65㎡, b5=80~95㎡) 우선 노출, 최대 2개까지만 — 부족하면 나머지 구간(b1/b2/b4/b6/b7)으로
+    // 채움(수민 요청, 2026.08 — 압구정미성2차처럼 30/47/55평 등 국민평형이 아닌 단지도 최소 하나는 뜨도록)
+    const PRIORITY = ['b3','b5'];
+    const byKey = Object.fromEntries((x.bandResults||[]).map(r=>[r.key, r.trade]));
+    const prioritized = PRIORITY.map(k=>byKey[k]).filter(Boolean);
+    const rest = (x.bandResults||[]).filter(r=>!PRIORITY.includes(r.key)).map(r=>r.trade);
+    const candidates = [...prioritized, ...rest].slice(0,2).sort((a,b)=>a.area-b.area);
+    // py(평형)는 실거래 데이터를 서버에서 받아올 때 이미 areaToPy()로 계산돼 있는 값을 그대로 재사용
+    // (2026.08 — 공급면적 실측 배치가 아직 안 돌아서 보간표 기반 추정값이지만, 새로 개편된 앵커 기준)
+    const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평(전용${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>지하철 도보${esc(formatWalkDisplay(x.subwayWalk))} 이내${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>지하철 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.useDate? ` · ${x.useDate.slice(0,4)}년 준공`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${priceBadges(x)}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
@@ -2584,7 +2598,7 @@ function renderSubway(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 45~105 최근 실거래가 중 최대 2개, 55~85 우선, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형(55~65·80~95㎡) 우선, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -2987,7 +3001,7 @@ function subwayMetaHTML(hh){
   // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "지하철 도보 N분 이내"처럼
   // 구체적 역명/호선 없이 도보시간만 안내. subwayLines는 역세권 탭 필터링(호선 선택)에는 계속 쓰이지만,
   // 화면 표시에서는 이제 안 씀.
-  return ` · 지하철 도보${esc(formatWalkDisplay(hh.subwayWalk))} 이내`;
+  return ` · 지하철 도보${esc(formatWalkDisplay(hh.subwayWalk))}`;
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
