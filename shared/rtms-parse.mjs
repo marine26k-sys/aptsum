@@ -10,15 +10,15 @@ export function areaToPy(area) {
   const A = PY_ANCHORS;
   if (area <= A[0][0]) {
     const [a0, p0] = A[0], [a1, p1] = A[1];
-    return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+    return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
   }
   for (let i = 0; i < A.length - 1; i++) {
     const [a0, p0] = A[i], [a1, p1] = A[i + 1];
-    if (area >= a0 && area <= a1) return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+    if (area >= a0 && area <= a1) return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
   }
   const [a0, p0] = A[A.length - 2], [a1, p1] = A[A.length - 1];
   const slope = (p1 - p0) / (a1 - a0);
-  return Math.floor(p1 + (area - a1) * slope);
+  return Math.round(p1 + (area - a1) * slope);
 }
 
 export function xtag(b, name) {

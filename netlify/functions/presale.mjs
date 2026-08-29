@@ -53,44 +53,17 @@ function areaToPy(area) {
   const A = PY_ANCHORS;
   if (area <= A[0][0]) {
     const [a0, p0] = A[0], [a1, p1] = A[1];
-    return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+    return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
   }
   for (let i = 0; i < A.length - 1; i++) {
     const [a0, p0] = A[i], [a1, p1] = A[i + 1];
     if (area >= a0 && area <= a1) {
-      return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+      return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
     }
   }
   const [a0, p0] = A[A.length - 2], [a1, p1] = A[A.length - 1];
   const slope = (p1 - p0) / (a1 - a0);
-  return Math.floor(p1 + (area - a1) * slope);
-}
-
-// 공급면적 정확화(2026.08) — analyze.mjs와 동일한 방식(그쪽 주석 참고): data/supply-area/<lawd>.json에
-// 실측값이 있으면 그걸로, 없으면 PY_ANCHORS 보간으로 폴백. 분양권은 준공 전이라 건축HUB 대장 자체가
-// 없는 경우가 많은데, 그런 경우도 매칭 실패로 자동 폴백되므로 별도 분기가 필요 없음.
-const norm = (s) => String(s || "").replace(/\s/g, "");
-const SQM_PER_PY = 3.3058;
-function resolvePy(supplyMap, apt, area) {
-  const rounded = Math.round(area);
-  const measured = supplyMap && supplyMap[norm(apt)];
-  if (measured) {
-    const hit = measured.find((t) => Math.round(t.exclusiveArea) === rounded);
-    if (hit) return Math.floor(hit.supplyArea / SQM_PER_PY); // 2026.08 — 평수 라운드다운(반올림 X)
-  }
-  return areaToPy(rounded);
-}
-function attachPy(items, supplyMap) {
-  for (const it of items) it.py = resolvePy(supplyMap, it.apt, it.area);
-  return items;
-}
-async function fetchSupplyAreaMap(origin, lawd) {
-  try {
-    const r = await fetch(`${origin}/data/supply-area/${encodeURIComponent(lawd)}.json`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j && j.items && typeof j.items === "object" ? j.items : null;
-  } catch (e) { return null; }
+  return Math.round(p1 + (area - a1) * slope);
 }
 
 function xtag(b, name) {
@@ -116,7 +89,7 @@ function parseItems(xml, ymFallback) {
       apt,
       umd: xtag(b, "umdNm"),
       area,
-      // py는 여기서 계산하지 않음 — fetchShard()에서 일괄 계산(attachPy 참고, analyze.mjs와 동일)
+      py: areaToPy(Math.round(area)),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"),
@@ -236,9 +209,8 @@ async function fetchStaticMonth(origin, lawd, ym) {
     if (!r.ok) return null;
     const j = await r.json();
     if (!j || !Array.isArray(j.items)) return null;
-    // py는 fetchShard()의 attachPy()가 최신 로직(실측 우선, 없으면 보간)으로 한 번에 다시 계산 —
-    // area만 그대로 넘기면 됨(analyze.mjs와 동일한 이유).
-    return j.items;
+    // area는 그대로, py만 지금 코드의 PY_ANCHORS로 다시 계산(2026.08 — analyze.mjs와 동일한 이유)
+    return j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) }));
   } catch (e) { return null; }
 }
 
@@ -251,11 +223,7 @@ function currentAndPrevYm() {
 }
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) {
-    const r = await fetchShardLive(key, lawd, yms);
-    if (r.items) attachPy(r.items, null);
-    return r;
-  }
+  if (!origin) return fetchShardLive(key, lawd, yms);
 
   const { cur, prev } = currentAndPrevYm();
   const isRecent = (ym) => ym === cur || ym === prev;
@@ -265,8 +233,7 @@ async function fetchShard(key, lawd, yms, origin) {
   // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
   // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
   // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가, analyze.mjs와 동일)
-  const [supplyMap, staticHits, recentLive] = await Promise.all([
-    fetchSupplyAreaMap(origin, lawd),
+  const [staticHits, recentLive] = await Promise.all([
     historicalYms.length
       ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
       : [],
@@ -275,28 +242,18 @@ async function fetchShard(key, lawd, yms, origin) {
   const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null);
   const staticItems = staticHits.filter((h) => h !== null).flat();
 
-  if (recentLive.error) {
-    if (!staticItems.length) return recentLive;
-    attachPy(staticItems, supplyMap);
-    return { items: staticItems, anyFailed: true };
-  }
+  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
 
   if (!missingHistorical.length) {
-    const items = [...staticItems, ...recentLive.items];
-    attachPy(items, supplyMap);
-    return { items, anyFailed: recentLive.anyFailed };
+    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
   }
 
   const missingLive = await fetchShardLive(key, lawd, missingHistorical);
   if (missingLive.error) {
     const items = [...staticItems, ...recentLive.items];
-    if (!items.length) return missingLive;
-    attachPy(items, supplyMap);
-    return { items, anyFailed: true };
+    return items.length ? { items, anyFailed: true } : missingLive;
   }
-  const items = [...staticItems, ...recentLive.items, ...missingLive.items];
-  attachPy(items, supplyMap);
-  return { items, anyFailed: recentLive.anyFailed || missingLive.anyFailed };
+  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
 }
 
 export default async (req) => {

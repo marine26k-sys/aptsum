@@ -65,49 +65,17 @@ function areaToPy(area) {
   const A = PY_ANCHORS;
   if (area <= A[0][0]) {
     const [a0, p0] = A[0], [a1, p1] = A[1];
-    return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+    return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
   }
   for (let i = 0; i < A.length - 1; i++) {
     const [a0, p0] = A[i], [a1, p1] = A[i + 1];
     if (area >= a0 && area <= a1) {
-      return Math.floor(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
+      return Math.round(p0 + ((area - a0) * (p1 - p0)) / (a1 - a0));
     }
   }
   const [a0, p0] = A[A.length - 2], [a1, p1] = A[A.length - 1];
   const slope = (p1 - p0) / (a1 - a0);
-  return Math.floor(p1 + (area - a1) * slope);
-}
-
-// 공급면적 정확화(2026.08) — data/supply-area/<lawd>.json에 그 단지·면적타입의 건축HUB 실측
-// 공급면적(전유+공용)이 있으면 그걸로 평형을 계산하고, 없으면 위 PY_ANCHORS 보간으로 폴백한다.
-// (collect-supply-area.mjs가 채워둔 형식: { "단지명": [{exclusiveArea, supplyArea}, ...] })
-const norm = (s) => String(s || "").replace(/\s/g, "");
-const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (공급면적 → 평형 정밀 환산)
-function resolvePy(supplyMap, apt, area) {
-  const rounded = Math.round(area);
-  const measured = supplyMap && supplyMap[norm(apt)];
-  if (measured) {
-    const hit = measured.find((t) => Math.round(t.exclusiveArea) === rounded);
-    if (hit) return Math.floor(hit.supplyArea / SQM_PER_PY); // 2026.08 — 평수 라운드다운(반올림 X)
-  }
-  return areaToPy(rounded);
-}
-// items 배열에 py를 한 번에 부여 — static/live 등 출처와 무관하게 항상 이 시점에만 계산해서
-// (PY_ANCHORS 개편 때와 동일한 이유로) 오래된 캐시·정적 파일의 옛 py 값에 의존하지 않는다.
-function attachPy(items, supplyMap) {
-  for (const it of items) it.py = resolvePy(supplyMap, it.apt, it.area);
-  return items;
-}
-// GitHub Actions 배치가 커밋해둔 단지별 실측 공급면적 — lawd당 1개 파일이라 요청당 한 번만 로드해
-// 이번 요청에서 다루는 모든 월·모든 거래에 재사용한다. 분구 지역(HS-/BC-/IC-)은 아직 수집 대상이
-// 아니라 파일 자체가 없어 자동으로 null(=보간 폴백)이 된다.
-async function fetchSupplyAreaMap(origin, lawd) {
-  try {
-    const r = await fetch(`${origin}/data/supply-area/${encodeURIComponent(lawd)}.json`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j && j.items && typeof j.items === "object" ? j.items : null;
-  } catch (e) { return null; }
+  return Math.round(p1 + (area - a1) * slope);
 }
 
 function xtag(b, name) {
@@ -131,7 +99,7 @@ function parseItems(xml, ymFallback) {
       apt: xtag(b, "aptNm"),
       umd: xtag(b, "umdNm"),
       area,
-      // py는 여기서 계산하지 않음 — fetchShard()에서 supply-area 실측 유무를 반영해 한 번에 계산(attachPy 참고)
+      py: areaToPy(Math.round(area)),
       amt: R1(parseInt(amtRaw, 10) / 10000),
       ym: (xtag(b, "dealYear") + xtag(b, "dealMonth").padStart(2, "0")) || ymFallback,
       d: xtag(b, "dealDay").padStart(2, "0"),
@@ -263,10 +231,10 @@ async function fetchStaticMonth(origin, lawd, ym) {
     if (!r.ok) return null;
     const j = await r.json();
     if (!j || !Array.isArray(j.items)) return null;
-    // 저장된 py는 정적 파일이 커밋된 시점 기준(옛 PY_ANCHORS 또는 그때까지의 supply-area 커버리지)이라
-    // 그대로 믿지 않음 — area는 그대로 두고 py는 fetchShard()의 attachPy()가 최신 로직으로 한 번에
-    // 다시 계산한다(2026.08 PY_ANCHORS 개편 때 확립된 패턴, 공급면적 실측 도입에도 동일 적용).
-    return j.items;
+    // 저장된 py는 그 시점의 PY_ANCHORS로 계산된 값이라, 보간표를 나중에 고쳐도 이미 커밋된 정적 파일엔
+    // 옛 값이 그대로 남아있음 — area(전용면적)는 그대로 두고 py만 지금 코드 기준으로 다시 계산해서
+    // 돌려준다(2026.08 PY_ANCHORS 개편 때 발견 — 안 그러면 전체 배치를 재수집해야 값이 반영됨).
+    return j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) }));
   } catch (e) { return null; }
 }
 
@@ -281,11 +249,7 @@ function currentAndPrevYm() {
 }
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) {
-    const r = await fetchShardLive(key, lawd, yms);
-    if (r.items) attachPy(r.items, null); // origin 없이 호출된 경우(라이브 전용) — supply-area 없이 보간만 적용
-    return r;
-  }
+  if (!origin) return fetchShardLive(key, lawd, yms);
 
   const { cur, prev } = currentAndPrevYm();
   const isRecent = (ym) => ym === cur || ym === prev;
@@ -295,10 +259,7 @@ async function fetchShard(key, lawd, yms, origin) {
   // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
   // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
   // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가)
-  // supply-area 실측 맵도 같이 병렬로 로드 — py 계산은 아래에서 items가 다 모인 뒤 한 번에 하므로
-  // (attachPy) 이 시점엔 그냥 나머지와 동시에 시작해두기만 하면 됨(순서 의존성 없음).
-  const [supplyMap, staticHits, recentLive] = await Promise.all([
-    fetchSupplyAreaMap(origin, lawd),
+  const [staticHits, recentLive] = await Promise.all([
     historicalYms.length
       ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
       : [],
@@ -308,29 +269,19 @@ async function fetchShard(key, lawd, yms, origin) {
   const staticItems = staticHits.filter((h) => h !== null).flat();
 
   // 최근월 live 자체가 실패하면(키 오류·한도 초과 등) 기존과 동일하게 처리 — static이라도 있으면 그거라도 반환
-  if (recentLive.error) {
-    if (!staticItems.length) return recentLive;
-    attachPy(staticItems, supplyMap);
-    return { items: staticItems, anyFailed: true };
-  }
+  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
 
   if (!missingHistorical.length) {
-    const items = [...staticItems, ...recentLive.items];
-    attachPy(items, supplyMap);
-    return { items, anyFailed: recentLive.anyFailed };
+    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
   }
 
   // static에서 못 찾은 과거월만 추가로 live 조회 (recentYms와는 별개 호출 — recentYms는 위에서 이미 끝났음)
   const missingLive = await fetchShardLive(key, lawd, missingHistorical);
   if (missingLive.error) {
     const items = [...staticItems, ...recentLive.items]; // 최근월 live는 이미 성공했으니 그 데이터는 살리고 과거 누락분만 에러 취급
-    if (!items.length) return missingLive;
-    attachPy(items, supplyMap);
-    return { items, anyFailed: true };
+    return items.length ? { items, anyFailed: true } : missingLive;
   }
-  const items = [...staticItems, ...recentLive.items, ...missingLive.items];
-  attachPy(items, supplyMap);
-  return { items, anyFailed: recentLive.anyFailed || missingLive.anyFailed };
+  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
 }
 
 export default async (req) => {

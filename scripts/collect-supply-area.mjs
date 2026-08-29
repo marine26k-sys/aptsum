@@ -73,13 +73,6 @@ function parseAreaXml(xml) {
     items.push({
       dong: xtag(b, "dongNm"), ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 검증된 필드명(2026.08)
-      // 주부속구분(mainAtchGbCdNm: "주건축물"|"부속건축물") — "공용" 항목 중에는 그 동/호가 속한
-      // 주건축물 내부의 계단·복도·엘리베이터 로비 같은 "주거공용"뿐 아니라, 지하주차장·관리사무소·
-      // 경비실처럼 완전히 별도 건물(부속건축물)의 면적도 섞여 온다(2026.08 발견 — 공공데이터포털
-      // 문서 예시에서 "공용"+"부속건축물"+용도 "주차장" 조합 확인). 시장에서 통용되는 "공급면적"은
-      // 전용면적 + 주거공용면적만 뜻하고 부속건축물(지하주차장 등) 면적은 포함하지 않으므로, 이 필드로
-      // 부속건축물분을 걸러내야 한다(아래 collectComplexSupplyArea 참고).
-      mainAtchGb: xtag(b, "mainAtchGbCdNm"),
       area: parseFloat(xtag(b, "area")) || 0,
     });
   }
@@ -184,9 +177,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
       if (row.gb.includes("전유")) u.exclu += row.area;
-      // "공용" 중 부속건축물(지하주차장·관리사무소 등)분은 제외 — 주건축물 내부 공용(계단·복도 등)만
-      // "주거공용"으로 더해 시장 관행상의 "공급면적"(전용+주거공용)에 맞춘다(2026.08, 위 mainAtchGb 주석 참고).
-      else if (row.gb.includes("공용") && !row.mainAtchGb.includes("부속")) u.pubuse += row.area;
+      else if (row.gb.includes("공용")) u.pubuse += row.area;
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
@@ -195,30 +186,13 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 1000)); // 페이스 훨씬 보수적으로(2026.08 150ms→1000ms — 공격적인 요청 패턴이 IP 차단을 유발했을 가능성)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
-  // 2026.08 추가 — 비산화성파크드림 사례(전 타입 전용/공급 비율 0.54)로 발견된 버그 방어: 페이지 경계를
-  // 넘나드는 같은 (동,호) 행 중복/부속건축물 오분류 등으로 공용면적만 비정상 누적되면 비율이 크게
-  // 어긋난다. 정상 단지들의 실측 비율 범위(0.709~0.803, 이 데이터셋 관찰치 기준)를 벗어나면 원본
-  // pubuse 값을 버리고, 그 범위의 중간값(CORRECTION_RATIO)으로 supplyArea를 역산한 보정값을 대신 쓴다
-  // — 결측으로 남기지 않고 최선의 추정치로 채워서 배포는 계속 나가게 함.
-  const RATIO_MIN = 0.709, RATIO_MAX = 0.803;
-  const CORRECTION_RATIO = (RATIO_MIN + RATIO_MAX) / 2; // 0.756
   const result = {}; // roundedExclusiveArea -> {exclusiveArea, supplyArea}
-  const correctedRatio = []; // 진단용 — 비율 이상으로 보정값을 대신 쓴 항목
   for (const u of Object.values(units)) {
     const rounded = Math.round(u.exclu);
     if (!targetAreas.has(rounded) || result[rounded]) continue;
-    const rawSupply = u.exclu + u.pubuse;
-    const ratio = rawSupply > 0 ? u.exclu / rawSupply : 0;
-    const exclusiveArea = Math.round(u.exclu * 100) / 100;
-    if (ratio < RATIO_MIN || ratio > RATIO_MAX) {
-      const correctedSupply = Math.round((u.exclu / CORRECTION_RATIO) * 100) / 100;
-      correctedRatio.push({ exclusiveArea, rawSupplyArea: Math.round(rawSupply * 100) / 100, rawRatio: Math.round(ratio * 1000) / 1000, correctedSupplyArea: correctedSupply });
-      result[rounded] = { exclusiveArea, supplyArea: correctedSupply };
-      continue;
-    }
-    result[rounded] = { exclusiveArea, supplyArea: Math.round(rawSupply * 100) / 100 };
+    result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, correctedRatio } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -278,9 +252,6 @@ async function main() {
         // 10자리를 그대로 넘기면 존재하지 않는 코드가 되어 매번 빈 응답(0페이지)이 나왔음(2026.08 발견).
         const bjdongCd5 = c.bjdCode.length === 10 ? c.bjdCode.slice(5) : c.bjdCode;
         const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas);
-        if (debug.correctedRatio && debug.correctedRatio.length) {
-          console.log(`  ${c.name}: 비율 이상으로 ${debug.correctedRatio.length}개 타입 보정값 적용(전용/공급 0.709~0.803 밖) — ${JSON.stringify(debug.correctedRatio)}`);
-        }
         if (Object.keys(types).length) {
           out.items[c.name] = Object.values(types);
           console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);

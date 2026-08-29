@@ -1,15 +1,11 @@
-// Netlify Function — 국토교통부 건축HUB 건축물대장정보 서비스 (전유공용면적 조회, 단건 라이브 조회용)
+// Netlify Function — 국토교통부 건축HUB 건축물대장정보 서비스 (전유공용면적 조회)
 // 목적: areaToPy()의 보간표(추정치) 대신, 건축물대장에 등록된 실제 전유면적+공용면적을 가져와
 // 진짜 공급면적(전유+주거공용)을 계산한다 (2026.08 수민 요청 — "공급면적을 정확하게").
 //
-// 필드명 실전 검증 완료(2026.08, 은마아파트 10동 901호로 확인) — expsPubuseGbCdNm 오타를
-// exposPubuseGbCdNm으로 수정, area/dongNm/hoNm은 처음부터 정상.
-//
-// ⚠️ 현재 미사용(고아 함수): 실제 배치 파이프라인은 scripts/collect-supply-area.mjs가 이 API를
-// 직접 호출(동일 로직 중복 구현)해 data/supply-area/<lawd>.json으로 저장하고, analyze.mjs/presale.mjs는
-// 그 정적 파일만 읽는다(resolvePy() 참고) — 라이브 폴백으로 이 엔드포인트를 쓰기로 하지 않음(2026.08 결정).
-// 지번 하나 넣고 원본 세대별 데이터를 바로 확인하고 싶을 때(디버깅용, ?debug=1로 raw XML 확인 가능)
-// 남겨둔 것뿐이라 삭제하지 않아도 서비스 동작엔 영향 없음.
+// ⚠️ 이 함수는 아직 실전 검증 전입니다. data.go.kr/code.go.kr가 로봇 접근을 막아놔서
+// 실제 응답 필드명을 라이브로 확인하지 못한 채, 이 API 계열(BldRgstService/BldRgstHubService)의
+// 공개 문서·커뮤니티 예제에서 통용되는 필드명(expsPubuseGbCdNm/area/dongNm/hoNm 등)을 기준으로
+// 작성했습니다 — 실제 배포 후 첫 호출 결과를 보고 필드명을 맞춰야 할 수 있습니다(아래 parseAreaXml 참고).
 //
 // 요청 파라미터: sigunguCd(5자리, 앱 전체가 쓰는 lawd 코드와 동일) + umd(법정동명, 예: "대치동")
 //   + bun(본번, analyze.mjs가 이미 추출해둔 t.bonbun) + ji(부번, t.bubun — 없으면 0000)
@@ -55,9 +51,6 @@ function parseAreaXml(xml) {
       dong: xtag(b, "dongNm"),
       ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 테스트로 필드명 확인 완료(2026.08)
-      // "공용" 중 지하주차장·관리사무소 등 부속건축물분은 시장 관행상 "공급면적"에 안 들어가므로
-      // 제외해야 함 — collect-supply-area.mjs와 동일 이유(그쪽 주석 참고, 2026.08)
-      mainAtchGb: xtag(b, "mainAtchGbCdNm"),
       area: parseFloat(xtag(b, "area")) || 0,
       etcStrct: xtag(b, "etcStrct"),
     });
@@ -114,7 +107,7 @@ export default async (req) => {
       const k = `${it.dong}|${it.ho}`;
       byUnit[k] = byUnit[k] || { exclu: 0, pubuse: 0, dong: it.dong, ho: it.ho };
       if (it.gb.includes("전유")) byUnit[k].exclu += it.area;
-      else if (it.gb.includes("공용") && !it.mainAtchGb.includes("부속")) byUnit[k].pubuse += it.area;
+      else if (it.gb.includes("공용")) byUnit[k].pubuse += it.area;
     }
     const units = Object.values(byUnit).map(u => ({
       dong: u.dong, ho: u.ho,

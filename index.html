@@ -1235,8 +1235,7 @@ function addCmpRow(){
 
 // ═══ 데이터 조회: 샤드 병렬 + 월 캐시 ═══
 // ⚠️ CACHE_VER 체크리스트 — 아래 중 하나라도 바뀌면 배포 전에 반드시 +1 할 것:
-//    · areaToPy() 앵커/보간 로직, resolvePy()의 실측 매칭 로직(단지명/면적 매칭 방식 등),
-//      parseItems()의 필드 구성(LS_FIELDS/LS_FIELDS_P/LS_FIELDS_J 순서 포함)
+//    · areaToPy() 앵커/보간 로직, parseItems()의 필드 구성(LS_FIELDS/LS_FIELDS_P/LS_FIELDS_J 순서 포함)
 //    · xtag() 파싱 방식, dealAmount/deposit/excluUseAr 등 원본 API 필드 처리 방식
 //    · 서버(analyze.mjs/presale.mjs/rent.mjs)가 응답에 담는 아이템의 필드 자체가 늘거나 줄 때
 //    올리지 않으면 브라우저에 캐시된 옛 포맷 데이터가 새 코드로 그대로 읽혀 오류가 날 수 있음.
@@ -1247,10 +1246,7 @@ function addCmpRow(){
 // (2026.08 6→7: areaToPy()의 PY_ANCHORS 전면 개편 — 39→18평/59→25평/84→33평 등 시장 관행과 어긋나던
 // 값을 복수 출처로 재확인한 값(59→24평/84→34평/101→40평 등)으로 교체. 앵커가 바뀌면 이미 캐시된
 // 옛 py 값이 새로고침해도 그대로 남아있을 수 있어 버전을 올림)
-// (2026.08 7→8: 공급면적 정확화 — 서버(analyze/presale/rent.mjs)가 data/supply-area의 건축HUB 실측값이
-// 있는 단지·평형은 보간(PY_ANCHORS) 대신 그 실측값으로 py를 계산하도록 변경. 캐시된 옛 py는 실측 반영
-// 전 보간값이라 새로고침만으론 안 바뀌어 버전을 올림)
-const CACHE_VER = 8;
+const CACHE_VER = 7;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -1712,20 +1708,12 @@ function aliasesFor(qn){
   const arr = APT_ALIASES[canon] || [];
   return [...new Set([canon, qn, ...arr.map(a=>a.replace(/\s/g,''))])];
 }
-// 부분일치 허용 폭 — "q가 a를 포함"(등록명이 검색어보다 짧은 경우, 예: 검색 "롯데캐슬캠퍼스타운아파트" vs
-// 등록 "롯데캐슬캠퍼스타운")은 "아파트"/"1차" 같은 흔한 접미사 생략만 구제하려는 의도인데, 길이 제한이 없으면
-// "롯데"·"롯데캐슬"처럼 완전히 다른 별개 단지의 짧은 이름까지 전부 딸려 들어와 버림(2026.08 발견 —
-// 연수구 "롯데캐슬캠퍼스타운아파트" 검색 시 무관한 "롯데"/"롯데캐슬"이 다중일치로 잡히던 버그).
-// 반대 방향(a가 q를 포함 = 등록명이 검색어보다 긴 경우, 예: 검색 "래미안" vs 등록 "래미안개포2차")은 사용자가
-// 의도적으로 축약해 검색하는 흔한 패턴이라 길이 제한을 두지 않음.
-const SUFFIX_TRIM_MAX = 5;
-function looseNameMatch(a, q){ return a.includes(q) || (q.includes(a) && q.length - a.length <= SUFFIX_TRIM_MAX); }
 function matchComplex(all, name){
   const qn = name.replace(/\s/g,'');
   const qnList = aliasesFor(qn); // 검색어 본인 + 알려진 개명 이력 별칭까지 함께 매칭
   const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
   if(exact.length) return {hits:exact};
-  const cand = all.filter(t=>{ const a=t.apt.replace(/\s/g,''); return qnList.some(q=>looseNameMatch(a,q)); });
+  const cand = all.filter(t=>{ const a=t.apt.replace(/\s/g,''); return qnList.some(q=>a.includes(q)||q.includes(a)); });
   const names = [...new Set(cand.map(t=>t.apt))];
   if(names.length===1) return {hits:cand};
   if(names.length>1){
@@ -2490,10 +2478,7 @@ function populateSubwayLineSelect(items){
 function safeNameLookup(map, name){
   const qn = name.replace(/\s/g, '');
   if(map[qn] !== undefined) return map[qn];
-  // looseNameMatch와 동일한 길이 제한 부분일치(2026.08) — 예전엔 무제한 substring 허용이라
-  // "롯데캐슬캠퍼스타운아파트" 같은 긴 이름이 "롯데"·"롯데캐슬" 같은 무관한 단지의 짧은 등록명과
-  // 우연히 "정확히 1개"만 걸려서 그 엉뚱한 단지 가격을 조용히 잘못 표시하는 사고가 있었음.
-  const partial = Object.keys(map).filter(k => looseNameMatch(k, qn));
+  const partial = Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
   return partial.length === 1 ? map[partial[0]] : null;
 }
 function matchPricePerPy(priceMap, name){ return safeNameLookup(priceMap, name); }
@@ -2591,8 +2576,8 @@ function renderSubway(d){
     const prioritized = PRIORITY.map(k=>byKey[k]).filter(Boolean);
     const rest = (x.bandResults||[]).filter(r=>!PRIORITY.includes(r.key)).map(r=>r.trade);
     const candidates = [...prioritized, ...rest].slice(0,2).sort((a,b)=>a.area-b.area);
-    // py(평형)는 서버(analyze.mjs 등)가 이미 계산해 내려준 값을 그대로 재사용 — data/supply-area에
-    // 건축HUB 실측값이 있는 단지·평형은 그 값 기준, 없으면 PY_ANCHORS 보간 기준(2026.08)
+    // py(평형)는 실거래 데이터를 서버에서 받아올 때 이미 areaToPy()로 계산돼 있는 값을 그대로 재사용
+    // (2026.08 — 공급면적 실측 배치가 아직 안 돌아서 보간표 기반 추정값이지만, 새로 개편된 앵커 기준)
     const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평(전용${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
@@ -2639,7 +2624,7 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
     presaleNames.forEach(pname=>{
       const norm = pname.replace(/\s/g,'');
       if(tradeNormMap[norm]){ nameMap[pname] = tradeNormMap[norm]; return; }
-      const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return looseNameMatch(tn, norm); });
+      const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return tn.includes(norm)||norm.includes(tn); });
       nameMap[pname] = matched || presaleNormRep[norm];
     });
 
@@ -3877,7 +3862,7 @@ function renderPricePerPyeong(d){
       <h3>전용면적 평단가 랭킹</h3>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
       ${rows(d.pyPrice, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">전용 ${Math.floor(x.pyExact)}평(${x.area?Math.floor(x.area):''}㎡)</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">전용 ${Math.round(x.pyExact)}평(${x.area?Math.floor(x.area):''}㎡)</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
