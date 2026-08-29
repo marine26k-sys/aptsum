@@ -51,6 +51,9 @@ function parseAreaXml(xml) {
       dong: xtag(b, "dongNm"),
       ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 테스트로 필드명 확인 완료(2026.08)
+      // "공용" 중 지하주차장·관리사무소 등 부속건축물분은 시장 관행상 "공급면적"에 안 들어가므로
+      // 제외해야 함 — collect-supply-area.mjs와 동일 이유(그쪽 주석 참고, 2026.08)
+      mainAtchGb: xtag(b, "mainAtchGbCdNm"),
       area: parseFloat(xtag(b, "area")) || 0,
       etcStrct: xtag(b, "etcStrct"),
     });
@@ -107,7 +110,7 @@ export default async (req) => {
       const k = `${it.dong}|${it.ho}`;
       byUnit[k] = byUnit[k] || { exclu: 0, pubuse: 0, dong: it.dong, ho: it.ho };
       if (it.gb.includes("전유")) byUnit[k].exclu += it.area;
-      else if (it.gb.includes("공용")) byUnit[k].pubuse += it.area;
+      else if (it.gb.includes("공용") && !it.mainAtchGb.includes("부속")) byUnit[k].pubuse += it.area;
     }
     const units = Object.values(byUnit).map(u => ({
       dong: u.dong, ho: u.ho,

@@ -73,6 +73,13 @@ function parseAreaXml(xml) {
     items.push({
       dong: xtag(b, "dongNm"), ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 검증된 필드명(2026.08)
+      // 주부속구분(mainAtchGbCdNm: "주건축물"|"부속건축물") — "공용" 항목 중에는 그 동/호가 속한
+      // 주건축물 내부의 계단·복도·엘리베이터 로비 같은 "주거공용"뿐 아니라, 지하주차장·관리사무소·
+      // 경비실처럼 완전히 별도 건물(부속건축물)의 면적도 섞여 온다(2026.08 발견 — 공공데이터포털
+      // 문서 예시에서 "공용"+"부속건축물"+용도 "주차장" 조합 확인). 시장에서 통용되는 "공급면적"은
+      // 전용면적 + 주거공용면적만 뜻하고 부속건축물(지하주차장 등) 면적은 포함하지 않으므로, 이 필드로
+      // 부속건축물분을 걸러내야 한다(아래 collectComplexSupplyArea 참고).
+      mainAtchGb: xtag(b, "mainAtchGbCdNm"),
       area: parseFloat(xtag(b, "area")) || 0,
     });
   }
@@ -177,7 +184,9 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
       if (row.gb.includes("전유")) u.exclu += row.area;
-      else if (row.gb.includes("공용")) u.pubuse += row.area;
+      // "공용" 중 부속건축물(지하주차장·관리사무소 등)분은 제외 — 주건축물 내부 공용(계단·복도 등)만
+      // "주거공용"으로 더해 시장 관행상의 "공급면적"(전용+주거공용)에 맞춘다(2026.08, 위 mainAtchGb 주석 참고).
+      else if (row.gb.includes("공용") && !row.mainAtchGb.includes("부속")) u.pubuse += row.area;
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
