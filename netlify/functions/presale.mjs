@@ -42,9 +42,11 @@ const SPLIT_REGIONS = {
 };
 
 // 전용면적(㎡) → 평형 환산: analyze.mjs와 동일 앵커 테이블
+// 2026.08 개편 — analyze.mjs와 동일(이유는 그쪽 주석 참고): 59/74/84/101/114㎡→24/30/34/40/45평형은
+// 복수 출처로 확인된 값, 39/49/130/150/165는 추세 연장 추정치.
 const PY_ANCHORS = [
-  [39, 18], [49, 21], [59, 25], [74, 30], [84, 33],
-  [99, 38], [110, 42], [130, 49], [150, 58], [165, 65],
+  [39, 16], [49, 20], [59, 24], [74, 30], [84, 34],
+  [101, 40], [114, 45], [130, 51], [150, 58], [165, 64],
 ];
 function areaToPy(area) {
   if (!area || area <= 0) return 0;
@@ -207,7 +209,8 @@ async function fetchStaticMonth(origin, lawd, ym) {
     if (!r.ok) return null;
     const j = await r.json();
     if (!j || !Array.isArray(j.items)) return null;
-    return j.items;
+    // area는 그대로, py만 지금 코드의 PY_ANCHORS로 다시 계산(2026.08 — analyze.mjs와 동일한 이유)
+    return j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) }));
   } catch (e) { return null; }
 }
 

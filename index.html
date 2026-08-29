@@ -90,10 +90,10 @@
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
-  .peer-table th:nth-child(1),.peer-table td:nth-child(1){width:28%;word-break:break-all}
-  .peer-table th:nth-child(2),.peer-table td:nth-child(2){width:26%;white-space:nowrap}
+  .peer-table th:nth-child(1),.peer-table td:nth-child(1){width:38%;word-break:break-all}
+  .peer-table th:nth-child(2),.peer-table td:nth-child(2){width:24%;white-space:nowrap}
   .peer-table th:nth-child(3),.peer-table td:nth-child(3),
-  .peer-table th:nth-child(4),.peer-table td:nth-child(4){width:23%}
+  .peer-table th:nth-child(4),.peer-table td:nth-child(4){width:19%}
   .peer-table tr:last-child td{border-bottom:none}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
@@ -926,7 +926,7 @@ let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
-function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice') ? REGION_MAX_RANK : REGION_MAX; }
+function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longpeakdong') ? REGION_MAX_RANK : REGION_MAX; } // 연간 저평가(동일 동)만 2026.08부터 25개로 상향(수민 요청) — 나머지 저평가 3탭(단기/반기/연간)은 무거운 계산이라 5개 유지
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -1004,7 +1004,7 @@ function buildRegionPicker(){
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
     html += `<div class="rggrp">${esc(g)}</div>`;
-    if(multi && !q && mode==='region'){
+    if(multi && !q){
       html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
@@ -1154,10 +1154,11 @@ function setMode(m){
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
   // 평형 필터는 계산에 실제로 반영되는 탭에서만 노출 — 저평가(단기/반기/연간)는 항상 20~39평(20평대/30평대 평대별) 고정 계산이라 셀렉트를 아예 숨긴다(2026.07)
-  // '○○ 전체' 옵션은 지역 랭킹에서만 노출 — 저평가(단기/반기/연간)는 지역 5개 상한이라
-  // 한 번에 수십 개(서울 25개 등)를 추가하는 '전체' 옵션 자체가 앞뒤가 안 맞음(2026.07, 5개 상한 도입 후 발견).
-  // 개별 구를 여러 개 골라 담는 칩 방식(최대 5개)은 이 세 탭에서도 그대로 지원.
-  const supportsAllScopeOption = m==='region';
+  // '○○ 전체' 옵션 — 모든 복수선택 탭(지역 랭킹·저평가 3종·신고가·하락거래·전용면적 평단가)에서 노출(2026.08,
+  // 수민 요청으로 지역 랭킹 전용에서 확장). 저평가(상한 5)처럼 시/도 전체 개수보다 낮은 상한을 가진 탭에서는
+  // addRegion()의 기존 over-limit 경고("지역은 최대 N개까지 선택할 수 있습니다")가 그대로 안내해주므로,
+  // 상한을 넘는 시/도를 선택해도 조용히 잘리지 않고 명확히 알려짐 — 그래서 안전하게 전체 탭에 노출 가능.
+  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -1236,7 +1237,10 @@ function addCmpRow(){
 // 브라우저의 영구 캐시를 동시에 무효화한다 (재배포만으로는 두 캐시 다 안 지워짐).
 // (2026.08 4→5는 이전 변경, 5→6: analyze.mjs의 parseItems()에 bonbun/bubun 필드 추가(건축HUB 연동 준비) —
 // 필드만 늘어도 옛 캐시엔 이 필드가 없어 버전을 안 올리면 새로고침해도 안 채워짐)
-const CACHE_VER = 6;
+// (2026.08 6→7: areaToPy()의 PY_ANCHORS 전면 개편 — 39→18평/59→25평/84→33평 등 시장 관행과 어긋나던
+// 값을 복수 출처로 재확인한 값(59→24평/84→34평/101→40평 등)으로 교체. 앵커가 바뀌면 이미 캐시된
+// 옛 py 값이 새로고침해도 그대로 남아있을 수 있어 버전을 올림)
+const CACHE_VER = 7;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다

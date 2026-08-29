@@ -134,24 +134,23 @@ async function loadKnownAreasByComplex(lawd) {
 
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
-  // 초당 요청 제한(429) + 네트워크 레벨 예외("fetch failed" 등) 둘 다 재시도(2026.08) — 처음엔 429만
-  // 다뤘는데, 실전에서 대부분의 "0페이지" 실패가 사실 fetch() 자체가 던지는 일반 네트워크 예외였음이
-  // 드러남(collect-hhcnt.mjs에서 겪었던 것과 동일 증상) — try 밖에 있던 fetch가 던지면 이 함수 전체가
-  // 예외로 빠져나가 호출부의 catch{break}에 조용히 삼켜지고 pagesScanned=0/rateLimited=false로 남아
-  // "속도 제한"인지 "그냥 실패"인지조차 구분이 안 됐음.
-  for (let attempt = 0; attempt <= 5; attempt++) {
+  // 초당 요청 제한(429) + 네트워크 레벨 예외("fetch failed"/UND_ERR_CONNECT_TIMEOUT 등) 둘 다 재시도.
+  // (2026.08 5→2회로 축소 — 공격적인 재시도가 오히려 데이터센터 IP 대역 차단을 유발했을 가능성이 있어
+  // 훨씬 보수적으로 조정. 이젠 "재시도로 뚫어보기"보다 "막혀있으면 빨리 포기하고 전체를 중단"하는
+  // 쪽으로 전략 전환 — main()의 circuit breaker 참고)
+  for (let attempt = 0; attempt <= 2; attempt++) {
     try {
       const r = await fetch(`${AREA_URL}?${q}`, { signal: AbortSignal.timeout(20000) });
       if (r.status === 429) {
-        if (attempt === 5) return { rows: [], rateLimited: true };
-        await new Promise((res) => setTimeout(res, 1000 * (attempt + 1))); // 1s,2s,3s...6s로 더 길게
+        if (attempt === 2) return { rows: [], rateLimited: true };
+        await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
         continue;
       }
       const text = await r.text();
       return { rows: parseAreaXml(text), rateLimited: false };
     } catch (e) {
-      if (attempt === 5) return { rows: [], rateLimited: true, error: `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}` }; // 429와 동일하게 "재시도 다 씀" 취급 — 다음 실행 때 자동 재시도됨
-      await new Promise((res) => setTimeout(res, 1000 * (attempt + 1)));
+      if (attempt === 2) return { rows: [], rateLimited: true, error: `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}` };
+      await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
     }
   }
   return { rows: [], rateLimited: true };
@@ -184,7 +183,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
     }
     if (foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약)
-    if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 150)); // 초당 요청 제한 여유를 위한 페이스 조절(2026.08)
+    if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 1000)); // 페이스 훨씬 보수적으로(2026.08 150ms→1000ms — 공격적인 요청 패턴이 IP 차단을 유발했을 가능성)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
   const result = {}; // roundedExclusiveArea -> {exclusiveArea, supplyArea}
@@ -230,14 +229,20 @@ async function main() {
       return areas && areas.size > 0; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
     });
 
-    // 2026.08: 원래 순차 처리(하나씩)였는데, collect-hhcnt.mjs(동시 3개 병렬)는 9,763개 단지를 11분만에
-    // 끝낸 반면 이건 단지당 최대 30페이지를 순서대로 도느라 훨씬 느렸음 — 같은 방식(동시 3개)으로 병렬화.
+    // 2026.08: 동시 2~3개로도 대량 연속 처리 시 UND_ERR_CONNECT_TIMEOUT(데이터센터 IP 대역 차단 의심)이
+    // 발생 — 1(완전 순차)로 낮추고, 단지 시작 전 대기도 늘림. 처리량보다 "막혀있으면 최대한 빨리 알아채고
+    // 멈추기"를 우선.
     const remaining = Math.max(0, limit - processed);
     const batch = targets.slice(0, remaining);
-    // 2026.08: 동시 3개로도 대량 연속 처리(56개+) 시 429가 다시 발생 — 2로 낮추고, 워커가 다음 단지로
-    // 넘어갈 때도 살짝 쉬어가도록(단지 내부 페이지 사이 딜레이만으론 부족했음)
-    await pool(batch, 2, async (c) => {
-      await new Promise((res) => setTimeout(res, 200)); // 워커가 이전 단지 끝내자마자 바로 다음 단지 시작하지 않게(2026.08)
+    // 회로차단기(circuit breaker, 2026.08 추가) — 연속으로 계속 네트워크 실패가 나면, 이미 막혀있다고
+    // 보고 남은 수천 개를 헛되이 다 시도하는 대신 즉시 전체 실행을 중단한다(안 그러면 시간·API 시도만
+    // 낭비하고, 혹시 진짜 차단 상태라면 계속 두드릴수록 차단이 더 굳어질 수도 있음).
+    const CIRCUIT_BREAKER_THRESHOLD = 5;
+    let consecutiveNetworkFailures = 0;
+    let circuitOpen = false;
+    await pool(batch, 1, async (c) => {
+      if (circuitOpen) return; // 이미 중단 결정났으면 나머지는 건드리지 않음(그대로 미처리 상태로 남아 다음 실행에 재시도)
+      await new Promise((res) => setTimeout(res, 500)); // 단지 시작 전 대기(2026.08 200ms→500ms)
       const bj = parseBunJi(c.kaptAddr);
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
       const targetAreas = knownAreas[norm(c.name)];
@@ -250,14 +255,22 @@ async function main() {
         if (Object.keys(types).length) {
           out.items[c.name] = Object.values(types);
           console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
+          consecutiveNetworkFailures = 0; // 성공하면 연속 실패 카운트 리셋
         } else if (debug.rateLimited) {
-          // 2026.08 — "데이터가 없음"이 아니라 "429 재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
+          // 2026.08 — "데이터가 없음"이 아니라 "재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
           // out.items에 저장 안 하므로 다음 실행 때 자동으로 재시도됨(영구 실패 아님).
           console.log(`  ${c.name}: 속도 제한/네트워크 오류로 조회 실패(나중에 자동 재시도됨)${debug.lastError ? ` — ${debug.lastError}` : ""}`);
+          consecutiveNetworkFailures++;
+          if (consecutiveNetworkFailures >= CIRCUIT_BREAKER_THRESHOLD && !circuitOpen) {
+            circuitOpen = true;
+            console.log(`\n⚠️  연속 ${CIRCUIT_BREAKER_THRESHOLD}개 단지 조회 실패 — 지금 이 환경에서 건축HUB API 자체가 막혀있는 것으로 보여 실행을 중단합니다.`);
+            console.log(`   (재시도해도 소용없을 가능성이 높음 — 다른 환경/시간대에 다시 시도해보세요. 지금까지 성공한 데이터는 그대로 저장됨)\n`);
+          }
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
           console.log(`  ${c.name}: 못 찾음(0/${targetAreas.size}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
+          consecutiveNetworkFailures = 0; // 이건 진짜 응답을 받은 케이스라 네트워크 실패가 아님 — 리셋
         }
       } catch (e) {
         console.error(`  ${c.name}: 조회 실패 -`, e.message);
