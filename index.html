@@ -45,6 +45,14 @@
   .tab svg{flex:none;width:13px;height:13px;stroke:currentColor}
   .tab.on{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 3px 10px rgba(0,130,138,.28)}
   .tab:not(.on):active{background:var(--teal-soft)}
+  /* 구독 전용 탭(역세권) 구분선 + 라벨 — 운영자 확인용 비밀탭(하락 거래·연간 저평가(동일 동))과 섞이지 않도록
+     시각적으로 분리(2026.08, 수민 요청) */
+  .tab-divider{flex-basis:100%;display:flex;align-items:center;gap:6px;margin:2px 0 0;font-size:10px;font-weight:700;color:var(--sub)}
+  .tab-divider::before{content:'';flex:none;width:10px;height:1.5px;background:var(--line)}
+  .tab-divider::after{content:'';flex:1;height:1.5px;background:var(--line)}
+  .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
+  .tab.subscriber:not(.on){color:#8A6D1F}
+  .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
   .search-box{display:grid;gap:8px;margin-bottom:8px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
@@ -380,17 +388,20 @@
     function closePwaModal(){
       document.getElementById('pwaModalBg').style.display = 'none';
     }
-    // ---- 신저가·연간 저평가 탭 비밀모드: 로고 5번 빠르게 탭하면 노출 ----
-    // 팔로워 전체 공개 기능이 아니라 운영자 확인용이라, 탭에 상시 노출하지 않고 이 제스처로만 접근한다
-    // (신저가 2026.08 최초 추가, 연간 저평가도 2026.08 같은 방식으로 비공개 전환).
-    // 한 번 해제하면 이 브라우저에서는 계속 노출(localStorage) — 새로고침·재방문 때마다 다시 탭할 필요 없음.
+    // ---- 구독 전용 탭 3종(하락 거래·연간 저평가(동일 동)·역세권): 로고 5번 빠르게 탭 + 코드 입력하면 노출 ----
+    // 인스타 구독(2,600원/월) 전용 콘텐츠라, 탭에 상시 노출하지 않고 이 제스처+코드로만 접근한다.
+    // 한 번 해제하면 이 브라우저에서는 계속 노출(localStorage) — 새로고침·재방문 때마다 다시 입력할 필요 없음.
+    // (2026.08 — 원래 하락 거래·연간 저평가(동일 동)는 "운영자 확인용"이라 코드 없이 탭만으로 풀리게
+    // 짜놨었는데, 수민 정정으로 셋 다 구독 전용 콘텐츠였음이 확인돼 하나의 게이트로 통합)
     // header/tabs 마크업이 이 스크립트보다 뒤에 나오므로(아직 DOM에 없음) DOMContentLoaded 이후에 바인딩한다.
     document.addEventListener('DOMContentLoaded', function(){
-      const SECRET_KEY = 'apc:secretNewLow'; // 신저가 때 만든 키를 그대로 재사용 — 한 번 탭 해제하면 세 탭 다 같이 풀림(2026.08 지하철 검색 탭 추가)
-      const secretTabIds = ['tabNL', 'tabLPD', 'tabSub'];
-      const secretTabs = secretTabIds.map(id => document.getElementById(id)).filter(Boolean);
-      if (!secretTabs.length) return;
-      if (localStorage.getItem(SECRET_KEY) === '1') { secretTabs.forEach(t => { t.style.display = ''; }); }
+      const SUBSCRIBER_KEY = 'apc:subscriberSub'; // 세 탭 공용 — 비밀번호 확인 후에만 세팅됨
+      const SUBSCRIBER_CODE = 'aptsum26'; // 구독자에게만 공유하는 코드(인스타 구독 전용 피드에 안내)
+      const subTabs = ['tabNL', 'tabLPD', 'tabSub'].map(id => document.getElementById(id)).filter(Boolean);
+      const subDivider = document.getElementById('tabSubDivider');
+      if (!subTabs.length) return;
+      const reveal = () => { subTabs.forEach(t => { t.style.display = ''; }); if (subDivider) subDivider.style.display = ''; };
+      if (localStorage.getItem(SUBSCRIBER_KEY) === '1') { reveal(); }
 
       let taps = 0, lastTap = 0;
       const zone = document.getElementById('logoTapZone');
@@ -401,8 +412,13 @@
           lastTap = now;
           if (taps >= 5) {
             taps = 0;
-            secretTabs.forEach(t => { t.style.display = ''; });
-            try{ localStorage.setItem(SECRET_KEY, '1'); }catch(e){}
+            if (localStorage.getItem(SUBSCRIBER_KEY) !== '1') {
+              const code = prompt('구독자 전용 코드를 입력하세요');
+              if (code === SUBSCRIBER_CODE) {
+                reveal();
+                try{ localStorage.setItem(SUBSCRIBER_KEY, '1'); }catch(e){}
+              }
+            }
           }
         });
       }
@@ -422,18 +438,20 @@
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
     <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>전용면적 평단가</div>
-    <div class="tab" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
-    <!-- 신저가 탭: 화면에서만 숨김(2026.08) — 로직·데이터 처리는 그대로 유지, 버튼만 비노출. 재노출하려면 위 style="display:none" 제거 -->
     <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabU" onclick="setMode('updown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>등락 랭킹</div>
     <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
-    <div class="tab" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
-    <!-- 연간 저평가(동일 동) 탭: 비공개(2026.08) — 기존 공개 "연간 저평가" 탭은 그대로 두고, 같은 동 기준 비교 로직만 별도 탭으로 분리 -->
-    <div class="tab" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
-    <!-- 역세권(구 "지하철 검색") 탭: 비공개(2026.08) — 팔로워 공개 기능이 아니라 운영자 확인용, 로고 5번 탭 제스처로만 노출(신저가·연간 저평가(동일 동)와 동일 방식). 내부 함수/변수명(searchSubway 등)은 그대로 유지, 화면 표시 라벨만 변경(2026.08) -->
+    <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 동)·역세권 셋 다 인스타 구독(2,600원/월) 콘텐츠라
+         하나로 묶었다(수민 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독 전용이었음).
+         로고 5번 탭 + 코드(aptsum26) 입력해야 셋 다 같이 노출(아래 SUBSCRIBER_KEY 참고). 위치도 탭바 맨
+         끝으로 옮겨서 무료 탭들과 섞이지 않게 함. 내부 함수/변수명(searchSubway 등)은 그대로 유지.-->
+    <div class="tab-divider" id="tabSubDivider" style="display:none">구독 전용</div>
+    <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
+    <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
+    <div class="tab subscriber" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
   </div>
 
   <div class="search-box">
@@ -1710,7 +1728,23 @@ function aliasesFor(qn){
 }
 function matchComplex(all, name){
   const qn = name.replace(/\s/g,'');
-  const qnList = aliasesFor(qn); // 검색어 본인 + 알려진 개명 이력 별칭까지 함께 매칭
+  // 역세권 탭 등 K-apt 데이터 기반 화면은 이름에 "...아파트"까지 붙어서 오는 경우가 있는데(예: "롯데캐슬
+  // 캠퍼스타운아파트"), RTMS 실거래 등록명엔 이 접미사가 거의 없어("롯데캐슬캠퍼스타운") exact 매칭이
+  // 실패하고 substring fallback으로 떨어짐 — 그러면 "롯데"/"롯데캐슬"처럼 훨씬 짧고 무관한 다른 단지명까지
+  // q.includes(a)로 걸려서 "여러 단지 일치"로 잘못 뜸(2026.08 발견). "아파트"가 붙어있으면 뗀 버전도
+  // exact 후보에 같이 넣어 이 경우를 substring 단계까지 가기 전에 먼저 해결한다.
+  const qnNoSuffix = qn.replace(/아파트$/, '');
+  const candidateKeys = [qn, qnNoSuffix].filter((v,i,a)=>a.indexOf(v)===i);
+  // 송도·청라 등 대형 택지지구는 "OO15단지"처럼 부르는 통칭과 RTMS 등록명("OOF15BL")이 서로 달라
+  // exact 매칭이 실패하는 경우가 있음(2026.08, "송도더샵퍼스트파크15단지" 실사례로 확인 — 정확한 등록명은
+  // "송도더샵퍼스트파크F15BL"). "N단지"로 끝나는 검색어는 "F{N}BL" 표기 후보도 exact 매칭에 같이
+  // 시도한다 — 실제로 그 이름이 없으면 그냥 무시되니(원래 흐름 그대로 진행) 부작용은 없음.
+  const districtM = qnNoSuffix.match(/^(.+?)(\d{1,2})단지$/);
+  if(districtM){
+    const [, prefix, numStr] = districtM;
+    candidateKeys.push(`${prefix}F${numStr}BL`, `${prefix}F${parseInt(numStr,10)}BL`);
+  }
+  const qnList = [...new Set(candidateKeys.flatMap(aliasesFor))]; // 검색어 본인(+접미사 제거·단지→블록 변환판) + 알려진 개명 이력 별칭까지 함께 매칭
   const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
   if(exact.length) return {hits:exact};
   const cand = all.filter(t=>{ const a=t.apt.replace(/\s/g,''); return qnList.some(q=>a.includes(q)||q.includes(a)); });
@@ -2567,6 +2601,10 @@ function formatWalkDisplay(raw){
   if(nums.length >= 2) return `${nums[1]}분이내`;
   return raw;
 }
+// K-apt 표기는 "...아파트"까지 붙어서 오는 경우가 있는데(예: "롯데캐슬캠퍼스타운아파트"), 실거래 등록명·
+// 다른 탭 표기 관행에 맞춰 화면엔 접미사를 떼고 보여준다(2026.08, 수민 요청 — matchComplex()의 접미사
+// 처리와는 별개로 "역세권 탭 표시 자체"를 정리).
+function stripAptSuffix(name){ return name.replace(/아파트$/, ''); }
 function renderSubway(d){
   const priceBadges = x => {
     // 국민평형대(b3=55~65㎡, b5=80~95㎡) 우선 노출, 최대 2개까지만 — 부족하면 나머지 구간(b1/b2/b4/b6/b7)으로
@@ -2581,10 +2619,15 @@ function renderSubway(d){
     const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평(전용${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
-  const rows = d.rows.length
-    ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.name)}')">${esc(x.name)}</span></span><small>지하철 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.useDate? ` · ${x.useDate.slice(0,4)}년 준공`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
-        ${priceBadges(x)}
+  const withBadges = d.rows.map(x=>({ x, badge: priceBadges(x) }));
+  // 실거래 매칭이 안 돼 가격 뱃지가 비는 단지는 역세권 탭에서 아예 숨긴다(수민 요청, 2026.08) —
+  // 이 탭은 "도보 N분 이내·평단가 높은 순" 랭킹이 핵심인데, 오른쪽 가격이 안 뜨는 항목은 랭킹 기준 자체를
+  // 보여줄 수 없어 목록에 있어봐야 혼란만 줌.
+  const filtered = withBadges.filter(({badge})=>badge);
+  const rows = filtered.length
+    ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no">${i+1}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small>지하철 도보${esc(formatWalkDisplay(x.subwayWalk))}${x.useDate? ` · ${x.useDate.slice(0,4)}년 준공`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        ${badge}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
