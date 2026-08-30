@@ -480,8 +480,8 @@
         <option value="48">최근 4년</option>
         <option value="60">최근 5년</option>
       </select>
-      <div id="pyBandMultiWrap" style="flex:1;min-width:0;position:relative;display:none">
-        <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%">
+      <div id="pyBandMultiWrap" style="flex:1.5;min-width:0;position:relative;display:none">
+        <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%;padding:11px 8px;font-size:13px">
           <span id="pyBandMultiTxt">전체 평형</span><b>▼</b>
         </button>
         <div id="pyBandMultiPanel" class="pybm-panel" style="display:none"></div>
@@ -511,17 +511,6 @@
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
-
-  <!-- 카카오 애드핏 배너(320x50) — #result 밖에 둬서 tab 전환/재검색 때 innerHTML이 갈아끼워져도
-       광고 슬롯 자체는 안 지워지고 유지됨(2026.08 추가) -->
-  <div style="margin:10px 0 2px;text-align:center">
-    <div style="font-size:9px;color:var(--sub);margin-bottom:2px">광고</div>
-    <ins class="kakao_ad_area" style="display:none;"
-      data-ad-unit="DAN-nB65FgILxBVcaHpn"
-      data-ad-width="320"
-      data-ad-height="50"></ins>
-    <script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
-  </div>
 </div>
 
 <div id="ac"></div>
@@ -2041,7 +2030,8 @@ function analyzeUpDown(all, months){
 }
 
 // ═══ 갭투자(전세가율) 랭킹 (2026.08 신규, 2026.08 공개 탭으로 전환) ═══
-// 매매·전세 실거래를 각각 "단지+동+평형+구" 단위로 묶어 최근 2개월 평균가를 낸 뒤(2026.08, 12개월→2개월로 변경),
+// 매매·전세 실거래를 각각 "단지+동+평형+구" 단위로 묶어 최근 3개월 평균가를 낸 뒤(2026.08, 12→2→3개월로
+// 조정 — 2개월은 표본이 너무 좁아 조회되는 단지 수가 급감해서 3개월로 완화),
 // 같은 단위끼리 짝지어 전세가율(전세평균÷매매평균)을 계산 — 갭투자(적은 시드로 매매) 소재용 랭킹. 표본이 적으면
 // (매매·전세 각 2건 미만) 극단치 왜곡이 크므로 그 그룹은 아예 제외. 1~4층은 저층 할인 왜곡 방지를 위해 매매 쪽만
 // 제외(전세는 원래도 표본이 얇아 층수까지 거르면 남는 그룹이 너무 적어짐).
@@ -2729,7 +2719,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 2 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 2개월 평균 고정(2026.08, 12개월→2개월로 변경)
+  const neededMN = (mode==='updown'||mode==='shortval') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 3 : mN))))); // 등락 랭킹·단기 저평가는 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가는 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 3개월 평균 고정(2026.08, 12개월→2개월→3개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -2921,7 +2911,6 @@ async function search(){
         items = pyBandMultiFilter(items); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
         const rentItems = windowF(rawJ);
         d = analyzeGapRanking(items, rentItems, months);
-        d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
         d = analyzeComplex(items, name, months, rawMerged);
@@ -3826,7 +3815,7 @@ function renderGap(d){
     <div class="card-hd">
       ${hdTop('전세가율 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''} · <b style="color:#7FD4D9">최근 2개월 평균</b></div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · <b style="color:#7FD4D9">최근 3개월 평균</b></div>
     </div>
     <div class="sec">
       <h3>전세가율 상위 (매매·전세 각 2건 이상 표본)</h3>
