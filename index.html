@@ -609,7 +609,7 @@ function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
   if(!m) return;
-  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':(m==='newlow'?'newlow':(m==='gap'?'gap':'complex'))))))))));
+  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':(m==='newlow'?'newlow':(m==='gap'?'gap':(m==='subway'?'subway':'complex')))))))))));
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(m==='compare'){
@@ -627,6 +627,7 @@ function initFromURL(){
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
     if((m==='newhigh'||m==='newlow') && p.get('pym')){ pyBandMultiSel = p.get('pym').split(',').filter(Boolean); renderPyBandMultiBtn(); }
     if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='gap'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
+    else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
 }
@@ -899,6 +900,7 @@ function restoreView(vi){
   else if(v.data.mode==='newlow') renderNewLow(v.data);
   else if(v.data.mode==='pyprice') renderPricePerPyeong(v.data);
   else if(v.data.mode==='gap') renderGap(v.data);
+  else if(v.data.mode==='subway') renderSubway(v.data);
   else renderRegion(v.data);
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
@@ -1726,30 +1728,42 @@ function aliasesFor(qn){
   const arr = APT_ALIASES[canon] || [];
   return [...new Set([canon, qn, ...arr.map(a=>a.replace(/\s/g,''))])];
 }
-function matchComplex(all, name){
-  const qn = name.replace(/\s/g,'');
-  // 역세권 탭 등 K-apt 데이터 기반 화면은 이름에 "...아파트"까지 붙어서 오는 경우가 있는데(예: "롯데캐슬
-  // 캠퍼스타운아파트"), RTMS 실거래 등록명엔 이 접미사가 거의 없어("롯데캐슬캠퍼스타운") exact 매칭이
-  // 실패하고 substring fallback으로 떨어짐 — 그러면 "롯데"/"롯데캐슬"처럼 훨씬 짧고 무관한 다른 단지명까지
-  // q.includes(a)로 걸려서 "여러 단지 일치"로 잘못 뜸(2026.08 발견). "아파트"가 붙어있으면 뗀 버전도
-  // exact 후보에 같이 넣어 이 경우를 substring 단계까지 가기 전에 먼저 해결한다.
+// 검색어(K-apt류 표기)에서 있을 수 있는 이형 표기 후보를 만든다 — "...아파트" 접미사 제거, "N단지"→"F{N}BL"
+// 변환(송도·청라 등 대형 택지지구, 2026.08). matchComplex()(단지 분석 매칭)와 safeNameLookup()(역세권
+// 탭 가격·세대수 매칭) 양쪽이 똑같이 이 표기 차이 문제를 겪어서 공용으로 뺐다 — 하나만 고치고 다른 쪽을
+// 빠뜨리는 일이 없도록.
+function aptNameVariants(qn){
   const qnNoSuffix = qn.replace(/아파트$/, '');
-  const candidateKeys = [qn, qnNoSuffix].filter((v,i,a)=>a.indexOf(v)===i);
-  // 송도·청라 등 대형 택지지구는 "OO15단지"처럼 부르는 통칭과 RTMS 등록명("OOF15BL")이 서로 달라
-  // exact 매칭이 실패하는 경우가 있음(2026.08, "송도더샵퍼스트파크15단지" 실사례로 확인 — 정확한 등록명은
-  // "송도더샵퍼스트파크F15BL"). "N단지"로 끝나는 검색어는 "F{N}BL" 표기 후보도 exact 매칭에 같이
-  // 시도한다 — 실제로 그 이름이 없으면 그냥 무시되니(원래 흐름 그대로 진행) 부작용은 없음.
+  const variants = [qn, qnNoSuffix].filter((v,i,a)=>a.indexOf(v)===i);
   const districtM = qnNoSuffix.match(/^(.+?)(\d{1,2})단지$/);
   if(districtM){
     const [, prefix, numStr] = districtM;
-    candidateKeys.push(`${prefix}F${numStr}BL`, `${prefix}F${parseInt(numStr,10)}BL`);
+    variants.push(`${prefix}F${numStr}BL`, `${prefix}F${parseInt(numStr,10)}BL`);
   }
-  const qnList = [...new Set(candidateKeys.flatMap(aliasesFor))]; // 검색어 본인(+접미사 제거·단지→블록 변환판) + 알려진 개명 이력 별칭까지 함께 매칭
+  return variants;
+}
+function matchComplex(all, name){
+  const qn = name.replace(/\s/g,'');
+  // 역세권 탭 등 K-apt 데이터 기반 화면은 이름 표기가 RTMS 실거래 등록명과 다른 경우가 있어(예: "아파트"
+  // 접미사, "N단지" vs "F{N}BL") exact 매칭이 실패하고 substring fallback으로 떨어짐 — 그러면 "롯데"/
+  // "롯데캐슬"처럼 훨씬 짧고 무관한 다른 단지명까지 q.includes(a)로 걸려서 "여러 단지 일치"로 잘못 뜸
+  // (2026.08 발견). aptNameVariants()로 만든 이형 표기 후보도 exact 후보에 같이 넣어 이 경우를 substring
+  // 단계까지 가기 전에 먼저 해결한다.
+  const qnList = [...new Set(aptNameVariants(qn).flatMap(aliasesFor))]; // 검색어 본인(+이형 표기) + 알려진 개명 이력 별칭까지 함께 매칭
   const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
   if(exact.length) return {hits:exact};
   const cand = all.filter(t=>{ const a=t.apt.replace(/\s/g,''); return qnList.some(q=>a.includes(q)||q.includes(a)); });
-  const names = [...new Set(cand.map(t=>t.apt))];
-  if(names.length===1) return {hits:cand};
+  let names = [...new Set(cand.map(t=>t.apt))];
+  if(names.length>1){
+    // 매칭된 이름 중 하나가 다른 매칭된 이름의 부분 문자열이면(예: "삼성" ⊂ "삼성래미안") 대개는 진짜
+    // 별개 단지가 아니라 우연히 걸린 조각이다 — "안양동삼성래미안"으로 검색했더니 정작 무관한 "삼성"까지
+    // 같이 떠서 "여러 단지 일치"로 잘못 뜨던 문제(2026.08, hhcnt 쪽 법정동 접두어 표기 때문에 발생).
+    // 서로가 서로를 포함하지 않는 진짜 다른 이름끼리만 남으면 그건 실제 모호한 경우라 그대로 다중 후보로 보여준다.
+    const norm = s => s.replace(/\s/g,'');
+    const maximal = names.filter(n => !names.some(other => other!==n && norm(other).includes(norm(n))));
+    if(maximal.length) names = maximal;
+  }
+  if(names.length===1) return {hits: cand.filter(t=>t.apt===names[0])};
   if(names.length>1){
     const cnt={}; cand.forEach(t=>cnt[t.apt]=(cnt[t.apt]||0)+1);
     return {multi: names.sort((a,b)=>cnt[b]-cnt[a])};
@@ -2511,8 +2525,18 @@ function populateSubwayLineSelect(items){
 // (전혀 다른 단지가 우연히 유일한 부분일치일 수 있음), 최소한 "여러 후보 중 아무거나 골라잡는" 것보다는 낫다.
 function safeNameLookup(map, name){
   const qn = name.replace(/\s/g, '');
-  if(map[qn] !== undefined) return map[qn];
-  const partial = Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
+  // aptNameVariants()로 "...아파트" 접미사·"N단지"→"F{N}BL" 이형 표기도 먼저 정확매칭 시도(2026.08) —
+  // 안 그러면 "송도더샵퍼스트파크15단지"처럼 matchComplex()에서만 고쳐놓고 여기(가격·세대수 매칭)는
+  // 그대로 둬서, 단지 분석은 되는데 역세권 탭 가격 배지만 안 뜨는 반쪽짜리 수정이 될 뻔했음.
+  for(const v of aptNameVariants(qn)){ if(map[v] !== undefined) return map[v]; }
+  let partial = Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
+  if(partial.length > 1){
+    // matchComplex()와 같은 문제: 후보 중 하나가 다른 후보의 부분 문자열이면(예: "삼성" ⊂ "삼성래미안")
+    // 우연히 걸린 조각일 뿐이니 제외 — 안 그러면 "안양동삼성래미안"이 "삼성래미안"·"삼성" 2개로 걸려
+    // "후보 2개 이상"으로 판정돼 정작 매칭 가능한 가격을 못 찾고 null(가격 미표시)로 빠졌음(2026.08).
+    const maximal = partial.filter(k => !partial.some(other => other!==k && other.includes(k)));
+    if(maximal.length) partial = maximal;
+  }
   return partial.length === 1 ? map[partial[0]] : null;
 }
 function matchPricePerPy(priceMap, name){ return safeNameLookup(priceMap, name); }
@@ -2584,7 +2608,17 @@ async function searchSubway(){
       if(b.pricePerPy == null) return -1;
       return b.pricePerPy - a.pricePerPy; // 평단가 높은 순
     });
-    renderSubway({ regionName: sel.options[sel.selectedIndex].textContent, lineF, maxWalk, rows });
+    // 2026.08 버그 수정 — 이전엔 이 아래서 renderSubway()만 부르고 lastData/pushView()를 빼먹어서, 역세권
+    // 탭에서 단지명 클릭(quick()) → 단지 분석으로 이동 → 뒤로가기 하면 역세권 결과 화면이 히스토리에 아예
+    // 없어 그냥 건너뛰어져 버렸음(수민 리포트). 다른 탭들과 동일하게 lastData를 채우고 pushView()로 이
+    // 결과를 히스토리에 쌓는다 — mode:'subway'를 같이 저장해서 restoreView()가 되돌아올 때 renderSubway로
+    // 분기할 수 있게 함.
+    const subwayData = { mode:'subway', regionName: sel.options[sel.selectedIndex].textContent, lineF, maxWalk, rows };
+    renderSubway(subwayData);
+    window.scrollTo(0, 0);
+    lastData = subwayData;
+    pushView();
+    saveLastRegionPref(lawd);
   }catch(e){
     showError('지하철 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
   }finally{
