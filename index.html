@@ -2553,30 +2553,26 @@ async function searchSubway(){
       { key: 'b6', min: 96, max: 130 },
       { key: 'b7', min: 131, max: 200 },
     ];
-    let priceMap = {};
     const bandMaps = {};
     let allAptNames = [];
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
-      const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
       const trades = await ensureMonths(lawd, 36);
       allAptNames = [...new Set(trades.map(t=>t.apt))];
-      const pyRes = analyzePricePerPyeong(trades, months);
-      pyRes.pyPrice.forEach(x=>{
-        const k = x.apt.replace(/\s/g, '');
-        if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
-      });
       AREA_BANDS.forEach(b => { bandMaps[b.key] = peakByAreaLastYear(trades, b.min, b.max); });
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
     rows = rows.map(x => {
       const resolved = resolveAptName(allAptNames, x.name); // 밴드별로 따로 찾지 않고 이름을 먼저 한 번만 확정
       const rk = resolved ? resolved.replace(/\s/g,'') : null;
-      return {
-        ...x,
-        pricePerPy: rk!=null && priceMap[rk]!==undefined ? priceMap[rk] : null,
-        bandResults: rk==null ? [] : AREA_BANDS.map(b => ({ key: b.key, trade: bandMaps[b.key][rk] || null })).filter(r=>r.trade),
-      };
+      const bandResults = rk==null ? [] : AREA_BANDS.map(b => ({ key: b.key, trade: bandMaps[b.key][rk] || null })).filter(r=>r.trade);
+      // 정렬 기준(평단가)은 반드시 화면에 실제로 보여줄 후보(pickSubwayPriceCandidates)에서만 계산한다 —
+      // "전용면적 평단가" 탭처럼 단지 전체 유닛 중 평단가 1위 유닛(화면엔 안 보이는 소형 특수평형일 수 있음)
+      // 으로 정렬하면, 화면엔 전혀 다른(더 낮은 평단가의) 국민평형 가격만 보이면서 순위가 안 맞아 보이는
+      // 모순이 생김(2026.08, 수민 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
+      const candidates = pickSubwayPriceCandidates(bandResults);
+      const pricePerPy = candidates.length ? Math.max(...candidates.map(c => c.amt / (c.area / SQM_PER_PY))) : null;
+      return { ...x, pricePerPy, bandResults };
     });
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
@@ -2615,15 +2611,22 @@ function formatWalkDisplay(raw){
 // 다른 탭 표기 관행에 맞춰 화면엔 접미사를 떼고 보여준다(2026.08, 수민 요청 — matchComplex()의 접미사
 // 처리와는 별개로 "역세권 탭 표시 자체"를 정리).
 function stripAptSuffix(name){ return name.replace(/아파트$/, ''); }
+// 역세권 탭에서 화면에 실제로 보여줄 가격 배지 후보를 고른다 — 국민평형대(b3=55~65㎡, b5=80~95㎡) 우선,
+// 최대 2개까지만, 부족하면 나머지 구간(b1/b2/b4/b6/b7)으로 채움(수민 요청, 2026.08 — 압구정미성2차처럼
+// 30/47/55평 등 국민평형이 아닌 단지도 최소 하나는 뜨도록). 정렬 기준(평단가)도 반드시 이 함수로 뽑은
+// 후보에서만 계산해야 한다 — 안 그러면 "전용면적 평단가" 탭 방식(단지 전체 유닛 중 평단가 1위, 화면엔
+// 안 보이는 소형 특수평형일 수 있음)으로 정렬 순위를 매기면서 화면엔 전혀 다른(더 낮은 평단가의) 국민평형
+// 가격만 보여주는 모순이 생김(2026.08, 수민 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
+const SUBWAY_PRICE_BAND_PRIORITY = ['b3','b5'];
+function pickSubwayPriceCandidates(bandResults){
+  const byKey = Object.fromEntries((bandResults||[]).map(r=>[r.key, r.trade]));
+  const prioritized = SUBWAY_PRICE_BAND_PRIORITY.map(k=>byKey[k]).filter(Boolean);
+  const rest = (bandResults||[]).filter(r=>!SUBWAY_PRICE_BAND_PRIORITY.includes(r.key)).map(r=>r.trade);
+  return [...prioritized, ...rest].slice(0,2);
+}
 function renderSubway(d){
   const priceBadges = x => {
-    // 국민평형대(b3=55~65㎡, b5=80~95㎡) 우선 노출, 최대 2개까지만 — 부족하면 나머지 구간(b1/b2/b4/b6/b7)으로
-    // 채움(수민 요청, 2026.08 — 압구정미성2차처럼 30/47/55평 등 국민평형이 아닌 단지도 최소 하나는 뜨도록)
-    const PRIORITY = ['b3','b5'];
-    const byKey = Object.fromEntries((x.bandResults||[]).map(r=>[r.key, r.trade]));
-    const prioritized = PRIORITY.map(k=>byKey[k]).filter(Boolean);
-    const rest = (x.bandResults||[]).filter(r=>!PRIORITY.includes(r.key)).map(r=>r.trade);
-    const candidates = [...prioritized, ...rest].slice(0,2).sort((a,b)=>a.area-b.area);
+    const candidates = pickSubwayPriceCandidates(x.bandResults).sort((a,b)=>a.area-b.area);
     // py(평형)는 실거래 데이터를 서버에서 받아올 때 이미 areaToPy()로 계산돼 있는 값을 그대로 재사용
     // (2026.08 — 공급면적 실측 배치가 아직 안 돌아서 보간표 기반 추정값이지만, 새로 개편된 앵커 기준)
     const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평(전용${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
