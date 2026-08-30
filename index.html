@@ -455,8 +455,8 @@
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
     <div class="tab subscriber" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
     <div class="tab subscriber" id="tabBox" style="display:none" onclick="setMode('boxrange')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/><line x1="4" y1="12" x2="20" y2="12"/></svg>박스권</div>
-    <div class="tab subscriber" id="tabFS" style="display:none" onclick="setMode('firesale')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v13h18V7z"/><path d="M9 22V12h6v10"/></svg>급매</div>
-    <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>손바뀜</div>
+    <div class="tab subscriber" id="tabFS" style="display:none" onclick="setMode('firesale')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v13h18V7z"/><path d="M9 22V12h6v10"/></svg>급하락</div>
+    <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>회전율</div>
     <div class="tab subscriber" id="tabJU" style="display:none" onclick="setMode('jeonseupdown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>전세 등락</div>
     <div class="tab subscriber" id="tabBB" style="display:none" onclick="setMode('boxbreak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M15 9V4M15 4l-3 3M15 4l3 3"/></svg>박스권 이탈</div>
   </div>
@@ -1993,10 +1993,10 @@ function analyzeBoxRange(all, months, boxPct){
     rows: results.slice(0,30) };
 }
 
-// ═══ 급매 탭(2026.08 신규, 구독 전용) ═══
+// ═══ 급하락 탭(2026.08 신규, 구독 전용) ═══
 // "하락 거래" 탭은 1년 최고가 대비 하락폭을 보는데, 최고가는 오래돼서 지금 시세와 안 맞을 수 있음.
 // 이 탭은 박스권과 같은 방식으로 최근 6개월 평균("본질 시세")을 기준선으로 삼고, 그 대비 10~25% 싸게
-// 최근(30일 이내) 팔린 거래만 "급매"로 잡는다 — 신저가 탭의 로직(10~25% 하한·급전용 이상치 배제)을
+// 최근(30일 이내) 팔린 거래만 "급하락"으로 잡는다 — 신저가 탭의 로직(10~25% 하한·급전용 이상치 배제)을
 // 그대로 가져오되 비교 기준만 "1년 최고가"에서 "최근 6개월 평균"으로 바꾼 것.
 function analyzeFireSale(all, months){
   all = all.filter(t=>!t.direct && parseInt(t.floor,10)>=6);
@@ -2027,7 +2027,7 @@ function analyzeFireSale(all, months){
     firesale: results.slice(0,30) };
 }
 
-// ═══ 손바뀜(회전율) 탭(2026.08 신규, 구독 전용) ═══
+// ═══ 회전율(손바뀜) 탭(2026.08 신규, 구독 전용) ═══
 // 최근 1년 거래건수 ÷ 세대수 = 손바뀜 비율. 절대 거래량(거래량 랭킹)과 달리 단지 규모를 반영해서
 // "유독 자주 손바뀜하는 단지"(투자수요 몰리는 곳)를 소형·대형 단지 상관없이 공평하게 비교한다.
 // 세대수는 세션 종료 후 hhcnt 배치 조회로 붙이므로, 이 함수는 일단 거래건수까지만 집계하고
@@ -2080,7 +2080,10 @@ function analyzeBoxBreak(all, months, boxPct){
       priorCenter:R1(priorCenter), direction, changePct, n:prior.length,
     });
   }
-  results.sort((a,b)=> Math.abs(b.changePct) - Math.abs(a.changePct)); // 이탈폭 큰 순
+  results.sort((a,b)=>{
+    if(a.direction !== b.direction) return a.direction==='up' ? -1 : 1; // 상승 이탈 먼저, 그다음 하락 이탈(수민 요청, 2026.08)
+    return a.direction==='up' ? b.changePct - a.changePct : a.changePct - b.changePct; // 상승은 증가폭 큰 순, 하락은 하락폭 큰 순
+  });
   return { found:true, mode:'boxbreak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months), boxPct:Math.round(boxPct*100),
@@ -2880,7 +2883,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval'||mode==='jeonseupdown') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow'||mode==='turnover'||mode==='boxbreak' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : mN)))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급매는 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 이탈은 이전 6개월(박스 판정)+최근 6개월(이탈 확인)=12개월 고정(2026.08 신규 — longpeak처럼 캘린더 연도 정렬이 필요 없어 curMonthNum+12 대신 그냥 12로 고정)
+  const neededMN = (mode==='updown'||mode==='shortval'||mode==='jeonseupdown') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow'||mode==='turnover'||mode==='boxbreak' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : mN)))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 이탈은 이전 6개월(박스 판정)+최근 6개월(이탈 확인)=12개월 고정(2026.08 신규 — longpeak처럼 캘린더 연도 정렬이 필요 없어 curMonthNum+12 대신 그냥 12로 고정)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -2952,7 +2955,7 @@ async function search(){
           d.failedRegions = failed;
         }
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
-        // 신고가·신저가·전용면적 평단가·박스권·급매·박스권 이탈은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
+        // 신고가·신저가·전용면적 평단가·박스권·급하락·박스권 이탈은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         if(!items.length){
@@ -4109,18 +4112,18 @@ function renderFireSale(d){
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
-    : '<div class="rng" style="padding:6px 0">최근 한 달 이내 급매 거래를 기록한 단지가 없습니다</div>';
+    : '<div class="rng" style="padding:6px 0">최근 한 달 이내 급하락 거래를 기록한 단지가 없습니다</div>';
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('급매', true)}
+      ${hdTop('급하락', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 평균("본질 시세") 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>급매 단지</h3>
+      <h3>급하락 단지</h3>
       <div class="rng" style="margin-bottom:8px">※표본 3건 이상만 집계 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 최근 6개월 평균 대비 10~25% 낮은 최근(30일 이내) 거래만 집계(25% 이상은 특수관계·이례적 급매 가능성으로 제외)</div>
       ${rows(d.firesale, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
@@ -4148,7 +4151,7 @@ function renderBoxBreak(d){
 
     <div class="sec">
       <h3>박스권 이탈 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※표본 3건 이상만 집계 · 1~4층 제외(층수 할인 왜곡 방지) · 직거래·저가 이상치 제외 · 이전 6개월이 실제로 박스권(평균 ±${d.boxPct}% 이내)이었던 단지 중 최근 6개월에 그 박스를 벗어난 거래만 집계 · 이탈폭 큰 순</div>
+      <div class="rng" style="margin-bottom:8px">※표본 3건 이상만 집계 · 1~4층 제외(층수 할인 왜곡 방지) · 직거래·저가 이상치 제외 · 이전 6개월이 실제로 박스권(평균 ±${d.boxPct}% 이내)이었던 단지 중 최근 6개월에 그 박스를 벗어난 거래만 집계 · 상승 이탈(증가폭 큰 순) 먼저, 그다음 하락 이탈(하락폭 큰 순)</div>
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
         <span class="val ${x.direction==='up'?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">이전 박스 ${x.priorCenter.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">${x.direction==='up'?'▲':'▼'}${Math.abs(x.changePct)}%</b> · ${esc(x.date)}</small></span>`)}
@@ -4251,14 +4254,14 @@ function renderTurnover(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('손바뀜', true)}
+      ${hdTop('회전율', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · 거래건수÷세대수</div>
     </div>
 
     <div class="sec">
-      <h3>손바뀜(회전율) 상위</h3>
-      <div class="rng" style="margin-bottom:8px">※표본 3건 이상·100세대 이상만 집계 · 직거래 제외 · 최근 1년 거래건수를 세대수로 나눈 비율이 높을수록 자주 손바뀜하는 단지</div>
+      <h3>회전율 상위</h3>
+      <div class="rng" style="margin-bottom:8px">※표본 3건 이상·100세대 이상만 집계 · 직거래 제외 · 최근 1년 거래건수를 세대수로 나눈 비율이 높을수록 회전율이 높은(자주 손바뀜하는) 단지</div>
       ${rows(d.turnover, x=>`
         <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
         <span class="val">${x.turnoverPct}%<small>${x.n}건 · ${esc(x.date)}</small></span>`)}
