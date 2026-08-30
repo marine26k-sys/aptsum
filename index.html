@@ -465,7 +465,6 @@
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:9px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
     <div class="row2" id="subwayRow" style="display:none">
-      <select id="subwayLine" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()"><option value="">호선 전체</option></select>
       <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
         <option value="5">도보 5분 이내</option>
         <option value="10" selected>도보 10분 이내</option>
@@ -480,16 +479,6 @@
         <option value="36">최근 3년</option>
         <option value="48">최근 4년</option>
         <option value="60">최근 5년</option>
-      </select>
-      <select id="pyBand" style="flex:1;min-width:0;display:none">
-        <option value="" selected>전체 평형</option>
-        <option value="17-22">17~22평</option>
-        <option value="23-27">23~27평</option>
-        <option value="28-31">28~31평</option>
-        <option value="32-36">32~36평</option>
-        <option value="37-41">37~41평</option>
-        <option value="42-46">42~46평</option>
-        <option value="47-51">47~51평</option>
       </select>
       <div id="pyBandMultiWrap" style="flex:1;min-width:0;position:relative;display:none">
         <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%">
@@ -580,8 +569,7 @@ function pushView(){
     q: document.getElementById('q').value,
     mN: document.getElementById('monthsN').value,
     fM: document.getElementById('floorMin').value,
-    py: document.getElementById('pyBand').value,
-    pym: pyBandMultiSel.slice(), // 신고가 탭 전용 평형 다중 선택 상태
+    pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
@@ -596,10 +584,9 @@ function buildShareURL(inp){
   } else {
     p.set('r', inp.lawd);
     if(inp.mode==='complex') p.set('q', inp.q);
-    if((inp.mode==='region'||inp.mode==='volume'||inp.mode==='updown'||inp.mode==='shortval'||inp.mode==='peak'||inp.mode==='longpeak'||inp.mode==='longpeakdong'||inp.mode==='newhigh'||inp.mode==='newlow'||inp.mode==='gap') && inp.py) p.set('py', inp.py);
     // 복수 지역(칩) 선택 상태 — sel.value만으론 칩 선택이 안 잡히므로 별도 파라미터로 인코딩(2026.07)
     if(inp.regionSel && inp.regionSel.length) p.set('rs', inp.regionSel.map(x=>x.lawd+':'+x.name).join('|'));
-    // 신고가 탭 전용 평형 다중 선택
+    // 평형 다중 선택(2026.08부터 평형 선택 있는 탭 전부 공통)
     if(inp.pym && inp.pym.length) p.set('pym', inp.pym.join(','));
   }
   return location.pathname + '?' + p.toString();
@@ -625,8 +612,8 @@ function initFromURL(){
       saveRegionSel(); renderRegionChips();
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
-    if((m==='newhigh'||m==='newlow') && p.get('pym')){ pyBandMultiSel = p.get('pym').split(',').filter(Boolean); renderPyBandMultiBtn(); }
-    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='gap'){ if(p.get('py')) document.getElementById('pyBand').value = p.get('py'); search(); }
+    if(p.get('pym')){ pyBandMultiSel = p.get('pym').split(',').filter(Boolean); renderPyBandMultiBtn(); } // 2026.08 — 평형 다중 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통 복원
+    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='gap'){ search(); }
     else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
@@ -873,11 +860,11 @@ function restoreView(vi){
   document.getElementById('q').value = inp.q;
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
-  document.getElementById('pyBand').value = inp.py;
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
   regionSel = (inp.regionSel || []).slice();
   saveRegionSel(); renderRegionChips();
-  // 신고가 탭 전용 평형 다중 선택 상태 복원(setMode()가 newhigh에 새로 진입할 때 초기화하므로 그 다음에)
+  // 평형 다중 선택 상태 복원(setMode()가 새 탭 진입 시 초기화하므로 그 다음에) — 2026.08부터 평형 선택
+  // 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
   pyBandMultiSel = (inp.pym || []).slice();
   renderPyBandMultiBtn();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
@@ -1098,15 +1085,22 @@ sel.addEventListener('change', ()=>{
   }
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
 });
-document.getElementById('pyBand').addEventListener('change', e=>{ if(mode==='region') savePyBandPref(e.target.value); }); // 거래량·등락 랭킹에서의 선택은 기억하지 않음(그 탭 안에서만 적용, 다음 방문 시 항상 전체 평형)
 
-// 평형 필터(pyBand) 마지막 선택값 기억 — 지역/거래량/등락 랭킹 세 탭이 공유
-function getPyBandPref(){ try{ return localStorage.getItem('apc:pyBand'); }catch(e){ return null; } }
-function savePyBandPref(v){ try{ localStorage.setItem('apc:pyBand', v); }catch(e){} }
+// 평형 다중 선택 마지막 값 기억 — 지역 랭킹만 기억(다른 탭들의 선택은 그 탭 안에서만 적용, 매번 "전체 평형"로
+// 시작). 2026.08 이전엔 단일 select라 문자열 하나("32-36")로 저장했는데, 이제 다중 선택이라 배열로 저장
+// — 예전 버전이 남긴 순수 문자열 값도 JSON.parse 실패 시 그 문자열 하나짜리 배열로 취급해 계속 읽는다.
+function getPyBandMultiPref(){
+  let raw; try{ raw = localStorage.getItem('apc:pyBand'); }catch(e){ return null; }
+  if(raw==null) return null; // 저장된 적 없음 → 호출부에서 디폴트(32~36평) 적용
+  try{ const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : [String(parsed)]; }
+  catch(e){ return raw ? [raw] : []; } // 예전 단일-select 시절 순수 문자열 포맷 호환
+}
+function savePyBandMultiPref(arr){ try{ localStorage.setItem('apc:pyBand', JSON.stringify(arr)); }catch(e){} }
 
-// 신고가 탭 전용 평형 다중 선택 — 다른 랭킹 탭(단일 select, 위)과 달리 여러 구간을 동시에 볼 수 있어야 해서
-// 별도 상태로 관리한다(예: "23~27평"과 "37~41평"을 동시에, 그 사이 "28~36평"은 빼고 보고 싶은 경우 등).
-// 다른 랭킹 탭들처럼 이 선택도 탭을 나갔다 오면 기억하지 않음(항상 "전체 평형"로 시작).
+// 평형 다중 선택 — 여러 구간을 동시에 볼 수 있다(예: "23~27평"과 "37~41평"을 동시에, 그 사이 "28~36평"은
+// 빼고 보고 싶은 경우 등). 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/
+// pyprice) 공통 — 예전엔 region/volume/updown/gap은 구간 하나만 고르는 단일 select였음.
+// 지역 랭킹만 마지막 선택을 기억하고, 나머지 탭은 탭을 나갔다 오면 기억하지 않음(항상 "전체 평형"로 시작).
 const PY_BANDS = [
   {v:'17-22', l:'17~22평'}, {v:'23-27', l:'23~27평'}, {v:'28-31', l:'28~31평'},
   {v:'32-36', l:'32~36평'}, {v:'37-41', l:'37~41평'}, {v:'42-46', l:'42~46평'}, {v:'47-51', l:'47~51평'},
@@ -1137,15 +1131,16 @@ function togglePyBandPanel(){
 function togglePyBandMulti(v){
   const i = pyBandMultiSel.indexOf(v);
   if(i>=0) pyBandMultiSel.splice(i,1); else pyBandMultiSel.push(v);
+  if(mode==='region') savePyBandMultiPref(pyBandMultiSel); // 지역 랭킹에서의 선택만 기억(다른 탭은 그 탭 안에서만 적용)
   buildPyBandPanel(); renderPyBandMultiBtn();
 }
-function clearPyBandMulti(){ pyBandMultiSel = []; buildPyBandPanel(); renderPyBandMultiBtn(); }
+function clearPyBandMulti(){ pyBandMultiSel = []; if(mode==='region') savePyBandMultiPref(pyBandMultiSel); buildPyBandPanel(); renderPyBandMultiBtn(); }
 document.addEventListener('click', e=>{
   const wrap = document.getElementById('pyBandMultiWrap');
   const panel = document.getElementById('pyBandMultiPanel');
   if(panel && panel.style.display!=='none' && wrap && !wrap.contains(e.target)) panel.style.display = 'none';
 });
-// 선택된 평형 구간들 중 하나라도 걸치면 통과시키는 필터 함수 — 신고가 탭 전용(search()에서 사용)
+// 선택된 평형 구간들 중 하나라도 걸치면 통과시키는 필터 함수 — 평형 선택 있는 탭 전부에서 공용으로 사용(search()에서 사용)
 function pyBandMultiFilter(items){
   if(!pyBandMultiSel.length) return items;
   const ranges = pyBandMultiSel.map(v=>v.split('-').map(Number));
@@ -1207,10 +1202,12 @@ function setMode(m){
     }
   }
   renderRegionChips();
-  document.getElementById('pyBand').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap') ? '' : 'none';
-  document.getElementById('pyBandMultiWrap').style.display = (m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
+  // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
+  // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
+  document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
-  if(m!=='newhigh' && m!=='newlow' && m!=='pyprice'){ pyBandMultiSel = []; } // 다른 탭으로 나가면 초기화(신고가·신저가·평단가 재진입 시 항상 "전체 평형"로 시작, 다른 랭킹 탭과 동일한 컨벤션)
+  // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
+  pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway') ? 'none' : '';
@@ -1219,7 +1216,6 @@ function setMode(m){
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
   document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
   document.getElementById('floorMin').value = '0';
-  document.getElementById('pyBand').value = m==='region' ? (getPyBandPref() ?? '32-36') : '';
   document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='updown'||m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
@@ -1729,8 +1725,8 @@ function aliasesFor(qn){
   return [...new Set([canon, qn, ...arr.map(a=>a.replace(/\s/g,''))])];
 }
 // 검색어(K-apt류 표기)에서 있을 수 있는 이형 표기 후보를 만든다 — "...아파트" 접미사 제거, "N단지"→"F{N}BL"
-// 변환(송도·청라 등 대형 택지지구, 2026.08). matchComplex()(단지 분석 매칭)와 safeNameLookup()(역세권
-// 탭 가격·세대수 매칭) 양쪽이 똑같이 이 표기 차이 문제를 겪어서 공용으로 뺐다 — 하나만 고치고 다른 쪽을
+// 변환(송도·청라 등 대형 택지지구, 2026.08). matchComplex()(단지 분석 매칭)와 resolveAptName()(역세권
+// 탭 가격 매칭) 양쪽이 똑같이 이 표기 차이 문제를 겪어서 공용으로 뺐다 — 하나만 고치고 다른 쪽을
 // 빠뜨리는 일이 없도록.
 function aptNameVariants(qn){
   const qnNoSuffix = qn.replace(/아파트$/, '');
@@ -2087,7 +2083,7 @@ function analyzeGapRanking(saleAll, rentAll, months){
   return { found:true, mode:'gap', total:saleAll.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    rows: rows.slice(0,30) };
+    rows: rows.slice(0,100) };
 }
 
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
@@ -2129,7 +2125,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence };
+    divergence: divergence.slice(0,30) };
 }
 
 // ═══ 저평가 (2026.07 잠금 해제 — 공개 탭 / v130에서 "분기 저평가"→"반기 저평가"로 개명) ═══
@@ -2192,7 +2188,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence };
+    divergence: divergence.slice(0,30) };
 }
 
 // ═══ 연간 저평가 — "반기 저평가"(peak, 2026.07 이전 명칭 "분기 저평가")와 완전히 동일한 로직, 6개월 구간(6vs6) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
@@ -2262,7 +2258,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
-    divergence };
+    divergence: divergence.slice(0,30) };
 }
 
 function analyzeCompare(itemsByLawd, targets, months){
@@ -2465,7 +2461,7 @@ function quick(n, guName){
 
 // ── 지하철 검색(비공개 탭) ──
 // data/hhcnt/<lawd>.json은 매매 실거래 API와 무관한 별도 정적 배치(collect-hhcnt.mjs)라
-// 이 탭에서만 쓰는 전용 캐시(lawd → items[])를 따로 둔다. 필터(호선·도보시간)를 바꿀 때마다
+// 이 탭에서만 쓰는 전용 캐시(lawd → items[])를 따로 둔다. 필터(도보시간)를 바꿀 때마다
 // 다시 fetch하지 않도록 세션 내 메모리에만 유지(새로고침하면 비워짐 — 세대수 데이터 자체가
 // 자주 안 바뀌는 값이라 무거운 영속 캐시까지는 불필요).
 const subwayDataCache = {};
@@ -2499,59 +2495,45 @@ function parseSubwayWalk(raw){
   const open = /이상|초과/.test(raw);
   return open ? { min: nums[0], max: Infinity } : { min: 0, max: nums[0] };
 }
-// 지역마다 실제로 등장하는 호선이 달라(K-apt 표기도 지역마다 제각각) 하드코딩하지 않고
-// 방금 불러온 지역 데이터에서 실제 등장하는 호선만 뽑아 드롭다운을 채운다.
-function populateSubwayLineSelect(items){
-  const set = new Set();
-  items.forEach(it => (it.subwayLines || []).forEach(l => set.add(l)));
-  const lines = [...set].sort((a,b) => {
-    const an = parseInt(a,10), bn = parseInt(b,10);
-    if(!isNaN(an) && !isNaN(bn)) return an - bn;
-    if(!isNaN(an)) return -1;
-    if(!isNaN(bn)) return 1;
-    return a.localeCompare(b, 'ko');
-  });
-  const sel2 = document.getElementById('subwayLine');
-  const cur = sel2.value;
-  sel2.innerHTML = `<option value="">호선 전체</option>` + lines.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
-  if(lines.includes(cur)) sel2.value = cur;
-}
-// 실거래 단지명(analyzePricePerPyeong 결과의 apt)과 K-apt 단지명(subwayLines 등)은 표기가 달라서
-// (예: 실거래 "한신" vs K-apt "도봉한신") 표기가 어긋나는 경우가 있어 부분일치를 허용했다가, 완전히 다른
-// 단지의 가격을 잘못 끌어온 사고가 있었음(2026.08, "귀인마을현대홀타운"은 84㎡ 타입 자체가 없는데 이름이
-// 비슷한 다른 단지의 84㎡ 거래가를 잘못 표시) — 일단 정확일치만 허용하도록 축소했었으나, 여전히 표기 차이로
-// 놓치는 케이스가 있어 수민 확인 후 재도입(2026.08): 부분일치는 후보가 "정확히 1개"일 때만 허용 — 2개 이상
-// 걸리면 어느 쪽인지 애매하므로 아예 매칭을 포기(빈 값)한다. 후보 1개짜리 부분일치도 100% 안전하진 않지만
-// (전혀 다른 단지가 우연히 유일한 부분일치일 수 있음), 최소한 "여러 후보 중 아무거나 골라잡는" 것보다는 낫다.
-function safeNameLookup(map, name){
-  const qn = name.replace(/\s/g, '');
-  // aptNameVariants()로 "...아파트" 접미사·"N단지"→"F{N}BL" 이형 표기도 먼저 정확매칭 시도(2026.08) —
-  // 안 그러면 "송도더샵퍼스트파크15단지"처럼 matchComplex()에서만 고쳐놓고 여기(가격·세대수 매칭)는
-  // 그대로 둬서, 단지 분석은 되는데 역세권 탭 가격 배지만 안 뜨는 반쪽짜리 수정이 될 뻔했음.
-  for(const v of aptNameVariants(qn)){ if(map[v] !== undefined) return map[v]; }
-  let partial = Object.keys(map).filter(k => k.includes(qn) || qn.includes(k));
-  if(partial.length > 1){
-    // matchComplex()와 같은 문제: 후보 중 하나가 다른 후보의 부분 문자열이면(예: "삼성" ⊂ "삼성래미안")
-    // 우연히 걸린 조각일 뿐이니 제외 — 안 그러면 "안양동삼성래미안"이 "삼성래미안"·"삼성" 2개로 걸려
-    // "후보 2개 이상"으로 판정돼 정작 매칭 가능한 가격을 못 찾고 null(가격 미표시)로 빠졌음(2026.08).
-    const maximal = partial.filter(k => !partial.some(other => other!==k && other.includes(k)));
-    if(maximal.length) partial = maximal;
-  }
-  return partial.length === 1 ? map[partial[0]] : null;
-}
-function matchPricePerPy(priceMap, name){ return safeNameLookup(priceMap, name); }
 // 단지별로 지정된 전용면적 구간의 최근 거래 1건씩 뽑는다(수민이 지정한 4개 구간: 45~54/55~60/80~85/86~105㎡).
 // 매매만 대상(분양권/입주권은 준공 전 시세라 제외).
-function latestByArea(trades, minA, maxA){
+// 밴드별(전용면적 구간) 표시가는 원래 "가장 최근 거래 1건"이었는데, 특이값(급매·저층 등) 하나로 단지가
+// 실제보다 저평가돼 보일 수 있어 "최근 1년 내 최고가"로 변경(2026.08, 수민 요청). 최근 1년 안에 해당
+// 구간 거래가 아예 없으면 그 밴드는 표시 안 함(오래된 거래를 최근인 것처럼 보여주는 게 더 나쁘다고 판단).
+function peakByAreaLastYear(trades, minA, maxA){
+  const recentSet = new Set(lastMonthsYm(12));
   const map = {};
   trades.forEach(t=>{
     if(t.kind || !t.area) return;
     if(t.area < minA || t.area > maxA) return;
+    if(!recentSet.has(t.ym)) return;
     const k = t.apt.replace(/\s/g, '');
     const cur = map[k];
-    if(!cur || t.ym > cur.ym || (t.ym === cur.ym && t.d > cur.d)) map[k] = t;
+    if(!cur || t.amt > cur.amt) map[k] = t;
   });
   return map;
+}
+// bandMaps·priceMap처럼 서로 다른 부분집합(밴드별로 그 밴드에 거래가 있는 단지만 키로 존재)에 대해
+// 매번 독립적으로 substring 매칭을 하면, 정작 그 밴드에 거래가 없는 진짜 단지 대신 우연히 그 밴드에는
+// 데이터가 있는 훨씬 짧고 무관한 이름(예: "삼성")이 "유일 후보"로 오매칭될 수 있다(2026.08 실사고 —
+// "안양동삼성래미안"엔 84㎡ 타입 자체가 없는데, 그 지역 84㎡ 밴드맵엔 완전히 다른 "삼성"이라는 단지가
+// 있었고 그게 유일하게 substring이 걸려서 엉뚱하게 4.9억이 33평(전용84) 배지로 붙어버림). 그래서 이름
+// 해석은 그 지역 "전체" 단지명 목록(allAptNames, 가장 정보가 많아 오매칭 여지가 적음) 기준으로 딱 한 번만
+// 하고, 일단 진짜 이름이 정해지면 그 이후엔 각 밴드맵·평단가맵에 정확일치로만 조회한다. 해석 자체가
+// 모호하면(동명이인 단지가 실제로 있으면) null — 엉뚱한 단지 가격을 보여주는 것보다 배지를 안 보여주는
+// 게 안전하다는 판단.
+function resolveAptName(allNames, name){
+  const qn = name.replace(/\s/g,'');
+  const variants = aptNameVariants(qn);
+  const exact = allNames.find(n => variants.includes(n.replace(/\s/g,'')));
+  if(exact) return exact;
+  const cand = [...new Set(allNames.filter(n => { const a=n.replace(/\s/g,''); return variants.some(v=>a.includes(v)||v.includes(a)); }))];
+  if(cand.length>1){
+    const norm = s=>s.replace(/\s/g,'');
+    const maximal = cand.filter(n => !cand.some(other => other!==n && norm(other).includes(norm(n))));
+    if(maximal.length) return maximal.length===1 ? maximal[0] : null;
+  }
+  return cand.length===1 ? cand[0] : null;
 }
 async function searchSubway(){
   const lawd = sel.value;
@@ -2563,12 +2545,10 @@ async function searchSubway(){
   document.getElementById('btn').disabled = true;
   try{
     const items = await loadSubwayData(lawd);
-    populateSubwayLineSelect(items);
-    const lineF = document.getElementById('subwayLine').value;
     const maxWalk = +document.getElementById('subwayWalkMax').value;
     let rows = items
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
-      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk && (!lineF || it.subwayLines.includes(lineF)));
+      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk);
 
     // 평단가(전용면적 평단가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
@@ -2585,23 +2565,29 @@ async function searchSubway(){
     ];
     let priceMap = {};
     const bandMaps = {};
+    let allAptNames = [];
     try{
       document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
       const months = lastMonthsYm(36); // "전용면적 평단가" 탭과 동일하게 3년 고정
       const trades = await ensureMonths(lawd, 36);
+      allAptNames = [...new Set(trades.map(t=>t.apt))];
       const pyRes = analyzePricePerPyeong(trades, months);
       pyRes.pyPrice.forEach(x=>{
         const k = x.apt.replace(/\s/g, '');
         if(priceMap[k] === undefined || x.pricePerPy > priceMap[k]) priceMap[k] = x.pricePerPy;
       });
-      AREA_BANDS.forEach(b => { bandMaps[b.key] = latestByArea(trades, b.min, b.max); });
+      AREA_BANDS.forEach(b => { bandMaps[b.key] = peakByAreaLastYear(trades, b.min, b.max); });
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
-    rows = rows.map(x => ({
-      ...x,
-      pricePerPy: matchPricePerPy(priceMap, x.name),
-      bandResults: AREA_BANDS.map(b => ({ key: b.key, trade: safeNameLookup(bandMaps[b.key], x.name) })).filter(r=>r.trade),
-    }));
+    rows = rows.map(x => {
+      const resolved = resolveAptName(allAptNames, x.name); // 밴드별로 따로 찾지 않고 이름을 먼저 한 번만 확정
+      const rk = resolved ? resolved.replace(/\s/g,'') : null;
+      return {
+        ...x,
+        pricePerPy: rk!=null && priceMap[rk]!==undefined ? priceMap[rk] : null,
+        bandResults: rk==null ? [] : AREA_BANDS.map(b => ({ key: b.key, trade: bandMaps[b.key][rk] || null })).filter(r=>r.trade),
+      };
+    });
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
       if(a.pricePerPy == null) return 1; // 가격 정보 없는 단지는 뒤로
@@ -2613,7 +2599,7 @@ async function searchSubway(){
     // 없어 그냥 건너뛰어져 버렸음(수민 리포트). 다른 탭들과 동일하게 lastData를 채우고 pushView()로 이
     // 결과를 히스토리에 쌓는다 — mode:'subway'를 같이 저장해서 restoreView()가 되돌아올 때 renderSubway로
     // 분기할 수 있게 함.
-    const subwayData = { mode:'subway', regionName: sel.options[sel.selectedIndex].textContent, lineF, maxWalk, rows };
+    const subwayData = { mode:'subway', regionName: sel.options[sel.selectedIndex].textContent, maxWalk, rows };
     renderSubway(subwayData);
     window.scrollTo(0, 0);
     lastData = subwayData;
@@ -2669,7 +2655,7 @@ function renderSubway(d){
     <div class="card-hd">
       ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">${d.lineF? `<b style="color:#7FD4D9">${esc(d.lineF)}</b> · `:''}도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순</div>
+      <div class="meta">도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순</div>
     </div>
     <div class="sec">
       ${rows}
@@ -2828,15 +2814,13 @@ async function search(){
           d.failedRegions = failed;
         }
       } else {
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         if(!items.length){
           d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간이나 평형을 조정해 보세요.'};
         } else {
           d = analyzeRegion(items, months);
-          d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+          d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
           d.buildYear = buildYearLabel();
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
@@ -2899,13 +2883,11 @@ async function search(){
       }
       let items = windowF(floorF(rawMerged));
       if(mode==='region' || mode==='volume'){
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         d = analyzeRegion(items, months);
         if(mode==='volume') d.mode = 'volume';
-        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·층수·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'){
@@ -2920,38 +2902,26 @@ async function search(){
         d = analyzeShortUndervalue(items, months, items);
         if(!items.length){ d = {found:false, note:'선택한 연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='updown'){
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         d = analyzeUpDown(items, months);
-        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·층수·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='peak'){
-        const itemsUnfiltered = items; // 평형 필터 적용 전 — "반기 저평가"는 이 데이터로 고정 계산
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        const itemsUnfiltered = items; // 평형 필터 UI가 없는 탭(20~39평 고정, 20평대/30평대 평대별) — "반기 저평가"는 이 데이터로 고정 계산
         d = analyzePeakUndervalue(items, months, itemsUnfiltered);
-        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
-        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+        if(!items.length){ d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간을 조정해 보세요.'}; }
       } else if(mode==='longpeak'||mode==='longpeakdong'){
-        const itemsUnfiltered = items; // 평형 필터 적용 전 — "연간 저평가"는 이 데이터로 고정 계산
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax);
+        const itemsUnfiltered = items; // 평형 필터 UI가 없는 탭(20~39평 고정, 20평대/30평대 평대별) — "연간 저평가"는 이 데이터로 고정 계산
         d = analyzeLongPeakUndervalue(items, months, itemsUnfiltered, mode==='longpeakdong');
-        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
-        if(!items.length){ d = {found:false, note:'선택한 평형·층수 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
+        if(!items.length){ d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간을 조정해 보세요.'}; }
       } else if(mode==='gap'){
         // 공개 탭(2026.08) — 매매·전세 실거래를 짝지어 전세가율(갭투자) 랭킹.
-        const pb = document.getElementById('pyBand').value.split('-');
-        const pyMin=+pb[0]||0, pyMax=+pb[1]||0;
-        if(pyMin) items = items.filter(t=>t.py>=pyMin && t.py<=pyMax); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
+        items = pyBandMultiFilter(items); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
         const rentItems = windowF(rawJ);
         d = analyzeGapRanking(items, rentItems, months);
-        d.pyBand = pyMin? `${pyMin}~${pyMax}평` : null;
+        d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
         d = analyzeComplex(items, name, months, rawMerged);
@@ -3076,8 +3046,8 @@ function subwayMetaHTML(hh){
   if(!hh || !hh.subwayWalk) return ''; // 역명/호선명 표시는 2026.08부터 전면 중단(K-apt 원본 데이터에 반복되는
   // 오기입 문제 — 경춘선(평촌목련2단지), 의정부경전철(한가람한양6차), 양평역(동탄 소재 단지) 등, 계속
   // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "지하철 도보 N분 이내"처럼
-  // 구체적 역명/호선 없이 도보시간만 안내. subwayLines는 역세권 탭 필터링(호선 선택)에는 계속 쓰이지만,
-  // 화면 표시에서는 이제 안 씀.
+  // 구체적 역명/호선 없이 도보시간만 안내. subwayLines는 역세권 탭에서 "지하철 근처인지" 여부 판정에는
+  // 계속 쓰이지만(호선 선택 필터 자체는 2026.08 삭제), 화면 표시에서는 이제 안 씀.
   return ` · 지하철 도보${esc(formatWalkDisplay(hh.subwayWalk))}`;
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
