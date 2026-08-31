@@ -399,7 +399,7 @@
     document.addEventListener('DOMContentLoaded', function(){
       const SUBSCRIBER_KEY = 'apc:subscriberSub'; // 세 탭 공용 — 비밀번호 확인 후에만 세팅됨
       const SUBSCRIBER_CODE = 'aptsum26'; // 구독자에게만 공유하는 코드(인스타 구독 전용 피드에 안내)
-      const subTabs = ['tabNL', 'tabLPD', 'tabSub', 'tabBox', 'tabFS', 'tabTO', 'tabJU', 'tabBB'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabNL', 'tabLPD', 'tabSub', 'tabBox', 'tabFS', 'tabTO', 'tabJU', 'tabBBU'].map(id => document.getElementById(id)).filter(Boolean);
       const subDivider = document.getElementById('tabSubDivider');
       if (!subTabs.length) return;
       const reveal = () => { subTabs.forEach(t => { t.style.display = ''; }); if (subDivider) subDivider.style.display = ''; };
@@ -455,11 +455,13 @@
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 동)</div>
     <div class="tab subscriber" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
-    <div class="tab subscriber" id="tabBox" style="display:none" onclick="setMode('boxrange')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/><line x1="4" y1="12" x2="20" y2="12"/></svg>박스권</div>
+    <div class="tab subscriber" id="tabBox" style="display:none" onclick="setMode('boxrange')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/><line x1="4" y1="12" x2="20" y2="12"/></svg>박스권 시세</div>
+    <div class="tab subscriber" id="tabBBU" style="display:none" onclick="setMode('boxbreak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M15 9V4M15 4l-3 3M15 4l3 3"/></svg>박스권 시세 변동</div>
     <div class="tab subscriber" id="tabFS" style="display:none" onclick="setMode('firesale')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v13h18V7z"/><path d="M9 22V12h6v10"/></svg>급하락</div>
     <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>회전율</div>
     <div class="tab subscriber" id="tabJU" style="display:none" onclick="setMode('jeonseupdown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>전세 등락</div>
-    <div class="tab subscriber" id="tabBB" style="display:none" onclick="setMode('boxbreak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M15 9V4M15 4l-3 3M15 4l3 3"/></svg>박스권 이탈</div>
+    <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
+         평소 평균보다 크게 낮은지 확인) 수민 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
 
   <div class="search-box">
@@ -1164,7 +1166,7 @@ function setMode(m){
   document.getElementById('tabFS').classList.toggle('on', m==='firesale');
   document.getElementById('tabTO').classList.toggle('on', m==='turnover');
   document.getElementById('tabJU').classList.toggle('on', m==='jeonseupdown');
-  document.getElementById('tabBB').classList.toggle('on', m==='boxbreak');
+  document.getElementById('tabBBU').classList.toggle('on', m==='boxbreak');
   document.getElementById('tabPP').classList.toggle('on', m==='pyprice');
   document.getElementById('tabV').classList.toggle('on', m==='volume');
   document.getElementById('tabU').classList.toggle('on', m==='updown');
@@ -2050,39 +2052,43 @@ function analyzeTurnover(all, months){
     turnover: results }; // hhcnt·turnoverPct는 search()에서 후처리로 채움
 }
 
-// ═══ 박스권 이탈 탭(2026.08 신규, 구독 전용) ═══
-// "박스권" 탭이 지금 안정적인 곳을 찾는다면, 이 탭은 반대로 "얼마 전까지 박스권이었다가 최근에 그 박스를
-// 벗어난" 곳을 찾는다 — 시세가 막 움직이기 시작한 초기 신호로 참고. 12개월을 반으로 나눠(이전 6개월로
-// 박스권 여부를 판정하고, 최근 6개월 안의 거래가 그 박스를 위/아래로 벗어났는지 확인.
+// ═══ 박스권 시세 변동 탭(2026.08 신규, 구독 전용) ═══
+// "박스권" 탭이 지금 안정적인 곳을 찾는다면, 이 탭은 반대로 "박스권이었는데 막 그 박스를 뚫고 나간 거래가
+// 있는" 곳을 찾는다 — 시세가 막 움직이기 시작한 초기 신호로 참고. 박스권 탭과 동일하게 최근 6개월 전체를
+// 보되(표본을 두껍게 써야 박스 판정이 신뢰할 만함, 2026.08 — 최초엔 이전 3개월/최근 3개월로 반씩
+// 쪼갰었는데 그러면 박스 판정 표본이 너무 얇아져서 수민 요청으로 재설계), 그 안에서 가장 최근 거래 1건만
+// 따로 떼어 "나머지 거래들이 만든 박스"를 벗어났는지 확인한다.
+// 상승·하락 두 탭으로 분리했다가(2026.08) 하락 쪽이 "급하락" 탭과 개념이 겹쳐 상승만 남긴 적이 있었는데,
+// 다시 상승+하락을 한 탭("박스권 시세 변동")에 같이 보여주는 걸로 재변경(수민 요청) — 상승 먼저, 그다음
+// 하락 순으로 정렬.
 function analyzeBoxBreak(all, months, boxPct){
   const eligible = all.filter(t=>!t.direct && parseInt(t.floor,10)>=5);
   const byKey = {};
   for(const t of eligible){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byKey[k]=byKey[k]||[]).push(t); }
-  const recentSet = new Set(months.slice(0,6)), priorSet = new Set(months.slice(6,12));
   const results = [];
   for(const [k, arrRaw] of Object.entries(byKey)){
-    const arr = markOutliers(arrRaw, months);
-    const prior = arr.filter(t=>priorSet.has(t.ym));
-    const recent = arr.filter(t=>recentSet.has(t.ym));
-    if(prior.length < 3 || !recent.length) continue;
-    const priorCenter = avgA(prior);
-    const priorAmts = prior.map(t=>t.amt);
-    const priorMin = Math.min(...priorAmts), priorMax = Math.max(...priorAmts);
-    if(priorMax > priorCenter*(1+boxPct) || priorMin < priorCenter*(1-boxPct)) continue; // 이전 6개월이 애초에 박스권이 아니었으면 대상 아님
-    const breakout = recent.filter(t=> t.amt > priorCenter*(1+boxPct) || t.amt < priorCenter*(1-boxPct));
-    if(!breakout.length) continue; // 최근 6개월도 그 박스 안에 그대로 있으면(=박스권 탭 대상) 이탈 아님
-    const latest = breakout.slice().sort((a,b)=> dkey(b).localeCompare(dkey(a)))[0];
-    const direction = latest.amt > priorCenter ? 'up' : 'down';
-    const changePct = Math.round((latest.amt-priorCenter)/priorCenter*100);
+    const arr = markOutliers(arrRaw, months); // 최근 6개월 전체
+    if(arr.length < 4) continue; // 박스 판정용 3건 + 이탈 확인용 최신 1건
+    const sorted = arr.slice().sort((a,b)=> dkey(b).localeCompare(dkey(a)));
+    const latest = sorted[0];
+    const rest = sorted.slice(1); // 최신 거래를 뺀 나머지로 박스(=평소 시세) 판정
+    if(rest.length < 3) continue;
+    const center = avgA(rest);
+    const restAmts = rest.map(t=>t.amt);
+    const restMin = Math.min(...restAmts), restMax = Math.max(...restAmts);
+    if(restMax > center*(1+boxPct) || restMin < center*(1-boxPct)) continue; // 나머지 거래들 자체가 박스권이 아니었으면 대상 아님
+    if(!(latest.amt > center*(1+boxPct) || latest.amt < center*(1-boxPct))) continue; // 최신 거래가 그 박스 안에 그대로 있으면(=박스권 탭 대상) 이탈 아님
+    const direction = latest.amt > center ? 'up' : 'down';
+    const changePct = Math.round((latest.amt-center)/center*100);
     const [apt, umd, py, gu] = k.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:latest.lawd||null, py:`${py}평`, area:latest.area, amt:latest.amt,
       date:`${ymLabel(latest.ym)}.${latest.d}`, floor:latest.floor, build:latest.build,
-      priorCenter:R1(priorCenter), direction, changePct, n:prior.length,
+      priorCenter:R1(center), direction, changePct, n:rest.length,
     });
   }
   results.sort((a,b)=>{
-    if(a.direction !== b.direction) return a.direction==='up' ? -1 : 1; // 상승 이탈 먼저, 그다음 하락 이탈(수민 요청, 2026.08)
+    if(a.direction !== b.direction) return a.direction==='up' ? -1 : 1; // 상승 먼저, 그다음 하락(수민 요청, 2026.08)
     return a.direction==='up' ? b.changePct - a.changePct : a.changePct - b.changePct; // 상승은 증가폭 큰 순, 하락은 하락폭 큰 순
   });
   return { found:true, mode:'boxbreak', total:all.length,
@@ -2884,7 +2890,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = (mode==='updown'||mode==='shortval'||mode==='jeonseupdown') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow'||mode==='turnover'||mode==='boxbreak' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : mN)))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 이탈은 이전 6개월(박스 판정)+최근 6개월(이탈 확인)=12개월 고정(2026.08 신규 — longpeak처럼 캘린더 연도 정렬이 필요 없어 curMonthNum+12 대신 그냥 12로 고정)
+  const neededMN = (mode==='updown'||mode==='shortval'||mode==='jeonseupdown') ? 4 : (mode==='peak' ? 12 : ((mode==='longpeak'||mode==='longpeakdong') ? curMonthNum+12 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : mN))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 이탈은 이전 3개월(박스 판정)+최근 3개월(이탈 확인)=6개월 고정(2026.08, 최초 6+6개월에서 수민 요청으로 3+3개월로 단축)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -4093,7 +4099,7 @@ function renderBoxRange(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('박스권', true)}
+      ${hdTop('박스권 시세', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · 평균가 ±${d.boxPct}% 이내 유지${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
@@ -4141,30 +4147,31 @@ function renderFireSale(d){
 }
 
 function renderBoxBreak(d){
+  const label = '박스권 시세 변동';
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
-    : '<div class="rng" style="padding:6px 0">박스권 이탈 조건에 맞는 단지가 없습니다</div>';
+    : `<div class="rng" style="padding:6px 0">${esc(label)} 조건에 맞는 단지가 없습니다</div>`;
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('박스권 이탈', true)}
+      ${hdTop(label, true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs('이전 6개월 박스(±'+d.boxPct+'%)', '최근 6개월 이탈 거래')}
+      ${hdVs('최근 6개월 박스(±'+d.boxPct+'%)', '가장 최근 거래')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>박스권 이탈 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※표본 3건 이상 · 1~4층·직거래·이상치 제외 · 상승 이탈 먼저, 하락 이탈 순</div>
+      <h3>${esc(label)} 단지</h3>
+      <div class="rng" style="margin-bottom:8px">※표본 3건 이상 · 1~4층·직거래·이상치 제외 · 상승 먼저, 그다음 하락 순</div>
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
         <span class="val ${x.direction==='up'?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">이전 박스 ${x.priorCenter.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">${x.direction==='up'?'▲':'▼'}${Math.abs(x.changePct)}%</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 이전 6개월 박스(평균 ±${d.boxPct}%) 대비 최근 6개월 이탈 기준 · 직거래 제외</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 6개월 박스(평균 ±${d.boxPct}%) 대비 가장 최근 거래 이탈 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4284,7 +4291,7 @@ function renderJeonseUpDown(d){
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
   const fmtRow = x => `
-    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small>${esc(x.umd)}·${x.build}년 준공·${esc(x.mainPy)}</small></span>
+    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
     <span class="val ${x.pct>=0?'up':'down'}">${x.pct>0?'+':''}${x.pct}%<small>평균 ${x.p3avg.toFixed(1)}→${x.r3avg.toFixed(1)}억</small></span>`;
   const html = `
   <div class="card">
