@@ -87,8 +87,9 @@
   .hd-logo span{font-size:13px;font-weight:800;color:#00C2C2}
   .hd-badge{font-size:13px;font-weight:800;color:#fff;background:var(--teal);padding:6px 13px;border-radius:16px}
   .hd-badge.subscriber{background:#E0B84D;color:#4A3607}
-  .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px}
-  .hd-vs span{font-size:13px;font-weight:500;color:#7FD4D9}
+  .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:5px 10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
+  .hd-vs svg{width:11px;height:11px}
+  .hd-vs span{font-size:11.5px;font-weight:500;color:#7FD4D9}
   .sec{padding:14px 18px}
   .sec+.sec{border-top:1px solid var(--line)}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
@@ -4017,6 +4018,7 @@ function renderGap(d){
       ${hdTop('전세가율 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · <b style="color:#7FD4D9">최근 4개월 평균</b></div>
+      ${hdVs('매매가', '전세가')}
     </div>
     <div class="sec">
       <h3>전세가율 상위 (매매·전세 각 2건 이상 표본)</h3>
@@ -4038,6 +4040,7 @@ function renderNewHigh(d){
       ${hdTop('신고가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${hdVs('이전 최고가', '이번 신고가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4065,6 +4068,7 @@ function renderNewLow(d){
       ${hdTop('하락 거래', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${hdVs('1년 내 최고가', '최근 거래가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4119,6 +4123,7 @@ function renderFireSale(d){
       ${hdTop('급하락', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} 평균("본질 시세") 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${hdVs('최근 6개월 평균(본질 시세)', '최근 거래가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4145,13 +4150,14 @@ function renderBoxBreak(d){
     <div class="card-hd">
       ${hdTop('박스권 이탈', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 이전 6개월 박스(±${d.boxPct}%) 대비 최근 6개월 이탈${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${hdVs('이전 6개월 박스(±'+d.boxPct+'%)', '최근 6개월 이탈 거래')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>박스권 이탈 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※표본 3건 이상만 집계 · 1~4층 제외(층수 할인 왜곡 방지) · 직거래·저가 이상치 제외 · 이전 6개월이 실제로 박스권(평균 ±${d.boxPct}% 이내)이었던 단지 중 최근 6개월에 그 박스를 벗어난 거래만 집계 · 상승 이탈(증가폭 큰 순) 먼저, 그다음 하락 이탈(하락폭 큰 순)</div>
+      <div class="rng" style="margin-bottom:8px">※표본 3건 이상 · 1~4층·직거래·이상치 제외 · 상승 이탈 먼저, 하락 이탈 순</div>
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
         <span class="val ${x.direction==='up'?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">이전 박스 ${x.priorCenter.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">${x.direction==='up'?'▲':'▼'}${Math.abs(x.changePct)}%</b> · ${esc(x.date)}</small></span>`)}
