@@ -1901,7 +1901,7 @@ function analyzeSurge(all, months){
     const [apt,umd,gu]=k.split('|');
     const r3n = arr.filter(t=>r3set.has(t.ym)).length;
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
-    const surge = r3n>=6 && r3n >= p3n*2;
+    const surge = p3n>0 && r3n>=6 && r3n >= p3n*2; // 이전 3개월이 0건이면 "급증"이 아니라 그냥 신규 거래 시작(신축 입주 등)이라 제외(수민 요청, 2026.09)
     return {apt, umd, gu:gu||null, lawd:sorted[0].lawd||null, mainPy:`${mainPy}평`, r3n, p3n,
       surge, recentAmt:sorted[0].amt, date:`${ymLabel(sorted[0].ym)}.${sorted[0].d}`, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).filter(x=>x.surge).sort((a,b)=> b.r3n - a.r3n); // 최근 거래량 많은 순
@@ -2247,16 +2247,41 @@ function analyzeInversion(all, months){
     if(priorA.length < 2 || priorB.length < 2) continue; // 기준선 표본 부족
     const recentA = byPy[t1].filter(t=>dayDiff(t)<=30), recentB = byPy[t2].filter(t=>dayDiff(t)<=30);
     if(!recentA.length || !recentB.length) continue; // 최근 30일에 둘 다 거래 있어야만 집계
-    const baselineRatio = ppOf(priorA) / ppOf(priorB);
-    const recentRatio = ppOf(recentA) / ppOf(recentB);
-    const deviation = (recentRatio - baselineRatio) / baselineRatio; // 음수면 t1이, 양수면 t2가 상대적으로 저평가
+    // "기준(분모)"은 항상 평단가가 더 높은 쪽으로 고정한다(2026.09, 수민 지적) — 그래야 평단가 비율이
+    // 100%를 넘는 이상한 숫자가 안 나오고, "더 저렴한 평형이 기준 평형의 몇 %인지"로 자연스럽게 읽힘.
+    // 기준은 이전 3개월(평소 상태) 기준으로 한 번만 정하고, 최근 구간에도 그대로 적용 — 최근에 실제로
+    // 역전(더 저렴하던 쪽이 더 비싸짐)이 일어나면 그때는 비율이 100%를 넘는 게 오히려 정확한 신호.
+    const refIsA = ppOf(priorA) >= ppOf(priorB);
+    const refPy = refIsA ? t1 : t2, lowPy = refIsA ? t2 : t1;
+    const priorRef = refIsA ? priorA : priorB, priorLow = refIsA ? priorB : priorA;
+    const recentRef = refIsA ? recentA : recentB, recentLow = refIsA ? recentB : recentA;
+    const baselineRatio0 = ppOf(priorLow) / ppOf(priorRef); // ≤1(=100%)로 시작(기준을 더 비싼 쪽으로 고정했으므로)
+    const recentRatio0 = ppOf(recentLow) / ppOf(recentRef);
+    const deviation = (recentRatio0 - baselineRatio0) / baselineRatio0; // 음수면 lowPy가, 양수면 refPy가 상대적으로 저평가
     if(Math.abs(deviation) < DEV_MIN) continue;
-    const underPy = deviation < 0 ? t1 : t2, otherPy = deviation < 0 ? t2 : t1;
+    // 음수(비율이 더 떨어짐) → 원래도 더 저렴했던 lowPy가 한층 더 저평가
+    // 양수(비율이 100%에 가까워지거나 넘어섬) → refPy의 원래 프리미엄이 옅어져 refPy가 상대적으로 저평가
+    const underPy = deviation < 0 ? lowPy : refPy, otherPy = deviation < 0 ? refPy : lowPy;
+    const underTrades = deviation < 0 ? recentLow : recentRef, otherTrades = deviation < 0 ? recentRef : recentLow;
+    const baselineRatio = Math.round(baselineRatio0 * 100);
+    const recentRatio = Math.round(recentRatio0 * 100);
+    // "안전마진" — 다른 평형의 지금 평단가에 평소(기준선) 비율을 그대로 적용했을 때 저평가 평형이
+    // 원래 받았어야 할 "적정가"를 역산하고, 실제 최근 평균가와의 차액(억)을 마진으로 제시한다.
+    const underAvgArea = underTrades.reduce((s,t)=>s+t.area,0)/underTrades.length;
+    const underPyExact = R1(underAvgArea / SQM_PER_PY);
+    // baselineRatio0 = pp(lowPy)/pp(refPy) 관계이므로, underPy가 lowPy면 그대로 곱하고 refPy면 나눠야 함
+    const fairPricePerPy = deviation < 0 ? ppOf(otherTrades) * baselineRatio0 : ppOf(otherTrades) / baselineRatio0; // 만원/평
+    const fairAmt = R1(fairPricePerPy * underPyExact / 10000); // 억
+    const underAvgAmt = R1(avgA(underTrades)), otherAvgAmt = R1(avgA(otherTrades));
+    const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
     const [apt,umd,gu] = ck.split('|');
     results.push({
       apt, umd, gu:gu||null, underPy:`${underPy}평`, otherPy:`${otherPy}평`,
-      baselineRatio:Math.round(baselineRatio*100), recentRatio:Math.round(recentRatio*100),
+      refPy:`${refPy}평`, lowPy:`${lowPy}평`, // 비율(baselineRatio/recentRatio)은 항상 이 lowPy÷refPy 기준
+      isLowUnder: deviation < 0, // true면 lowPy가 저평가(표에서 위쪽 행 강조), false면 refPy가 저평가(아래쪽 행 강조)
+      baselineRatio, recentRatio,
       deviationPct:Math.round(Math.abs(deviation)*100),
+      underAvgAmt, otherAvgAmt, lowAvgAmt, refAvgAmt, fairAmt, marginAmt:R1(fairAmt-underAvgAmt),
     });
   }
   results.sort((a,b)=> b.deviationPct - a.deviationPct); // 틀어진 폭 큰 순
@@ -4559,9 +4584,9 @@ function renderSurge(d){
 
     <div class="sec">
       <h3>거래량 급증 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※최근 3개월 거래 6건 이상 · 이전 3개월 대비 2배 이상 급증한 단지만 집계 · 매매만(분양권·입주권 제외) · 최근 거래량 많은 순</div>
+      <div class="rng" style="margin-bottom:8px">※이전 3개월 거래 1건 이상 있는 단지 중 · 최근 3개월 거래 6건 이상 · 이전 3개월 대비 2배 이상 급증한 단지만 집계(이전 0건→신규 거래는 제외) · 매매만(분양권·입주권 제외) · 최근 거래량 많은 순</div>
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span><span class="nh" style="background:#D97706">거래급증</span></span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
         <span class="val up">${x.recentAmt.toFixed(1)}억<small>${x.p3n}건→<b style="color:var(--teal-dark)">${x.r3n}건</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4572,8 +4597,20 @@ function renderSurge(d){
 
 function renderInversion(d){
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
-  const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+  const rows = d.rows.length ? d.rows.map((x,i)=>`
+    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+      <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
+      <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}</div>
+      <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
+        <tr><th>평형</th><th class="tr-r">평단가 비율(${esc(x.lowPy)}÷${esc(x.refPy)})</th><th class="tr-r">평균가격</th></tr>
+        <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span>${x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">${x.baselineRatio}%${x.isLowUnder?`→<b style="color:var(--red)">${x.recentRatio}%</b>`:` → ${x.recentRatio}%`}</td><td class="tr-r">${x.isLowUnder?`<b style="color:var(--red)">${x.lowAvgAmt.toFixed(1)}억</b>`:`${x.lowAvgAmt.toFixed(1)}억`}</td></tr>
+        <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span>${!x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">기준(100%)</td><td class="tr-r">${!x.isLowUnder?`<b style="color:var(--red)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td></tr>
+      </table></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
+        <span class="rng">${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> 낮음(안전마진)</span>
+        <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.deviationPct}%</span>
+      </div>
+    </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4586,10 +4623,8 @@ function renderInversion(d){
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 3개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
-      ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small>${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)} · <b style="color:var(--teal-dark)">${esc(x.underPy)}</b>이 ${esc(x.otherPy)} 대비 저평가</small></span>
-        <span class="val down">▼${x.deviationPct}%<small>기준 ${x.baselineRatio}%→최근 ${x.recentRatio}%</small></span>`)}
+      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 3개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 적정가는 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
+      ${rows}
     </div>
 
   </div>
