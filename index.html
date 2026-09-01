@@ -2274,14 +2274,16 @@ function analyzeInversion(all, months){
     const fairAmt = R1(fairPricePerPy * underPyExact / 10000); // 억
     const underAvgAmt = R1(avgA(underTrades)), otherAvgAmt = R1(avgA(otherTrades));
     const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
+    const lowPriorAmt = R1(avgA(priorLow)), refPriorAmt = R1(avgA(priorRef)); // 기준선(이전 3개월) 쪽 평균가격도 같이 제시
     const [apt,umd,gu] = ck.split('|');
     results.push({
-      apt, umd, gu:gu||null, underPy:`${underPy}평`, otherPy:`${otherPy}평`,
+      apt, umd, gu:gu||null, lawd:(arr.find(t=>t.lawd)||{}).lawd || null, build:(arr.find(t=>t.build)||{}).build || '',
+      underPy:`${underPy}평`, otherPy:`${otherPy}평`,
       refPy:`${refPy}평`, lowPy:`${lowPy}평`, // 비율(baselineRatio/recentRatio)은 항상 이 lowPy÷refPy 기준
       isLowUnder: deviation < 0, // true면 lowPy가 저평가(표에서 위쪽 행 강조), false면 refPy가 저평가(아래쪽 행 강조)
       baselineRatio, recentRatio,
       deviationPct:Math.round(Math.abs(deviation)*100),
-      underAvgAmt, otherAvgAmt, lowAvgAmt, refAvgAmt, fairAmt, marginAmt:R1(fairAmt-underAvgAmt),
+      underAvgAmt, otherAvgAmt, lowAvgAmt, refAvgAmt, lowPriorAmt, refPriorAmt, fairAmt, marginAmt:R1(fairAmt-underAvgAmt),
     });
   }
   results.sort((a,b)=> b.deviationPct - a.deviationPct); // 틀어진 폭 큰 순
@@ -3411,6 +3413,17 @@ async function search(){
         .sort((a,b)=> b.turnoverPct - a.turnoverPct)
         .slice(0,30);
       if(!d.turnover.length){ d = {found:false, note:'선택한 조건에 맞는 단지가 없습니다. 지역을 조정해 보세요.'}; }
+    }
+
+    // 평형 비교 저평가 탭: 세대수는 회전율처럼 계산에 쓰는 게 아니라 그냥 참고 정보로 붙인다(수민 요청) —
+    // 그래서 회전율과 달리 세대수 하한으로 걸러내진 않음.
+    if(d.found && mode==='inversion' && d.rows && d.rows.length){
+      const byLawd = {};
+      d.rows.forEach(x=>{ const lw = x.lawd || lawd; (byLawd[lw] ||= []).push(x); });
+      await Promise.all(Object.entries(byLawd).map(async ([lw, list])=>{
+        const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
+        list.forEach(x=>{ x.hh = map[x.apt] || null; });
+      }));
     }
 
 
@@ -4600,14 +4613,14 @@ function renderInversion(d){
   const rows = d.rows.length ? d.rows.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-      <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}</div>
+      <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
-        <tr><th>평형</th><th class="tr-r">평단가 비율(${esc(x.lowPy)}÷${esc(x.refPy)})</th><th class="tr-r">평균가격</th></tr>
-        <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span>${x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">${x.baselineRatio}%${x.isLowUnder?`→<b style="color:var(--red)">${x.recentRatio}%</b>`:` → ${x.recentRatio}%`}</td><td class="tr-r">${x.isLowUnder?`<b style="color:var(--red)">${x.lowAvgAmt.toFixed(1)}억</b>`:`${x.lowAvgAmt.toFixed(1)}억`}</td></tr>
-        <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span>${!x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">기준(100%)</td><td class="tr-r">${!x.isLowUnder?`<b style="color:var(--red)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td></tr>
+        <tr><th>평형</th><th class="tr-r">평단가 비율(${esc(x.lowPy)}÷${esc(x.refPy)})</th><th class="tr-r">평균가격(이전→최근)</th></tr>
+        <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span>${x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">${x.baselineRatio}%${x.isLowUnder?`→<b style="color:var(--red)">${x.recentRatio}%</b>`:` → ${x.recentRatio}%`}</td><td class="tr-r">${x.lowPriorAmt.toFixed(1)}→${x.isLowUnder?`<b style="color:var(--red)">${x.lowAvgAmt.toFixed(1)}억</b>`:`${x.lowAvgAmt.toFixed(1)}억`}</td></tr>
+        <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span>${!x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">기준(100%)</td><td class="tr-r">${x.refPriorAmt.toFixed(1)}→${!x.isLowUnder?`<b style="color:var(--red)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td></tr>
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
-        <span class="rng">${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> 낮음(안전마진)</span>
+        <span class="rng">${esc(x.underPy)} 상승 여력 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> (${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>까지)</span>
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.deviationPct}%</span>
       </div>
     </div>`).join('')
@@ -4623,7 +4636,7 @@ function renderInversion(d){
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 3개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 적정가는 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
+      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 3개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
       ${rows}
     </div>
 
