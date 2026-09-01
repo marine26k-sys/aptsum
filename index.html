@@ -791,7 +791,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -814,7 +814,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -825,11 +825,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -980,7 +980,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -1000,7 +1000,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length){
     return regionSel.length===1 ? regionSel[0].name
       : (regionSel.length<=4 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
   }
@@ -1055,7 +1055,7 @@ function pickRegion(v){
     closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
     return;
   }
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -1086,7 +1086,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -2214,11 +2214,19 @@ function analyzePresaleRank(all, months){
 // 한쪽이 상대적으로 저평가"라는 개념으로 재설계. 평형 크기가 아니라 "거래량 상위 2개"를 고르는 게
 // 핵심(표본이 두꺼운 페어라야 기준선이 신뢰할 만함). 최근 1개월에 두 평형 다 거래가 있어야만 집계(더
 // 엄격한 기준, 수민 선택) — 한쪽만 거래된 달은 판단 재료 부족으로 스킵.
+// "최근 1개월"은 달력상의 월(9월/8월 같은 버킷)이 아니라 오늘 기준 실제 날짜로 최근 30일을 말한다는
+// 걸 수민이 명확히 함(2026.09) — isRecentDeal()과 동일한 날짜 계산 방식 재사용. 이전 3개월도 마찬가지로
+// "31~120일 전" 구간(날짜 기준)으로 계산 — 달 경계(매달 1일 등)에 걸려 최근 구간이 텅 비는 문제 자체가
+// 날짜 기준이면 애초에 안 생김(월초에도 지난 30일치 데이터가 항상 있음).
 function analyzeInversion(all, months){
   all = all.filter(t=>!t.direct && !t.kind && t.area && parseInt(t.floor,10)>=5); // 분양권/입주권은 매매와 가격 형성 구조가 달라 제외
+  const dayDiff = t=>{
+    const y=+t.ym.slice(0,4), mo=+t.ym.slice(4,6), da=+t.d;
+    if(!y||!mo||!da) return Infinity;
+    return Math.floor((Date.now() - new Date(y, mo-1, da).getTime()) / (24*3600*1000));
+  };
   const byComplex = {};
   for(const t of all){ const ck = `${t.apt}|${t.umd}|${t.gu||''}`; (byComplex[ck]=byComplex[ck]||[]).push(t); }
-  const recentSet = new Set(months.slice(0,1)), priorSet = new Set(months.slice(1,4)); // 최근 1개월 vs 이전 3개월
   const DEV_MIN = 0.05; // 기준선 대비 5% 이상 틀어져야 신호로 인정
   const ppOf = trades => {
     const avgArea = trades.reduce((s,t)=>s+t.area,0)/trades.length;
@@ -2230,14 +2238,15 @@ function analyzeInversion(all, months){
     for(const t of arr){ (byPy[t.py]=byPy[t.py]||[]).push(t); }
     const pyKeys = Object.keys(byPy);
     if(pyKeys.length < 2) continue;
-    // 거래량(4개월 전체 표본수) 상위 2개 평형을 고정 페어로 선택 — 표본 두꺼운 페어라야 기준선이 신뢰할 만함
+    // 거래량(전체 표본수) 상위 2개 평형을 고정 페어로 선택 — 표본 두꺼운 페어라야 기준선이 신뢰할 만함
     const top2 = pyKeys.map(py=>({py, n:byPy[py].length})).sort((a,b)=> b.n - a.n).slice(0,2);
     if(top2.length < 2) continue;
     const [t1, t2] = top2.map(x=>x.py).sort((a,b)=> parseInt(a,10)-parseInt(b,10)); // 표시용으로 평형 크기순 정렬
-    const priorA = byPy[t1].filter(t=>priorSet.has(t.ym)), priorB = byPy[t2].filter(t=>priorSet.has(t.ym));
+    const priorA = byPy[t1].filter(t=>{ const d=dayDiff(t); return d>30 && d<=120; });
+    const priorB = byPy[t2].filter(t=>{ const d=dayDiff(t); return d>30 && d<=120; });
     if(priorA.length < 2 || priorB.length < 2) continue; // 기준선 표본 부족
-    const recentA = byPy[t1].filter(t=>recentSet.has(t.ym)), recentB = byPy[t2].filter(t=>recentSet.has(t.ym));
-    if(!recentA.length || !recentB.length) continue; // 최근 1개월에 둘 다 거래 있어야만 집계
+    const recentA = byPy[t1].filter(t=>dayDiff(t)<=30), recentB = byPy[t2].filter(t=>dayDiff(t)<=30);
+    if(!recentA.length || !recentB.length) continue; // 최근 30일에 둘 다 거래 있어야만 집계
     const baselineRatio = ppOf(priorA) / ppOf(priorB);
     const recentRatio = ppOf(recentA) / ppOf(recentB);
     const deviation = (recentRatio - baselineRatio) / baselineRatio; // 음수면 t1이, 양수면 t2가 상대적으로 저평가
@@ -3030,7 +3039,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 4 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 최근 1개월 vs 이전 3개월(4개월, 2026.08 재설계 2차) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
+  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 5 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 3개월(5개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
