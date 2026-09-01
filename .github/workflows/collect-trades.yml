@@ -2,11 +2,14 @@ name: 실거래 데이터 배치 수집 (매매/분양권/전세)
 
 on:
   schedule:
-    # 하이브리드 모드: 과거 데이터(2개월 이전)만 채우면 되므로 격월(2개월 간격) 1일 03:30 KST에 실행
+    # 하이브리드 모드: 과거 데이터(2개월 이전)만 채우면 되므로 매월 "마지막 날"에 1회 실행
     # (최근 2개월은 Netlify Function이 매 요청마다 실시간 호출로 커버 — netlify/functions/analyze·presale·rent.mjs 참고)
-    # 2026.07: 매월→격월로 완화 — refresh=4(최근 4개월 재조회) 창이 배치 간격(2개월)보다 넉넉해서
-    # 한 번 실행이 실패하거나 밀려도 다음 배치가 무리 없이 따라잡을 여유가 있음(실행 횟수는 연 12회→6회로 절반)
-    - cron: "30 18 1 */2 *"
+    # 2026.09: 격월(1일)→매월 마지막 날로 변경 — 매월 1일이 되는 순간 "전월"이던 달이 실시간 조회 창에서
+    # 벗어나 정적 파일 조회로 전환되는데, 그 시점에 정적 파일이 신고 지연분까지 다 채워진 상태여야
+    # 데이터 공백이 안 생김(실제로 이 타이밍 때문에 7월 데이터가 9월 1일에 잠깐 비어 보인 적 있음).
+    # cron은 "매월 마지막 날"을 직접 표현할 수 없어 28~31일 매일 이 시각에 실행하되, 아래 gate 스텝에서
+    # "내일이 1일"인 날에만 실제로 진행하고 나머지는 건너뛴다(28~30일짜리 달에서 중복 실행 방지).
+    - cron: "30 18 28-31 * *"
   workflow_dispatch:
     inputs:
       months:
@@ -37,18 +40,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
+      - name: 매월 마지막 날인지 확인 (schedule 실행에만 적용 — 28~31일 중 "내일이 1일"인 날만 진행)
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            tomorrow=$(date -u -d tomorrow +%d)
+            if [ "$tomorrow" != "01" ]; then
+              echo "오늘은 이번 달 마지막 날이 아님(내일=${tomorrow}일) — 이번 실행은 건너뜀"
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
         with:
           node-version: "20"
 
       - name: git identity 설정 (스크립트 내 중간 커밋에도 사용됨)
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 수집 개월수 결정 (data/.trades-backfilled 마커 없으면 최초 백필로 보고 60개월, 있으면 24개월)
+        if: steps.gate.outputs.run == 'true'
         id: months
         run: |
           if [ -n "${{ github.event.inputs.months }}" ]; then
@@ -62,6 +82,7 @@ jobs:
           echo "months=$MONTHS" >> "$GITHUB_OUTPUT"
 
       - name: 실거래 배치 수집 실행 (kind별로 스크립트가 자체적으로 중간 커밋·푸시함)
+        if: steps.gate.outputs.run == 'true'
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
         run: |
@@ -72,7 +93,7 @@ jobs:
             ${{ github.event.inputs.force == 'true' && '--force' || '' }}
 
       - name: 최초 백필 완료 표시 (자동 60개월 백필이 성공했을 때만)
-        if: success() && github.event_name == 'schedule' && steps.months.outputs.months == '60'
+        if: steps.gate.outputs.run == 'true' && success() && github.event_name == 'schedule' && steps.months.outputs.months == '60'
         run: |
           mkdir -p data
           touch data/.trades-backfilled
@@ -86,7 +107,7 @@ jobs:
           done
 
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
-        if: always()
+        if: always() && steps.gate.outputs.run == 'true'
         run: |
           for d in data/analyze data/presale data/rent; do
             [ -d "$d" ] && git add "$d"
