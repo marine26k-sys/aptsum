@@ -104,6 +104,10 @@
   .peer-table th:nth-child(2),.peer-table td:nth-child(2){width:24%;white-space:nowrap}
   .peer-table th:nth-child(3),.peer-table td:nth-child(3),
   .peer-table th:nth-child(4),.peer-table td:nth-child(4){width:19%}
+  /* 평형 비교 저평가 탭 전용 5열 표 — nth-child 폭 지정은 헤더가 colspan/rowspan을 쓰면 행마다 실제
+     <th> 개수가 달라져서 안 맞음. 대신 <colgroup>으로 폭을 고정한다(렌더 쪽에서 <colgroup> 사용). */
+  .inv-table td{white-space:nowrap}
+  .inv-table .grp-td{border-right:1px solid var(--line)}
   .peer-table tr:last-child td{border-bottom:none}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
@@ -2210,12 +2214,13 @@ function analyzePresaleRank(all, months){
 
 // ═══ 평형 비교 저평가 탭(2026.08 재설계 2차, 구독 전용) ═══
 // 1차 설계(작은 vs 큰 평형, 6개월 대 6개월)도 수민 지적으로 다시 갈아엎음 — 이번엔 "단지 안에서 거래량이
-// 가장 많은 두 평형의 평단가 비율을 이전 3개월로 기준선 삼고, 최근 1개월에 그 비율이 크게 틀어지면 어느
+// 가장 많은 두 평형의 평단가 비율을 이전 6개월로 기준선 삼고, 최근 1개월에 그 비율이 크게 틀어지면 어느
 // 한쪽이 상대적으로 저평가"라는 개념으로 재설계. 평형 크기가 아니라 "거래량 상위 2개"를 고르는 게
 // 핵심(표본이 두꺼운 페어라야 기준선이 신뢰할 만함). 최근 1개월에 두 평형 다 거래가 있어야만 집계(더
 // 엄격한 기준, 수민 선택) — 한쪽만 거래된 달은 판단 재료 부족으로 스킵.
 // "최근 1개월"은 달력상의 월(9월/8월 같은 버킷)이 아니라 오늘 기준 실제 날짜로 최근 30일을 말한다는
-// 걸 수민이 명확히 함(2026.09) — isRecentDeal()과 동일한 날짜 계산 방식 재사용. 이전 3개월도 마찬가지로
+// 걸 수민이 명확히 함(2026.09) — isRecentDeal()과 동일한 날짜 계산 방식 재사용. 이전 6개월(수민 요청,
+// 2026.09 3개월→6개월로 확대)도 마찬가지로
 // "31~120일 전" 구간(날짜 기준)으로 계산 — 달 경계(매달 1일 등)에 걸려 최근 구간이 텅 비는 문제 자체가
 // 날짜 기준이면 애초에 안 생김(월초에도 지난 30일치 데이터가 항상 있음).
 function analyzeInversion(all, months){
@@ -2242,14 +2247,14 @@ function analyzeInversion(all, months){
     const top2 = pyKeys.map(py=>({py, n:byPy[py].length})).sort((a,b)=> b.n - a.n).slice(0,2);
     if(top2.length < 2) continue;
     const [t1, t2] = top2.map(x=>x.py).sort((a,b)=> parseInt(a,10)-parseInt(b,10)); // 표시용으로 평형 크기순 정렬
-    const priorA = byPy[t1].filter(t=>{ const d=dayDiff(t); return d>30 && d<=120; });
-    const priorB = byPy[t2].filter(t=>{ const d=dayDiff(t); return d>30 && d<=120; });
+    const priorA = byPy[t1].filter(t=>{ const d=dayDiff(t); return d>30 && d<=210; });
+    const priorB = byPy[t2].filter(t=>{ const d=dayDiff(t); return d>30 && d<=210; });
     if(priorA.length < 2 || priorB.length < 2) continue; // 기준선 표본 부족
     const recentA = byPy[t1].filter(t=>dayDiff(t)<=30), recentB = byPy[t2].filter(t=>dayDiff(t)<=30);
     if(!recentA.length || !recentB.length) continue; // 최근 30일에 둘 다 거래 있어야만 집계
     // "기준(분모)"은 항상 평단가가 더 높은 쪽으로 고정한다(2026.09, 수민 지적) — 그래야 평단가 비율이
     // 100%를 넘는 이상한 숫자가 안 나오고, "더 저렴한 평형이 기준 평형의 몇 %인지"로 자연스럽게 읽힘.
-    // 기준은 이전 3개월(평소 상태) 기준으로 한 번만 정하고, 최근 구간에도 그대로 적용 — 최근에 실제로
+    // 기준은 이전 6개월(평소 상태) 기준으로 한 번만 정하고, 최근 구간에도 그대로 적용 — 최근에 실제로
     // 역전(더 저렴하던 쪽이 더 비싸짐)이 일어나면 그때는 비율이 100%를 넘는 게 오히려 정확한 신호.
     const refIsA = ppOf(priorA) >= ppOf(priorB);
     const refPy = refIsA ? t1 : t2, lowPy = refIsA ? t2 : t1;
@@ -2274,7 +2279,7 @@ function analyzeInversion(all, months){
     const fairAmt = R1(fairPricePerPy * underPyExact / 10000); // 억
     const underAvgAmt = R1(avgA(underTrades)), otherAvgAmt = R1(avgA(otherTrades));
     const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
-    const lowPriorAmt = R1(avgA(priorLow)), refPriorAmt = R1(avgA(priorRef)); // 기준선(이전 3개월) 쪽 평균가격도 같이 제시
+    const lowPriorAmt = R1(avgA(priorLow)), refPriorAmt = R1(avgA(priorRef)); // 기준선(이전 6개월) 쪽 평균가격도 같이 제시
     const [apt,umd,gu] = ck.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:(arr.find(t=>t.lawd)||{}).lawd || null, build:(arr.find(t=>t.build)||{}).build || '',
@@ -3066,7 +3071,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 5 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 3개월(5개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
+  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 8 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 6개월(8개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외, 기준선도 3개월→6개월로 확대) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -4614,10 +4619,27 @@ function renderInversion(d){
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
-      <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
-        <tr><th>평형</th><th class="tr-r">평단가 비율(${esc(x.lowPy)}÷${esc(x.refPy)})</th><th class="tr-r">평균가격(이전→최근)</th></tr>
-        <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span>${x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">${x.baselineRatio}%${x.isLowUnder?`→<b style="color:var(--red)">${x.recentRatio}%</b>`:` → ${x.recentRatio}%`}</td><td class="tr-r">${x.lowPriorAmt.toFixed(1)}→${x.isLowUnder?`<b style="color:var(--red)">${x.lowAvgAmt.toFixed(1)}억</b>`:`${x.lowAvgAmt.toFixed(1)}억`}</td></tr>
-        <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}><td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span>${!x.isLowUnder?' <span class="rng">저평가</span>':''}</td><td class="tr-r">기준(100%)</td><td class="tr-r">${x.refPriorAmt.toFixed(1)}→${!x.isLowUnder?`<b style="color:var(--red)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td></tr>
+      <div class="tbl-scroll"><table class="peer-table inv-table" style="margin-top:10px">
+        <colgroup><col style="width:22%"><col style="width:19%"><col style="width:20%"><col style="width:19%"><col style="width:20%"></colgroup>
+        <tr>
+          <th rowspan="2" style="vertical-align:bottom">평형</th>
+          <th colspan="2" class="th-teal2" style="text-align:center">이전 6개월</th>
+          <th colspan="2" class="th-teal" style="text-align:center">최근 1개월</th>
+        </tr>
+        <tr>
+          <th class="tr-r">평균가</th><th class="tr-r grp-td">평단가 비율</th>
+          <th class="tr-r">평균가</th><th class="tr-r">평단가 비율</th>
+        </tr>
+        <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}>
+          <td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span>${x.isLowUnder?' <span class="rng">저평가</span>':''}</td>
+          <td class="tr-r">${x.lowPriorAmt.toFixed(1)}억</td><td class="tr-r grp-td">${x.baselineRatio}%</td>
+          <td class="tr-r">${x.isLowUnder?`<b style="color:var(--red)">${x.lowAvgAmt.toFixed(1)}억</b>`:`${x.lowAvgAmt.toFixed(1)}억`}</td><td class="tr-r">${x.isLowUnder?`<b style="color:var(--red)">${x.recentRatio}%</b>`:`${x.recentRatio}%`}</td>
+        </tr>
+        <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}>
+          <td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span>${!x.isLowUnder?' <span class="rng">저평가</span>':''}</td>
+          <td class="tr-r">${x.refPriorAmt.toFixed(1)}억</td><td class="tr-r grp-td">기준(100%)</td>
+          <td class="tr-r">${!x.isLowUnder?`<b style="color:var(--red)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td><td class="tr-r">기준(100%)</td>
+        </tr>
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">${esc(x.underPy)} 상승 여력 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> (${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>까지)</span>
@@ -4631,12 +4653,12 @@ function renderInversion(d){
       ${hdTop('평형 비교 저평가', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}</div>
-      ${hdVs('이전 3개월 평단가 비율(기준선)', '최근 1개월 평단가 비율')}
+      ${hdVs('이전 6개월 평단가 비율(기준선)', '최근 1개월 평단가 비율')}
     </div>
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 3개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
+      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 6개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
       ${rows}
     </div>
 
