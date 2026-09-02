@@ -2278,6 +2278,11 @@ function analyzeInversion(all, months){
     // baselineRatio0 = pp(lowPy)/pp(refPy) 관계이므로, underPy가 lowPy면 그대로 곱하고 refPy면 나눠야 함
     const fairPricePerPy = deviation < 0 ? ppOf(otherTrades) * baselineRatio0 : ppOf(otherTrades) / baselineRatio0; // 만원/평
     const fairAmt = R1(fairPricePerPy * underPyExact / 10000); // 억
+    // 적정가가 저평가 평형 자신의 최근 1년 실제 최고가보다 "높아야"(=이 평형이 아직 한 번도 못 찍어본
+    // 가격대) 진짜 상승 여력이 있는 저평가로 본다(수민 요청, 2026.09) — 적정가가 기존 최고가 이하면
+    // 이미 그 가격대를 경험해본 적 있다는 뜻이라, 그냥 평범한 시세 등락이지 특별한 저평가 신호가 아님.
+    const underYearMax = Math.max(...byPy[underPy].filter(t=>dayDiff(t)<=365).map(t=>t.amt));
+    if(fairAmt <= underYearMax) continue;
     const underAvgAmt = R1(avgA(underTrades)), otherAvgAmt = R1(avgA(otherTrades));
     const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
     const lowPriorAmt = R1(avgA(priorLow)), refPriorAmt = R1(avgA(priorRef)); // 기준선(이전 6개월) 쪽 평균가격도 같이 제시
@@ -2289,7 +2294,7 @@ function analyzeInversion(all, months){
       isLowUnder: deviation < 0, // true면 lowPy가 저평가(표에서 위쪽 행 강조), false면 refPy가 저평가(아래쪽 행 강조)
       baselineRatio, recentRatio,
       deviationPct:Math.round(Math.abs(deviation)*100),
-      underAvgAmt, otherAvgAmt, lowAvgAmt, refAvgAmt, lowPriorAmt, refPriorAmt, fairAmt, marginAmt:R1(fairAmt-underAvgAmt),
+      underAvgAmt, otherAvgAmt, lowAvgAmt, refAvgAmt, lowPriorAmt, refPriorAmt, fairAmt, marginAmt:R1(fairAmt-underAvgAmt), underYearMax:R1(underYearMax),
     });
   }
   results.sort((a,b)=> b.deviationPct - a.deviationPct); // 틀어진 폭 큰 순
@@ -3072,7 +3077,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 8 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 6개월(8개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외, 기준선도 3개월→6개월로 확대) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
+  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 13 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 동 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 6개월(13개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외, 기준선도 3개월→6개월로 확대, 적정가 검증용 최근 1년 최고가 비교를 위해 조회 범위도 8→13개월로 확장) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -4646,6 +4651,7 @@ function renderInversion(d){
         <span class="rng">${esc(x.underPy)} 상승 여력 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> (${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>)</span>
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.deviationPct}%</span>
       </div>
+      <div class="rng" style="text-align:right;margin-top:1px">${esc(x.underPy)} 역대 최고가 ${x.underYearMax.toFixed(1)}억을 넘어서는 적정가(신규 고점 기대)</div>
     </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
@@ -4659,7 +4665,7 @@ function renderInversion(d){
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 6개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
+      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준 · 이전 6개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 적정가가 저평가 평형 자신의 최근 1년 최고가보다 높은(=아직 못 찍어본 가격대) 경우만 표시 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
       ${rows}
     </div>
 
