@@ -107,6 +107,7 @@
   /* 평형 비교 저평가 탭 전용 5열 표 — nth-child 폭 지정은 헤더가 colspan/rowspan을 쓰면 행마다 실제
      <th> 개수가 달라져서 안 맞음. 대신 <colgroup>으로 폭을 고정한다(렌더 쪽에서 <colgroup> 사용). */
   .inv-table td{white-space:nowrap}
+  .inv-table td:nth-child(1){white-space:normal} /* 평형 칸만 줄바꿈 허용(33평 저평가처럼 길어질 수 있어서) — 나머지는 기준(100%) 같은 문구가 안 잘리게 한 줄 고정 */
   .inv-table .grp-td{border-right:1px solid var(--line)}
   .peer-table tr:last-child td{border-bottom:none}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -2022,7 +2023,7 @@ function analyzeBoxRange(all, months, boxPct){
     const amts = arr.map(t=>t.amt);
     const minAmt = Math.min(...amts), maxAmt = Math.max(...amts);
     if(maxAmt > center*(1+boxPct) || minAmt < center*(1-boxPct)) continue; // 박스 이탈 — 박스권 아님
-    const spreadPct = Math.round(((maxAmt-minAmt)/center)*1000)/10; // 실제 변동폭(표시용, 좁을수록 안정적)
+    const spreadPct = Math.round(((maxAmt-minAmt)/center)*100); // 실제 변동폭(표시용, 정수%, 좁을수록 안정적)
     const latest = arr.slice().sort((a,b)=> dkey(b).localeCompare(dkey(a)))[0];
     const [apt, umd, py, gu] = k.split('|');
     results.push({
@@ -4620,7 +4621,7 @@ function renderInversion(d){
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px">${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table inv-table" style="margin-top:10px">
-        <colgroup><col style="width:22%"><col style="width:19%"><col style="width:20%"><col style="width:19%"><col style="width:20%"></colgroup>
+        <colgroup><col style="width:16%"><col style="width:17%"><col style="width:25%"><col style="width:17%"><col style="width:25%"></colgroup>
         <tr>
           <th rowspan="2" style="vertical-align:bottom">평형</th>
           <th colspan="2" class="th-teal2" style="text-align:center">이전 6개월</th>
@@ -4642,7 +4643,7 @@ function renderInversion(d){
         </tr>
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
-        <span class="rng">${esc(x.underPy)} 상승 여력 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> (${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>까지)</span>
+        <span class="rng">${esc(x.underPy)} 상승 여력 <b style="font-size:14px;color:var(--red)">${x.marginAmt.toFixed(1)}억</b> (${esc(x.otherPy)} 기준 적정가 <b style="font-size:14px;color:var(--teal-dark)">${x.fairAmt.toFixed(1)}억</b>)</span>
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.deviationPct}%</span>
       </div>
     </div>`).join('')
@@ -4653,7 +4654,7 @@ function renderInversion(d){
       ${hdTop('평형 비교 저평가', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}</div>
-      ${hdVs('이전 6개월 평단가 비율(기준선)', '최근 1개월 평단가 비율')}
+      ${hdVs('이전 6개월(기준선)', '최근 1개월')}
     </div>
 
     <div class="sec">
