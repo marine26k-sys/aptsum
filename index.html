@@ -1288,7 +1288,12 @@ function addCmpRow(){
 // (2026.08 6→7: areaToPy()의 PY_ANCHORS 전면 개편 — 39→18평/59→25평/84→33평 등 시장 관행과 어긋나던
 // 값을 복수 출처로 재확인한 값(59→24평/84→34평/101→40평 등)으로 교체. 앵커가 바뀌면 이미 캐시된
 // 옛 py 값이 새로고침해도 그대로 남아있을 수 있어 버전을 올림)
-const CACHE_VER = 7;
+// (2026.09 7→8: rent.mjs·presale.mjs가 그 개편 이후에도 구버전 PY_ANCHORS를 그대로 쓰고 있던 걸 발견 —
+// analyze.mjs(매매)는 그새 3차 개편(shared/rtms-parse.mjs 주석 참고, 수민 실측 10개 단지 교차검증)까지
+// 더 반영된 상태였는데 rent/presale만 2차 개편 버전에 멈춰 있었음. 매매는 "59㎡→25평", 전세는
+// "59㎡→24평"으로 라벨이 갈려 전세가율 탭이 단지|동|평형|구로 매매·전세를 조인할 때 정상적인 쌍까지
+// 대거 누락되는 원인이었음 — rent.mjs·presale.mjs를 analyze.mjs 최신 앵커로 통일)
+const CACHE_VER = 8;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -2244,8 +2249,10 @@ function analyzeInversion(all, months){
   };
   const results = [];
   for(const [ck, arr] of Object.entries(byComplex)){
+    const byPyRaw = {};
+    for(const t of arr){ (byPyRaw[t.py]=byPyRaw[t.py]||[]).push(t); }
     const byPy = {};
-    for(const t of arr){ (byPy[t.py]=byPy[t.py]||[]).push(t); }
+    for(const [py, list] of Object.entries(byPyRaw)){ byPy[py] = markOutliers(list, months); } // 저가 이상치 제외(다른 랭킹 탭들과 동일 로직, 평형별로 적용 — 평형이 섞이면 가격 스케일이 달라 이상치 판정이 왜곡됨)
     const pyKeys = Object.keys(byPy);
     if(pyKeys.length < 2) continue;
     // 거래량(전체 표본수) 상위 2개 평형을 고정 페어로 선택 — 표본 두꺼운 페어라야 기준선이 신뢰할 만함
@@ -4670,7 +4677,7 @@ function renderInversion(d){
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※단지별 거래량 상위 2개 평형 기준(20~39평만 대상) · 이전 6개월로 평소 평단가 비율을 잡고, 최근 1개월에 두 평형 다 거래가 있을 때만 비교 · 기준선 대비 5% 이상 틀어지면 상대적으로 싸진 쪽을 저평가로 표시 · 상승 여력(적정가)은 다른 평형의 최근 평단가에 기준선 비율을 그대로 적용해 역산한 값 · 적정가가 저평가 평형 자신의 최근 1년 최고가보다 높은(=아직 못 찍어본 가격대) 경우만 표시 · 1~4층·분양권·입주권·직거래 제외 · 틀어진 폭 큰 순</div>
+      <div class="rng" style="margin-bottom:8px">※거래량 상위 2개 평형(20~39평) 평단가 비율 비교 · 이전 6개월 대비 최근 1개월 비율이 5% 이상 벌어지면 저평가 표시 · 적정가는 다른 평형 시세에 평소 비율을 적용한 역산값 · 1~4층·분양권·입주권·직거래·저가 이상치 제외 · 틀어진 폭 큰 순</div>
       ${rows}
     </div>
 
