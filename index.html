@@ -563,6 +563,27 @@ const REGIONS = [
 // 원래대로 도시명 포함 라벨 유지. 결과 헤더 제목만 구 이름으로 축약해서 보여주고 싶으면 shortRegionLabel() 사용.
 // 그룹(서울/경기/인천) 순서는 유지하고, 각 그룹 내부 지역명만 가나다순 정렬 (2026.07)
 REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
+// lawd코드 → 소속 시/도 역인덱스(HS-/BC-/IC- 분구 코드 포함) · 복수 지역 선택 라벨에 사용 (2026.09, 수민 요청)
+const LAWD_TO_PROVINCE = {};
+REGIONS.forEach(([prov, arr]) => arr.forEach(([, lawd]) => { LAWD_TO_PROVINCE[lawd] = prov; }));
+const PROVINCE_DISPLAY = { '서울':'서울시', '경기':'경기도', '인천':'인천시', '부산':'부산시' };
+// 복수 지역 선택 라벨: 4곳 이하면 이름을 그대로 나열, 5곳 이상이면 "강서구 외 15곳"처럼 뭉개지 않고
+// 어느 시/도들이 섞여 있는지 보여준다("서울시, 경기도, 부산시, 인천시") — REGIONS 순서로 정렬,
+// 한 시/도 안에서만 5곳 이상 골랐으면 그 시/도 이름 하나만("경기도"). lawd 매칭 실패 시에만 기존
+// "○○ 외 N곳" 표기로 폴백.
+function regionScopeLabel(items){
+  if(!items || !items.length) return '';
+  if(items.length<=4) return items.map(x=>x.name).join(' · ');
+  const order = REGIONS.map(([p])=>p);
+  const provinces = [];
+  for(const it of items){
+    const p = LAWD_TO_PROVINCE[it.lawd];
+    if(p && !provinces.includes(p)) provinces.push(p);
+  }
+  if(!provinces.length) return `${items[0].name} 외 ${items.length-1}곳`; // 폴백(정상 상황에선 발생하지 않음)
+  provinces.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  return provinces.map(p=>PROVINCE_DISPLAY[p]||p).join(', ');
+}
 let mode = 'complex';
 let lastData = null;
 // 지역랭킹→단지분석처럼 이전 검색이 끝나기 전에(await 도중) 새 검색이 시작되면,
@@ -1007,8 +1028,7 @@ loadRegionSel();
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
   if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length){
-    return regionSel.length===1 ? regionSel[0].name
-      : (regionSel.length<=4 ? regionSel.map(x=>x.name).join(' · ') : `${regionSel[0].name} 외 ${regionSel.length-1}곳`);
+    return regionScopeLabel(regionSel);
   }
   const o = sel.options[sel.selectedIndex];
   return o ? o.textContent : '지역 선택';
@@ -3149,10 +3169,10 @@ async function search(){
         });
       }
       let items = floorF(windowF(merged));
-      // 헤더 제목: 1~4개면 이름을 나열하고, 그보다 많으면 "○○ 외 N곳"으로 축약 (2026.08 3→4개로 확대)
-      const names = targets.map(t=>t.name);
+      // 헤더 제목: 4곳 이하면 이름을 나열, 5곳 이상이면 시/도 단위로 묶어서 표시 (2026.08 3→4개로 확대,
+      // 2026.09 5곳+일 때 "강서구 외 15곳" 대신 "서울시, 경기도, 부산시, 인천시"처럼 규모를 보여주도록 변경)
       const scopeLabel = regionSel.length
-        ? (names.length<=4 ? names.join(' · ') : `${names[0]} 외 ${names.length-1}곳`)
+        ? regionScopeLabel(targets)
         : sel.options[sel.selectedIndex].textContent;
       if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
         // 이 세 탭은 평형(20~39평 고정, 20평대/30평대 평대별)·연식 필터 UI가 없어 items를 그대로 각자의 분석 함수에 넘긴다(단일 지역 조회와 동일한 방식)
