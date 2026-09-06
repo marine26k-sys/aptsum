@@ -33,13 +33,18 @@ function pushWithRetry() {
   }
 }
 
-function commitProgress(message) {
+function commitProgress(message, allowEmpty = false) {
   try {
     if (!existsSync("data/hhcnt")) return; // 폴더가 아직 없으면(비정상 조기 실패 등) git add가 죽는 것 방지
     execSync("git add data/hhcnt", { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
-    if (!diff) return;
-    execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });
+    // allowEmpty: 완료 커밋 전용 — lawds.length가 COMMIT_EVERY로 정확히 나눠지면 바로 앞의 중간 커밋([skip ci])이
+    // 이미 마지막 지역까지 전부 커밋해버려서 여기서 diff가 비게 됨. 그러면 이 최종 커밋이 조용히 no-op되고,
+    // skip ci 없는 커밋이 이번 실행에서 단 하나도 안 생겨 Netlify 배포가 전혀 트리거 안 되는 문제가 있었음
+    // (실제로 90개 지역÷10=9로 정확히 나눠져서 매번 재발하던 버그, 2026.09 발견). --allow-empty로 강제 커밋해
+    // 항상 skip ci 없는 마커 커밋이 최소 하나는 생기도록 보장.
+    if (!diff && !allowEmpty) return;
+    execSync(`git commit ${allowEmpty ? "--allow-empty " : ""}-m ${JSON.stringify(message)}`, { stdio: "inherit" });
     pushWithRetry();
     console.log(`  (중간 커밋 완료: ${message})`);
   } catch (e) {
@@ -255,7 +260,7 @@ async function main() {
     console.log("\n[hhcnt] fetchBasis 실패 원인 집계:");
     for (const [reason, count] of Object.entries(failReasons)) console.log(`  ${reason}: ${count}건`);
   }
-  commitProgress(`chore: 세대수 배치 수집 완료 커밋 ${new Date().toISOString()}`);
+  commitProgress(`chore: 세대수 배치 수집 완료 커밋 ${new Date().toISOString()}`, true);
 }
 
 main().catch((e) => {

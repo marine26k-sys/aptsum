@@ -971,8 +971,8 @@ const lastRegionPref = getLastRegionPref();
 let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
-const REGION_MAX_UNDERVALUE = 5; // 저평가(단기/반기/연간)는 지역 랭킹과 달리 단지별로 세대수까지 조회하는 무거운 계산이라 상한을 낮게 잡음(2026.07)
-function regionSelMax(){ return (mode==='shortval'||mode==='peak'||mode==='longpeak') ? REGION_MAX_UNDERVALUE : (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longpeakdong'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') ? REGION_MAX_RANK : REGION_MAX; } // 연간 저평가(동일 권역)만 2026.08부터 25개로 상향(수민 요청) — 나머지 저평가 3탭(단기/반기/연간)은 무거운 계산이라 5개 유지
+const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
+function regionSelMax(){ return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') ? REGION_MAX_RANK : REGION_MAX; } // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(수민 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -1223,10 +1223,10 @@ function setMode(m){
   // 수민 요청으로 지역 랭킹 전용에서 확장). 저평가(상한 5)처럼 시/도 전체 개수보다 낮은 상한을 가진 탭에서는
   // addRegion()의 기존 over-limit 경고("지역은 최대 N개까지 선택할 수 있습니다")가 그대로 안내해주므로,
   // 상한을 넘는 시/도를 선택해도 조용히 잘리지 않고 명확히 알려짐 — 그래서 안전하게 전체 탭에 노출 가능.
-  // '○○ 전체' 옵션 — 그동안 상한 25개인 탭에서만 노출했었음(2026.08). 상한 5개인 단기/반기/연간
-  // 저평가는 서울(25)조차 다 못 담아서 실효성 없다고 보고 제외했었는데, 눌러도 addRegion()이 이미
-  // "5개까지만 채우고 나머지는 초과 안내" 방식으로 안전하게 처리하고 있어서, 5개만 빠르게 채우고 싶을 때는
-  // 오히려 유용하다는 수민 피드백으로 2026.09 재추가.
+  // '○○ 전체' 옵션 — 원래 상한 25개인 탭에서만 노출했음(2026.08). 상한 5개였던 단기/반기/연간 저평가는
+  // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
+  // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
+  // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
   const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='firesale'||m==='boxbreak'||m==='presalerank'||m==='surge'||m==='inversion'||m==='turnover'||m==='jeonseupdown'||m==='gaptrend');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
@@ -2486,9 +2486,9 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   const MIN_PEER_N = 2; // 비교군은 최근·이전 2개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
+      .filter(o=> o!==r && o.apt!==r.apt && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
       .sort((a,b)=> Math.abs(a.p3avg-r.p3avg) - Math.abs(b.p3avg-r.p3avg))
-      .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지
+      .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지 (o.apt!==r.apt: 2026.09 버그 수정 — 같은 단지 다른 평형이 자기 비교군으로 잡히던 문제, longpeak 쪽 주석 참고)
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
     if(group.length < 3) return;
     const r3median = median(nearest.map(o=>o.r3avg));
@@ -2548,8 +2548,8 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   const MIN_PEER_N = 2;
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
-        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외
+      .filter(o=> o!==r && o.apt!==r.apt && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외 (o.apt!==r.apt: 2026.09 버그 수정, longpeak 쪽 주석 참고)
       .sort((a,b)=> Math.abs(a.p3max-r.p3max) - Math.abs(b.p3max-r.p3max))
       .slice(0,5);
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
@@ -2610,8 +2610,12 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
   const MIN_PEER_N = 2;
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && (!sameDongOnly || o.umd===r.umd) && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+      .filter(o=> o!==r && o.apt!==r.apt && (!sameDongOnly || o.umd===r.umd) && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
         && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외.
+        // o.apt!==r.apt (2026.09 버그 수정, 수민 리포트로 발견): 원래 o!==r만 걸러서 "다른 행"인지만 봤는데
+        // byAptPy는 단지+평형 단위로 행을 나누다 보니, 같은 단지의 다른 평형(예: 대신해모로센트럴 31평 vs
+        // 33평)이 서로의 "비교군"에 들어갈 수 있었음. 한 단지 안의 평형별 가격 차이는 시장이 그 단지를
+        // 저평가했다는 신호가 아니라 그냥 면적별 정상적인 가격 편차라서, 반드시 다른 단지여야 비교군으로 인정.
         // sameDongOnly=true(비공개 "연간 저평가·동일 권역" 탭 전용, 2026.08 도입, 2026.09 "동일 동"→"동일
         // 권역"으로 개명 — 부산 추가 후 기장군처럼 행정구역이 "동"이 아니라 읍/면인 지역도 있어서 "동"이라는
         // 명칭이 부정확해짐. 실제 로직은 처음부터 umd 문자열이 동/읍/면 어떤 형태든 그대로 정확히 일치하는지만

@@ -42,13 +42,17 @@ function pushWithRetry() {
     }
   }
 }
-function commitProgress(message) {
+function commitProgress(message, allowEmpty = false) {
   try {
     if (!existsSync("data/supply-area")) return;
     execSync("git add data/supply-area", { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
-    if (!diff) return;
-    execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });
+    // allowEmpty: 완료 커밋 전용 — collect-hhcnt.mjs와 동일한 이유(2026.09 발견)로, limit이 COMMIT_EVERY로
+    // 정확히 나눠떨어지면 바로 앞 중간 커밋([skip ci])이 이미 마지막 건까지 다 커밋해버려 여기서 diff가
+    // 비어 완료 커밋이 조용히 no-op되고 skip ci 없는 커밋이 하나도 안 생겨 Netlify 배포가 안 되는 문제가
+    // 있을 수 있어 선제적으로 동일하게 방어.
+    if (!diff && !allowEmpty) return;
+    execSync(`git commit ${allowEmpty ? "--allow-empty " : ""}-m ${JSON.stringify(message)}`, { stdio: "inherit" });
     pushWithRetry();
     console.log(`  (중간 커밋 완료: ${message})`);
   } catch (e) {
@@ -288,7 +292,7 @@ async function main() {
     console.log(`[supply-area] ${lawd}: 이번 실행 ${targets.length}개 단지 중 처리 완료, 누적 ${Object.keys(out.items).length}개 단지`);
   }
 
-  commitProgress(`chore: 공급면적 배치 수집 완료 커밋 ${new Date().toISOString()}`);
+  commitProgress(`chore: 공급면적 배치 수집 완료 커밋 ${new Date().toISOString()}`, true);
 }
 
 main().catch((e) => {
