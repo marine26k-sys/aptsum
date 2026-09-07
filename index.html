@@ -404,7 +404,7 @@
     document.addEventListener('DOMContentLoaded', function(){
       const SUBSCRIBER_KEY = 'apc:subscriberSub'; // 세 탭 공용 — 비밀번호 확인 후에만 세팅됨
       const SUBSCRIBER_CODE = 'aptsum26'; // 구독자에게만 공유하는 코드(인스타 구독 전용 피드에 안내)
-      const subTabs = ['tabNL', 'tabLPD', 'tabSub', 'tabBox', 'tabFS', 'tabTO', 'tabJU', 'tabBBU', 'tabPR', 'tabSG', 'tabINV', 'tabGT'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabNL', 'tabLPD', 'tabSub', 'tabBox', 'tabTO', 'tabBBU', 'tabSG', 'tabGT', 'tabLTR'].map(id => document.getElementById(id)).filter(Boolean);
       const subDivider = document.getElementById('tabSubDivider');
       if (!subTabs.length) return;
       const reveal = () => { subTabs.forEach(t => { t.style.display = ''; }); if (subDivider) subDivider.style.display = ''; };
@@ -447,10 +447,12 @@
     <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>전용면적 평단가</div>
     <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
     <div class="tab" id="tabU" onclick="setMode('updown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>매매 등락</div>
+    <div class="tab" id="tabJU" onclick="setMode('jeonseupdown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>전세 등락</div>
     <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
     <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
+    <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
     <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독(2,600원/월)
          콘텐츠라 하나로 묶었다(수민 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
          전용이었음). 박스권은 2026.08 신설 때부터 처음부터 구독 전용으로 만듦(수민 요청).
@@ -462,13 +464,10 @@
     <div class="tab subscriber" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
     <div class="tab subscriber" id="tabBox" style="display:none" onclick="setMode('boxrange')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/><line x1="4" y1="12" x2="20" y2="12"/></svg>박스권 시세</div>
     <div class="tab subscriber" id="tabBBU" style="display:none" onclick="setMode('boxbreak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M15 9V4M15 4l-3 3M15 4l3 3"/></svg>박스권 시세 변동</div>
-    <div class="tab subscriber" id="tabFS" style="display:none" onclick="setMode('firesale')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v13h18V7z"/><path d="M9 22V12h6v10"/></svg>급하락</div>
     <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>회전율</div>
-    <div class="tab subscriber" id="tabJU" style="display:none" onclick="setMode('jeonseupdown')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>전세 등락</div>
-    <div class="tab subscriber" id="tabPR" style="display:none" onclick="setMode('presalerank')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg>분양권 랭킹</div>
     <div class="tab subscriber" id="tabSG" style="display:none" onclick="setMode('surge')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/><path d="M15 6h4v4"/></svg>거래량 급증</div>
-    <div class="tab subscriber" id="tabINV" style="display:none" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
     <div class="tab subscriber" id="tabGT" style="display:none" onclick="setMode('gaptrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M14 5h5v5"/></svg>전세가율 추세</div>
+    <div class="tab subscriber" id="tabLTR" style="display:none" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>기간별 상승 랭킹</div>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 수민 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
@@ -489,6 +488,15 @@
         <option value="10" selected>도보 10분 이내</option>
         <option value="15">도보 15분 이내</option>
         <option value="20">도보 20분 이내</option>
+      </select>
+    </div>
+    <div class="row2" id="risePeriodRow" style="display:none">
+      <select id="risePeriodN" style="flex:1;min-width:0" onchange="if(sel.value)search()">
+        <option value="3">3개월 전 대비</option>
+        <option value="6">6개월 전 대비</option>
+        <option value="9">9개월 전 대비</option>
+        <option value="12" selected>12개월 전 대비</option>
+        <option value="24">24개월 전 대비</option>
       </select>
     </div>
     <div class="row2" id="optRow">
@@ -626,7 +634,7 @@ function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
   if(!m) return;
-  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':(m==='newlow'?'newlow':(m==='boxrange'?'boxrange':(m==='firesale'?'firesale':(m==='turnover'?'turnover':(m==='jeonseupdown'?'jeonseupdown':(m==='boxbreak'?'boxbreak':(m==='presalerank'?'presalerank':(m==='surge'?'surge':(m==='inversion'?'inversion':(m==='gaptrend'?'gaptrend':(m==='gap'?'gap':(m==='subway'?'subway':'complex'))))))))))))))))))));
+  setMode(m==='compare'?'compare':(m==='region'?'region':(m==='volume'?'volume':(m==='updown'?'updown':(m==='shortval'?'shortval':(m==='peak'?'peak':(m==='longpeak'?'longpeak':(m==='newhigh'?'newhigh':(m==='newlow'?'newlow':(m==='boxrange'?'boxrange':(m==='turnover'?'turnover':(m==='jeonseupdown'?'jeonseupdown':(m==='boxbreak'?'boxbreak':(m==='surge'?'surge':(m==='inversion'?'inversion':(m==='gaptrend'?'gaptrend':(m==='gap'?'gap':(m==='subway'?'subway':'complex'))))))))))))))))));
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(m==='compare'){
@@ -643,7 +651,7 @@ function initFromURL(){
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
     if(p.get('pym')){ pyBandMultiSel = p.get('pym').split(',').filter(Boolean); renderPyBandMultiBtn(); } // 2026.08 — 평형 다중 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통 복원
-    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='firesale'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='presalerank'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='gap'){ search(); }
+    if(m==='region'||m==='volume'||m==='updown'||m==='shortval'||m==='peak'||m==='longpeak'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise'||m==='gap'){ search(); }
     else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
@@ -818,7 +826,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -841,7 +849,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -852,11 +860,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -872,7 +880,7 @@ function favRegionGo(code){
   updateRegionFavBtn();
   renderFavRegions();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
-  if(mode==='region'||mode==='volume'||mode==='updown'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='gaptrend') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
+  if(mode==='region'||mode==='volume'||mode==='updown'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
@@ -916,15 +924,14 @@ function restoreView(vi){
   else if(v.data.mode==='newhigh') renderNewHigh(v.data);
   else if(v.data.mode==='newlow') renderNewLow(v.data);
   else if(v.data.mode==='boxrange') renderBoxRange(v.data);
-  else if(v.data.mode==='firesale') renderFireSale(v.data);
   else if(v.data.mode==='turnover') renderTurnover(v.data);
   else if(v.data.mode==='jeonseupdown') renderJeonseUpDown(v.data);
   else if(v.data.mode==='boxbreak') renderBoxBreak(v.data);
-  else if(v.data.mode==='presalerank') renderPresaleRank(v.data);
   else if(v.data.mode==='surge') renderSurge(v.data);
   else if(v.data.mode==='inversion') renderInversion(v.data);
   else if(v.data.mode==='gaptrend') renderGapTrend(v.data);
   else if(v.data.mode==='pyprice') renderPricePerPyeong(v.data);
+  else if(v.data.mode==='longtermrise') renderLongTermRise(v.data);
   else if(v.data.mode==='gap') renderGap(v.data);
   else if(v.data.mode==='subway') renderSubway(v.data);
   else renderRegion(v.data);
@@ -972,7 +979,7 @@ let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
-function regionSelMax(){ return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') ? REGION_MAX_RANK : REGION_MAX; } // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(수민 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
+function regionSelMax(){ return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') ? REGION_MAX_RANK : REGION_MAX; } // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(수민 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
@@ -1007,7 +1014,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -1027,7 +1034,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') && regionSel.length){
     return regionScopeLabel(regionSel);
   }
   const o = sel.options[sel.selectedIndex];
@@ -1038,7 +1045,7 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend');
+  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
   document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
@@ -1081,7 +1088,7 @@ function pickRegion(v){
     closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
     return;
   }
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -1112,7 +1119,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -1197,13 +1204,12 @@ function setMode(m){
   document.getElementById('tabNH').classList.toggle('on', m==='newhigh');
   document.getElementById('tabNL').classList.toggle('on', m==='newlow');
   document.getElementById('tabBox').classList.toggle('on', m==='boxrange');
-  document.getElementById('tabFS').classList.toggle('on', m==='firesale');
   document.getElementById('tabTO').classList.toggle('on', m==='turnover');
   document.getElementById('tabJU').classList.toggle('on', m==='jeonseupdown');
-  document.getElementById('tabPR').classList.toggle('on', m==='presalerank');
   document.getElementById('tabSG').classList.toggle('on', m==='surge');
   document.getElementById('tabINV').classList.toggle('on', m==='inversion');
   document.getElementById('tabGT').classList.toggle('on', m==='gaptrend');
+  document.getElementById('tabLTR').classList.toggle('on', m==='longtermrise');
   document.getElementById('tabBBU').classList.toggle('on', m==='boxbreak');
   document.getElementById('tabPP').classList.toggle('on', m==='pyprice');
   document.getElementById('tabV').classList.toggle('on', m==='volume');
@@ -1227,7 +1233,7 @@ function setMode(m){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='firesale'||m==='boxbreak'||m==='presalerank'||m==='surge'||m==='inversion'||m==='turnover'||m==='jeonseupdown'||m==='gaptrend');
+  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='turnover'||m==='jeonseupdown'||m==='gaptrend'||m==='longtermrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -1236,7 +1242,7 @@ function setMode(m){
   // 모든 탭이 선택 지역을 공유·고정 기억한다(2026.08 변경) — 탭을 넘나들어도 regionSel/sel.value를 그대로 유지.
   // 단, 지역 선택 방식이 탭마다 다르다: 지역랭킹·저평가 3탭·신고가는 칩(regionSel, 복수), 단지분석·단지비교·거래량·등락은 단일 셀렉트(sel.value) —
   // 그동안 이 둘을 서로 이어주는 로직이 없어서 한쪽에서 고른 지역이 다른 쪽 탭엔 전혀 안 보이는 문제가 있었음(2026.08 수정).
-  const multiModes = ['region','shortval','peak','longpeak','newhigh','newlow','pyprice','boxrange','firesale','boxbreak'];
+  const multiModes = ['region','shortval','peak','longpeak','newhigh','newlow','pyprice','boxrange','boxbreak','longtermrise'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   if(multiModes.includes(m)){
@@ -1252,15 +1258,16 @@ function setMode(m){
   renderRegionChips();
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
-  document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='firesale'||m==='boxbreak'||m==='presalerank') ? '' : 'none';
+  document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='updown'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='boxbreak'||m==='longtermrise') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
-  document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='firesale'||m==='boxbreak') ? '' : 'none';
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='firesale'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='presalerank'||m==='surge'||m==='inversion'||m==='gaptrend') ? 'none' : '';
-  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='firesale'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='presalerank'||m==='surge'||m==='inversion'||m==='gaptrend') ? 'none' : '';
+  document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='boxbreak'||m==='longtermrise') ? '' : 'none';
+  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
+  document.getElementById('risePeriodRow').style.display = m==='longtermrise' ? '' : 'none';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
   document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
   document.getElementById('floorMin').value = '0';
@@ -2066,51 +2073,6 @@ function analyzeBoxRange(all, months, boxPct){
     rows: results.slice(0,30) };
 }
 
-// ═══ 급하락 탭(2026.08 신규, 구독 전용) ═══
-// "하락 거래" 탭은 1년 최고가 대비 하락폭을 보는데, 최고가는 오래돼서 지금 시세와 안 맞을 수 있음.
-// 이 탭은 박스권과 같은 방식으로 최근 6개월 평균("본질 시세")을 기준선으로 삼고, 그 대비 10~25% 싸게
-// 최근(30일 이내) 팔린 거래만 "급하락"으로 잡는다 — 신저가 탭의 로직(10~25% 하한·급전용 이상치 배제)을
-// 그대로 가져오되 비교 기준만 "1년 최고가"에서 "최근 6개월 평균"으로 바꾼 것.
-function analyzeFireSale(all, months){
-  all = all.filter(t=>!t.direct && parseInt(t.floor,10)>=6);
-  const byApt={};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
-  const DROP_MIN = 0.10, DROP_MAX = 0.25;
-  const results = [];
-  for(const [k, arrRaw] of Object.entries(byApt)){
-    const arr = markOutliers(arrRaw, months);
-    if(arr.length < 4) continue; // 후보 자신을 뺀 비교군이 3건 이상 있어야 하므로 전체 4건 이상 필요
-    const recentCandidates = arr.filter(t=> isRecentDeal(t, 30));
-    if(!recentCandidates.length) continue;
-    // "본질 시세"는 각 후보 거래 자신을 뺀 나머지 거래들의 평균으로 계산한다(leave-one-out) — 자기 자신을
-    // 포함해서 평균을 내면 그 거래가 낮을수록 평균 자체가 같이 낮아져서 실제보다 하락폭이 작아 보이는
-    // 자기참조 왜곡이 생김(2026.08 발견 — 7.4억짜리 이상치 거래가 실제로는 -27% 하락인데 자기 자신을
-    // 포함한 평균으로 계산하면 -22%로 나와 "이상치로 제외"(25% 초과) 기준을 피해가던 문제).
-    let best = null;
-    for(const cand of recentCandidates){
-      const others = arr.filter(t=>t!==cand);
-      if(others.length < 3) continue;
-      const center = avgA(others);
-      if(cand.amt > center*(1-DROP_MIN) || cand.amt <= center*(1-DROP_MAX)) continue; // 10~25% 하락 범위 밖
-      const gapAmt = R1(center - cand.amt);
-      const gapPct = Math.round(gapAmt/center*100);
-      if(!best || cand.amt < best.amt) best = { ...cand, center:R1(center), gapAmt, gapPct };
-    }
-    if(!best) continue;
-    const [apt, umd, py, gu] = k.split('|');
-    results.push({
-      apt, umd, gu:gu||null, lawd:best.lawd||null, py:`${py}평`, area:best.area, amt:best.amt,
-      date:`${ymLabel(best.ym)}.${best.d}`, floor:best.floor, build:best.build, kind:best.kind||null, n:arr.length,
-      center:best.center, gapAmt:best.gapAmt, gapPct:best.gapPct,
-    });
-  }
-  results.sort((a,b)=> b.gapPct - a.gapPct); // 본질 시세 대비 하락률 큰 순
-  return { found:true, mode:'firesale', total:all.length,
-    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
-    years:yearsLabel(months),
-    firesale: results.slice(0,30) };
-}
-
 // ═══ 회전율(손바뀜) 탭(2026.08 신규, 구독 전용) ═══
 // 최근 1년 거래건수 ÷ 세대수 = 손바뀜 비율. 절대 거래량(거래량 랭킹)과 달리 단지 규모를 반영해서
 // "유독 자주 손바뀜하는 단지"(투자수요 몰리는 곳)를 소형·대형 단지 상관없이 공평하게 비교한다.
@@ -2230,17 +2192,7 @@ function analyzePricePerPyeong(all, months){
     pyPrice: results.slice(0,100) };
 }
 
-// ═══ 분양권 랭킹 탭(2026.08 신규, 구독 전용) ═══
-// analyzePricePerPyeong()을 매매(raw)가 아니라 분양권 전용 데이터(rawP)에 그대로 재사용 — 프리미엄이
-// 가장 높게 형성된 분양권 타입을 단지별로 랭킹. 준공 전이라 build(준공년도) 필드가 없어서 화면엔 자동으로
-// "준공년도" 표시만 빠짐(analyzePricePerPyeong·렌더 둘 다 build 없으면 그냥 생략하도록 이미 방어돼 있음).
-function analyzePresaleRank(all, months){
-  const d = analyzePricePerPyeong(all, months);
-  d.mode = 'presalerank';
-  return d;
-}
-
-// ═══ 평형 비교 저평가 탭(2026.08 재설계 2차, 구독 전용) ═══
+// ═══ 평형 비교 저평가 탭(2026.08 재설계 2차, 2026.09 전체 공개 전환 — 연간 저평가 옆으로 이동) ═══
 // 1차 설계(작은 vs 큰 평형, 6개월 대 6개월)도 수민 지적으로 다시 갈아엎음 — 이번엔 "단지 안에서 거래량이
 // 가장 많은 두 평형의 평단가 비율을 이전 6개월로 기준선 삼고, 최근 1개월에 그 비율이 크게 틀어지면 어느
 // 한쪽이 상대적으로 저평가"라는 개념으로 재설계. 평형 크기가 아니라 "거래량 상위 2개"를 고르는 게
@@ -2373,7 +2325,50 @@ function analyzeUpDown(all, months){
     up, down };
 }
 
-// ═══ 전세 등락 랭킹(2026.08 신규, 구독 전용) ═══
+// ═══ 기간별 상승 랭킹(2026.09 신규, 구독 전용) ═══
+// "N개월 전 평균가"가 무엇을 뜻하는지가 핵심 설계 포인트 — "오늘부터 누적된 최근 N개월 평균"이 아니라
+// "정확히 그 시점 하나의 스냅샷"을 말한다(다른 탭들의 "최근 N개월 평균"과는 다른 개념). 예를 들어
+// "3개월 전"은 지금부터 61~90일 전 30일짜리 구간의 평균가 — 오늘부터 90일 전까지 전부 합친 누적
+// 평균이 아니다. "최근 1개월"도 마찬가지로 달력상의 월이 아니라 오늘 기준 최근 30일(day-based).
+// 비교 시점(3/6/9/12/24개월 전)과 평형(20평대/30평대 등)은 화면에서 사용자가 직접 고름(수민 요청) —
+// 다른 저평가 탭들처럼 20~37평 고정 범위나 특정 평대 강제가 아니라 pyBandMultiFilter를 그대로 재사용.
+// 항상 "많이 오른 순"(changePct 내림차순)으로만 정렬 — 등락 랭킹의 up 정렬과 동일한 방식.
+function analyzeLongTermRise(all, months, periodM){
+  all = all.filter(t=>!t.kind); // 매매만 집계(분양권·입주권 제외, 사용자 요청) — 여러 지역을 동시에 조회할 때는 분양권이 자동 병합돼 들어올 수 있어 여기서 명시적으로 한 번 더 거름
+  // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
+  // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
+  // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
+  const byAptPy = {};
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  const dayDiff = t=>{ // analyzeInversion()과 동일한 날짜 계산 방식(오늘 기준 실제 경과일)
+    const y=+t.ym.slice(0,4), mo=+t.ym.slice(4,6), da=+t.d;
+    if(!y||!mo||!da) return Infinity;
+    return Math.floor((Date.now() - new Date(y, mo-1, da).getTime()) / (24*3600*1000));
+  };
+  const results = [];
+  for(const [k, arrRaw] of Object.entries(byAptPy)){
+    const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
+    const recent = arr.filter(t=> dayDiff(t) <= 30); // 최근 1개월(최근 30일)
+    const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
+    if(recent.length < 2 || past.length < 2) continue; // 두 구간 다 표본 2건 이상 있어야 신뢰 가능
+    const recentAvg = avgA(recent), pastAvg = avgA(past);
+    if(!pastAvg) continue;
+    const changeAmt = R1(recentAvg - pastAvg);
+    const changePct = Math.round((recentAvg-pastAvg)/pastAvg*100);
+    const [apt, umd, py, gu] = k.split('|');
+    const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
+    const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0].kind||null,
+      recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
+  }
+  results.sort((a,b)=> b.changePct - a.changePct); // 많이 오른 순
+  return { found:true, mode:'longtermrise', total:all.length, periodM,
+    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
+    years:yearsLabel(months),
+    rows: results.slice(0,30) };
+}
+
+// ═══ 전세 등락 랭킹(2026.08 신규, 2026.09 전체 공개 전환 — 매매 등락 옆으로 이동) ═══
 // 매매 대신 전세 실거래(rentItems)를 그대로 buildRepRows/analyzeUpDown에 흘려보낸다 — 두 함수 다 데이터
 // 출처(매매/전세)를 구분하지 않고 .amt(거래금액=매매가 또는 전세보증금)만 보고 동작하는 범용 로직이라
 // 그대로 재사용 가능. 역전세 위험 신호(전세가 급락)나 전세가 급등 지역 포착용.
@@ -2486,9 +2481,9 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   const MIN_PEER_N = 2; // 비교군은 최근·이전 2개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && o.apt!==r.apt && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
+      .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
       .sort((a,b)=> Math.abs(a.p3avg-r.p3avg) - Math.abs(b.p3avg-r.p3avg))
-      .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지 (o.apt!==r.apt: 2026.09 버그 수정 — 같은 단지 다른 평형이 자기 비교군으로 잡히던 문제, longpeak 쪽 주석 참고)
+      .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지 (o.apt!==r.apt: 2026.09 버그 수정 — 같은 단지 다른 평형이 자기 비교군으로 잡히던 문제, longpeak 쪽 주석 참고 / o.gu===r.gu: 2026.09 추가 — 여러 지역(구) 동시 선택 시 비교군이 다른 구 단지까지 섞이지 않도록, 항상 같은 구 안에서만 비교)
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
     if(group.length < 3) return;
     const r3median = median(nearest.map(o=>o.r3avg));
@@ -2548,8 +2543,8 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   const MIN_PEER_N = 2;
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && o.apt!==r.apt && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
-        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외 (o.apt!==r.apt: 2026.09 버그 수정, longpeak 쪽 주석 참고)
+      .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+        && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외 (o.apt!==r.apt: 2026.09 버그 수정, longpeak 쪽 주석 참고 / o.gu===r.gu: 2026.09 추가, 여러 구 동시 선택 시 구 간 혼선 방지)
       .sort((a,b)=> Math.abs(a.p3max-r.p3max) - Math.abs(b.p3max-r.p3max))
       .slice(0,5);
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
@@ -2610,8 +2605,11 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
   const MIN_PEER_N = 2;
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && o.apt!==r.apt && (!sameDongOnly || o.umd===r.umd) && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
+      .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && (!sameDongOnly || o.umd===r.umd) && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3max - r.p3max) / r.p3max <= 0.02
         && (o.r3max - r.r3max) / r.r3max > 0.02) // 비교군은 "이전엔 비슷했지만 최근엔 나보다 확실히(2% 초과) 더 오른" 단지만 인정 — 나와 비슷하게 움직인 단지(오르지도 처지지도 않은)는 저평가 판단에 참고가 안 되므로 제외.
+        // o.gu===r.gu (2026.09 추가): 여러 구를 동시에 선택해 조회할 때 비교군이 다른 구 단지까지 섞이지
+        // 않도록, 항상 같은 구 안에서만 비교(수민 요청). 지역을 하나만 선택했을 때는 어차피 모든 행이 같은
+        // 구라 이 조건이 아무 영향 없음.
         // o.apt!==r.apt (2026.09 버그 수정, 수민 리포트로 발견): 원래 o!==r만 걸러서 "다른 행"인지만 봤는데
         // byAptPy는 단지+평형 단위로 행을 나누다 보니, 같은 단지의 다른 평형(예: 대신해모로센트럴 31평 vs
         // 33평)이 서로의 "비교군"에 들어갈 수 있었음. 한 단지 안의 평형별 가격 차이는 시장이 그 단지를
@@ -3110,7 +3108,7 @@ async function search(){
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   const mN = +document.getElementById('monthsN').value;
-  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='boxrange'||mode==='firesale'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='gaptrend') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  const fM = (mode==='region'||mode==='volume'||mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='boxrange'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
@@ -3118,7 +3116,7 @@ async function search(){
   // 아니지만, RTMS 조회 가능 범위 안에서 근사). 최초엔 5년(60개월)으로 구현했는데, 콜드 캐시 상태에서 6개 조각을
   // 받아와야 해서 처음 조회하는 지역은 응답이 느려(로그 기준 조각당 1~5초) 사용자가 답답해서 새로고침·재시도를
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
-  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange'||mode==='firesale' ? 6 : (mode==='boxbreak' ? 6 : (mode==='presalerank' ? 12 : (mode==='inversion' ? 13 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 권역 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권·급하락은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 분양권 랭킹은 최근 1년 고정 / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 6개월(13개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외, 기준선도 3개월→6개월로 확대, 적정가 검증용 최근 1년 최고가 비교를 위해 조회 범위도 8→13개월로 확장) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월)
+  const neededMN = mode==='updown'||mode==='shortval'||mode==='jeonseupdown' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow'||mode==='turnover' ? 12 : (mode==='gap' ? 4 : (mode==='boxrange' ? 6 : (mode==='boxbreak' ? 6 : (mode==='inversion' ? 13 : (mode==='surge' ? 6 : (mode==='gaptrend' ? 8 : (mode==='longtermrise' ? +document.getElementById('risePeriodN').value+2 : mN))))))))))); // 등락 랭킹·단기 저평가·전세 등락은 최근 2개월 vs 이전 2개월(4개월) / 반기 저평가는 최근 6개월 vs 이전 6개월 최고가(12개월, 2026.07 분기(3+3)→반기(6+6)로 변경) / 연간 저평가(동일 권역 포함)는 올해(1~현재월) vs 작년(1~12월) 캘린더 연도 비교 / 신고가·평단가는 3년 고정(2026.07 5년→3년, 콜드 캐시 부하 완화) / 신저가·손바뀜은 1년 고정(2026.08, 2년→1년으로 축소, 수민 요청) / 전세가율 랭킹은 최근 4개월 평균 고정(2026.08, 12개월→2개월→3개월→4개월로 완화 — 2개월은 표본이 너무 좁아서 조회되는 단지 수가 급감, 3개월도 여전히 부족해 4개월로 추가 완화) / 박스권은 최근 6개월 고정(2026.08 신규 — "본질 시세" 판단은 너무 오래된 거래까지 보면 의미가 없어 반기 저평가와 같은 6개월 창 채택) / 박스권 시세 변동은 최근 6개월 전체 중 최신 거래 1건을 뺀 나머지로 박스 판정(2026.08, 최초 이전+최근 3+3개월 분리 방식에서 표본이 너무 얇아 재설계) / 평형 비교 저평가는 이미 끝난 최근 1개월 vs 그 이전 6개월(13개월 조회, 2026.09 — 진행 중인 이번 달은 신고 자체가 없어 제외, 기준선도 3개월→6개월로 확대, 적정가 검증용 최근 1년 최고가 비교를 위해 조회 범위도 8→13개월로 확장) / 거래량 급증은 최근 3개월 vs 이전 3개월(6개월) / 전세가율 추세는 최근 4개월 vs 이전 4개월(8개월) / 기간별 상승 랭킹은 사용자가 고른 비교 시점(3/6/9/12/24개월 전, risePeriodN)+2개월 여유분만큼 조회(2026.09, 달마다 일수가 달라 +1개월로는 12/1/2월이 겹치는 등 극단적인 경우 경계에서 하루 이틀 모자랄 수 있어 여유를 더 둠)
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -3126,12 +3124,12 @@ async function search(){
   // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
   // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
-  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') ? []
+  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   const allScope = multiTargets.length > 0;
   const effMN = allScope
-    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
-    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='boxrange'||mode==='firesale'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='presalerank'||mode==='surge'||mode==='inversion'||mode==='gaptrend') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : Math.max(mN, 24));
+    ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
+    : (mode==='updown'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='boxrange'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='gaptrend') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='longtermrise' ? +document.getElementById('risePeriodN').value+2 : Math.max(mN, 24)));
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
@@ -3193,8 +3191,8 @@ async function search(){
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
         }
-      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
-        // 신고가·신저가·전용면적 평단가·박스권·급하락·박스권 이탈은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
+      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='longtermrise'){
+        // 신고가·신저가·전용면적 평단가·박스권·박스권 이탈·기간별 상승 랭킹은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         if(!items.length){
@@ -3203,22 +3201,13 @@ async function search(){
           d = mode==='newhigh' ? analyzeNewHigh(items, months)
             : mode==='newlow' ? analyzeNewLow(items, months)
             : mode==='boxrange' ? analyzeBoxRange(items, months, 0.05)
-            : mode==='firesale' ? analyzeFireSale(items, months)
             : mode==='boxbreak' ? analyzeBoxBreak(items, months, 0.05)
+            : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
             : analyzePricePerPyeong(items, months);
           d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
           d.buildYear = buildYearLabel();
           d.scopeLabel = scopeLabel;
           d.failedRegions = failed;
-        }
-      } else if(mode==='presalerank'){
-        let presaleItems = pyBandMultiFilter(items.filter(t=>t.kind)); // merged엔 분양권도 kind:'분양권'으로 같이 들어있음
-        if(!presaleItems.length){
-          d = {found:false, note:'선택한 평형 조건에 맞는 분양권 거래가 없습니다. 지역이나 평형을 조정해 보세요.'};
-        } else {
-          d = analyzePresaleRank(presaleItems, months);
-          d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
-          d.scopeLabel = scopeLabel;
         }
       } else if(mode==='surge'){
         d = analyzeSurge(items, months);
@@ -3319,14 +3308,14 @@ async function search(){
         d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·층수·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
-      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='firesale'||mode==='boxbreak'){
+      } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='longtermrise'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         d = mode==='newhigh' ? analyzeNewHigh(items, months)
           : mode==='newlow' ? analyzeNewLow(items, months)
           : mode==='boxrange' ? analyzeBoxRange(items, months, 0.05)
-          : mode==='firesale' ? analyzeFireSale(items, months)
           : mode==='boxbreak' ? analyzeBoxBreak(items, months, 0.05)
+          : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
           : analyzePricePerPyeong(items, months);
         d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
@@ -3340,12 +3329,6 @@ async function search(){
         const rentItems = windowF(rawJ);
         d = analyzeJeonseUpDown(rentItems, months);
         if(!d.up.length && !d.down.length){ d = {found:false, note:'선택한 조건에 맞는 전세 거래가 없습니다. 지역을 조정해 보세요.'}; }
-      } else if(mode==='presalerank'){
-        // 매매(items) 대신 분양권 전용 데이터(rawP)만 사용 — 평형 다중 선택은 여기서도 적용
-        let presaleItems = pyBandMultiFilter(windowF(rawP));
-        d = analyzePresaleRank(presaleItems, months);
-        d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
-        if(!presaleItems.length){ d = {found:false, note:'선택한 평형 조건에 맞는 분양권 거래가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else if(mode==='surge'){
         d = analyzeSurge(items, months);
         if(!d.rows.length){ d = {found:false, note:'조건에 맞는 거래량 급증 단지가 없습니다. 지역을 조정해 보세요.'}; }
@@ -3505,7 +3488,7 @@ async function search(){
       return;
     }
     lastData = d;
-    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='boxrange') renderBoxRange(d); else if(d.mode==='firesale') renderFireSale(d); else if(d.mode==='turnover') renderTurnover(d); else if(d.mode==='jeonseupdown') renderJeonseUpDown(d); else if(d.mode==='boxbreak') renderBoxBreak(d); else if(d.mode==='presalerank') renderPresaleRank(d); else if(d.mode==='surge') renderSurge(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='gaptrend') renderGapTrend(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
+    if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='updown') renderUpDown(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='boxrange') renderBoxRange(d); else if(d.mode==='turnover') renderTurnover(d); else if(d.mode==='jeonseupdown') renderJeonseUpDown(d); else if(d.mode==='boxbreak') renderBoxBreak(d); else if(d.mode==='surge') renderSurge(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='gaptrend') renderGapTrend(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
     // 내용만 단지분석으로 바뀌어서 화면 중간(차트 아래쪽 등)부터 보이고, 그 위에 있는 평형별 요약표가 안 보이는
     // 것처럼 느껴지는 문제가 있었음 — 새 결과를 그릴 때마다 스크롤을 맨 위로 되돌린다.
@@ -3584,6 +3567,8 @@ async function attachHHCountsAsync(d, myToken, lawd){
       // 신저가는 300세대 필터 적용을 위해 search() 단계에서 이미 세대수를 조회·부착해뒀으므로(위 참고) 여기선 재조회 불필요
     } else if(d.mode==='pyprice'){
       // 평단가는 세대수를 표시하지 않는 탭이라 조회 자체를 생략(수민 요청 범위 밖 — 필요해지면 newhigh 분기처럼 추가하면 됨)
+    } else if(d.mode==='longtermrise'){
+      // 기간별 상승 랭킹도 pyprice와 동일한 이유로 세대수 미표시 — 생략
     } else if(d.mode==='updown'){
       const attachAll = (list) => list && list.length
         ? fetchHHCntBatch(lawd, list.map(x=>x.apt)).then(map=>{ list.forEach(x=>{ x.hh = map[x.apt] || null; }); })
@@ -4373,7 +4358,7 @@ function renderNewLow(d){
       <div class="rng" style="margin-bottom:8px">※매매·분양권·입주권 포함 · 표본 3건 이상만 집계 · 300세대 이상 단지만 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 1년 내 최고가 대비 10~25% 하락한 최근(30일 이내) 거래만 집계(25% 이상은 특수관계·이례적 급매 가능성으로 제외) · 급매 등 시세 하락 신호로 참고</div>
       ${rows(d.newLow, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
+        <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억 →</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
@@ -4405,34 +4390,6 @@ function renderBoxRange(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 ${d.years} 평균가 ±${d.boxPct}% 이내 거래만 "박스권"으로 집계 · 직거래 제외</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
-}
-
-function renderFireSale(d){
-  const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
-  const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
-    : '<div class="rng" style="padding:6px 0">최근 한 달 이내 급하락 거래를 기록한 단지가 없습니다</div>';
-  const html = `
-  <div class="card">
-    <div class="card-hd">
-      ${hdTop('급하락', true)}
-      <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 평균("본질 시세") 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs('최근 6개월 평균(본질 시세)', '최근 거래가')}
-      ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
-    </div>
-
-    <div class="sec">
-      <h3>급하락 단지</h3>
-      <div class="rng" style="margin-bottom:8px">※표본 3건 이상만 집계 · 1~5층 제외(층수 할인 왜곡 방지) · 직거래 제외 · 최근 6개월 평균 대비 10~25% 낮은 최근(30일 이내) 거래만 집계(25% 이상은 특수관계·이례적 급매 가능성으로 제외)</div>
-      ${rows(d.firesale, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val down"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">평균 ${x.center.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ${esc(x.date)}</small></span>`)}
-    </div>
-
-  </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 6개월 평균 대비 -10~25% 하락 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4586,7 +4543,7 @@ function renderJeonseUpDown(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('전세 등락', true)}
+      ${hdTop('전세 등락')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years} · 전세보증금 기준</div>
       ${hdVs('이전 2개월 평균 전세가', '최근 2개월 평균 전세가')}
@@ -4607,29 +4564,31 @@ function renderJeonseUpDown(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
-function renderPresaleRank(d){
+function renderLongTermRise(d){
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
-    : '<div class="rng" style="padding:6px 0">조건에 맞는 분양권 거래가 없습니다</div>';
+    : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('분양권 랭킹', true)}
+      ${hdTop('기간별 상승 랭킹', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 전용면적 평단가 높은 순${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.periodM}개월 전 대비 최근 1개월 상승률 높은 순${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      ${hdVs(`${d.periodM}개월 전 평균`, '최근 1개월 평균')}
+      ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>분양권 평단가 상위</h3>
-      <div class="rng" style="margin-bottom:8px">※분양권·입주권만 집계(준공 전이라 준공년도 없음) · 단지당 평단가 가장 높은 평형 1개만 대표로 채택 · 직거래 제외</div>
-      ${rows(d.pyPrice, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val">${x.amt.toFixed(1)}억<small>${(x.pricePerPy/10000).toFixed(2)}억/평 · ${esc(x.date)}</small></span>`)}
+      <h3>상승 단지</h3>
+      <div class="rng" style="margin-bottom:8px">※표본 2건 이상만 집계(두 구간 각각) · 직거래·저가 이상치 제외 · "${d.periodM}개월 전"은 오늘부터 누적된 평균이 아니라 정확히 그 시점(30일 구간) 하나의 평균가 · 많이 오른 순</div>
+      ${rows(d.rows, x=>`
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${x.gu?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val up"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:var(--red)">▲${x.changeAmt.toFixed(1)}억(${x.changePct}%)</b></small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">전용면적 기준 평단가(전용면적÷3.3058로 정밀 환산, 공급면적 기준 아님) · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계(분양권·입주권 제외) · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4698,7 +4657,7 @@ function renderInversion(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('평형 비교 저평가', true)}
+      ${hdTop('평형 비교 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} 중 ${d.years}</div>
       ${hdVs('이전 6개월(기준선)', '최근 1개월')}
