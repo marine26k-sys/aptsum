@@ -1947,7 +1947,7 @@ function analyzeSurge(all, months){
   return { found:true, mode:'surge', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    rows: results.slice(0,30) };
+    rows: results.slice(0,50) };
 }
 
 // ═══ 신고가 탭 ═══
@@ -2070,7 +2070,7 @@ function analyzeBoxRange(all, months, boxPct){
   return { found:true, mode:'boxrange', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months), boxPct:Math.round(boxPct*100),
-    rows: results.slice(0,30) };
+    rows: results.slice(0,50) };
 }
 
 // ═══ 회전율(손바뀜) 탭(2026.08 신규, 구독 전용) ═══
@@ -2137,7 +2137,7 @@ function analyzeBoxBreak(all, months, boxPct){
   return { found:true, mode:'boxbreak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months), boxPct:Math.round(boxPct*100),
-    rows: results.slice(0,30) };
+    rows: results.slice(0,50) };
 }
 
 // ═══ 전용면적 평단가 탭 ═══
@@ -2284,10 +2284,14 @@ function analyzeInversion(all, months){
     });
   }
   results.sort((a,b)=> b.deviationPct - a.deviationPct); // 틀어진 폭 큰 순
+  // longtermrise와 동일한 이유로 정확한 날짜 표시 — 이 탭의 전체 구간은 "이전 6개월" 기준선의 시작점(오늘로부터
+  // 210일 전)부터 "최근 1개월" 구간의 끝(오늘)까지.
+  const fmtDate = dt => `${String(dt.getFullYear()).slice(2)}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+  const todayDate2 = new Date();
+  const startDate2 = new Date(Date.now() - 210*24*3600*1000);
   return { found:true, mode:'inversion', total:all.length,
-    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
-    years:yearsLabel(months),
-    rows: results.slice(0,30) };
+    period:`${fmtDate(startDate2)} ~ ${fmtDate(todayDate2)}`,
+    rows: results.slice(0,50) };
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산 — analyzeUpDown 내부에서 공용으로 사용
@@ -2362,10 +2366,15 @@ function analyzeLongTermRise(all, months, periodM){
       recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
   }
   results.sort((a,b)=> b.changePct - a.changePct); // 많이 오른 순
+  // 이 탭은 달력 월이 아니라 일 단위(day-based)로 비교 구간을 정하므로, 화면에 보여줄 기간도 "YY.MM ~ YY.MM
+  // 중 N개월"(달력 월 뭉뚱그림)이 아니라 실제 계산에 쓰인 정확한 날짜로 표시한다 — 시작일은 정확히
+  // periodM*30일 전, 종료일은 오늘.
+  const fmtDate = dt => `${String(dt.getFullYear()).slice(2)}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+  const todayDate = new Date();
+  const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
-    period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
-    years:yearsLabel(months),
-    rows: results.slice(0,30) };
+    period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
+    rows: results.slice(0,50) };
 }
 
 // ═══ 전세 등락 랭킹(2026.08 신규, 2026.09 전체 공개 전환 — 매매 등락 옆으로 이동) ═══
@@ -2457,7 +2466,7 @@ function analyzeGapTrend(saleAll, rentAll, months){
   return { found:true, mode:'gaptrend', total:saleAll.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    rows: results.slice(0,30) };
+    rows: results.slice(0,50) };
 }
 
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
@@ -2499,7 +2508,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,30) };
+    divergence: divergence.slice(0,50) };
 }
 
 // ═══ 저평가 (2026.07 잠금 해제 — 공개 탭 / v130에서 "분기 저평가"→"반기 저평가"로 개명) ═══
@@ -2562,7 +2571,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,30) };
+    divergence: divergence.slice(0,50) };
 }
 
 // ═══ 연간 저평가 — "반기 저평가"(peak, 2026.07 이전 명칭 "분기 저평가")와 완전히 동일한 로직, 6개월 구간(6vs6) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
@@ -2642,7 +2651,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
-    divergence: divergence.slice(0,30) };
+    divergence: divergence.slice(0,50) };
 }
 
 function analyzeCompare(itemsByLawd, targets, months){
@@ -3446,7 +3455,7 @@ async function search(){
         .filter(x=>x.hh && x.hh.hhcnt>=100)
         .map(x=>({ ...x, turnoverPct: Math.round(x.n/x.hh.hhcnt*1000)/10 }))
         .sort((a,b)=> b.turnoverPct - a.turnoverPct)
-        .slice(0,30);
+        .slice(0,50);
       if(!d.turnover.length){ d = {found:false, note:'선택한 조건에 맞는 단지가 없습니다. 지역을 조정해 보세요.'}; }
     }
 
@@ -4213,7 +4222,7 @@ function renderCompare(d){
     <div class="card-hd">
       ${hdTop('단지 비교')}
       <h2>단지 시세 비교</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
+      <div class="meta">${esc(d.period)} (${d.years}) · ${d.complexes.length}개 단지${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}${d.missing.length? ' · <span style="color:#FCA5A5">거래 데이터 없음: '+d.missing.map(esc).join(', ')+'</span>':''}</div>
     </div>
 
     <div class="sec">
@@ -4242,7 +4251,7 @@ function renderRegion(d){
     <div class="card-hd">
       ${hdTop('실거래 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years})${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4268,7 +4277,7 @@ function renderVolume(d){
     <div class="card-hd">
       ${hdTop('거래량 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years})${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
     </div>
 
     <div class="sec">
@@ -4298,7 +4307,7 @@ function renderGap(d){
     <div class="card-hd">
       ${hdTop('전세가율 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · <b style="color:#7FD4D9">최근 4개월 평균</b></div>
+      <div class="meta">${esc(d.period)} (${d.years}) · <b style="color:#7FD4D9">최근 4개월 평균</b></div>
       ${hdVs('매매가', '전세가')}
     </div>
     <div class="sec">
@@ -4320,7 +4329,7 @@ function renderNewHigh(d){
     <div class="card-hd">
       ${hdTop('신고가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs('이전 최고가', '이번 신고가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4348,7 +4357,7 @@ function renderNewLow(d){
     <div class="card-hd">
       ${hdTop('하락 거래', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years}) 최고가 대비 최근 한 달 이내 거래${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs('1년 내 최고가', '최근 거래가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4376,7 +4385,7 @@ function renderBoxRange(d){
     <div class="card-hd">
       ${hdTop('박스권 시세', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 평균가 ±${d.boxPct}% 이내 유지${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years}) · 평균가 ±${d.boxPct}% 이내 유지${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4404,7 +4413,7 @@ function renderBoxBreak(d){
     <div class="card-hd">
       ${hdTop(label, true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years})${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs('최근 6개월 박스(±'+d.boxPct+'%)', '가장 최근 거래')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4432,7 +4441,7 @@ function renderPricePerPyeong(d){
     <div class="card-hd">
       ${hdTop('전용면적 평단가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years}) 최고가 기준${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4487,7 +4496,7 @@ function renderUpDown(d){
     <div class="card-hd">
       ${hdTop('매매 등락')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
+      <div class="meta">${esc(d.period)} (${d.years})${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${hdVs('이전 2개월 평균가', '최근 2개월 평균가')}
     </div>
 
@@ -4516,7 +4525,7 @@ function renderTurnover(d){
     <div class="card-hd">
       ${hdTop('회전율', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 거래건수÷세대수</div>
+      <div class="meta">${esc(d.period)} (${d.years}) · 거래건수÷세대수</div>
     </div>
 
     <div class="sec">
@@ -4545,7 +4554,7 @@ function renderJeonseUpDown(d){
     <div class="card-hd">
       ${hdTop('전세 등락')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · 전세보증금 기준</div>
+      <div class="meta">${esc(d.period)} (${d.years}) · 전세보증금 기준</div>
       ${hdVs('이전 2개월 평균 전세가', '최근 2개월 평균 전세가')}
     </div>
 
@@ -4574,7 +4583,7 @@ function renderLongTermRise(d){
     <div class="card-hd">
       ${hdTop('기간별 상승 랭킹', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years} · ${d.periodM}개월 전 대비 최근 1개월 상승률 높은 순${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
+      <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs(`${d.periodM}개월 전 평균`, '최근 1개월 평균')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4602,7 +4611,7 @@ function renderSurge(d){
     <div class="card-hd">
       ${hdTop('거래량 급증', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)} (${d.years})</div>
       ${hdVs('이전 3개월 거래량', '최근 3개월 거래량')}
     </div>
 
@@ -4659,7 +4668,7 @@ function renderInversion(d){
     <div class="card-hd">
       ${hdTop('평형 비교 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)}</div>
       ${hdVs('이전 6개월(기준선)', '최근 1개월')}
     </div>
 
@@ -4684,7 +4693,7 @@ function renderGapTrend(d){
     <div class="card-hd">
       ${hdTop('전세가율 추세', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)} (${d.years})</div>
       ${hdVs('이전 4개월 전세가율', '최근 4개월 전세가율')}
     </div>
 
@@ -4708,7 +4717,7 @@ function renderShortUndervalue(d){
     <div class="card-hd">
       ${hdTop('단기 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)} (${d.years})</div>
       ${hdVs('이전 2개월 평균가', '최근 2개월 평균가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4755,7 +4764,7 @@ function renderPeak(d){
     <div class="card-hd">
       ${hdTop('반기 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)} (${d.years})</div>
       ${hdVs('이전 6개월 최고가', '최근 6개월 최고가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
@@ -4778,7 +4787,7 @@ function renderLongPeak(d){
     <div class="card-hd">
       ${hdTop(`연간 저평가${d.sameDongOnly? ' (동일 권역)':''}`, !!d.sameDongOnly)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta">${esc(d.period)} 중 ${d.years}</div>
+      <div class="meta">${esc(d.period)} (${d.years})</div>
       ${hdVs(`${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
