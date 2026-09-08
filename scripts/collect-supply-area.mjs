@@ -68,17 +68,6 @@ function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));
   return m ? m[1].trim() : "";
 }
-// 2026.09 발견 — "특정 세대 평수가 실제보다 조금 크게 나옴" 버그 조사용: 같은 동/호로 지하 창고·관리동
-// 부속시설 등 비주거 전유 레코드가 같이 잡혀 합산되는 것으로 추정. 정확한 필드명이 실전 응답에서
-// 검증 전이라(추측성 태그명), 일단 후보 필드를 다 뽑아두고 아래 diagUnknownTags()로 실제 태그 목록을
-// 한 번 찍어서 맞는지 확인한 뒤 필터링 조건을 확정한다.
-function xtagAny(b, names) {
-  for (const name of names) {
-    const v = xtag(b, name);
-    if (v) return v;
-  }
-  return "";
-}
 function parseAreaXml(xml) {
   const items = [];
   const re = /<item(?:\s[^>]*)?>([\s\S]*?)<\/item\s*>/g;
@@ -89,10 +78,6 @@ function parseAreaXml(xml) {
       dong: xtag(b, "dongNm"), ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 검증된 필드명(2026.08)
       area: parseFloat(xtag(b, "area")) || 0,
-      // 아래 둘은 2026.09 실전 로그로 필드명 확정됨(mainPurpsCdNm="아파트"/"창고"/"주차장" 등,
-      // mainAtchGbCdNm="주건축물"/"부속건축물") — collectComplexSupplyArea의 비주거/부속 필터에서 사용.
-      purpose: xtagAny(b, ["mainPurpsCdNm", "etcPurps"]),
-      mainAtch: xtagAny(b, ["mainAtchGbCdNm"]),
     });
   }
   return items;
@@ -151,21 +136,6 @@ async function loadKnownAreasByComplex(lawd) {
   return map;
 }
 
-// 2026.09 발견 — 같은 단지가 실행마다 "확보"/"못 찾음(실제스캔:[])"을 오갔던 원인: data.go.kr API는
-// 실패해도 HTTP 상태코드는 200을 주고 본문에 에러를 담아서 줌(정상 성공은 resultCode="00", 또는
-// 아예 다른 스키마인 <OpenAPI_ServiceResponse>로 인증/트래픽 관련 에러를 줌). 지금까지는 이걸 구분 안 하고
-// "본문에 <item> 없음 = 이 페이지가 마지막(진짜 데이터 없음)"으로 해석해버려서, 일시적인 서버 에러를
-// "이 단지는 대상 없음"으로 오판했음 — 재시도해야 할 걸 그냥 포기해버린 셈.
-function checkApiError(xml) {
-  if (xml.includes("OpenAPI_ServiceResponse")) {
-    const msg = xtag(xml, "returnAuthMsg") || xtag(xml, "returnReasonCode") || "OpenAPI_ServiceResponse 에러(인증/트래픽 관련으로 추정)";
-    return msg;
-  }
-  const code = xtag(xml, "resultCode");
-  if (code && code !== "00") return `resultCode=${code} ${xtag(xml, "resultMsg")}`;
-  return null;
-}
-
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
   // 초당 요청 제한(429) + 네트워크 레벨 예외("fetch failed"/UND_ERR_CONNECT_TIMEOUT 등) 둘 다 재시도.
@@ -181,12 +151,6 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
         continue;
       }
       const text = await r.text();
-      const apiError = checkApiError(text);
-      if (apiError) {
-        if (attempt === 2) return { rows: [], rateLimited: true, error: apiError };
-        await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
-        continue;
-      }
       return { rows: parseAreaXml(text), rateLimited: false };
     } catch (e) {
       if (attempt === 2) return { rows: [], rateLimited: true, error: `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}` };
@@ -202,7 +166,6 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   const units = {}; // "동|호" -> {exclu, pubuse, matchedType}
   const foundTypes = new Set();
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
-  const excludedRows = []; // 2026.09 — 아래 필터로 걸러낸 행 기록(진단/검증용, 개수가 비정상적으로 많으면 필터 조건 재검토 필요)
   let pagesScanned = 0;
   let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429/네트워크 예외로 결국 못 받아옴"을 구분하기 위한 플래그
   let lastError = null;
@@ -217,23 +180,8 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
-      if (row.gb.includes("전유")) {
-        // 전유(exclu)는 실거래 전용면적과 매칭하는 기준값이라 무조건 합산 — mainAtch/purpose로 거르면 안 됨.
-        // (2026.09 발견: 일부 단지는 세대 자체의 전유 레코드가 mainAtchGbCdNm="부속건축물"로 등록돼 있어서,
-        // 여기에 필터를 걸면 그 단지는 전유면적이 통째로 안 잡혀 매칭 자체가 실패함 — 실전 회귀로 확인함)
-        u.exclu += row.area;
-      } else if (row.gb.includes("공용")) {
-        // 공용(pubuse)만 필터링 — "공급면적(전용+주거공용)"에는 부속건축물(관리동/경로당 등) 소속 공용이나
-        // 기타공용(창고·주차장·기계실 등)이 포함되면 안 됨. 실전 로그로 확인된 패턴:
-        // 롯데캐슬노블·개포더샵트리에(부속건축물 복리시설/부대시설), 래미안그레이튼(부속건축물 소속 미세 조각),
-        // 한화진넥스빌(주건축물 소속이지만 창고/주차장) — 모두 공용 쪽에서만 나타났고 전유 쪽엔 없었음(2026.09).
-        const isNonResidentialCommon = row.mainAtch !== "주건축물" || /창고|주차|기계실|전기실|경비|관리|복리시설|부대시설/.test(row.purpose);
-        if (isNonResidentialCommon) {
-          excludedRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch });
-        } else {
-          u.pubuse += row.area;
-        }
-      }
+      if (row.gb.includes("전유")) u.exclu += row.area;
+      else if (row.gb.includes("공용")) u.pubuse += row.area;
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
@@ -248,7 +196,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -278,17 +226,11 @@ async function main() {
     const outFile = path.join("data/supply-area", `${lawd}.json`);
     const out = existsSync(outFile) ? JSON.parse(await readFile(outFile, "utf-8")) : { items: {} };
 
-    // 2026.09 변경 — 예전엔 out.items[c.name]에 하나라도 저장돼 있으면(부분 성공 N/M 포함) 그대로
-    // 영구 스킵했음. 그래서 "2/3개 타입 확보" 같은 건 나머지 1개를 영영 못 찾은 채로 고정됐음
-    // (사용자 요청으로 변경: 목표 타입을 전부 찾을 때까지 계속 재시도). 단, 이미 다 찾은 것까지 매번
-    // 다시 스캔하면 API 호출만 낭비이므로, "목표 개수만큼 다 채웠는지"로만 스킵 여부를 판단한다.
     const targets = (hh.items || []).filter((c) => {
+      if (out.items[c.name]) return false; // 이미 처리됨(재실행 시 이어서)
       if (!c.kaptAddr || !c.bjdCode) return false; // hhcnt 데이터가 아직 kaptAddr/bjdCode 없는 옛 버전이면 스킵
       const areas = knownAreas[norm(c.name)];
-      if (!areas || areas.size === 0) return false; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
-      const already = out.items[c.name];
-      if (already && already.length >= areas.size) return false; // 목표 타입 다 찾았으면 스킵(이어서 처리 이 경우에만 해당)
-      return true;
+      return areas && areas.size > 0; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
     });
 
     // 2026.08: 동시 2~3개로도 대량 연속 처리 시 UND_ERR_CONNECT_TIMEOUT(데이터센터 IP 대역 차단 의심)이
@@ -315,18 +257,8 @@ async function main() {
         const bjdongCd5 = c.bjdCode.length === 10 ? c.bjdCode.slice(5) : c.bjdCode;
         const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas);
         if (Object.keys(types).length) {
-          // 2026.09 — 재시도 시 이전에 이미 찾아둔 타입을 잃어버리지 않도록 병합. 반올림 전용면적을
-          // 키로 합쳐서 저장(같은 타입이 다시 나오면 이번 결과로 갱신, 새 타입이면 추가).
-          const prevArr = out.items[c.name] || [];
-          const merged = new Map(prevArr.map((t) => [Math.round(t.exclusiveArea), t]));
-          for (const v of Object.values(types)) merged.set(Math.round(v.exclusiveArea), v);
-          out.items[c.name] = [...merged.values()];
-          console.log(`  ${c.name}: ${out.items[c.name].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
-          if (debug.excludedRows.length) {
-            // 2026.09 — 필터로 걸러낸 비주거/부속 행 개수. 몇 건 정도는 정상(관리동 등 실제로 존재)이지만
-            // 개수가 비정상적으로 많으면(예: 수백~수천 건) 필터 조건이 뭔가 놓치고 있을 수 있어 같이 남긴다.
-            console.log(`    [필터] 공급면적에서 제외된 비주거/기타공용 행 ${debug.excludedRows.length}건: ${JSON.stringify(debug.excludedRows.slice(0, 3))}`);
-          }
+          out.items[c.name] = Object.values(types);
+          console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
           consecutiveNetworkFailures = 0; // 성공하면 연속 실패 카운트 리셋
         } else if (debug.rateLimited) {
           // 2026.08 — "데이터가 없음"이 아니라 "재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
@@ -341,8 +273,7 @@ async function main() {
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
-          const prevCount = (out.items[c.name] || []).length; // 2026.09 — 재시도 대상이라 이전에 이미 일부 찾아뒀을 수 있음
-          console.log(`  ${c.name}: 못 찾음(${prevCount}/${targetAreas.size}${prevCount ? ", 이번엔 신규 0" : ""}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
+          console.log(`  ${c.name}: 못 찾음(0/${targetAreas.size}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
           consecutiveNetworkFailures = 0; // 이건 진짜 응답을 받은 케이스라 네트워크 실패가 아님 — 리셋
         }
       } catch (e) {
@@ -358,14 +289,7 @@ async function main() {
 
     out.updatedAt = new Date().toISOString();
     await writeFile(outFile, JSON.stringify(out));
-    // 2026.09 — "누적 확보"에 부분 성공(N/M, N<M)도 포함되게 바뀌어서(재시도 대상으로 남겨두려고),
-    // 완전 확보와 부분 확보를 나눠서 보여준다 — 안 그러면 "누적 X개"가 다 끝난 것처럼 오해될 수 있음.
-    const fullyDone = Object.entries(out.items).filter(([name, arr]) => {
-      const areas = knownAreas[norm(name)];
-      return areas && arr.length >= areas.size;
-    }).length;
-    const totalSaved = Object.keys(out.items).length;
-    console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개, 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
+    console.log(`[supply-area] ${lawd}: 이번 실행 ${targets.length}개 단지 중 처리 완료, 누적 ${Object.keys(out.items).length}개 단지`);
   }
 
   commitProgress(`chore: 공급면적 배치 수집 완료 커밋 ${new Date().toISOString()}`, true);

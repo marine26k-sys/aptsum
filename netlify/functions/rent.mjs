@@ -71,42 +71,6 @@ function areaToPy(area) {
   return Math.round(p1 + (area - a1) * slope);
 }
 
-// 2026.09 추가 — data/supply-area/<lawd>.json(건축HUB 실측 공급면적 배치 결과, scripts/collect-supply-area.mjs가
-// 생성)에 해당 단지+전용면적이 있으면 그 실측값 기준으로 평형을 다시 계산하고, 없으면(그 지역 배치가 아직
-// 안 돌았거나 그 단지/타입이 아직 안 잡혔거나) 기존 areaToPy() 보간값을 그대로 쓴다. fetchStaticMonth와
-// 동일하게 origin으로 이 사이트 자신의 정적 파일(data/supply-area/*.json, publish="."로 그대로 호스팅됨)을
-// fetch — 없거나(아직 배치 안 됨) 실패하면 조용히 폴백. (analyze.mjs의 동일 로직 별도 사본)
-const SQM_PER_PY = 3.3058;
-const norm = (s) => String(s || "").replace(/\s/g, "");
-const supplyAreaCache = new Map(); // lawd -> Map(정규화단지명 -> [{exclusiveArea, supplyArea}]) | null — 컨테이너 warm 재사용 동안만 캐시
-async function loadSupplyAreaMap(origin, lawd) {
-  if (supplyAreaCache.has(lawd)) return supplyAreaCache.get(lawd);
-  let map = null;
-  try {
-    const r = await fetch(`${origin}/data/supply-area/${encodeURIComponent(lawd)}.json`);
-    if (r.ok) {
-      const j = await r.json();
-      map = new Map();
-      for (const [name, types] of Object.entries(j.items || {})) map.set(norm(name), types);
-    }
-  } catch (e) { map = null; }
-  supplyAreaCache.set(lawd, map);
-  return map;
-}
-async function hubPyOverride(items, lawd, origin) {
-  if (!origin || !lawd || !/^\d{5}$/.test(lawd)) return items;
-  const map = await loadSupplyAreaMap(origin, lawd);
-  if (!map) return items;
-  return items.map((t) => {
-    const types = map.get(norm(t.apt));
-    if (!types) return t;
-    const rounded = Math.round(t.area);
-    const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
-    if (!match) return t;
-    return { ...t, py: Math.round(match.supplyArea / SQM_PER_PY) };
-  });
-}
-
 function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));
   return m ? m[1].trim() : "";
@@ -165,7 +129,7 @@ async function fetchText(key, lawd, ym, retries = 2) {
 }
 
 // 인천 전용: analyze.mjs의 fetchShardIncheon()과 동일한 로직 (전월세 API용)
-async function fetchShardIncheon(key, guName, yms, origin) {
+async function fetchShardIncheon(key, guName, yms) {
   const cfg = SPLIT_REGIONS["IC-"];
   const code = cfg.codes[guName];
   if (!code) return { error: "구 선택 오류" };
@@ -173,7 +137,7 @@ async function fetchShardIncheon(key, guName, yms, origin) {
   const newMs = yms.filter((ym) => ym >= cfg.split);
 
   const newRes = await Promise.all(newMs.map((ym) => fetchText(key, code, ym)));
-  const items = await hubPyOverride(newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym)), code, origin);
+  const items = newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym));
 
   let oldItems = [];
   let oldRes = [];
@@ -184,30 +148,26 @@ async function fetchShardIncheon(key, guName, yms, origin) {
         Promise.all(oldMs.map((ym) => fetchText(key, "28140", ym))),
       ]);
       oldRes = [...c110, ...c140];
-      const mainlandAll = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(c110[i].text, ym)), "28110", origin);
-      const mainland = mainlandAll.filter((t) => !cfg.islandDongs.includes(t.umd));
-      const dong = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(c140[i].text, ym)), "28140", origin);
+      const mainland = oldMs.flatMap((ym, i) => parseItems(c110[i].text, ym)).filter((t) => !cfg.islandDongs.includes(t.umd));
+      const dong = oldMs.flatMap((ym, i) => parseItems(c140[i].text, ym));
       oldItems = [...mainland, ...dong];
     } else if (guName === "영종구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28110", ym)));
-      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28110", origin);
-      oldItems = all.filter((t) => cfg.islandDongs.includes(t.umd));
+      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => cfg.islandDongs.includes(t.umd));
     } else if (guName === "서해구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28260", ym)));
-      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28260", origin);
-      oldItems = all.filter((t) => !cfg.geomdanDongs.includes(t.umd));
+      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => !cfg.geomdanDongs.includes(t.umd));
     } else if (guName === "검단구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28260", ym)));
-      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28260", origin);
-      oldItems = all.filter((t) => cfg.geomdanDongs.includes(t.umd));
+      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => cfg.geomdanDongs.includes(t.umd));
     }
   }
   const anyFailed = [...newRes, ...oldRes].some((r) => r.failed);
   return { items: [...items, ...oldItems], anyFailed };
 }
 
-async function fetchShardLive(key, lawd, yms, origin) {
-  if (lawd.startsWith("IC-")) return fetchShardIncheon(key, lawd.slice(3), yms, origin);
+async function fetchShardLive(key, lawd, yms) {
+  if (lawd.startsWith("IC-")) return fetchShardIncheon(key, lawd.slice(3), yms);
   const prefix = Object.keys(SPLIT_REGIONS).find((p) => lawd.startsWith(p));
   if (prefix) {
     const cfg = SPLIT_REGIONS[prefix];
@@ -223,10 +183,11 @@ async function fetchShardLive(key, lawd, yms, origin) {
       Promise.all(oldMs.map((ym) => fetchText(key, cfg.oldCode, ym))),
     ]);
     const anyFailed = [...newRes, ...oldGuRes, ...oldUniRes].some((r) => r.failed);
-    const items = await hubPyOverride(newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym)), code, origin);
-    const oldGu = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldGuRes[i].text, ym)), code, origin);
-    const oldUniAll = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldUniRes[i].text, ym)), cfg.oldCode, origin);
-    const oldUni = oldUniAll.filter((t) => dongs.includes(t.umd));
+    const items = newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym));
+    const oldGu = oldMs.flatMap((ym, i) => parseItems(oldGuRes[i].text, ym));
+    const oldUni = oldMs
+      .flatMap((ym, i) => parseItems(oldUniRes[i].text, ym))
+      .filter((t) => dongs.includes(t.umd));
     const seen = new Set();
     for (const t of [...oldGu, ...oldUni]) {
       const k = `${t.apt}|${t.umd}|${t.area}|${t.amt}|${t.ym}|${t.d}|${t.floor}`;
@@ -245,7 +206,7 @@ async function fetchShardLive(key, lawd, yms, origin) {
     if (joined.includes("EXCEEDS") || joined.includes("LIMITED"))
       return { error: "일일 호출 한도 초과" };
   }
-  return { items: await hubPyOverride(yms.flatMap((ym, i) => parseItems(results[i].text, ym)), lawd, origin), anyFailed };
+  return { items: yms.flatMap((ym, i) => parseItems(results[i].text, ym)), anyFailed };
 }
 
 async function fetchStaticMonth(origin, lawd, ym) {
@@ -255,7 +216,7 @@ async function fetchStaticMonth(origin, lawd, ym) {
     const j = await r.json();
     if (!j || !Array.isArray(j.items)) return null;
     // area는 그대로, py만 지금 코드의 PY_ANCHORS로 다시 계산(2026.08 — analyze.mjs와 동일한 이유)
-    return await hubPyOverride(j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) })), lawd, origin);
+    return j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) }));
   } catch (e) { return null; }
 }
 
@@ -268,7 +229,7 @@ function currentAndPrevYm() {
 }
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) return fetchShardLive(key, lawd, yms, origin);
+  if (!origin) return fetchShardLive(key, lawd, yms);
 
   const { cur, prev } = currentAndPrevYm();
   const isRecent = (ym) => ym === cur || ym === prev;
@@ -282,7 +243,7 @@ async function fetchShard(key, lawd, yms, origin) {
     historicalYms.length
       ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
       : [],
-    recentYms.length ? fetchShardLive(key, lawd, recentYms, origin) : { items: [], anyFailed: false },
+    recentYms.length ? fetchShardLive(key, lawd, recentYms) : { items: [], anyFailed: false },
   ]);
   const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null);
   const staticItems = staticHits.filter((h) => h !== null).flat();
@@ -293,7 +254,7 @@ async function fetchShard(key, lawd, yms, origin) {
     return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
   }
 
-  const missingLive = await fetchShardLive(key, lawd, missingHistorical, origin);
+  const missingLive = await fetchShardLive(key, lawd, missingHistorical);
   if (missingLive.error) {
     const items = [...staticItems, ...recentLive.items];
     return items.length ? { items, anyFailed: true } : missingLive;
