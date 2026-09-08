@@ -8,6 +8,7 @@ export const config = {
 
 const RTMS = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev";
 
+
 // 행정구역 개편 지역: 구코드·신코드 병합 조회 설정
 // 화성시 2026.02 분구 / 부천시 2024.01 구 재설치 / 인천 2026.07 행정체제 개편
 const SPLIT_REGIONS = {
@@ -61,7 +62,8 @@ const SPLIT_REGIONS = {
 // (수민 가설, 미검증) 표본 적은 구간에서 역전이 나오는 건 2000년 이전 준공(복도식 위주, 공용면적
 // 배분 관행이 지금과 다름) 단지가 섞여있어서일 가능성 — 현재 이 표에는 준공년도가 없어 확인 불가.
 // 나중에 hhcnt/supply-area 쪽에 준공년도가 붙으면 pre-2000 단지를 걸러서 재검증하면 좋을 듯.
-// 실측 데이터(공급면적 배치, data/supply-area)가 더 쌓이면 이 보간표 자체를 대체할 예정.
+// 2026.09 — hubPyOverride()가 data/supply-area 실측값을 매칭되는 단지/타입에 우선 적용하도록 연결됨
+// (아래 xtag() 앞 참고). 이 보간표는 실측이 없는 나머지 경우의 폴백으로 계속 쓰인다.
 const PY_ANCHORS = [
   [29, 14], [37, 15], [39, 18], [49, 21], [50, 21], [53, 21],
   [59, 25], [60, 25], [63, 26], [68, 28], [76, 31], [77, 31],
@@ -86,6 +88,46 @@ function areaToPy(area) {
   const [a0, p0] = A[A.length - 2], [a1, p1] = A[A.length - 1];
   const slope = (p1 - p0) / (a1 - a0);
   return Math.round(p1 + (area - a1) * slope);
+}
+
+// 2026.09 추가 — data/supply-area/<lawd>.json(건축HUB 실측 공급면적 배치 결과, scripts/collect-supply-area.mjs가
+// 생성)에 해당 단지+전용면적이 있으면 그 실측값 기준으로 평형을 다시 계산하고, 없으면(그 지역 배치가 아직
+// 안 돌았거나 그 단지/타입이 아직 안 잡혔거나) 기존 areaToPy() 보간값을 그대로 쓴다.
+// fetchStaticMonth(data/analyze 정적 배치 읽는 방식)와 동일하게 매 요청마다 fetch()로 실시간 조회 —
+// (2026.09 최초엔 included_files로 함수 번들에 구워 넣었었는데, 그러면 GitHub Actions 배치가 새로
+// 커밋해도 Netlify가 재배포되기 전까진 반영이 안 되는 문제가 있어 fetch 방식으로 변경함).
+// 파일이 없거나(아직 배치 안 됨) 네트워크 실패 시 조용히 폴백하므로 이 배치가 아직 안 돈 지역/단지여도 문제없음.
+const SQM_PER_PY = 3.3058; // index.html "전용면적 평단가" 탭과 동일한 정밀 환산 상수(보간 없음)
+const norm = (s) => String(s || "").replace(/\s/g, "");
+const supplyAreaCache = new Map(); // lawd -> Map(정규화단지명 -> [{exclusiveArea, supplyArea}]) | null(파일 없음/파싱 실패) — 컨테이너 warm 재사용 동안만 캐시
+async function loadSupplyAreaMap(origin, lawd) {
+  if (supplyAreaCache.has(lawd)) return supplyAreaCache.get(lawd);
+  let map = null;
+  try {
+    const r = await fetch(`${origin}/data/supply-area/${encodeURIComponent(lawd)}.json`);
+    if (r.ok) {
+      const j = await r.json();
+      map = new Map();
+      for (const [name, types] of Object.entries(j.items || {})) map.set(norm(name), types);
+    }
+  } catch (e) { map = null; } // 파일 없음/네트워크 실패는 정상적인 케이스(아직 배치 안 됨)라 에러 로그 안 남김
+  supplyAreaCache.set(lawd, map);
+  return map;
+}
+// lawd가 5자리 숫자 코드일 때만 시도 — 분구 가상코드(HS-/BC-/IC-...)는 collect-supply-area.mjs가 아직
+// 대상으로 안 삼고 있어(ALL_LAWDS 필터 참고) 실측 데이터 자체가 없음 → 시도해봐야 항상 미스이므로 스킵.
+async function hubPyOverride(items, lawd, origin) {
+  if (!origin || !lawd || !/^\d{5}$/.test(lawd)) return items;
+  const map = await loadSupplyAreaMap(origin, lawd);
+  if (!map) return items;
+  return items.map((t) => {
+    const types = map.get(norm(t.apt));
+    if (!types) return t;
+    const rounded = Math.round(t.area);
+    const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
+    if (!match) return t;
+    return { ...t, py: Math.round(match.supplyArea / SQM_PER_PY) };
+  });
 }
 
 function xtag(b, name) {
@@ -149,7 +191,7 @@ async function fetchText(key, lawd, ym, retries = 2) {
 
 // 인천 전용: 제물포구=옛 중구(섬 동 제외)+옛 동구(전체) / 영종구=옛 중구 중 섬 동만
 // 서해구=옛 서구(검단 동 제외) / 검단구=옛 서구 중 검단 동만 — 옛 코드끼리 겹치는 범위가 없어 화성/부천처럼 중복 제거가 필요 없음
-async function fetchShardIncheon(key, guName, yms) {
+async function fetchShardIncheon(key, guName, yms, origin) {
   const cfg = SPLIT_REGIONS["IC-"];
   const code = cfg.codes[guName];
   if (!code) return { error: "구 선택 오류" };
@@ -157,7 +199,7 @@ async function fetchShardIncheon(key, guName, yms) {
   const newMs = yms.filter((ym) => ym >= cfg.split);
 
   const newRes = await Promise.all(newMs.map((ym) => fetchText(key, code, ym)));
-  const items = newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym));
+  const items = await hubPyOverride(newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym)), code, origin);
 
   let oldItems = [];
   let oldRes = [];
@@ -168,26 +210,30 @@ async function fetchShardIncheon(key, guName, yms) {
         Promise.all(oldMs.map((ym) => fetchText(key, "28140", ym))),
       ]);
       oldRes = [...c110, ...c140];
-      const mainland = oldMs.flatMap((ym, i) => parseItems(c110[i].text, ym)).filter((t) => !cfg.islandDongs.includes(t.umd));
-      const dong = oldMs.flatMap((ym, i) => parseItems(c140[i].text, ym));
+      const mainlandAll = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(c110[i].text, ym)), "28110", origin);
+      const mainland = mainlandAll.filter((t) => !cfg.islandDongs.includes(t.umd));
+      const dong = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(c140[i].text, ym)), "28140", origin);
       oldItems = [...mainland, ...dong];
     } else if (guName === "영종구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28110", ym)));
-      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => cfg.islandDongs.includes(t.umd));
+      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28110", origin);
+      oldItems = all.filter((t) => cfg.islandDongs.includes(t.umd));
     } else if (guName === "서해구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28260", ym)));
-      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => !cfg.geomdanDongs.includes(t.umd));
+      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28260", origin);
+      oldItems = all.filter((t) => !cfg.geomdanDongs.includes(t.umd));
     } else if (guName === "검단구") {
       oldRes = await Promise.all(oldMs.map((ym) => fetchText(key, "28260", ym)));
-      oldItems = oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)).filter((t) => cfg.geomdanDongs.includes(t.umd));
+      const all = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldRes[i].text, ym)), "28260", origin);
+      oldItems = all.filter((t) => cfg.geomdanDongs.includes(t.umd));
     }
   }
   const anyFailed = [...newRes, ...oldRes].some((r) => r.failed);
   return { items: [...items, ...oldItems], anyFailed };
 }
 
-async function fetchShardLive(key, lawd, yms) {
-  if (lawd.startsWith("IC-")) return fetchShardIncheon(key, lawd.slice(3), yms);
+async function fetchShardLive(key, lawd, yms, origin) {
+  if (lawd.startsWith("IC-")) return fetchShardIncheon(key, lawd.slice(3), yms, origin);
   const prefix = Object.keys(SPLIT_REGIONS).find((p) => lawd.startsWith(p));
   if (prefix) {
     const cfg = SPLIT_REGIONS[prefix];
@@ -205,11 +251,10 @@ async function fetchShardLive(key, lawd, yms) {
       Promise.all(oldMs.map((ym) => fetchText(key, cfg.oldCode, ym))),
     ]);
     const anyFailed = [...newRes, ...oldGuRes, ...oldUniRes].some((r) => r.failed);
-    const items = newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym));
-    const oldGu = oldMs.flatMap((ym, i) => parseItems(oldGuRes[i].text, ym)); // 구코드 응답은 이미 해당 구 범위
-    const oldUni = oldMs
-      .flatMap((ym, i) => parseItems(oldUniRes[i].text, ym))
-      .filter((t) => dongs.includes(t.umd)); // 통합코드는 법정동 필터
+    const items = await hubPyOverride(newMs.flatMap((ym, i) => parseItems(newRes[i].text, ym)), code, origin);
+    const oldGu = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldGuRes[i].text, ym)), code, origin); // 구코드 응답은 이미 해당 구 범위
+    const oldUniAll = await hubPyOverride(oldMs.flatMap((ym, i) => parseItems(oldUniRes[i].text, ym)), cfg.oldCode, origin);
+    const oldUni = oldUniAll.filter((t) => dongs.includes(t.umd)); // 통합코드는 법정동 필터
     // 중복 제거 (동일 거래가 양쪽에 있을 수 있음)
     const seen = new Set();
     for (const t of [...oldGu, ...oldUni]) {
@@ -229,7 +274,7 @@ async function fetchShardLive(key, lawd, yms) {
     if (joined.includes("EXCEEDS") || joined.includes("LIMITED"))
       return { error: "일일 호출 한도 초과" };
   }
-  return { items: yms.flatMap((ym, i) => parseItems(results[i].text, ym)), anyFailed };
+  return { items: await hubPyOverride(yms.flatMap((ym, i) => parseItems(results[i].text, ym)), lawd, origin), anyFailed };
 }
 
 // GitHub Actions 배치가 미리 수집해 리포에 커밋해둔 정적 JSON(data/analyze/<lawd>/<ym>.json)을 먼저 확인.
@@ -244,7 +289,7 @@ async function fetchStaticMonth(origin, lawd, ym) {
     // 저장된 py는 그 시점의 PY_ANCHORS로 계산된 값이라, 보간표를 나중에 고쳐도 이미 커밋된 정적 파일엔
     // 옛 값이 그대로 남아있음 — area(전용면적)는 그대로 두고 py만 지금 코드 기준으로 다시 계산해서
     // 돌려준다(2026.08 PY_ANCHORS 개편 때 발견 — 안 그러면 전체 배치를 재수집해야 값이 반영됨).
-    return j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) }));
+    return await hubPyOverride(j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) })), lawd, origin);
   } catch (e) { return null; }
 }
 
@@ -259,7 +304,7 @@ function currentAndPrevYm() {
 }
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) return fetchShardLive(key, lawd, yms);
+  if (!origin) return fetchShardLive(key, lawd, yms, origin);
 
   const { cur, prev } = currentAndPrevYm();
   const isRecent = (ym) => ym === cur || ym === prev;
@@ -273,7 +318,7 @@ async function fetchShard(key, lawd, yms, origin) {
     historicalYms.length
       ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
       : [],
-    recentYms.length ? fetchShardLive(key, lawd, recentYms) : { items: [], anyFailed: false },
+    recentYms.length ? fetchShardLive(key, lawd, recentYms, origin) : { items: [], anyFailed: false },
   ]);
   const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null); // static 배치가 아직 못 받은 과거월
   const staticItems = staticHits.filter((h) => h !== null).flat();
@@ -286,7 +331,7 @@ async function fetchShard(key, lawd, yms, origin) {
   }
 
   // static에서 못 찾은 과거월만 추가로 live 조회 (recentYms와는 별개 호출 — recentYms는 위에서 이미 끝났음)
-  const missingLive = await fetchShardLive(key, lawd, missingHistorical);
+  const missingLive = await fetchShardLive(key, lawd, missingHistorical, origin);
   if (missingLive.error) {
     const items = [...staticItems, ...recentLive.items]; // 최근월 live는 이미 성공했으니 그 데이터는 살리고 과거 누락분만 에러 취급
     return items.length ? { items, anyFailed: true } : missingLive;

@@ -278,11 +278,17 @@ async function main() {
     const outFile = path.join("data/supply-area", `${lawd}.json`);
     const out = existsSync(outFile) ? JSON.parse(await readFile(outFile, "utf-8")) : { items: {} };
 
+    // 2026.09 변경 — 예전엔 out.items[c.name]에 하나라도 저장돼 있으면(부분 성공 N/M 포함) 그대로
+    // 영구 스킵했음. 그래서 "2/3개 타입 확보" 같은 건 나머지 1개를 영영 못 찾은 채로 고정됐음
+    // (사용자 요청으로 변경: 목표 타입을 전부 찾을 때까지 계속 재시도). 단, 이미 다 찾은 것까지 매번
+    // 다시 스캔하면 API 호출만 낭비이므로, "목표 개수만큼 다 채웠는지"로만 스킵 여부를 판단한다.
     const targets = (hh.items || []).filter((c) => {
-      if (out.items[c.name]) return false; // 이미 처리됨(재실행 시 이어서)
       if (!c.kaptAddr || !c.bjdCode) return false; // hhcnt 데이터가 아직 kaptAddr/bjdCode 없는 옛 버전이면 스킵
       const areas = knownAreas[norm(c.name)];
-      return areas && areas.size > 0; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
+      if (!areas || areas.size === 0) return false; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
+      const already = out.items[c.name];
+      if (already && already.length >= areas.size) return false; // 목표 타입 다 찾았으면 스킵(이어서 처리 이 경우에만 해당)
+      return true;
     });
 
     // 2026.08: 동시 2~3개로도 대량 연속 처리 시 UND_ERR_CONNECT_TIMEOUT(데이터센터 IP 대역 차단 의심)이
@@ -309,8 +315,13 @@ async function main() {
         const bjdongCd5 = c.bjdCode.length === 10 ? c.bjdCode.slice(5) : c.bjdCode;
         const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas);
         if (Object.keys(types).length) {
-          out.items[c.name] = Object.values(types);
-          console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
+          // 2026.09 — 재시도 시 이전에 이미 찾아둔 타입을 잃어버리지 않도록 병합. 반올림 전용면적을
+          // 키로 합쳐서 저장(같은 타입이 다시 나오면 이번 결과로 갱신, 새 타입이면 추가).
+          const prevArr = out.items[c.name] || [];
+          const merged = new Map(prevArr.map((t) => [Math.round(t.exclusiveArea), t]));
+          for (const v of Object.values(types)) merged.set(Math.round(v.exclusiveArea), v);
+          out.items[c.name] = [...merged.values()];
+          console.log(`  ${c.name}: ${out.items[c.name].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
           if (debug.excludedRows.length) {
             // 2026.09 — 필터로 걸러낸 비주거/부속 행 개수. 몇 건 정도는 정상(관리동 등 실제로 존재)이지만
             // 개수가 비정상적으로 많으면(예: 수백~수천 건) 필터 조건이 뭔가 놓치고 있을 수 있어 같이 남긴다.
@@ -330,7 +341,8 @@ async function main() {
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
-          console.log(`  ${c.name}: 못 찾음(0/${targetAreas.size}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
+          const prevCount = (out.items[c.name] || []).length; // 2026.09 — 재시도 대상이라 이전에 이미 일부 찾아뒀을 수 있음
+          console.log(`  ${c.name}: 못 찾음(${prevCount}/${targetAreas.size}${prevCount ? ", 이번엔 신규 0" : ""}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
           consecutiveNetworkFailures = 0; // 이건 진짜 응답을 받은 케이스라 네트워크 실패가 아님 — 리셋
         }
       } catch (e) {
@@ -346,7 +358,14 @@ async function main() {
 
     out.updatedAt = new Date().toISOString();
     await writeFile(outFile, JSON.stringify(out));
-    console.log(`[supply-area] ${lawd}: 이번 실행 ${targets.length}개 단지 중 처리 완료, 누적 ${Object.keys(out.items).length}개 단지`);
+    // 2026.09 — "누적 확보"에 부분 성공(N/M, N<M)도 포함되게 바뀌어서(재시도 대상으로 남겨두려고),
+    // 완전 확보와 부분 확보를 나눠서 보여준다 — 안 그러면 "누적 X개"가 다 끝난 것처럼 오해될 수 있음.
+    const fullyDone = Object.entries(out.items).filter(([name, arr]) => {
+      const areas = knownAreas[norm(name)];
+      return areas && arr.length >= areas.size;
+    }).length;
+    const totalSaved = Object.keys(out.items).length;
+    console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개, 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
   }
 
   commitProgress(`chore: 공급면적 배치 수집 완료 커밋 ${new Date().toISOString()}`, true);
