@@ -68,16 +68,40 @@ function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));
   return m ? m[1].trim() : "";
 }
+// 2026.09 발견 — "특정 세대 평수가 실제보다 조금 크게 나옴" 버그 조사용: 같은 동/호로 지하 창고·관리동
+// 부속시설 등 비주거 전유 레코드가 같이 잡혀 합산되는 것으로 추정. 정확한 필드명이 실전 응답에서
+// 검증 전이라(추측성 태그명), 일단 후보 필드를 다 뽑아두고 아래 diagUnknownTags()로 실제 태그 목록을
+// 한 번 찍어서 맞는지 확인한 뒤 필터링 조건을 확정한다.
+function xtagAny(b, names) {
+  for (const name of names) {
+    const v = xtag(b, name);
+    if (v) return v;
+  }
+  return "";
+}
+let diagDumped = false;
+function diagDumpTags(rawItemBlock) {
+  if (diagDumped || !rawItemBlock) return;
+  diagDumped = true;
+  const tags = [...rawItemBlock.matchAll(/<([a-zA-Z]+)>/g)].map((m) => m[1]);
+  console.log(`  [진단] 전유공용면적 API 응답 item의 실제 태그 목록: ${[...new Set(tags)].join(", ")}`);
+  console.log(`  [진단] 첫 item 원문: ${rawItemBlock.replace(/\s+/g, " ").trim()}`);
+}
 function parseAreaXml(xml) {
   const items = [];
   const re = /<item(?:\s[^>]*)?>([\s\S]*?)<\/item\s*>/g;
   let m;
   while ((m = re.exec(xml))) {
     const b = m[1];
+    diagDumpTags(b); // 실행당 딱 한 번만 — 실제 태그명 확인용
     items.push({
       dong: xtag(b, "dongNm"), ho: xtag(b, "hoNm"),
       gb: xtag(b, "exposPubuseGbCdNm"), // "전유" | "공용" — 실전 검증된 필드명(2026.08)
       area: parseFloat(xtag(b, "area")) || 0,
+      // 아래 셋은 아직 태그명 미검증(추측) — diagDumpTags 로그로 실제 이름 확인 후 확정 필요.
+      // 확정되면 collectComplexSupplyArea에서 이 값으로 비주거/부속 레코드를 걸러낼 예정.
+      purpose: xtagAny(b, ["mainPurpsCdNm", "etcPurps"]),
+      mainAtch: xtagAny(b, ["mainAtchGbCdNm"]),
     });
   }
   return items;
@@ -166,6 +190,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   const units = {}; // "동|호" -> {exclu, pubuse, matchedType}
   const foundTypes = new Set();
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
+  const suspectRows = []; // 진단용(2026.09) — "평수가 조금 크게 나옴" 버그 조사: 비주거/부속으로 보이는 전유 행 기록
   let pagesScanned = 0;
   let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429/네트워크 예외로 결국 못 받아옴"을 구분하기 위한 플래그
   let lastError = null;
@@ -180,6 +205,11 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
+      // 2026.09 진단 — purpose/mainAtch 태그명이 아직 미검증이라 필터링은 안 하고 "의심 행"만 기록.
+      // 비주거로 보이는 값(창고/관리/경비/부속 등 키워드)이 실제로 잡히는지, 그게 평수 부풀림의
+      // 원인이 맞는지 로그로 먼저 확인한 뒤 필터링 조건을 확정한다.
+      const looksNonResidential = /창고|관리|경비|부속|기계실|전기실|주차/.test(row.purpose) || /부속/.test(row.mainAtch);
+      if (looksNonResidential) suspectRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch });
       if (row.gb.includes("전유")) u.exclu += row.area;
       else if (row.gb.includes("공용")) u.pubuse += row.area;
       const rounded = Math.round(u.exclu);
@@ -196,7 +226,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, suspectRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -259,6 +289,10 @@ async function main() {
         if (Object.keys(types).length) {
           out.items[c.name] = Object.values(types);
           console.log(`  ${c.name}: ${Object.keys(types).length}/${targetAreas.size}개 타입 확보`);
+          if (debug.suspectRows.length) {
+            // 2026.09 진단 — 성공한 케이스라도 비주거로 의심되는 행이 섞여 합산됐을 수 있어 같이 찍는다.
+            console.log(`    [진단] 의심 행 ${debug.suspectRows.length}건: ${JSON.stringify(debug.suspectRows.slice(0, 5))}`);
+          }
           consecutiveNetworkFailures = 0; // 성공하면 연속 실패 카운트 리셋
         } else if (debug.rateLimited) {
           // 2026.08 — "데이터가 없음"이 아니라 "재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
