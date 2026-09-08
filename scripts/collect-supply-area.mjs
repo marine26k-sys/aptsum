@@ -196,17 +196,22 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
-      // 2026.09 확정(실전 로그로 mainAtchGbCdNm/mainPurpsCdNm 필드 검증 완료) — "공급면적(전용+주거공용)"에는
-      // 부속건축물(관리동/경로당 등) 소속 면적이나, 주건축물 소속이라도 기타공용(창고·주차장·기계실 등)
-      // 면적은 포함되면 안 됨. 이 필터 없이 무조건 합산해서 세대 평수가 실제보다 커지는 버그가 있었음
-      // (예: 롯데캐슬노블·개포더샵트리에의 부속건축물 복리시설/부대시설, 래미안그레이튼의 부속건축물
-      // 소속 "아파트" 용도 미세 조각들, 한화진넥스빌의 주건축물 소속 창고/주차장).
-      const isNonResidentialCommon = row.mainAtch !== "주건축물" || /창고|주차|기계실|전기실|경비|관리|복리시설|부대시설/.test(row.purpose);
-      if (isNonResidentialCommon) {
-        excludedRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch });
-      } else {
-        if (row.gb.includes("전유")) u.exclu += row.area;
-        else if (row.gb.includes("공용")) u.pubuse += row.area;
+      if (row.gb.includes("전유")) {
+        // 전유(exclu)는 실거래 전용면적과 매칭하는 기준값이라 무조건 합산 — mainAtch/purpose로 거르면 안 됨.
+        // (2026.09 발견: 일부 단지는 세대 자체의 전유 레코드가 mainAtchGbCdNm="부속건축물"로 등록돼 있어서,
+        // 여기에 필터를 걸면 그 단지는 전유면적이 통째로 안 잡혀 매칭 자체가 실패함 — 실전 회귀로 확인함)
+        u.exclu += row.area;
+      } else if (row.gb.includes("공용")) {
+        // 공용(pubuse)만 필터링 — "공급면적(전용+주거공용)"에는 부속건축물(관리동/경로당 등) 소속 공용이나
+        // 기타공용(창고·주차장·기계실 등)이 포함되면 안 됨. 실전 로그로 확인된 패턴:
+        // 롯데캐슬노블·개포더샵트리에(부속건축물 복리시설/부대시설), 래미안그레이튼(부속건축물 소속 미세 조각),
+        // 한화진넥스빌(주건축물 소속이지만 창고/주차장) — 모두 공용 쪽에서만 나타났고 전유 쪽엔 없었음(2026.09).
+        const isNonResidentialCommon = row.mainAtch !== "주건축물" || /창고|주차|기계실|전기실|경비|관리|복리시설|부대시설/.test(row.purpose);
+        if (isNonResidentialCommon) {
+          excludedRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch });
+        } else {
+          u.pubuse += row.area;
+        }
       }
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
