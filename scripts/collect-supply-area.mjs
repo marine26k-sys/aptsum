@@ -151,6 +151,21 @@ async function loadKnownAreasByComplex(lawd) {
   return map;
 }
 
+// 2026.09 발견 — 같은 단지가 실행마다 "확보"/"못 찾음(실제스캔:[])"을 오갔던 원인: data.go.kr API는
+// 실패해도 HTTP 상태코드는 200을 주고 본문에 에러를 담아서 줌(정상 성공은 resultCode="00", 또는
+// 아예 다른 스키마인 <OpenAPI_ServiceResponse>로 인증/트래픽 관련 에러를 줌). 지금까지는 이걸 구분 안 하고
+// "본문에 <item> 없음 = 이 페이지가 마지막(진짜 데이터 없음)"으로 해석해버려서, 일시적인 서버 에러를
+// "이 단지는 대상 없음"으로 오판했음 — 재시도해야 할 걸 그냥 포기해버린 셈.
+function checkApiError(xml) {
+  if (xml.includes("OpenAPI_ServiceResponse")) {
+    const msg = xtag(xml, "returnAuthMsg") || xtag(xml, "returnReasonCode") || "OpenAPI_ServiceResponse 에러(인증/트래픽 관련으로 추정)";
+    return msg;
+  }
+  const code = xtag(xml, "resultCode");
+  if (code && code !== "00") return `resultCode=${code} ${xtag(xml, "resultMsg")}`;
+  return null;
+}
+
 async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
   const q = `serviceKey=${encodeURIComponent(key)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=100&pageNo=${pageNo}`;
   // 초당 요청 제한(429) + 네트워크 레벨 예외("fetch failed"/UND_ERR_CONNECT_TIMEOUT 등) 둘 다 재시도.
@@ -166,6 +181,12 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
         continue;
       }
       const text = await r.text();
+      const apiError = checkApiError(text);
+      if (apiError) {
+        if (attempt === 2) return { rows: [], rateLimited: true, error: apiError };
+        await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+        continue;
+      }
       return { rows: parseAreaXml(text), rateLimited: false };
     } catch (e) {
       if (attempt === 2) return { rows: [], rateLimited: true, error: `${e.message} | cause: ${e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "없음"}` };
