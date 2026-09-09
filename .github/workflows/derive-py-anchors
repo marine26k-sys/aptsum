@@ -1,0 +1,23 @@
+name: 평형 보간표 검증 리포트
+
+on:
+  workflow_dispatch:
+    inputs:
+      minSamples:
+        description: "이 개수 이상 표본이 있는 전용면적만 리포트에 포함(기본 2)"
+        required: false
+        default: "2"
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: PY_ANCHORS 검증 리포트 생성 (data/supply-area 실측 데이터 기반, 아무것도 커밋 안 함)
+        run: |
+          node scripts/derive-py-anchors.mjs --minSamples=${{ inputs.minSamples || '2' }} >> "$GITHUB_STEP_SUMMARY"
