@@ -268,11 +268,6 @@
   .fdcard-skel{height:64px;background:linear-gradient(90deg,var(--slate-bg) 25%,#eef2f6 37%,var(--slate-bg) 63%);
     background-size:400% 100%;animation:fdshimmer 1.4s ease infinite;border-radius:12px;margin-bottom:8px}
   @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
-  .naver-listing{background:#F0FBF4}
-  .naver-listing a{display:flex;align-items:center;justify-content:center;width:100%;padding:11px 13px;border-radius:10px;
-    background:#03C75A;color:#fff;font-size:13px;font-weight:800;text-decoration:none}
-  .naver-listing a:active{background:#02A94C}
-  .naver-listing p{margin:7px 0 0;font-size:10.5px;color:var(--sub);line-height:1.55;text-align:center}
 </style>
 </head>
 <body>
@@ -472,7 +467,7 @@
     <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>회전율</div>
     <div class="tab subscriber" id="tabSG" style="display:none" onclick="setMode('surge')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/><path d="M15 6h4v4"/></svg>거래량 급증</div>
     <div class="tab subscriber" id="tabGT" style="display:none" onclick="setMode('gaptrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M14 5h5v5"/></svg>전세가율 추세</div>
-    <div class="tab subscriber" id="tabLTR" style="display:none" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>기간별 상승 랭킹</div>
+    <div class="tab subscriber" id="tabLTR" style="display:none" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>기간별 변동률</div>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 수민 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
@@ -599,29 +594,6 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
-// 네이버 부동산의 단지 URL을 직접 복사해 아래 목록에 등록한다.
-// key: "법정동코드|공백을 뺀 단지명", value: 네이버 부동산 단지 URL
-// 예: '11680|개포자이프레지던스': 'https://new.land.naver.com/complexes/123456'
-// 비공식 API를 호출하거나 단지번호를 자동 수집하지 않는다. 새 단지 URL은 네이버 부동산 화면에서 직접 복사해 넣는다.
-const NAVER_COMPLEX_URLS = Object.freeze({
-});
-
-function naverComplexKey(lawd, name){
-  return `${lawd}|${String(name || '').replace(/\s+/g, '')}`;
-}
-function naverComplexUrl(lawd, name){
-  const url = NAVER_COMPLEX_URLS[naverComplexKey(lawd, name)];
-  return typeof url === 'string' && /^https:\/\/new\.land\.naver\.com\/complexes\/\d+(?:[/?#].*)?$/.test(url) ? url : '';
-}
-function naverListingHTML(d, lawd){
-  const directUrl = naverComplexUrl(lawd, d.name);
-  const href = directUrl || 'https://land.naver.com/';
-  const label = directUrl ? '네이버 부동산 매물 보기 ↗' : '네이버 부동산에서 매물 찾기 ↗';
-  const note = directUrl
-    ? '네이버 부동산의 최신 매물 화면으로 이동합니다.'
-    : '단지 URL을 등록하면 이 단지의 매물 화면으로 바로 연결됩니다.';
-  return `<div class="sec naver-listing"><a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}</a><p>${note}</p></div>`;
-}
 // 지역랭킹→단지분석처럼 이전 검색이 끝나기 전에(await 도중) 새 검색이 시작되면,
 // 먼저 시작된 검색이 나중에 끝나면서 최신 결과를 덮어써 "엉뚱한 표"가 뜨는 경합 문제 방지용 토큰.
 // (한 화면에 렌더링은 항상 한 번만 일어나야 하므로, 렌더 직전 자신이 여전히 최신 요청인지 확인 후 아니면 조용히 폐기)
@@ -1350,7 +1322,12 @@ function addCmpRow(){
 // 더 반영된 상태였는데 rent/presale만 2차 개편 버전에 멈춰 있었음. 매매는 "59㎡→25평", 전세는
 // "59㎡→24평"으로 라벨이 갈려 전세가율 탭이 단지|동|평형|구로 매매·전세를 조인할 때 정상적인 쌍까지
 // 대거 누락되는 원인이었음 — rent.mjs·presale.mjs를 analyze.mjs 최신 앵커로 통일)
-const CACHE_VER = 8;
+// (2026.09 8→9: analyze.mjs/presale.mjs/rent.mjs에 hubPyOverride() 추가 — data/supply-area 실측값이
+// 매칭되면 py를 areaToPy() 보간값 대신 실측 기반으로 다시 계산하도록 바뀜(PY_ANCHORS 개편과 동일한
+// "서버가 py 계산하는 방식이 바뀜" 케이스인데 이번엔 버전을 안 올려서 누락됨). 이미 브라우저에 캐시된
+// 옛 응답은 그대로 옛 py를 갖고 있어서, 같은 단지의 같은 전용면적인데 캐시 시점에 따라 33평/34평처럼
+// 서로 다른 평형으로 쪼개져 보이는 버그로 발견됨(수민 스크린샷 — 평촌더샵센트럴시티 84㎡가 33/34 두 줄로 표시)
+const CACHE_VER = 9;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -4118,7 +4095,6 @@ function renderComplex(d){
     </div>
 
     <div id="complexDynamic">${complexDynamicHTML()}</div>
-    ${naverListingHTML(d, sel.value)}
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4628,7 +4604,7 @@ function renderLongTermRise(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('기간별 상승 랭킹', true)}
+      ${hdTop('기간별 변동률', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs(`${d.periodM}개월 전 평균`, '최근 1개월 평균')}
