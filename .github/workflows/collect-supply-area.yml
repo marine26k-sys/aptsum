@@ -10,6 +10,9 @@ on:
         description: "이번 실행에서 처리할 단지 수(비우면 최대한 다 처리)"
         required: false
         default: "99999"
+      debugUnit:
+        description: "정밀 진단할 단지명(콤마 구분, 비우면 사용 안 함) — 결과는 data/supply-area/_debug_<단지명>.json으로 저장됨"
+        required: false
 
 permissions:
   contents: write
@@ -43,6 +46,7 @@ jobs:
         run: |
           node scripts/collect-supply-area.mjs \
             ${{ inputs.only && format('--only={0}', inputs.only) || '' }} \
+            ${{ inputs.debugUnit && format('--debugUnit={0}', inputs.debugUnit) || '' }} \
             --limit=${{ inputs.limit || '99999' }}
 
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
