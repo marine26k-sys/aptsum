@@ -198,12 +198,11 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
 
 // 한 단지의 대표 타입별 공급면적을 찾는다. targetAreas(정수 반올림 전용면적 집합)에 있는 값과 일치하는
 // (동,호)를 만나면 그 키를 계속 누적 추적(전유+공용 다 더함) — 페이지 상한까지 스캔.
-async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targetAreas, debugAll = false) {
+async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targetAreas) {
   const units = {}; // "동|호" -> {exclu, pubuse, matchedType}
   const foundTypes = new Set();
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
   const excludedRows = []; // 2026.09 — 아래 필터로 걸러낸 행 기록(진단/검증용, 개수가 비정상적으로 많으면 필터 조건 재검토 필요)
-  const allRows = debugAll ? [] : null; // 2026.09 — --debugUnit 지정 시에만 포함/제외 가리지 않고 전 행 기록(정밀 진단용)
   let pagesScanned = 0;
   let rateLimited = false; // 2026.08 — "데이터가 진짜 없음"과 "429/네트워크 예외로 결국 못 받아옴"을 구분하기 위한 플래그
   let lastError = null;
@@ -218,13 +217,11 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     for (const row of rows) {
       const k = `${row.dong}|${row.ho}`;
       const u = (units[k] = units[k] || { exclu: 0, pubuse: 0 });
-      let included = false;
       if (row.gb.includes("전유")) {
         // 전유(exclu)는 실거래 전용면적과 매칭하는 기준값이라 무조건 합산 — mainAtch/purpose로 거르면 안 됨.
         // (2026.09 발견: 일부 단지는 세대 자체의 전유 레코드가 mainAtchGbCdNm="부속건축물"로 등록돼 있어서,
         // 여기에 필터를 걸면 그 단지는 전유면적이 통째로 안 잡혀 매칭 자체가 실패함 — 실전 회귀로 확인함)
         u.exclu += row.area;
-        included = true;
       } else if (row.gb.includes("공용")) {
         // 공용(pubuse)만 필터링 — "공급면적(전용+주거공용)"에는 부속건축물(관리동/경로당 등) 소속 공용이나
         // 기타공용(창고·주차장·기계실 등)이 포함되면 안 됨. 실전 로그로 확인된 패턴:
@@ -235,15 +232,13 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
           excludedRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch });
         } else {
           u.pubuse += row.area;
-          included = true;
         }
       }
-      if (debugAll) allRows.push({ k, gb: row.gb, area: row.area, purpose: row.purpose, mainAtch: row.mainAtch, included, runningExclu: Math.round(u.exclu * 100) / 100, runningPubuse: Math.round(u.pubuse * 100) / 100 });
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
       if (targetAreas.has(rounded)) foundTypes.add(rounded);
     }
-    if (!debugAll && foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약) — 디버그 모드는 끝까지 다 봐야 하므로 조기종료 안 함
+    if (foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약)
     if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 1000)); // 페이스 훨씬 보수적으로(2026.08 150ms→1000ms — 공격적인 요청 패턴이 IP 차단을 유발했을 가능성)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
@@ -253,7 +248,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
   }
-  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows, allRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
+  return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
 async function pool(items, limit, worker) {
@@ -269,9 +264,6 @@ async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
   const lawds = args.only ? args.only.split(",") : ALL_LAWDS.filter((c) => /^\d{5}$/.test(c)); // 분구 지역(BC-/HS-/IC-)은 우선 제외 — 코드 체계가 달라 별도 처리 필요, 추후 확장
   const limit = parseInt(args.limit, 10) || 30;
-  // 2026.09 — 특정 단지의 원인 불명 오차(과대/과소 산정)를 정밀 진단할 때 씀. 콤마로 여러 개 지정 가능.
-  // 지정된 단지는 포함/제외 가리지 않고 스캔한 모든 행을 data/supply-area/_debug_<단지명>.json에 통째로 덤프.
-  const debugUnits = new Set(args.debugUnit ? args.debugUnit.split(",") : []);
 
   await mkdir("data/supply-area", { recursive: true });
   let processed = 0;
@@ -291,7 +283,6 @@ async function main() {
     // (사용자 요청으로 변경: 목표 타입을 전부 찾을 때까지 계속 재시도). 단, 이미 다 찾은 것까지 매번
     // 다시 스캔하면 API 호출만 낭비이므로, "목표 개수만큼 다 채웠는지"로만 스킵 여부를 판단한다.
     const targets = (hh.items || []).filter((c) => {
-      if (debugUnits.has(c.name)) return true; // 진단 대상은 완료 여부 무관하게 항상 포함
       if (!c.kaptAddr || !c.bjdCode) return false; // hhcnt 데이터가 아직 kaptAddr/bjdCode 없는 옛 버전이면 스킵
       const areas = knownAreas[norm(c.name)];
       if (!areas || areas.size === 0) return false; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
@@ -316,19 +307,13 @@ async function main() {
       await new Promise((res) => setTimeout(res, 500)); // 단지 시작 전 대기(2026.08 200ms→500ms)
       const bj = parseBunJi(c.kaptAddr);
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
-      const targetAreas = knownAreas[norm(c.name)] || new Set(); // 진단 강제 대상은 실거래 매칭 타입이 없어도 돌려야 하므로 폴백
+      const targetAreas = knownAreas[norm(c.name)];
       try {
         // K-apt(getAphusBassInfoV5)의 bjdCode는 "시군구코드(5)+동코드(5)" 합친 10자리 전체 코드로 옴
         // (실전 확인: "2638010100" 같은 형태) — 건축HUB의 bjdongCd 파라미터는 동 코드 5자리만 받아서
         // 10자리를 그대로 넘기면 존재하지 않는 코드가 되어 매번 빈 응답(0페이지)이 나왔음(2026.08 발견).
         const bjdongCd5 = c.bjdCode.length === 10 ? c.bjdCode.slice(5) : c.bjdCode;
-        const isDebug = debugUnits.has(c.name);
-        const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas, isDebug);
-        if (isDebug) {
-          const dbgFile = path.join("data/supply-area", `_debug_${c.name}.json`);
-          await writeFile(dbgFile, JSON.stringify({ name: c.name, targetAreas: [...targetAreas], allRows: debug.allRows }, null, 2));
-          console.log(`  [진단] ${c.name}: 전체 행 ${debug.allRows.length}건을 ${dbgFile}에 덤프함`);
-        }
+        const { types, debug } = await collectComplexSupplyArea(bldKey, lawd, bjdongCd5, bj.bun, bj.ji, targetAreas);
         if (Object.keys(types).length) {
           // 2026.09 — 재시도 시 이전에 이미 찾아둔 타입을 잃어버리지 않도록 병합. 반올림 전용면적을
           // 키로 합쳐서 저장(같은 타입이 다시 나오면 이번 결과로 갱신, 새 타입이면 추가).

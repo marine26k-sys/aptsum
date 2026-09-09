@@ -103,7 +103,12 @@ async function hubPyOverride(items, lawd, origin) {
     const rounded = Math.round(t.area);
     const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
     if (!match || !Number.isFinite(match.supplyArea)) return t; // supplyArea가 없거나 숫자가 아니면 NaN평 표시 방지
-    return { ...t, py: Math.round(match.supplyArea / SQM_PER_PY) };
+    const hubPy = Math.round(match.supplyArea / SQM_PER_PY);
+    // 2026.09 — 실측값이 기존 보간값(t.py)과 너무 동떨어지면 실측값을 버리고 보간값을 그대로 씀
+    // (analyze.mjs 주석 참고 — 주상복합 등 특이 케이스에서 실측값이 시장 관행 라벨과 크게 벌어지는
+    // 사례가 실제로 확인됨). 3평 이상 차이나면 신뢰하지 않음.
+    if (Math.abs(hubPy - t.py) > 3) return t;
+    return { ...t, py: hubPy };
   });
 }
 

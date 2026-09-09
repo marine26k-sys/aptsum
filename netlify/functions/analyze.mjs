@@ -126,7 +126,14 @@ async function hubPyOverride(items, lawd, origin) {
     const rounded = Math.round(t.area);
     const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
     if (!match || !Number.isFinite(match.supplyArea)) return t; // supplyArea가 없거나 숫자가 아니면 NaN평 표시 방지
-    return { ...t, py: Math.round(match.supplyArea / SQM_PER_PY) };
+    const hubPy = Math.round(match.supplyArea / SQM_PER_PY);
+    // 2026.09 — 실측값이 기존 보간값(t.py, parseItems에서 areaToPy()로 이미 계산됨)과 너무 동떨어지면
+    // 실측값을 버리고 보간값을 그대로 씀. 주상복합(아파트+상가+오피스텔이 공용시설을 같이 쓰는 건물)처럼
+    // 등록상 정상이어도 시장 관행 평형 라벨과 크게 벌어지는 케이스(비산화성파크드림 사례 — 실측 47평 vs
+    // 관행 34평)가 실제로 있어서, 이런 경우까지 "정확한 값"이라고 무조건 밀어붙이면 오히려 더 헷갈림 —
+    // 3평 이상 차이나면 신뢰하지 않고 안전하게 기존 보간값 유지.
+    if (Math.abs(hubPy - t.py) > 3) return t;
+    return { ...t, py: hubPy };
   });
 }
 
