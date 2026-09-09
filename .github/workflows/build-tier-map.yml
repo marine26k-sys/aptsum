@@ -1,0 +1,40 @@
+name: 급지 대시보드 데이터 생성
+
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "최근 몇 개월 거래를 기준으로 볼지(기본 6)"
+        required: false
+        default: "6"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: git identity 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 급지 대시보드 데이터 생성 (data/tier-map.json)
+        run: node scripts/build-tier-map.mjs --months=${{ inputs.months || '6' }}
+
+      - name: 커밋 & 푸시
+        run: |
+          git add data/tier-map.json
+          if git diff --cached --quiet; then
+            echo "변경된 데이터 없음"
+          else
+            git commit -m "chore: 급지 대시보드 데이터 갱신 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
