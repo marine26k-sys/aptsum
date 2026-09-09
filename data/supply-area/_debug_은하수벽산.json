@@ -6,5 +6,4006 @@
     85,
     76
   ],
-  "allRows": []
+  "allRows": [
+    {
+      "k": "제201동|304호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|304호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1202호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|301호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1401호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|804호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|202호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 1.038,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 9.528,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 8.817,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 0.213,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 0.179,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|303호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 8.817,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 0.213,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 0.179,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 1.038,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1201호",
+      "gb": "공용",
+      "area": 9.528,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 8.807,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 0.215,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 0.184,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 0.215,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 1.037,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|1402호",
+      "gb": "공용",
+      "area": 9.531,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1402호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1503호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1302호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 0,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1502호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|601호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|804호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1003호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|803호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1701호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 8.817,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 0.213,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 0.179,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 1.038,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|501호",
+      "gb": "공용",
+      "area": 9.528,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|1501호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|302호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|401호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 8.817,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 0.213,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 0.179,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 1.038,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|901호",
+      "gb": "공용",
+      "area": 9.528,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "상가동|지층 07호",
+      "gb": "전유",
+      "area": 28.57,
+      "purpose": "기타근린생활시설",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 28.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|지층 07호",
+      "gb": "공용",
+      "area": 11.34,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 28.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|지층 07호",
+      "gb": "공용",
+      "area": 1.35,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 28.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|지층 07호",
+      "gb": "공용",
+      "area": 0.23,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 28.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|지층 07호",
+      "gb": "공용",
+      "area": 9.86,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 28.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1401호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1101호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|704호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "전유",
+      "area": 76.05,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 11.796,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 7.29,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 0.191,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 0.159,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 0.195,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 0.923,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|102호",
+      "gb": "공용",
+      "area": 8.534,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "전유",
+      "area": 76.05,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 11.796,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 7.29,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 0.191,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 0.159,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 0.195,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 0.923,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|103호",
+      "gb": "공용",
+      "area": 8.534,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "전유",
+      "area": 76.05,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 11.796,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 7.29,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 0.191,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 0.159,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 0.195,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 0.923,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제207동|604호",
+      "gb": "공용",
+      "area": 8.534,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1702호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "전유",
+      "area": 76.05,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 11.796,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 7.29,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 0.191,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 0.159,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 0.195,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 0.923,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제206동|1602호",
+      "gb": "공용",
+      "area": 8.534,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 76.05,
+      "runningPubuse": 0.16
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1004호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1804호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1104호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|1602호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|104호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|103호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|403호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|1603호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "전유",
+      "area": 59.4,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 5.381,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 0.149,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 0.124,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 0.152,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 0.721,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|1201호",
+      "gb": "공용",
+      "area": 6.666,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 59.4,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제202동|1602호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제208동|603호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "복리시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제203동|1103호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|2층 212호",
+      "gb": "전유",
+      "area": 37.01,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 37.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|2층 212호",
+      "gb": "공용",
+      "area": 12.95,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 37.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|2층 212호",
+      "gb": "공용",
+      "area": 2.3,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 37.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|2층 212호",
+      "gb": "공용",
+      "area": 0.3,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 37.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "상가동|2층 212호",
+      "gb": "공용",
+      "area": 12.77,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 37.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 12.49,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 8.817,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 0.213,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 0.179,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 1.038,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제205동|602호",
+      "gb": "공용",
+      "area": 9.528,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|904호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "다세대주택",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.14
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.26
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.26
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.26
+    },
+    {
+      "k": "제209동|1703호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.26
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "전유",
+      "area": 55.65,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 8.699,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 5.267,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 0.139,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 0.116,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 0.142,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 0.678,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제209동|902호",
+      "gb": "공용",
+      "area": 6.245,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 55.65,
+      "runningPubuse": 0.12
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 1.028,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제204동|802호",
+      "gb": "공용",
+      "area": 9.527,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "전유",
+      "area": 84.9,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "공용",
+      "area": 13.471,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "공용",
+      "area": 7.838,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "공용",
+      "area": 0.214,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "공용",
+      "area": 0.178,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    },
+    {
+      "k": "제201동|201호",
+      "gb": "공용",
+      "area": 0.217,
+      "purpose": "부대시설",
+      "mainAtch": "주건축물",
+      "included": false,
+      "runningExclu": 84.9,
+      "runningPubuse": 0.18
+    }
+  ]
 }

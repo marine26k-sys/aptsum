@@ -6,5 +6,7006 @@
     68,
     109
   ],
-  "allRows": []
+  "allRows": [
+    {
+      "k": "|101동-806",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.42
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.62
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.81
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|101동-806",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-803",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 4.12
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 7.33
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 13.09
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 37.13
+    },
+    {
+      "k": "|102동-803",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-902",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0.97
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 20.18
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 22.77
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 26.92
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 54.65
+    },
+    {
+      "k": "|101동-902",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 1.03
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 3.53
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 33.07
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 38.76
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 59.44
+    },
+    {
+      "k": "|101동-1103",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 24.19
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 30.59
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.52
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|102동-1302",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.48
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.67
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 43.87
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.07
+    },
+    {
+      "k": "|101동-2007",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 40.7
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|102동-502",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-502",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 3.75
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 34.67
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 36.21
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 40.34
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 84.51
+    },
+    {
+      "k": "|102동-1505",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 3.22
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 4.42
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 9.9
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 34.05
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 68.53
+    },
+    {
+      "k": "|101동-1805",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|102동-402",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.93
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 65.14
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.07
+    },
+    {
+      "k": "|102동-402",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.12
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 32.31
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.86
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|101동-1406",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101",
+      "gb": "전유",
+      "area": 81.4787,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 81.48,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101",
+      "gb": "공용",
+      "area": 5.11,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 81.48,
+      "runningPubuse": 5.11
+    },
+    {
+      "k": "|101",
+      "gb": "공용",
+      "area": 34.208,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 81.48,
+      "runningPubuse": 39.32
+    },
+    {
+      "k": "|101",
+      "gb": "공용",
+      "area": 33.1437,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 81.48,
+      "runningPubuse": 72.46
+    },
+    {
+      "k": "|101동-903",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 29.54
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 50.22
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 52.98
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 54.01
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 56.52
+    },
+    {
+      "k": "|101동-903",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|101동-705",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 34.49
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 58.63
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 64.11
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 67.04
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 70.26
+    },
+    {
+      "k": "|101동-705",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|102동-801",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.12
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.33
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 62.87
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-801",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-805",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 2.92
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 27.07
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 30.29
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 31.49
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 65.98
+    },
+    {
+      "k": "|101동-805",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 24.19
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 25.4
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.62
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.17
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.36
+    },
+    {
+      "k": "|102동-1501",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-701",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 25.4
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 59.94
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 62.87
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.07
+    },
+    {
+      "k": "|102동-701",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-405",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 6.35
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 50.52
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 54.64
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 56.18
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 87.11
+    },
+    {
+      "k": "|102동-405",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-305",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 4.13
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 9.61
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 12.83
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 36.97
+    },
+    {
+      "k": "|101동-305",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 34.49
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 37.7
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 61.85
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 63.05
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 68.53
+    },
+    {
+      "k": "|101동-1305",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|101동-703",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 20.68
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 26.37
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 28.88
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 29.9
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 59.44
+    },
+    {
+      "k": "|101동-703",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 35.6
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 59.65
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 62.86
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 65.78
+    },
+    {
+      "k": "|102동-2103",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.97
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 67.16
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.36
+    },
+    {
+      "k": "|101동-1706",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 58.74
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 61.67
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 62.87
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-1001",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 2.35
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 21.56
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 49.3
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 51.88
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 56.03
+    },
+    {
+      "k": "|101동-1802",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 58.74
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 61.97
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-1601",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|218",
+      "gb": "전유",
+      "area": 44.1775,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 44.18,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|218",
+      "gb": "공용",
+      "area": 17.9704,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 44.18,
+      "runningPubuse": 17.97
+    },
+    {
+      "k": "|218",
+      "gb": "공용",
+      "area": 2.1504,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 44.18,
+      "runningPubuse": 20.12
+    },
+    {
+      "k": "|218",
+      "gb": "공용",
+      "area": 16.829,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 44.18,
+      "runningPubuse": 36.95
+    },
+    {
+      "k": "|101동-503",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 2.76
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 5.26
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 34.8
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 40.49
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 41.52
+    },
+    {
+      "k": "|101동-503",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 6.35
+    },
+    {
+      "k": "|102동-805",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 6.35
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 7.89
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 38.82
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 82.99
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 86.73
+    },
+    {
+      "k": "|102동-805",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|110",
+      "gb": "전유",
+      "area": 101.5078,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 101.51,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|110",
+      "gb": "공용",
+      "area": 6.3662,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 101.51,
+      "runningPubuse": 6.37
+    },
+    {
+      "k": "|110",
+      "gb": "공용",
+      "area": 41.2911,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 101.51,
+      "runningPubuse": 47.66
+    },
+    {
+      "k": "|110",
+      "gb": "공용",
+      "area": 42.6171,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 101.51,
+      "runningPubuse": 90.27
+    },
+    {
+      "k": "|101동-801",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 24.19
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.12
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.33
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 31.55
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|101동-801",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 3.75
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 47.92
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 52.04
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 82.97
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 82.97
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 89.32
+    },
+    {
+      "k": "|102동-1205",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 4.12
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 38.52
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 44.28
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 47.5
+    },
+    {
+      "k": "|102동-1803",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 2.51
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 8.19
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 10.95
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 11.98
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 41.52
+    },
+    {
+      "k": "|101동-1003",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|102동-903",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 34.41
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 35.6
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 38.82
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 62.86
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 68.62
+    },
+    {
+      "k": "|102동-903",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-607",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.43
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.62
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 31.55
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-607",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|217",
+      "gb": "전유",
+      "area": 83.508,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 83.51,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|217",
+      "gb": "공용",
+      "area": 4.0648,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 83.51,
+      "runningPubuse": 4.06
+    },
+    {
+      "k": "|217",
+      "gb": "공용",
+      "area": 31.8118,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 83.51,
+      "runningPubuse": 35.88
+    },
+    {
+      "k": "|217",
+      "gb": "공용",
+      "area": 33.9692,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 83.51,
+      "runningPubuse": 69.85
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 24.19
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|101동-907",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 32.31
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 35.54
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|101동-907",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|104",
+      "gb": "전유",
+      "area": 50.184,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 50.18,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|104",
+      "gb": "공용",
+      "area": 3.1473,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 50.18,
+      "runningPubuse": 3.15
+    },
+    {
+      "k": "|104",
+      "gb": "공용",
+      "area": 20.4137,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 50.18,
+      "runningPubuse": 23.56
+    },
+    {
+      "k": "|104",
+      "gb": "공용",
+      "area": 21.0693,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 50.18,
+      "runningPubuse": 44.63
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 34.49
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 37.41
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 38.61
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 62.76
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 68.24
+    },
+    {
+      "k": "|101동-1705",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.13
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 7.36
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 31.55
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-2306",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 24.19
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.12
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 30.35
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 31.55
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|102동-2102",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-707",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 6.16
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 30.35
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-707",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-902",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 38.98
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 41.91
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|102동-902",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|206",
+      "gb": "전유",
+      "area": 63.5662,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 63.57,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|206",
+      "gb": "공용",
+      "area": 25.8573,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 63.57,
+      "runningPubuse": 25.86
+    },
+    {
+      "k": "|206",
+      "gb": "공용",
+      "area": 24.2151,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 63.57,
+      "runningPubuse": 50.07
+    },
+    {
+      "k": "|206",
+      "gb": "공용",
+      "area": 3.0941,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 63.57,
+      "runningPubuse": 53.17
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 3.75
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 7.87
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 52.04
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 53.58
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 84.51
+    },
+    {
+      "k": "|102동-1405",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 30.93
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 34.67
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 41.02
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 45.15
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 89.32
+    },
+    {
+      "k": "|102동-1305",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 25.4
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 30.59
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 65.14
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.36
+    },
+    {
+      "k": "|101동-2307",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 2.59
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 3.56
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 22.77
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 26.92
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 54.65
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-1002",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-603",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 2.51
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 3.53
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 33.07
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 53.76
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 59.44
+    },
+    {
+      "k": "|101동-603",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 20.68
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 26.37
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 27.4
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 56.94
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 59.44
+    },
+    {
+      "k": "|101동-1603",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|101동-803",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 5.69
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 8.19
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 10.95
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 40.49
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 61.17
+    },
+    {
+      "k": "|101동-803",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|101동-602",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0.97
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 5.12
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 7.47
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 35.2
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 37.79
+    },
+    {
+      "k": "|101동-602",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 3.75
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 34.67
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 36.21
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 80.38
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 84.51
+    },
+    {
+      "k": "|102동-1005",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 40.7
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-1007",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.43
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 9.62
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.81
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|101동-1707",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 39.74
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.67
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 43.87
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|101동-1006",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 6.96
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 10.17
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 34.22
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 37.13
+    },
+    {
+      "k": "|102동-1603",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-301",
+      "gb": "전유",
+      "area": 67.2374,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 2.5544,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 2.55
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 19.1485,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 21.7
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 4.4466,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 26.15
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 27.3485,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 53.5
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 2.3167,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 55.81
+    },
+    {
+      "k": "|101동-301",
+      "gb": "공용",
+      "area": 0.9565,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 67.24,
+      "runningPubuse": 56.77
+    },
+    {
+      "k": "|201",
+      "gb": "전유",
+      "area": 59.0227,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.02,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|201",
+      "gb": "공용",
+      "area": 22.4843,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.02,
+      "runningPubuse": 22.48
+    },
+    {
+      "k": "|201",
+      "gb": "공용",
+      "area": 2.873,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.02,
+      "runningPubuse": 25.36
+    },
+    {
+      "k": "|201",
+      "gb": "공용",
+      "area": 24.0091,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 59.02,
+      "runningPubuse": 49.37
+    },
+    {
+      "k": "|208",
+      "gb": "전유",
+      "area": 41.1075,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 41.11,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|208",
+      "gb": "공용",
+      "area": 2.0009,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 41.11,
+      "runningPubuse": 2
+    },
+    {
+      "k": "|208",
+      "gb": "공용",
+      "area": 15.6596,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 41.11,
+      "runningPubuse": 17.66
+    },
+    {
+      "k": "|208",
+      "gb": "공용",
+      "area": 16.7216,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 41.11,
+      "runningPubuse": 34.38
+    },
+    {
+      "k": "|102동-703",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 34.41
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 37.32
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 40.54
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 64.58
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 65.78
+    },
+    {
+      "k": "|102동-703",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|111",
+      "gb": "전유",
+      "area": 71.3115,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 71.31,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|111",
+      "gb": "공용",
+      "area": 4.4724,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 71.31,
+      "runningPubuse": 4.47
+    },
+    {
+      "k": "|111",
+      "gb": "공용",
+      "area": 29.0079,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 71.31,
+      "runningPubuse": 33.48
+    },
+    {
+      "k": "|111",
+      "gb": "공용",
+      "area": 29.9395,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 71.31,
+      "runningPubuse": 63.42
+    },
+    {
+      "k": "|102동-305",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 30.93
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 32.47
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 36.59
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 80.76
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 84.51
+    },
+    {
+      "k": "|102동-305",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 38.98
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 41.91
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|102동-2001",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.48
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 38.68
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 41.91
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|102동-2202",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 32.61
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.81
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|102동-2101",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|202",
+      "gb": "전유",
+      "area": 32.6735,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 32.67,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|202",
+      "gb": "공용",
+      "area": 1.5904,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 32.67,
+      "runningPubuse": 1.59
+    },
+    {
+      "k": "|202",
+      "gb": "공용",
+      "area": 12.4467,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 32.67,
+      "runningPubuse": 14.04
+    },
+    {
+      "k": "|202",
+      "gb": "공용",
+      "area": 13.2908,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 32.67,
+      "runningPubuse": 27.33
+    },
+    {
+      "k": "|214",
+      "gb": "전유",
+      "area": 72.0125,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.01,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|214",
+      "gb": "공용",
+      "area": 27.4327,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.01,
+      "runningPubuse": 27.43
+    },
+    {
+      "k": "|214",
+      "gb": "공용",
+      "area": 29.2931,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.01,
+      "runningPubuse": 56.73
+    },
+    {
+      "k": "|214",
+      "gb": "공용",
+      "area": 3.5052,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.01,
+      "runningPubuse": 60.23
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.13
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 9.33
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 12.55
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|101동-1606",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.13
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.33
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.52
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 36.74
+    },
+    {
+      "k": "|101동-2106",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-601",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 40.7
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-601",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "전유",
+      "area": 84.581,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 2.918,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 2.92
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 5.7614,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 8.68
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 1.199,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 9.88
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 24.0445,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 33.92
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 34.4056,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 68.33
+    },
+    {
+      "k": "|102동-1403",
+      "gb": "공용",
+      "area": 3.212,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.58,
+      "runningPubuse": 71.54
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 29.38
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.93
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.86
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|101동-1401",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 4.13
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 9.33
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 43.87
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|101동-1807",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|210",
+      "gb": "전유",
+      "area": 65.1975,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 65.2,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|210",
+      "gb": "공용",
+      "area": 24.8365,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 65.2,
+      "runningPubuse": 24.84
+    },
+    {
+      "k": "|210",
+      "gb": "공용",
+      "area": 26.5209,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 65.2,
+      "runningPubuse": 51.36
+    },
+    {
+      "k": "|210",
+      "gb": "공용",
+      "area": 3.1735,
+      "purpose": "오피스텔",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 65.2,
+      "runningPubuse": 54.53
+    },
+    {
+      "k": "|106",
+      "gb": "전유",
+      "area": 55.08,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|106",
+      "gb": "공용",
+      "area": 3.4544,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 3.45
+    },
+    {
+      "k": "|106",
+      "gb": "공용",
+      "area": 23.1248,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 26.58
+    },
+    {
+      "k": "|106",
+      "gb": "공용",
+      "area": 22.4053,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 48.98
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 40.7
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 41.91
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-1402",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 39.74
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.97
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 67.16
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.36
+    },
+    {
+      "k": "|101동-1506",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.42
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.62
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.17
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|101동-1207",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|105",
+      "gb": "전유",
+      "area": 55.08,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|105",
+      "gb": "공용",
+      "area": 3.4544,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 3.45
+    },
+    {
+      "k": "|105",
+      "gb": "공용",
+      "area": 23.1248,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 26.58
+    },
+    {
+      "k": "|105",
+      "gb": "공용",
+      "area": 22.4053,
+      "purpose": "소매점",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 55.08,
+      "runningPubuse": 48.98
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 2.51
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 23.19
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 25.95
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 26.98
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 32.66
+    },
+    {
+      "k": "|101동-1303",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 2.35
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 6.5
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 7.47
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 35.2
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 54.41
+    },
+    {
+      "k": "|101동-1302",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "전유",
+      "area": 72.6193,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 2.5053,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 2.51
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 29.5399,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 32.05
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 20.6838,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 52.73
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 1.0295,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 53.76
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 2.7578,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 56.52
+    },
+    {
+      "k": "|101동-1203",
+      "gb": "공용",
+      "area": 5.686,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 72.62,
+      "runningPubuse": 62.2
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 37.48
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 38.68
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 0,
+      "runningPubuse": 43.87
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 43.87
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|102동-1401",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 6.35
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 7.89
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 52.06
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 55.8
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 86.73
+    },
+    {
+      "k": "|102동-1805",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-601",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.12
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 32.31
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 33.52
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.07
+    },
+    {
+      "k": "|101동-601",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-605",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 4.12
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 5.66
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 36.59
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 80.76
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 87.11
+    },
+    {
+      "k": "|102동-605",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 27.73
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 30.08
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 49.3
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 50.26
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 52.85
+    },
+    {
+      "k": "|101동-1202",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    },
+    {
+      "k": "|101동-405",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 24.15
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 25.35
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 28.57
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 63.05
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 68.53
+    },
+    {
+      "k": "|101동-405",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.77
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 61.97
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.17
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-1202",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 27.42
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 28.62
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 63.17
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.1
+    },
+    {
+      "k": "|102동-1802",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 34.49
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 37.7
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 61.85
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 67.33
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 70.26
+    },
+    {
+      "k": "|101동-1405",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 6.16
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 40.7
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 64.9
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|102동-1301",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 34.55
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 37.48
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.67
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.86
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|102동-1201",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 35.75
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 40.94
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 44.17
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|101동-1206",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 1.54
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 32.47
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 36.21
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 42.56
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 86.73
+    },
+    {
+      "k": "|102동-2205",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.42
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 9.62
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 44.17
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 68.36
+    },
+    {
+      "k": "|102동-2302",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 3.23
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.42
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 11.35
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 35.54
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|102동-1702",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "전유",
+      "area": 108.5831,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 44.1692,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 44.17
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 6.3501,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 50.52
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 4.1235,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 54.64
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 30.9271,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 85.57
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 3.746,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 89.32
+    },
+    {
+      "k": "|102동-2105",
+      "gb": "공용",
+      "area": 1.5393,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 108.58,
+      "runningPubuse": 90.86
+    },
+    {
+      "k": "|102동-602",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 39.74
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.97
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 45.9
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 47.1
+    },
+    {
+      "k": "|102동-602",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "전유",
+      "area": 84.7764,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 1.2018,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 1.2
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 5.4805,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 6.68
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 24.1464,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 30.83
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 2.9247,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 33.75
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 34.4851,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 68.24
+    },
+    {
+      "k": "|101동-1105",
+      "gb": "공용",
+      "area": 3.2194,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.78,
+      "runningPubuse": 71.46
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 5.19
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.12
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 42.67
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 66.86
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|101동-1201",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-606",
+      "gb": "전유",
+      "area": 84.9336,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 2.9302,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 2.93
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 5.1909,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 8.12
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 24.1912,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 32.31
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 3.2254,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 35.54
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 34.5491,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 70.09
+    },
+    {
+      "k": "|101동-606",
+      "gb": "공용",
+      "area": 1.204,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 84.93,
+      "runningPubuse": 71.29
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "전유",
+      "area": 68.1733,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 0
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 19.2117,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 19.21
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 2.3519,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 21.56
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 27.7314,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 49.3
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 2.5889,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 51.88
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 4.1492,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 56.03
+    },
+    {
+      "k": "|101동-1902",
+      "gb": "공용",
+      "area": 0.9664,
+      "purpose": "아파트",
+      "mainAtch": "주건축물",
+      "included": true,
+      "runningExclu": 68.17,
+      "runningPubuse": 57
+    }
+  ]
 }
