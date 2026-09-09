@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>급지 지도 — 아파트썸</title>
+<meta name="description" content="전국 아파트 단지를 국민평형(전용 84㎡) 시세 기준 6단계 급지로 나눠 한눈에 보는 지도">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
+    --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
+    --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
+  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
+  .back{position:absolute;top:50%;left:14px;transform:translateY(-50%);background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+  .back:active{background:rgba(255,255,255,.28)}
+
+  .meta-line{font-size:11px;color:var(--sub);text-align:center;margin-bottom:16px}
+  .meta-line b{color:var(--ink)}
+
+  /* 등급 사다리 — 이 페이지의 핵심 시각 요소. 각 급지를 막대 폭(단지 수 비례)으로 표현해서
+     "어디가 몇 개나 있는지" 한눈에 잡히게 함. 일반적인 통계 카드 나열 대신 이 콘텐츠(등급 구조)
+     자체를 그림으로 만든 것 — 6개 등급이 실제로 순위/사다리 구조이기 때문에 사다리 형태가 적절함. */
+  .ladder{background:#fff;border-radius:16px;padding:14px 14px 6px;margin-bottom:16px;border:1.5px solid var(--line)}
+  .ladder-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px}
+  .rung{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-bg);cursor:pointer;transition:background .12s}
+  .rung:last-child{border-bottom:none}
+  .rung:active{background:var(--teal-light-soft)}
+  .rung.on{background:var(--teal-light-soft)}
+  .rung-dot{flex:none;width:11px;height:11px;border-radius:3px}
+  .rung-info{flex:none;width:64px}
+  .rung-label{font-size:12px;font-weight:700;color:var(--ink)}
+  .rung-band{font-size:9.5px;color:var(--sub)}
+  .rung-bar-track{flex:1;height:20px;background:var(--slate-bg);border-radius:6px;overflow:hidden;position:relative}
+  .rung-bar-fill{height:100%;border-radius:6px;transition:width .5s ease}
+  .rung-count{flex:none;width:74px;text-align:right;font-size:11px;color:var(--sub)}
+  .rung-count b{color:var(--ink);font-size:12.5px}
+
+  .filters{display:flex;gap:6px;margin-bottom:12px}
+  .filters select,.filters input{flex:1;font-size:12px;padding:8px 9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-family:inherit}
+  .filters input{flex:1.4}
+  .filters select:focus,.filters input:focus{outline:none;border-color:var(--teal)}
+
+  .section-hd{display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px}
+  .section-hd h2{font-size:13px;font-weight:700;color:var(--navy)}
+  .section-hd .cnt{font-size:11px;color:var(--sub)}
+
+  .flag-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;-webkit-overflow-scrolling:touch}
+  .flag-row::-webkit-scrollbar{display:none}
+  .flag-card{flex:none;width:132px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px}
+  .flag-region{font-size:9.5px;color:var(--sub);font-weight:700}
+  .flag-name{font-size:12px;font-weight:700;color:var(--ink);margin:3px 0 5px;line-height:1.3;min-height:31px}
+  .flag-price{font-size:14px;font-weight:900;color:var(--teal-dark)}
+
+  .list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
+  .row{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--slate-bg)}
+  .row:last-child{border-bottom:none}
+  .row-no{flex:none;width:20px;font-size:11px;color:var(--sub);text-align:center}
+  .row-main{flex:1;min-width:0}
+  .row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row-sub{font-size:10px;color:var(--sub);margin-top:1px}
+  .row-price{flex:none;text-align:right}
+  .row-price b{font-size:13px;color:var(--navy)}
+  .est-tag{display:inline-block;font-size:8.5px;color:var(--sub);background:var(--slate-bg);border-radius:5px;padding:1px 4px;margin-left:4px;vertical-align:middle}
+
+  .more-btn{display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--teal-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .more-btn:active{background:var(--teal-light-soft)}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--sub);font-size:12.5px}
+
+  .disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
+  .disclaimer a{color:var(--teal-dark)}
+
+  .loading{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="./index.html" aria-label="메인으로">←</a>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>급지 지도</span>
+    <p>전국 아파트, 국민평형(전용 84㎡) 시세 기준 6단계</p>
+  </header>
+
+  <div id="app"><div class="loading">불러오는 중…</div></div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtEok = (manwon) => (manwon / 10000).toFixed(1) + "억";
+
+let DATA = null;
+let state = { grade: null, region: "", q: "", shown: 30 };
+
+async function load(){
+  try{
+    const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+    if(!res.ok) throw new Error("no data");
+    DATA = await res.json();
+    render();
+  }catch(e){
+    $("#app").innerHTML = `<div class="empty">아직 급지 데이터가 없습니다.<br>배치가 한 번 돈 뒤에 다시 확인해주세요.</div>`;
+  }
+}
+
+function regionOptions(){
+  const regions = [...new Set(DATA.complexes.map(c => c.gu))].sort();
+  return `<option value="">전체 지역</option>` + regions.map(r => `<option value="${esc(r)}" ${state.region===r?'selected':''}>${esc(r)}</option>`).join("");
+}
+
+function filtered(){
+  return DATA.complexes.filter(c =>
+    (!state.grade || c.g === state.grade) &&
+    (!state.region || c.gu === state.region) &&
+    (!state.q || c.nm.includes(state.q))
+  );
+}
+
+// 검색창 입력마다 이 함수만 다시 그림(#listArea만 갱신) — 검색창 자체는 안 건드려서 포커스 유지.
+// 기존 index.html의 rgSearch(지역 검색) 패턴과 동일한 원칙.
+function renderList(){
+  const list = filtered();
+  const shown = list.slice(0, state.shown);
+  $("#listCnt").textContent = `${list.length.toLocaleString()}개`;
+  $("#listArea").innerHTML = shown.length ? `
+    <div class="list">
+      ${shown.map((c,i) => `
+        <div class="row">
+          <div class="row-no">${i+1}</div>
+          <div class="row-main">
+            <div class="row-name">${esc(c.nm)}</div>
+            <div class="row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
+          </div>
+          <div class="row-price"><b>${fmtEok(c.p84)}</b>${c.estimated?'<span class="est-tag">환산</span>':''}</div>
+        </div>
+      `).join("")}
+    </div>
+    ${list.length > shown.length ? `<button class="more-btn" onclick="showMore()">${list.length - shown.length}개 더 보기</button>` : ""}
+  ` : `<div class="empty">조건에 맞는 단지가 없습니다.</div>`;
+}
+
+// 화면 전체(사다리+대장주+필터틀)를 그림 — 등급 탭 클릭/지역 드롭다운처럼 검색창 포커스와 무관한
+// 조작에서만 호출. 마지막에 renderList()도 같이 불러서 목록까지 한 번에 맞춤.
+function render(){
+  const maxCount = Math.max(...DATA.grades.map(g => g.count), 1);
+
+  $("#app").innerHTML = `
+    <div class="meta-line">단지 <b>${DATA.meta.complexes.toLocaleString()}</b>개 · 최근 ${DATA.meta.months}개월 거래 <b>${DATA.meta.tx.toLocaleString()}</b>건 기준</div>
+
+    <div class="ladder">
+      <div class="ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
+      ${DATA.grades.map(g => `
+        <div class="rung ${state.grade===g.g?'on':''}" onclick="setGrade(${g.g})">
+          <div class="rung-dot" style="background:${g.color}"></div>
+          <div class="rung-info"><div class="rung-label">${esc(g.label)}</div><div class="rung-band">${esc(g.band)}</div></div>
+          <div class="rung-bar-track"><div class="rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${g.color}"></div></div>
+          <div class="rung-count"><b>${g.count}</b>개<br>평균 ${fmtEok(g.avg)}</div>
+        </div>
+      `).join("")}
+    </div>
+
+    ${!state.grade && !state.region && !state.q ? `
+    <div class="section-hd"><h2>지역별 대장주</h2><span class="cnt">${DATA.flagships.length}개 지역</span></div>
+    <div class="flag-row">
+      ${DATA.flagships.map(f => `
+        <div class="flag-card">
+          <div class="flag-region">${esc(f.gu)}</div>
+          <div class="flag-name">${esc(f.nm)}</div>
+          <div class="flag-price">${fmtEok(f.p84)}</div>
+        </div>
+      `).join("")}
+    </div>
+    ` : ""}
+
+    <div class="section-hd"><h2>${state.grade ? esc(DATA.grades.find(g=>g.g===state.grade).label) : '전체 단지'}</h2><span class="cnt" id="listCnt"></span></div>
+    <div class="filters">
+      <select id="regionSel" onchange="setRegion(this.value)">${regionOptions()}</select>
+      <input id="qInput" type="text" placeholder="단지명 검색" value="${esc(state.q)}" oninput="setQuery(this.value)">
+    </div>
+
+    <div id="listArea"></div>
+
+    <div class="disclaimer">
+      ${esc(DATA.meta.basis)}.<br>
+      "환산" 표시는 84㎡ 실거래가 없어 다른 평형 거래를 면적 비례로 추정한 근사치입니다.<br>
+      실제 시세와 다를 수 있으니 참고용으로만 활용하세요 · <a href="./index.html">단지별 상세 분석 보기</a>
+    </div>
+  `;
+  renderList();
+}
+
+function setGrade(g){ state.grade = state.grade === g ? null : g; state.shown = 30; render(); }
+function setRegion(v){ state.region = v; state.shown = 30; render(); }
+function setQuery(v){ state.q = v; state.shown = 30; renderList(); }
+function showMore(){ state.shown += 50; renderList(); }
+
+load();
+</script>
+</body>
+</html>
