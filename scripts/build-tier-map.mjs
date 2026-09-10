@@ -81,29 +81,42 @@ async function main() {
   const pyGroups = new Map();
   let totalTx = 0;
 
+  // presale 디렉토리(data/presale/<lawd>/<ym>.json)도 매매(analyze)와 동일한 방식으로 함께 스캔한다.
+  // (2026.09 버그 수정: 원래 이 스크립트가 analyzeDir만 읽어서, 준공 전이라 매매 실거래가 아예 없고
+  // 분양권·입주권 거래만 있는 신축 단지는 급지 지도 단지 목록·히트맵에서 통째로 빠졌었음 — 검단·청라
+  // 같은 신축 밀집 지역에서 특히 눈에 띔. 사이트의 다른 랭킹 탭들(단지분석·연간 저평가 등)은 이미
+  // 매매+분양권을 합쳐서 보여주므로 여기도 맞춤. 단, 이 배치는 index.html의 mergeTradeAndPresaleForRanking처럼
+  // 정교한 단지명 정규화·매칭을 하지 않고 원문 그대로 그룹핑한다 — 표기가 완전히 같으면 매매와 자동으로
+  // 합쳐지고, 다르면 별도 항목으로 집계된다(간단하지만 "목록에서 아예 빠지는" 문제는 해결).
+  const presaleDir = "data/presale";
+
   for (const lawd of lawdDirs) {
     const region = LAWD_TO_REGION.get(lawd);
     if (!region) continue; // 분구 코드 등 REGIONS에 없는 폴더는 스킵(현재 배치 구조상 안 생기지만 방어)
     const province = provinceOf(region, lawd);
     if (!ALLOWED_PROVINCES.has(province)) continue; // 인천 등 대상 외 지역 폴더는 통째로 스킵
-    let ymFiles;
-    try { ymFiles = (await readdir(path.join(analyzeDir, lawd))).filter((f) => f.endsWith(".json")); }
-    catch { continue; }
-    for (const f of ymFiles) {
-      const ym = f.replace(".json", "");
-      if (!recentYms.has(ym)) continue;
-      let j;
-      try { j = JSON.parse(await readFile(path.join(analyzeDir, lawd, f), "utf-8")); }
-      catch { continue; }
-      for (const t of j.items || []) {
-        if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
-        if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
-        totalTx++;
-        const pk = `${region}|${t.umd}|${t.apt}|${t.py}`;
-        const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: t.apt, py: t.py, maxAmt: -Infinity, count: 0 };
-        g.count++;
-        if (t.amt > g.maxAmt) g.maxAmt = t.amt; // "2년 내 최고가"
-        pyGroups.set(pk, g);
+
+    for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
+      let ymFiles;
+      try { ymFiles = (await readdir(path.join(dir, lawd))).filter((f) => f.endsWith(".json")); }
+      catch { continue; } // 매매·분양권 중 한쪽 폴더가 아직 없는 지역도 있으므로 개별적으로 스킵
+      for (const f of ymFiles) {
+        const ym = f.replace(".json", "");
+        if (!recentYms.has(ym)) continue;
+        let j;
+        try { j = JSON.parse(await readFile(path.join(dir, lawd, f), "utf-8")); }
+        catch { continue; }
+        for (const t of j.items || []) {
+          if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
+          if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
+          totalTx++;
+          const pk = `${region}|${t.umd}|${t.apt}|${t.py}`;
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: t.apt, py: t.py, maxAmt: -Infinity, count: 0, presaleOnly: true };
+          g.count++;
+          if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
+          if (t.amt > g.maxAmt) g.maxAmt = t.amt; // "2년 내 최고가"
+          pyGroups.set(pk, g);
+        }
       }
     }
   }
@@ -144,6 +157,7 @@ async function main() {
       amt: Math.round(c.maxAmt * 10000), // 그 평형의 2년 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
       g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
+      presaleOnly: !!c.presaleOnly, // 매매 실거래가 아직 없어 분양권·입주권만으로 집계된 단지(프론트에서 배지 표시용)
     });
   }
   result.sort((a, b) => b.ppy - a.ppy);
@@ -171,7 +185,7 @@ async function main() {
       complexes: result.length,
       months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준, 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준(매매·분양권·입주권 포함), 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,

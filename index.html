@@ -278,58 +278,59 @@
 
   /* ── 급지 지도 탭(2026.09 index.html에 탭으로 통합 — 기존 tier.html에서 그대로 포팅, 클래스는 다른 탭과
        안 겹치게 전부 tier- 접두어) ── */
-  .tier-prov-tabs{display:flex;gap:6px;margin-bottom:14px}
+  .tier-prov-tabs{display:flex;gap:6px;margin-bottom:10px}
   .tier-prov-tab{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer}
   .tier-prov-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .tier-prov-tab:active{opacity:.85}
-  .tier-meta-line{font-size:11px;color:var(--sub);text-align:center;margin-bottom:16px}
+  .tier-meta-line{font-size:11px;color:var(--sub);text-align:center;margin-bottom:10px}
   .tier-meta-line b{color:var(--ink)}
-  .tier-ladder{background:#fff;border-radius:16px;padding:14px 14px 6px;margin-bottom:16px;border:1.5px solid var(--line)}
-  .tier-ladder-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px}
-  .tier-rung{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-bg);cursor:pointer;transition:background .12s}
+  .tier-ladder{background:#fff;border-radius:16px;padding:10px 14px 2px;margin-bottom:12px;border:1.5px solid var(--line)}
+  .tier-ladder-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .tier-rung{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--slate-bg);cursor:pointer;transition:background .12s}
   .tier-rung:last-child{border-bottom:none}
   .tier-rung:active{background:var(--teal-light-soft)}
   .tier-rung.on{background:var(--teal-light-soft)}
   .tier-rung-dot{flex:none;width:11px;height:11px;border-radius:3px}
   .tier-rung-info{flex:none;width:76px}
-  .tier-rung-label{font-size:12px;font-weight:700;color:var(--ink)}
-  .tier-rung-band{font-size:9px;color:var(--sub)}
+  .tier-rung-label{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3}
+  .tier-rung-band{font-size:9px;color:var(--sub);line-height:1.3}
   .tier-rung-bar-track{flex:1;height:20px;background:var(--slate-bg);border-radius:6px;overflow:hidden;position:relative}
   .tier-rung-bar-fill{height:100%;border-radius:6px;transition:width .5s ease}
-  .tier-rung-count{flex:none;width:80px;text-align:right;font-size:11px;color:var(--sub)}
+  .tier-rung-count{flex:none;width:80px;text-align:right;font-size:11px;color:var(--sub);line-height:1.3}
   .tier-rung-count b{color:var(--ink);font-size:12.5px}
-  .tier-filters{display:flex;gap:6px;margin-bottom:12px}
+  .tier-filters{display:flex;gap:6px;margin-bottom:10px}
   .tier-filters select,.tier-filters input{flex:1;font-size:12px;padding:8px 9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-family:inherit}
   .tier-filters input{flex:1.4}
   .tier-filters select:focus,.tier-filters input:focus{outline:none;border-color:var(--teal)}
-  .tier-section-hd{display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px}
+  .tier-section-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px}
   .tier-section-hd h2{font-size:13px;font-weight:700;color:var(--navy)}
   .tier-section-hd .cnt{font-size:11px;color:var(--sub)}
-  .tier-heat-group{margin-bottom:14px}
+  .tier-heat-group{margin-bottom:10px}
   .tier-heat-group-title{font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:6px;padding-left:2px}
   .tier-heatmap{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-  .tier-heat-cell{border-radius:10px;padding:8px 8px 7px;color:#fff;cursor:pointer;min-height:82px;display:flex;flex-direction:column;justify-content:space-between}
+  .tier-heat-cell{border-radius:10px;padding:8px 8px 7px;color:#fff;cursor:pointer;min-height:90px;display:flex;flex-direction:column;justify-content:space-between}
   .tier-heat-cell.on{box-shadow:0 0 0 3px var(--navy) inset}
   .tier-heat-cell:active{opacity:.85}
   .tier-heat-region{font-size:14px;font-weight:800;opacity:1}
-  .tier-heat-name{font-size:10.5px;font-weight:700;line-height:1.25;margin:2px 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-  .tier-heat-price{font-size:12px;font-weight:900}
-  .tier-heat-amt{font-size:9px;opacity:.85;margin-top:1px}
+  .tier-heat-name{font-size:10.5px;font-weight:700;line-height:1.2;margin:2px 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .tier-heat-price{font-size:15px;font-weight:900}
+  .tier-heat-amt{font-size:12px;font-weight:600;opacity:.92;margin-top:2px}
   .tier-list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
-  .tier-row{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--slate-bg)}
+  .tier-row{display:flex;align-items:center;gap:10px;padding:8px 13px;border-bottom:1px solid var(--slate-bg)}
   .tier-row:last-child{border-bottom:none}
   .tier-row-no{flex:none;width:20px;font-size:11px;color:var(--sub);text-align:center}
   .tier-row-main{flex:1;min-width:0}
-  .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tier-row-sub{font-size:10px;color:var(--sub);margin-top:1px}
+  .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+  .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
+  .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.3}
   .tier-row-price{flex:none;text-align:right}
   .tier-row-price b{font-size:13px;color:var(--navy)}
   .tier-row-price span{font-size:9.5px;color:var(--sub)}
-  .tier-row-amt{font-size:9.5px;color:var(--sub);margin-top:1px}
+  .tier-row-amt{font-size:9.5px;color:var(--sub);margin-top:0;line-height:1.3}
   .tier-more-btn{display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--teal-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
   .tier-more-btn:active{background:var(--teal-light-soft)}
   .tier-empty{text-align:center;padding:40px 20px;color:var(--sub);font-size:12.5px}
-  .tier-disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
+  .tier-disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:16px;padding:0 10px;line-height:1.5}
   .tier-loading-box{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
 </style>
 </head>
@@ -5017,7 +5018,7 @@ function tierRenderList(){
         <div class="tier-row">
           <div class="tier-row-no">${i+1}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.nm)}</div>
+            <div class="tier-row-name">${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평)</div></div>
@@ -5144,11 +5145,25 @@ function renderTier(){
   tierRenderList();
 }
 
-function tierSetProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; renderTier(); }
-function tierSetGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; renderTier(); }
+// 시·도 탭/등급 탭은 새 히스토리를 안 쌓지만(아래 tierSetProvince/tierSetGrade), 그 상태에서 바로 구/동을
+// 눌러 pushTierView()가 실행되면 문제가 생김 — 뒤로가기가 돌아갈 자리는 "방금 지나온 시·도/등급 상태"여야
+// 하는데, 그 상태는 애초에 history에 없어서 브라우저는 그보다 훨씬 전에 실제로 push됐던 화면(예: 이전에
+// 보고 있던 다른 시·도의 구 상세)으로 건너뛰어 버림. (제보: 부산 탭→남구 히트맵→뒤로가기 하면 이전에
+// 봤던 서초구가 뜸 — 부산 탭 클릭이 히스토리에 안 남아있어서 그 이전, 서초구를 눌렀을 때 push된 항목으로
+// 되돌아간 것.) 그래서 새 항목을 쌓는 대신 현재 맨 위 히스토리 항목 자체를 지금 상태로 갱신해둔다 — 이후
+// pushTierView()가 호출되면 뒤로가기가 정확히 이 상태로 돌아온다.
+function replaceTierView(){
+  lastData = { mode: 'tier', tierSnapshot: { ...tierState } };
+  if(!viewStack.length){ pushTierView(); return; } // 교체할 이전 항목이 아직 없으면(비정상 진입) 새로 쌓음
+  viewStack[viewStack.length-1] = { data: lastData, inputs: viewStack[viewStack.length-1].inputs };
+  try{ history.replaceState({vi: viewStack.length-1}, ''); }catch(e){}
+}
+function tierSetProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; renderTier(); replaceTierView(); }
+function tierSetGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; renderTier(); replaceTierView(); }
 // 구/시를 고르면 동별 평단가 히트맵으로 "들어가는" 것이라 뒤로가기로 되돌릴 수 있는 별도 단계로 기록
 // (수민 리포트 — 동별 히트맵에서 뒤로가기가 안 먹힘). 시·도 탭·등급 탭은 다른 탭들의 필터 조작과 동일하게
-// 별도 히스토리를 안 쌓음(기존 패턴 유지) — 구/시 선택만 "화면이 통째로 바뀌는" 수준의 이동이라 예외.
+// 새 히스토리 단계는 안 쌓되(기존 패턴 유지), 위 replaceTierView()로 현재 단계는 갱신해둠 — 구/시 선택만
+// "화면이 통째로 바뀌는" 수준의 이동이라 예외적으로 새 단계를 쌓음.
 function tierSetRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; renderTier(); pushTierView(); }
 function tierSetRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; renderTier(); pushTierView(); }
 // 동별 평단가 히트맵에서 동 하나를 탭하면 아래 단지 목록을 그 동만으로 좁힘(수민 요청) — 다시 탭하면 해제(토글).
