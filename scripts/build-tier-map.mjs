@@ -79,6 +79,11 @@ async function main() {
 
   // "구|동|단지명|평형(py)" -> { maxAmt, count } — 평형 단위로 2년 내 최고가와 표본 수를 집계
   const pyGroups = new Map();
+  // 단지명 표기가 "청담 르엘"/"청담르엘"처럼 띄어쓰기만 다른 경우 서로 다른 단지로 갈라져 급지 목록에
+  // 중복으로 뜨던 문제(2026.09 제보) — 그룹 키는 공백을 제거한 이름으로 통일해서 합치되, 화면에 보여줄
+  // 이름은 실제 등장한 표기 중 가장 많이 쓰인 것을 그대로 채택한다(index.html의 여러 이름-정규화 로직과
+  // 동일 원칙). "구|동|정규화된 단지명" -> {원문 표기: 등장 횟수}
+  const nameVariantsByCk = new Map();
   let totalTx = 0;
 
   // presale 디렉토리(data/presale/<lawd>/<ym>.json)도 매매(analyze)와 동일한 방식으로 함께 스캔한다.
@@ -110,12 +115,17 @@ async function main() {
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
           totalTx++;
-          const pk = `${region}|${t.umd}|${t.apt}|${t.py}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: t.apt, py: t.py, maxAmt: -Infinity, count: 0, presaleOnly: true };
+          const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
+          const ck = `${region}|${t.umd}|${nameNorm}`;
+          const pk = `${ck}|${t.py}`;
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, count: 0, presaleOnly: true };
           g.count++;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
           if (t.amt > g.maxAmt) g.maxAmt = t.amt; // "2년 내 최고가"
           pyGroups.set(pk, g);
+          const variants = nameVariantsByCk.get(ck) || {};
+          variants[t.apt] = (variants[t.apt] || 0) + 1;
+          nameVariantsByCk.set(ck, variants);
         }
       }
     }
@@ -139,7 +149,7 @@ async function main() {
   } catch { /* hhcnt 없어도 계속 진행 */ }
 
   // 단지별로 평형(py) 중 평단가가 가장 높은 것 1개만 대표로 채택
-  const byComplex = new Map(); // "구|동|단지명" -> 대표 평형 그룹 + ppy
+  const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
     if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
@@ -149,10 +159,13 @@ async function main() {
   }
 
   const result = [];
-  for (const c of byComplex.values()) {
-    const hh = hhLookup.get(`${c.region}|${String(c.name).replace(/\s/g, "")}`) || {};
+  for (const [ck, c] of byComplex) {
+    const hh = hhLookup.get(`${c.region}|${c.name}`) || {}; // c.name은 이미 공백 제거된 정규화 표기라 그대로 사용
+    // 화면에 보여줄 이름은 실제 등장 표기 중 가장 많이 쓰인 것으로(정규화 키는 중복 제거용일 뿐 화면엔 안 씀)
+    const variants = nameVariantsByCk.get(ck);
+    const displayName = variants ? Object.entries(variants).sort((a, b) => b[1] - a[1])[0][0] : c.name;
     result.push({
-      gu: c.region, province: c.province, dong: c.dong, nm: c.name,
+      gu: c.region, province: c.province, dong: c.dong, nm: displayName,
       ppy: c.ppy, py: c.py, // 평단가(만원/평), 대표로 채택된 평형(참고용)
       amt: Math.round(c.maxAmt * 10000), // 그 평형의 2년 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
       g: gradeOf(c.ppy),
