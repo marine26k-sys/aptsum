@@ -944,7 +944,6 @@ function favRegionGo(code){
   renderFavRegions();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(mode==='region'||mode==='volume'||mode==='updown'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='turnover'||mode==='jeonseupdown'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
-  if(mode==='tier') loadTierData(); // 급지 지도는 검색이 아니라 배치로 미리 만들어둔 정적 JSON을 그냥 불러와 보여줌
 }
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
@@ -954,10 +953,15 @@ function restoreView(vi){
   if(!v){ // 초기 화면
     document.getElementById('result').classList.remove('on');
     document.getElementById('result').innerHTML='';
+    // 급지 지도는 검색창 전체를 숨기는 유일한 탭이라(#searchBox), 뒤로가기로 맨 처음(검색 이전)까지
+    // 돌아갔을 때 숨겨진 채로 남지 않도록 여기서 되돌려준다. 다른 탭은 이 상태를 안 건드리므로 기존 동작 그대로.
+    document.getElementById('searchBox').style.display = '';
+    document.getElementById('tabTM').classList.remove('on');
+    document.getElementById('tabC').classList.add('on');
     return;
   }
   const inp = v.inputs;
-  setMode(inp.mode);
+  setMode(inp.mode, true);
   sel.value = inp.lawd;
   document.getElementById('q').value = inp.q;
   document.getElementById('monthsN').value = inp.mN;
@@ -998,6 +1002,7 @@ function restoreView(vi){
   else if(v.data.mode==='longtermrise') renderLongTermRise(v.data);
   else if(v.data.mode==='gap') renderGap(v.data);
   else if(v.data.mode==='subway') renderSubway(v.data);
+  else if(v.data.mode==='tier') {} // setMode(inp.mode, true)가 이미 loadTierData(true)까지 호출해 화면을 그려둠 — 여기선 추가로 할 일 없음
   else renderRegion(v.data);
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
@@ -1257,7 +1262,7 @@ function pyBandMultiFilter(items){
 }
 
 // 게이트
-function setMode(m){
+function setMode(m, fromRestore){
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
@@ -1345,6 +1350,11 @@ function setMode(m){
       if(!r.querySelector('input').value.trim()) r.querySelector('select').value = sel.value;
     });
   }
+  // 급지 지도는 지역/단지 선택이 필요 없는 탭이라(정적 배치 JSON을 그냥 불러와 보여줌), 다른 랭킹 탭들처럼
+  // "지역 골라야 조회 가능" 흐름이 아니라 탭을 누르는 즉시 바로 로드한다.
+  // (2026.09 버그 수정: 이 호출을 원래 favRegionGo()의 mode===... 디스패치 안에 잘못 넣어서 탭을 눌러도
+  // 아무 일도 안 일어났었음 — 그 디스패치는 즐겨찾기 지역 칩을 눌렀을 때만 타는 별개 함수였음)
+  if(m==='tier') loadTierData(fromRestore);
 }
 
 function regionSelectHTML(){
@@ -4931,19 +4941,29 @@ const TIER_PROVINCES = ["서울", "경기", "인천", "부산"]; // 2026.09 인�
 const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억"; // 평단가 — 억 단위 소수점 둘째자리(수민 요청)
 const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억"; // 매매가(총액) — 기존 관행대로 소수점 첫째자리
 
-async function loadTierData(){
-  if(tierData){ renderTier(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
+async function loadTierData(fromRestore){
+  // fromRestore가 true면 popstate(뒤로가기)로 복원되는 중 — 이때 pushView()를 또 부르면 history가
+  // 꼬여서(예: 뒤로가기 한 번이 제자리로 돌아오는 것처럼 느껴짐) 새 히스토리 항목을 안 쌓는다. 실제
+  // 사용자가 탭을 눌러 들어온 경우에만(false/undefined) 히스토리에 한 단계로 기록.
+  if(tierData){ renderTier(); if(!fromRestore) pushTierView(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
   const r0 = document.getElementById('result'); r0.innerHTML = `<div class="tier-loading-box">불러오는 중…</div>`; r0.classList.add('on');
   try{
     const res = await fetch('./data/tier-map.json', { cache: 'no-store' });
     if(!res.ok) throw new Error('no data');
     tierData = await res.json();
     renderTier();
+    if(!fromRestore) pushTierView();
   }catch(e){
     const r = document.getElementById('result');
     r.innerHTML = `<div class="tier-empty">아직 급지 데이터가 없습니다.<br>배치가 한 번 돈 뒤에 다시 확인해주세요.</div>`;
     r.classList.add('on');
   }
+}
+// 뒤로가기 복원용 히스토리 항목 하나 기록 — 다른 탭들의 pushView()를 그대로 재사용하되, lastData만
+// {mode:'tier'}로 맞춰서 restoreView()가 이 항목을 만났을 때 구분할 수 있게 함.
+function pushTierView(){
+  lastData = { mode: 'tier' };
+  pushView();
 }
 
 // 시·도(서울/경기/인천/부산) 스코프가 적용된 기준 목록 — 등급 사다리·지역 드롭다운·목록이 전부 이걸 기반으로 함
