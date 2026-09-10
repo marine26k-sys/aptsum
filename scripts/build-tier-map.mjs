@@ -3,8 +3,7 @@
 // 단지별 "평단가(공급면적 기준, 3.3㎡=1평당 가격)"를 뽑고 가격대별 6단계 등급(최상급지~하급지)으로
 // 나눈 data/tier-map.json을 만든다. 순수 배치 도구 — API 호출 없음, 이미 있는 데이터만 재가공.
 //
-// 대상 범위: 서울·경기·부산만(수민 요청, 2026.09) — REGIONS엔 인천도 있지만 이 대시보드는 세 곳만
-// 다룬다. ALL_REGIONS를 그대로 순회하되 provinceOf()로 인천 폴더는 걸러낸다.
+// 대상 범위: 서울·경기·인천·부산(2026.09 인천 재포함, 수민 요청) — REGIONS에 있는 4개 시·도 전부 다룬다.
 //
 // "평단가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평단가"(pyprice) 탭과 같은 골격, 기준만 다름):
 // 1) 단지+평형(공급면적 기준 평형 라벨, 아래 참고)별로 "최근 2년 내 최고가" 거래 1건을 뽑는다(표본이
@@ -32,12 +31,12 @@ import { ALL_REGIONS } from "../shared/regions.mjs";
 // 라운딩해 사용. 지방은 대부분 5~6등급에 몰릴 수 있는데, 이건 버그가 아니라 실제 가격 격차를
 // 반영하는 것(README에도 이렇게 기록해둘 것).
 const GRADES = [
-  { g: 1, label: "최상급지", band: "평당 9,000만원 이상", color: "#b71c1c", min: 9000 },
-  { g: 2, label: "상급지", band: "평당 6,000만~9,000만원", color: "#e64a19", min: 6000 },
-  { g: 3, label: "중상급지", band: "평당 4,500만~6,000만원", color: "#f57f17", min: 4500 },
-  { g: 4, label: "중급지", band: "평당 3,300만~4,500만원", color: "#00828A", min: 3300 },
-  { g: 5, label: "중하급지", band: "평당 2,400만~3,300만원", color: "#0277bd", min: 2400 },
-  { g: 6, label: "하급지", band: "평당 2,400만원 미만", color: "#546e7a", min: 0 },
+  { g: 1, label: "최상급지", band: "평당 0.90억 이상", color: "#b71c1c", min: 9000 },
+  { g: 2, label: "상급지", band: "평당 0.60억~0.90억", color: "#e64a19", min: 6000 },
+  { g: 3, label: "중상급지", band: "평당 0.45억~0.60억", color: "#f57f17", min: 4500 },
+  { g: 4, label: "중급지", band: "평당 0.33억~0.45억", color: "#00828A", min: 3300 },
+  { g: 5, label: "중하급지", band: "평당 0.24억~0.33억", color: "#0277bd", min: 2400 },
+  { g: 6, label: "하급지", band: "평당 0.24억 미만", color: "#546e7a", min: 0 },
 ];
 function gradeOf(manwonPerPy) {
   for (const g of GRADES) if (manwonPerPy >= g.min) return g.g;
@@ -58,7 +57,7 @@ function buildProvinceMap() {
   };
 }
 const provinceOf = buildProvinceMap();
-const ALLOWED_PROVINCES = new Set(["서울", "경기", "부산"]); // 인천은 이 대시보드에서 제외(수민 요청)
+const ALLOWED_PROVINCES = new Set(["서울", "경기", "인천", "부산"]); // 2026.09 인천 재포함(수민 요청) — 원래도 배치 수집 대상이었는데 대시보드에서만 빼뒀던 것
 const MIN_SAMPLES_PER_TYPE = 2; // 평형별 표본이 1건뿐이면 이상치 방지로 대표 후보에서 제외(pyprice 탭과 동일 원칙)
 
 async function main() {
@@ -142,6 +141,7 @@ async function main() {
     result.push({
       gu: c.region, province: c.province, dong: c.dong, nm: c.name,
       ppy: c.ppy, py: c.py, // 평단가(만원/평), 대표로 채택된 평형(참고용)
+      amt: Math.round(c.maxAmt * 10000), // 그 평형의 2년 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
       g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
     });
@@ -168,8 +168,8 @@ async function main() {
       tx: totalTx,
       complexes: result.length,
       months,
-      provinces: ["서울", "경기", "부산"],
-      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준, 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·부산 대상`,
+      provinces: ["서울", "경기", "인천", "부산"],
+      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준, 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,
