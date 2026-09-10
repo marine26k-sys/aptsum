@@ -148,10 +148,12 @@ async function main() {
   }
   result.sort((a, b) => b.ppy - a.ppy);
 
+  // min을 결과에도 노출(2026.09, 동별 평단가 히트맵용) — 프론트에서 단지 단위가 아니라 "동 평균 평단가"처럼
+  // 새로 계산한 값을 등급 색상표에 맞춰 분류해야 하는 경우가 생겨서, 그 경계값(min)을 그대로 실어보낸다.
   const gradesOut = GRADES.map((g) => {
     const inGrade = result.filter((c) => c.g === g.g);
     const avg = inGrade.length ? Math.round(inGrade.reduce((s, c) => s + c.ppy, 0) / inGrade.length) : 0;
-    return { g: g.g, label: g.label, band: g.band, color: g.color, count: inGrade.length, avg };
+    return { g: g.g, label: g.label, band: g.band, color: g.color, min: g.min, count: inGrade.length, avg };
   });
 
   // 지역(구/시)별 대장주(평단가 최고 단지) 1개씩 — province 태그를 같이 들고 있어 프론트에서

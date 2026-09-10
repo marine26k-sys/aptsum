@@ -4953,20 +4953,26 @@ function tierScoped(){
 function tierRegionOptions(){
   // 시·도(서울/경기/인천/부산)로 묶어서 보여줌(수민 요청) — "전체" 지역 탭일 때는 네 시·도 전부가 알파벳(가나다)순으로
   // 뒤섞여 나와 어디가 어느 시·도인지 구분이 안 됐던 문제. optgroup으로 시·도별 소제목을 붙임.
+  // option value는 "시·도::구/시" 복합키(2026.09 수정) — 서울 강서구/중구와 부산 강서구/중구처럼 시·도가
+  // 다른데 구 이름이 같은 경우가 실제로 있어서, 구 이름만으로 필터링하면 "전체" 지역 탭에서 서로 다른
+  // 두 도시가 하나로 합쳐지는 버그가 있었음(동별 평단가 히트맵 작업 중 발견).
   const scoped = tierScoped();
   const groups = tierState.province ? [tierState.province] : TIER_PROVINCES;
   let html = `<option value="">전체 지역</option>`;
   for (const p of groups) {
     const regions = [...new Set(scoped.filter(c => c.province === p).map(c => c.gu))].sort((a,b) => a.localeCompare(b, "ko"));
     if (!regions.length) continue;
-    html += `<optgroup label="${esc(p)}">` + regions.map(r => `<option value="${esc(r)}" ${tierState.region===r?'selected':''}>${esc(r)}</option>`).join("") + `</optgroup>`;
+    html += `<optgroup label="${esc(p)}">` + regions.map(r => {
+      const key = `${p}::${r}`;
+      return `<option value="${esc(key)}" ${tierState.region===key?'selected':''}>${esc(r)}</option>`;
+    }).join("") + `</optgroup>`;
   }
   return html;
 }
 function tierFiltered(){
   return tierScoped().filter(c =>
     (!tierState.grade || c.g === tierState.grade) &&
-    (!tierState.region || c.gu === tierState.region) &&
+    (!tierState.region || `${c.province}::${c.gu}` === tierState.region) &&
     (!tierState.q || c.nm.includes(tierState.q))
   );
 }
@@ -5006,7 +5012,7 @@ function tierHeatmapHTML(){
           ${items.map(f => {
             const grade = tierData.grades.find(g => g.g === f.g);
             return `
-              <div class="tier-heat-cell" style="background:${grade.color}" onclick="tierSetRegionFromHeat('${esc(f.gu)}')">
+              <div class="tier-heat-cell" style="background:${grade.color}" onclick="tierSetRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
                 <div class="tier-heat-region">${esc(f.gu)}</div>
                 <div class="tier-heat-name">${esc(f.nm)}</div>
                 <div class="tier-heat-price">${tierFmtPy(f.ppy)}</div>
@@ -5020,6 +5026,43 @@ function tierHeatmapHTML(){
 }
 function tierScopedFlagshipCount(){
   return tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).length;
+}
+// 새로 계산한 평단가(예: 동 평균)를 등급 색상표에 맞춰 분류 — GRADES가 min 내림차순으로 정렬돼 있어서
+// (build-tier-map.mjs 참고) 위에서부터 순서대로 처음 만족하는 등급을 찾으면 됨(서버의 gradeOf()와 동일 원리).
+function tierGradeColorFor(ppy){
+  for (const g of tierData.grades) if (ppy >= g.min) return g.color;
+  return tierData.grades[tierData.grades.length - 1].color;
+}
+// 동별 평단가 히트맵(수민 요청, 2026.09) — 특정 구/시를 선택했을 때만 노출. 그 구 안의 동들을 모아
+// 동별 "평균" 평단가(그 동에 있는 단지들의 대표 평단가 평균)를 계산해 등급색으로 칠한 히트맵으로 보여줌.
+// 지역별 대장주 히트맵은 "1등 단지 하나"를 보여주는 반면, 이건 "동 전체의 평균 수준"을 보여주는 것이라
+// 성격이 달라 별도 함수로 분리.
+function tierDongHeatmapHTML(){
+  if (!tierState.region) return "";
+  const [province, gu] = tierState.region.split("::");
+  const inGu = tierData.complexes.filter(c => c.province === province && c.gu === gu);
+  const byDong = new Map();
+  for (const c of inGu) {
+    const d = byDong.get(c.dong) || { sum: 0, count: 0 };
+    d.sum += c.ppy; d.count++;
+    byDong.set(c.dong, d);
+  }
+  const items = [...byDong.entries()]
+    .map(([dong, d]) => ({ dong, avgPpy: Math.round(d.sum / d.count), count: d.count }))
+    .sort((a,b) => b.avgPpy - a.avgPpy);
+  if (!items.length) return "";
+  return `
+    <div class="tier-section-hd"><h2>${esc(gu)} 동별 평단가</h2><span class="cnt">${items.length}개 동</span></div>
+    <div class="tier-heatmap">
+      ${items.map(it => `
+        <div class="tier-heat-cell" style="background:${tierGradeColorFor(it.avgPpy)}">
+          <div class="tier-heat-region">${esc(it.dong)}</div>
+          <div class="tier-heat-name">단지 ${it.count}개</div>
+          <div class="tier-heat-price">${tierFmtPy(it.avgPpy)}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 // 화면 전체(탭+사다리+대장주+필터틀)를 그림 — 시·도 탭/등급 탭 클릭/지역 드롭다운처럼 검색창
 // 포커스와 무관한 조작에서만 호출. 마지막에 tierRenderList()도 같이 불러서 목록까지 한 번에 맞춤.
@@ -5057,6 +5100,8 @@ function renderTier(){
     ${tierHeatmapHTML()}
     ` : ""}
 
+    ${tierState.region ? tierDongHeatmapHTML() : ""}
+
     <div class="tier-section-hd"><h2>${tierState.grade ? esc(tierData.grades.find(g=>g.g===tierState.grade).label) : '전체 단지'}</h2><span class="cnt" id="tierListCnt"></span></div>
     <div class="tier-filters">
       <select id="tierRegionSel" onchange="tierSetRegion(this.value)">${tierRegionOptions()}</select>
@@ -5077,7 +5122,7 @@ function renderTier(){
 function tierSetProvince(p){ tierState.province = p; tierState.region = ""; tierState.grade = null; tierState.shown = 30; renderTier(); }
 function tierSetGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; renderTier(); }
 function tierSetRegion(v){ tierState.region = v; tierState.shown = 30; renderTier(); }
-function tierSetRegionFromHeat(gu){ tierState.region = gu; tierState.shown = 30; renderTier(); }
+function tierSetRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.shown = 30; renderTier(); }
 function tierSetQuery(v){ tierState.q = v; tierState.shown = 30; tierRenderList(); }
 function tierShowMore(){ tierState.shown += 50; tierRenderList(); }
 </script>
