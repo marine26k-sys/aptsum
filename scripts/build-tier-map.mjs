@@ -191,9 +191,13 @@ async function main() {
 
   // 지역(구/시)별 대장주(평단가 최고 단지) 1개씩 — province 태그를 같이 들고 있어 프론트에서
   // 서울/경기/부산별로 묶어 히트맵으로 그릴 수 있음
+  // 2026.09 버그 수정: 키를 c.gu(구 이름)만 썼더니 서울·부산에 동명 구(중구·강서구)가 있어 평단가
+  // 낮은 쪽(주로 부산)이 통째로 밀려 사라지는 문제(수민 리포트) — 8차 개편 때 목록 필터는 "시·도::구"
+  // 복합키로 고쳤는데 이 집계는 그때 놓쳤던 부분. province까지 포함한 복합키로 수정.
   const byRegion = new Map();
   for (const c of result) {
-    if (!byRegion.has(c.gu) || byRegion.get(c.gu).ppy < c.ppy) byRegion.set(c.gu, c);
+    const rk = `${c.province}|${c.gu}`;
+    if (!byRegion.has(rk) || byRegion.get(rk).ppy < c.ppy) byRegion.set(rk, c);
   }
   const flagships = [...byRegion.values()].sort((a, b) => b.ppy - a.ppy);
 
