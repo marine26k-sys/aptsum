@@ -1,33 +1,46 @@
 // 급지(가격 등급) 대시보드 데이터 생성 (2026.09 신규 — subuji-main 참고)
 // 목적: 이미 collect-trades.mjs가 쌓아온 data/analyze/<lawd>/<ym>.json 매매 실거래를 스캔해서,
-// 단지별 "국민평형(전용 84㎡) 환산가"를 뽑고 가격대별 6단계 등급(최상급지~하급지)으로 나눈
-// data/tier-map.json을 만든다. 순수 배치 도구 — API 호출 없음, 이미 있는 데이터만 재가공.
+// 단지별 "평단가(공급면적 기준, 3.3㎡=1평당 가격)"를 뽑고 가격대별 6단계 등급(최상급지~하급지)으로
+// 나눈 data/tier-map.json을 만든다. 순수 배치 도구 — API 호출 없음, 이미 있는 데이터만 재가공.
 //
-// "환산가" 계산: 그 단지의 최근 거래 중 전용 81~87㎡(84타입) 거래가 있으면 그중 가장 최근 것을 그대로
-// 쓰고, 없으면 그 단지에서 구할 수 있는 가장 최근 거래를 "가격 ∝ 전용면적"으로 선형 환산한다(정밀
-// 감정평가가 아니라 "이 단지가 대략 어느 급지인가"를 보여주는 대시보드용 근사치임 — 화면에도 명시할 것).
+// 대상 범위: 서울·경기·부산만(수민 요청, 2026.09) — REGIONS엔 인천도 있지만 이 대시보드는 세 곳만
+// 다룬다. ALL_REGIONS를 그대로 순회하되 provinceOf()로 인천 폴더는 걸러낸다.
 //
-// 사용법: node scripts/build-tier-map.mjs [--months=6]
+// "평단가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평단가"(pyprice) 탭과 같은 골격, 기준만 다름):
+// 1) 단지+평형(공급면적 기준 평형 라벨, 아래 참고)별로 "최근 2년 내 최고가" 거래 1건을 뽑는다(표본이
+//    1건뿐인 평형은 이상치 방지로 제외 — pyprice 탭과 동일 원칙, 우연히 섞인 이례적 면적 1건이 대표로
+//    잘못 뽑히는 걸 막음).
+// 2) 그렇게 나온 평형별 최고가를 각 평형의 평단가로 환산한 뒤, 그중 평단가가 가장 높은 평형 딱 1개를
+//    그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평단가가 높은 경우가 흔해서(동일
+//    단지 안에서도 평형별 프리미엄 차이가 큼), 대표 평형을 고정하지 않고 자동 선정.
+//
+// "공급면적 기준"이라는 점이 index.html의 pyprice 탭과 다른 부분(수민 요청, 2026.09): 국토부 실거래
+// API는 전용면적만 주기 때문에, pyprice 탭은 정밀도를 위해 일부러 보간 없이 "전용면적÷3.3058"로
+// 계산한다(화면에도 "전용면적 평단가"라고 명시). 반면 이 대시보드는 애초에 정밀 분석이 아니라 근사
+// 등급 표시가 목적이라, 사람들이 흔히 말하는 "평당가"(공급면적 기준) 감각에 맞추는 걸 우선시했음.
+// 정밀 계산 대신 collect-trades.mjs가 각 거래에 이미 붙여둔 t.py(공급면적 관행 기준 평형 라벨 —
+// shared/rtms-parse.mjs의 areaToPy(), data/supply-area 실측치로 보정된 보간표)를 그대로 재사용한다.
+//
+// 사용법: node scripts/build-tier-map.mjs [--months=24]
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ALL_REGIONS } from "../shared/regions.mjs";
 
-const NATIONAL_TYPE_AREA = 84; // "국민평형" 기준 전용면적(㎡)
-const TYPE_TOLERANCE = 3; // 84±3㎡(81~87㎡)까지는 실측 그대로 인정, 벗어나면 선형 환산
-
-// subuji-main과 동일한 6단계 가격대(단위: 억) — 수도권·서울 시세 감각 기준. 지방은 대부분 5~6등급에
-// 몰릴 수 있는데, 이건 버그가 아니라 실제 가격 격차를 반영하는 것(README에도 이렇게 기록해둘 것).
+// 평단가(만원/평, 공급면적 기준) 기준 6단계 — 국민평형(전용 84㎡≈공급면적 기준 33평) 총액 등급
+// (30/20/15/11/8억)을 33평으로 나눠 평당가로 재환산한 값(9000/6000/4500/3300/2400만원/평)을
+// 라운딩해 사용. 지방은 대부분 5~6등급에 몰릴 수 있는데, 이건 버그가 아니라 실제 가격 격차를
+// 반영하는 것(README에도 이렇게 기록해둘 것).
 const GRADES = [
-  { g: 1, label: "최상급지", band: "30억 이상", color: "#b71c1c", min: 30 },
-  { g: 2, label: "상급지", band: "20억~30억", color: "#e64a19", min: 20 },
-  { g: 3, label: "중상급지", band: "15억~20억", color: "#f57f17", min: 15 },
-  { g: 4, label: "중급지", band: "11억~15억", color: "#00828A", min: 11 },
-  { g: 5, label: "중하급지", band: "8억~11억", color: "#0277bd", min: 8 },
-  { g: 6, label: "하급지", band: "8억 미만", color: "#546e7a", min: 0 },
+  { g: 1, label: "최상급지", band: "평당 9,000만원 이상", color: "#b71c1c", min: 9000 },
+  { g: 2, label: "상급지", band: "평당 6,000만~9,000만원", color: "#e64a19", min: 6000 },
+  { g: 3, label: "중상급지", band: "평당 4,500만~6,000만원", color: "#f57f17", min: 4500 },
+  { g: 4, label: "중급지", band: "평당 3,300만~4,500만원", color: "#00828A", min: 3300 },
+  { g: 5, label: "중하급지", band: "평당 2,400만~3,300만원", color: "#0277bd", min: 2400 },
+  { g: 6, label: "하급지", band: "평당 2,400만원 미만", color: "#546e7a", min: 0 },
 ];
-function gradeOf(eok) {
-  for (const g of GRADES) if (eok >= g.min) return g.g;
+function gradeOf(manwonPerPy) {
+  for (const g of GRADES) if (manwonPerPy >= g.min) return g.g;
   return GRADES[GRADES.length - 1].g;
 }
 
@@ -45,10 +58,12 @@ function buildProvinceMap() {
   };
 }
 const provinceOf = buildProvinceMap();
+const ALLOWED_PROVINCES = new Set(["서울", "경기", "부산"]); // 인천은 이 대시보드에서 제외(수민 요청)
+const MIN_SAMPLES_PER_TYPE = 2; // 평형별 표본이 1건뿐이면 이상치 방지로 대표 후보에서 제외(pyprice 탭과 동일 원칙)
 
 async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
-  const months = parseInt(args.months, 10) || 6; // 최근 N개월 거래만 봄(오래된 거래로 지금 시세 판단하면 왜곡)
+  const months = parseInt(args.months, 10) || 24; // "2년 내 최고가" 기준(수민 요청, 2026.09) — 기존 6개월(최근 시세 스냅샷)에서 변경
 
   const analyzeDir = "data/analyze";
   let lawdDirs;
@@ -63,13 +78,15 @@ async function main() {
     recentYms.add(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  // complexKey(구|동|단지명) -> { latest84: {amt,ym,d}, latestAny: {amt,ym,d,area} }
-  const complexes = new Map();
+  // "구|동|단지명|평형(py)" -> { maxAmt, count } — 평형 단위로 2년 내 최고가와 표본 수를 집계
+  const pyGroups = new Map();
   let totalTx = 0;
 
   for (const lawd of lawdDirs) {
     const region = LAWD_TO_REGION.get(lawd);
     if (!region) continue; // 분구 코드 등 REGIONS에 없는 폴더는 스킵(현재 배치 구조상 안 생기지만 방어)
+    const province = provinceOf(region, lawd);
+    if (!ALLOWED_PROVINCES.has(province)) continue; // 인천 등 대상 외 지역 폴더는 통째로 스킵
     let ymFiles;
     try { ymFiles = (await readdir(path.join(analyzeDir, lawd))).filter((f) => f.endsWith(".json")); }
     catch { continue; }
@@ -81,15 +98,13 @@ async function main() {
       catch { continue; }
       for (const t of j.items || []) {
         if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
+        if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
         totalTx++;
-        const key = `${region}|${t.umd}|${t.apt}`;
-        const c = complexes.get(key) || { region, dong: t.umd, name: t.apt, latest84: null, latestAny: null };
-        const ymd = `${t.ym}${t.d}`;
-        if (Math.abs(t.area - NATIONAL_TYPE_AREA) <= TYPE_TOLERANCE) {
-          if (!c.latest84 || ymd > c.latest84.ymd) c.latest84 = { amt: t.amt, ymd, area: t.area };
-        }
-        if (!c.latestAny || ymd > c.latestAny.ymd) c.latestAny = { amt: t.amt, ymd, area: t.area };
-        complexes.set(key, c);
+        const pk = `${region}|${t.umd}|${t.apt}|${t.py}`;
+        const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: t.apt, py: t.py, maxAmt: -Infinity, count: 0 };
+        g.count++;
+        if (t.amt > g.maxAmt) g.maxAmt = t.amt; // "2년 내 최고가"
+        pyGroups.set(pk, g);
       }
     }
   }
@@ -111,39 +126,41 @@ async function main() {
     }
   } catch { /* hhcnt 없어도 계속 진행 */ }
 
+  // 단지별로 평형(py) 중 평단가가 가장 높은 것 1개만 대표로 채택
+  const byComplex = new Map(); // "구|동|단지명" -> 대표 평형 그룹 + ppy
+  for (const g of pyGroups.values()) {
+    if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
+    const ck = `${g.region}|${g.dong}|${g.name}`;
+    const ppy = Math.round((g.maxAmt * 10000) / g.py); // 평단가(만원/평) = 2년 내 최고가(만원) ÷ 공급면적 기준 평형
+    const cur = byComplex.get(ck);
+    if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, ppy });
+  }
+
   const result = [];
-  for (const c of complexes.values()) {
-    let p84Eok; // 억 단위
-    if (c.latest84) {
-      p84Eok = c.latest84.amt;
-    } else if (c.latestAny && c.latestAny.area > 0) {
-      p84Eok = c.latestAny.amt * (NATIONAL_TYPE_AREA / c.latestAny.area); // 선형 환산(근사치)
-    } else {
-      continue; // 쓸 거래가 아예 없으면 스킵
-    }
+  for (const c of byComplex.values()) {
     const hh = hhLookup.get(`${c.region}|${String(c.name).replace(/\s/g, "")}`) || {};
     result.push({
-      gu: c.region, dong: c.dong, nm: c.name,
-      p84: Math.round(p84Eok * 10000), // 만원 단위(subuji-main과 동일 컨벤션)
-      estimated: !c.latest84, // true면 84타입 실거래가 아니라 선형 환산값이라는 표시
-      g: gradeOf(p84Eok),
+      gu: c.region, province: c.province, dong: c.dong, nm: c.name,
+      ppy: c.ppy, py: c.py, // 평단가(만원/평), 대표로 채택된 평형(참고용)
+      g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
     });
   }
-  result.sort((a, b) => b.p84 - a.p84);
+  result.sort((a, b) => b.ppy - a.ppy);
 
   const gradesOut = GRADES.map((g) => {
     const inGrade = result.filter((c) => c.g === g.g);
-    const avg = inGrade.length ? Math.round(inGrade.reduce((s, c) => s + c.p84, 0) / inGrade.length) : 0;
+    const avg = inGrade.length ? Math.round(inGrade.reduce((s, c) => s + c.ppy, 0) / inGrade.length) : 0;
     return { g: g.g, label: g.label, band: g.band, color: g.color, count: inGrade.length, avg };
   });
 
-  // 지역(구/시)별 대장주(최고가 단지) 1개씩
+  // 지역(구/시)별 대장주(평단가 최고 단지) 1개씩 — province 태그를 같이 들고 있어 프론트에서
+  // 서울/경기/부산별로 묶어 히트맵으로 그릴 수 있음
   const byRegion = new Map();
   for (const c of result) {
-    if (!byRegion.has(c.gu) || byRegion.get(c.gu).p84 < c.p84) byRegion.set(c.gu, c);
+    if (!byRegion.has(c.gu) || byRegion.get(c.gu).ppy < c.ppy) byRegion.set(c.gu, c);
   }
-  const flagships = [...byRegion.values()].sort((a, b) => b.p84 - a.p84);
+  const flagships = [...byRegion.values()].sort((a, b) => b.ppy - a.ppy);
 
   const out = {
     meta: {
@@ -151,7 +168,8 @@ async function main() {
       tx: totalTx,
       complexes: result.length,
       months,
-      basis: `국민평형(전용 84±${TYPE_TOLERANCE}㎡) 최근 거래 기준, 없으면 보유 거래를 면적 비례로 선형 환산한 근사치`,
+      provinces: ["서울", "경기", "부산"],
+      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준, 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,
@@ -160,7 +178,7 @@ async function main() {
 
   await writeFile("data/tier-map.json", JSON.stringify(out));
   console.log(`완료: 단지 ${result.length}개, 거래 ${totalTx}건 스캔`);
-  for (const g of gradesOut) console.log(`  ${g.label}(${g.band}): ${g.count}개, 평균 ${(g.avg / 10000).toFixed(1)}억`);
+  for (const g of gradesOut) console.log(`  ${g.label}(${g.band}): ${g.count}개, 평균 평당 ${g.avg.toLocaleString()}만원`);
 }
 
 main();
