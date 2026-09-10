@@ -12,6 +12,9 @@
 // 2) 그렇게 나온 평형별 최고가를 각 평형의 평단가로 환산한 뒤, 그중 평단가가 가장 높은 평형 딱 1개를
 //    그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평단가가 높은 경우가 흔해서(동일
 //    단지 안에서도 평형별 프리미엄 차이가 큼), 대표 평형을 고정하지 않고 자동 선정.
+//    단, 후보는 20~39평 범위로 한정(2026.09, 수민 요청) — 초소형(원룸/오피스텔급) 평형이 이례적으로
+//    높은 평단가를 찍어 대표값으로 잘못 뽑히는 걸 막기 위함. 이 범위에 해당하는 평형이 하나도 없는
+//    단지는 급지 지도 목록에서 통째로 빠진다(의도된 동작).
 //
 // "공급면적 기준"이라는 점이 index.html의 pyprice 탭과 다른 부분(수민 요청, 2026.09): 국토부 실거래
 // API는 전용면적만 주기 때문에, pyprice 탭은 정밀도를 위해 일부러 보간 없이 "전용면적÷3.3058"로
@@ -59,6 +62,8 @@ function buildProvinceMap() {
 const provinceOf = buildProvinceMap();
 const ALLOWED_PROVINCES = new Set(["서울", "경기", "인천", "부산"]); // 2026.09 인천 재포함(수민 요청) — 원래도 배치 수집 대상이었는데 대시보드에서만 빼뒀던 것
 const MIN_SAMPLES_PER_TYPE = 2; // 평형별 표본이 1건뿐이면 이상치 방지로 대표 후보에서 제외(pyprice 탭과 동일 원칙)
+const PY_MIN = 20, PY_MAX = 39; // 대표 평형 후보를 20~39평 범위로 한정(2026.09, 수민 요청) — 초소형/초대형 평형의
+// 이례적 평단가가 단지 대표값으로 잘못 뽑히는 걸 막기 위함. 범위 밖 평형은 표본이 많아도 대표 후보에서 제외.
 
 async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
@@ -118,10 +123,10 @@ async function main() {
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
           const pk = `${ck}|${t.py}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, count: 0, presaleOnly: true };
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
           g.count++;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
-          if (t.amt > g.maxAmt) g.maxAmt = t.amt; // "2년 내 최고가"
+          if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "2년 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
           const variants = nameVariantsByCk.get(ck) || {};
           variants[t.apt] = (variants[t.apt] || 0) + 1;
@@ -152,6 +157,7 @@ async function main() {
   const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
     if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
+    if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
     const ppy = Math.round((g.maxAmt * 10000) / g.py); // 평단가(만원/평) = 2년 내 최고가(만원) ÷ 공급면적 기준 평형
     const cur = byComplex.get(ck);
@@ -166,7 +172,7 @@ async function main() {
     const displayName = variants ? Object.entries(variants).sort((a, b) => b[1] - a[1])[0][0] : c.name;
     result.push({
       gu: c.region, province: c.province, dong: c.dong, nm: displayName,
-      ppy: c.ppy, py: c.py, // 평단가(만원/평), 대표로 채택된 평형(참고용)
+      ppy: c.ppy, py: c.py, ar: c.area != null ? Math.floor(c.area) : null, // 평단가(만원/평), 대표 평형(참고용), 그 거래의 전용면적(㎡, 다른 탭과 동일하게 내림)
       amt: Math.round(c.maxAmt * 10000), // 그 평형의 2년 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
       g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
@@ -198,7 +204,7 @@ async function main() {
       complexes: result.length,
       months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준(매매·분양권·입주권 포함), 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준(매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,

@@ -316,17 +316,17 @@
   .tier-heat-price{font-size:15px;font-weight:900}
   .tier-heat-amt{font-size:12px;font-weight:600;opacity:.92;margin-top:2px}
   .tier-list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
-  .tier-row{display:flex;align-items:center;gap:10px;padding:6px 13px;border-bottom:1px solid var(--slate-bg)}
+  .tier-row{display:flex;align-items:center;gap:10px;padding:4px 13px;border-bottom:1px solid var(--slate-bg)}
   .tier-row:last-child{border-bottom:none}
   .tier-row-no{flex:none;width:20px;font-size:11px;color:var(--sub);text-align:center}
   .tier-row-main{flex:1;min-width:0}
-  .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+  .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
-  .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.2}
+  .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-row-price{flex:none;text-align:right}
   .tier-row-price b{font-size:13px;color:var(--navy)}
   .tier-row-price span{font-size:9.5px;color:var(--sub)}
-  .tier-row-amt{font-size:9.5px;color:var(--sub);margin-top:0;line-height:1.2}
+  .tier-row-amt{font-size:9.5px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-more-btn{display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--teal-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
   .tier-more-btn:active{background:var(--teal-light-soft)}
   .tier-empty{text-align:center;padding:40px 20px;color:var(--sub);font-size:12.5px}
@@ -5021,7 +5021,7 @@ function tierRenderList(){
             <div class="tier-row-name">${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
-          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평)</div></div>
+          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div></div>
         </div>
       `).join("")}
     </div>
@@ -5046,7 +5046,7 @@ function tierHeatmapHTML(){
                 <div class="tier-heat-region">${esc(f.gu)}</div>
                 <div class="tier-heat-name">${esc(f.nm)}</div>
                 <div class="tier-heat-price">${tierFmtPy(f.ppy)}</div>
-                <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평)</div>
+                <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
               </div>
             `;
           }).join("")}
@@ -5083,7 +5083,7 @@ function tierDongHeatmapHTML(){
           <div class="tier-heat-region">${esc(c.dong)}</div>
           <div class="tier-heat-name">${esc(c.nm)}</div>
           <div class="tier-heat-price">${tierFmtPy(c.ppy)}</div>
-          <div class="tier-heat-amt">${tierFmtAmt(c.amt)} (${c.py}평)</div>
+          <div class="tier-heat-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div>
         </div>
       `;
       }).join("")}
