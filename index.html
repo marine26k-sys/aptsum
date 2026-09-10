@@ -312,9 +312,10 @@
   .tier-heat-cell.on{box-shadow:0 0 0 3px var(--navy) inset}
   .tier-heat-cell:active{opacity:.85}
   .tier-heat-region{font-size:14px;font-weight:800;opacity:1;overflow-wrap:anywhere}
-  .tier-heat-name{font-size:10.5px;font-weight:700;line-height:1.2;margin:2px 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
-  .tier-heat-price{font-size:15px;font-weight:900}
-  .tier-heat-amt{font-size:12px;font-weight:600;opacity:.92;margin-top:2px}
+  .tier-heat-name{font-size:11px;font-weight:700;line-height:1.2;margin:2px 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+  .tier-heat-price{font-size:15px;font-weight:900;margin-top:2px}
+  .tier-heat-price span{font-size:10px;font-weight:600;opacity:.85;margin-left:1px}
+  .tier-heat-amt{font-size:11px;font-weight:600;opacity:.92;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tier-list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
   .tier-row{display:flex;align-items:center;gap:10px;padding:4px 13px;border-bottom:1px solid var(--slate-bg)}
   .tier-row:last-child{border-bottom:none}
@@ -5045,8 +5046,8 @@ function tierHeatmapHTML(){
               <div class="tier-heat-cell" style="background:${grade.color}" onclick="tierSetRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
                 <div class="tier-heat-region">${esc(f.gu)}</div>
                 <div class="tier-heat-name">${esc(f.nm)}</div>
-                <div class="tier-heat-price">${tierFmtPy(f.ppy)}</div>
                 <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
+                <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
               </div>
             `;
           }).join("")}
@@ -5082,8 +5083,8 @@ function tierDongHeatmapHTML(){
         <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${grade.color}" onclick="tierSetDong('${esc(c.dong)}')">
           <div class="tier-heat-region">${esc(c.dong)}</div>
           <div class="tier-heat-name">${esc(c.nm)}</div>
-          <div class="tier-heat-price">${tierFmtPy(c.ppy)}</div>
           <div class="tier-heat-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div>
+          <div class="tier-heat-price">${tierFmtPy(c.ppy)}<span>/평</span></div>
         </div>
       `;
       }).join("")}
