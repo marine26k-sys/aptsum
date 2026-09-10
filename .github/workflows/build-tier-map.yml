@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       months:
-        description: "최근 몇 개월 거래를 기준으로 볼지(기본 6)"
+        description: "최근 몇 개월 내 거래를 볼지(기본 24 = 2년, 평형별 2년 내 최고가 기준)"
         required: false
-        default: "6"
+        default: "24"
 
 permissions:
   contents: write
