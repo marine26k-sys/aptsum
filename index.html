@@ -258,6 +258,8 @@
   .rgitem.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:800}
   .rgitem .tick{flex:0 0 auto;font-size:11px;display:none}
   .rgitem.sel .tick{display:inline}
+  .rgitem.rgcityall{border-style:dashed;border-color:var(--teal);background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800}
+  .rgitem.rgcityall:active{background:var(--teal-light)}
   .rgft{flex:0 0 auto;display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:10px;padding:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -1115,17 +1117,25 @@ function buildRegionPicker(){
     // '전체' 버튼 노출 — 그동안 상한 25개인 탭에서만 노출했으나(2026.08), addRegion()이 상한 초과 시
     // 이미 안전하게 "최대 N개까지만 채우고 안내"로 처리하므로, 상한 5개(단기/반기/연간 저평가)에서도
     // 5개를 빠르게 채우는 용도로 유용하다는 수민 피드백으로 2026.09 재추가 — sel 쪽 supportsAllScopeOption과 동일 기준
-    if(multi && !q){
-      if(g === '경기'){
-        // "경기 전체" 일괄 버튼 대신(수민 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)만 "OO시 전체" 버튼으로 지원
-        html += GG_MULTI_CITIES.map(city => `<button type="button" class="rgall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체 추가</button>`).join('');
-      } else {
-        html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
-      }
+    // 경기는 "경기 전체" 대신(수민 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)의 "OO시 전체" 알약을
+    // 별도 줄이 아니라 그 시의 구 알약들 바로 앞(같은 그리드 안)에 인라인으로 끼워 넣는다 — 어느 시 소속인지
+    // 바로 옆에서 보이도록.
+    if(multi && !q && g !== '경기'){
+      html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
+    let ggPickerLastCity = null;
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
+      let prefix = '';
+      if(g==='경기' && multi && !q){
+        const sp = n.indexOf(' ');
+        const city = sp>-1 ? n.slice(0,sp) : null;
+        if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
+          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+        }
+        ggPickerLastCity = city;
+      }
       const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
-      return `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
+      return prefix + `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
     }).join('') + `</div>`;
   });
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
