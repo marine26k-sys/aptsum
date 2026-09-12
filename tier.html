@@ -189,6 +189,34 @@ function heatmapHTML(){
 function scopedFlagshipCount(){
   return tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).length;
 }
+// 동별 순위 — 서울·경기·인천·부산 통합(또는 시·도 탭 선택 시 그 시·도 안)에서 동 단위로 대장주를 뽑아
+// 평단가 순으로 줄 세운 랭킹. 기존 "지역별 대장주"(구/시 단위)보다 더 잘게 쪼갠 순위.
+function dongRankHTML(limit=30){
+  const base = tierScoped();
+  const byDong = new Map();
+  for (const c of base) {
+    const key = `${c.province}::${c.gu}::${c.dong}`;
+    if (!byDong.has(key) || byDong.get(key).ppy < c.ppy) byDong.set(key, c);
+  }
+  const items = [...byDong.values()].sort((a,b) => b.ppy - a.ppy);
+  const shown = items.slice(0, limit);
+  if (!shown.length) return "";
+  return `
+    <div class="tier-section-hd"><h2>동별 순위${tierState.province ? '' : ' (전국 통합)'}</h2><span class="cnt">TOP ${shown.length}</span></div>
+    <div class="tier-list">
+      ${shown.map((c,i) => `
+        <div class="tier-row" style="cursor:pointer" onclick="setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
+          <div class="tier-row-no">${i+1}</div>
+          <div class="tier-row-main">
+            <div class="tier-row-name">${esc(c.dong)}</div>
+            <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
+          </div>
+          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
 // 동별 평단가 히트맵 — 구/시를 선택했을 때만 노출. 동별 대장주(그 동에서 평단가가 가장 높은 단지) 1개씩 보여줌.
 function dongHeatmapHTML(){
   if (!tierState.region) return "";
@@ -249,6 +277,7 @@ function render(){
     ${!tierState.grade && !tierState.region && !tierState.q ? `
     <div class="tier-section-hd"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역</span></div>
     ${heatmapHTML()}
+    ${dongRankHTML()}
     ` : ""}
 
     ${tierState.region ? dongHeatmapHTML() : ""}
