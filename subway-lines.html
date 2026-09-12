@@ -104,17 +104,27 @@ function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey =
 
 function stationKey(lineId, name){ return `${lineId}::${name}`; }
 
-// 급지 지도(index.html)의 gu는 "안산 단원구"처럼 시·구 결합 표기라 이 역 데이터의 시 단위 표기("안산시")와
-// 바로 안 맞는 경우가 많음(서울 자치구는 그대로 일치) — 접두어로 느슨하게 찾아 같은 시/구에 속한 단지를 모은다.
-function complexesNear(si, gu){
-  if(!TIER) return [];
+// 급지 지도(index.html)의 gu는 "안산 단원구"처럼 시·구 결합 표기 — 이 역 데이터도 되도록 그 표기를 그대로
+// 써서(예: "안산 단원구") 정확히 맞춘다. 다만 gu를 도시 단위로만 적어둔 역(예: "부천시")은 접두어로 느슨하게
+// 찾아 그 아래 모든 구를 포함한다.
+function complexesInGu(si, gu){
   const short = gu.replace(/(시|구|군)$/, '');
-  return TIER.complexes
-    .filter(c => c.province === si && (c.gu === gu || c.gu.startsWith(short)))
-    .sort((a,b) => b.ppy - a.ppy);
+  return TIER.complexes.filter(c => c.province === si && (c.gu === gu || c.gu.startsWith(short)));
+}
+// dong이 있으면 그 동(법정동)으로 더 좁혀서 보여준다 — 문자열 하나 또는 여러 동에 걸친 역이면 배열로도 옴.
+// 그 동에 조회되는 단지가 아예 없으면(신설역이라 거래가 드물거나 tier-map 집계 기준 미달) 조용히
+// 구 전체 결과로 넓혀서 보여주되, 넓혔다는 사실을 밝힌다(fellBack: true).
+function complexesNear(si, gu, dong){
+  if(!TIER) return { items: [], fellBack: false };
+  const inGu = complexesInGu(si, gu);
+  if(!dong) return { items: inGu.sort((a,b)=>b.ppy-a.ppy), fellBack: false };
+  const dongList = Array.isArray(dong) ? dong : [dong];
+  const inDong = inGu.filter(c => dongList.includes(c.dong));
+  if(inDong.length) return { items: inDong.sort((a,b)=>b.ppy-a.ppy), fellBack: false };
+  return { items: inGu.sort((a,b)=>b.ppy-a.ppy), fellBack: true };
 }
 
-async function toggleRegion(lineId, name, si, gu){
+async function toggleRegion(lineId, name){
   const key = stationKey(lineId, name);
   if(openStationKey === key){ openStationKey = ""; render(); return; }
   if(!TIER){
@@ -131,11 +141,14 @@ function regionPanelHTML(st, lineId){
   const key = stationKey(lineId, st.name);
   if(openStationKey !== key) return "";
   if(!TIER) return `<div class="region-panel"><div class="region-empty">단지 정보를 불러오지 못했습니다.</div></div>`;
-  const items = complexesNear(st.si, st.gu).slice(0, 15);
+  const { items: all, fellBack } = complexesNear(st.si, st.gu, st.dong);
+  const items = all.slice(0, 15);
   if(!items.length) return `<div class="region-panel"><div class="region-empty">이 지역에서 조회되는 단지가 없습니다.</div></div>`;
+  const dongLabel = st.dong ? (Array.isArray(st.dong) ? st.dong.join("·") : st.dong) : "";
+  const scopeLabel = (!fellBack && dongLabel) ? `${esc(st.si)} ${esc(st.gu)} ${esc(dongLabel)}` : `${esc(st.si)} ${esc(st.gu)}`;
   return `
     <div class="region-panel">
-      <div class="region-panel-hd">${esc(st.si)} ${esc(st.gu)} · 평단가 상위 ${items.length}개</div>
+      <div class="region-panel-hd">${scopeLabel} · 평단가 상위 ${items.length}개${fellBack && dongLabel ? ` <span style="font-weight:400">(${esc(dongLabel)}엔 조회되는 단지가 없어 구 전체 기준)</span>` : ''}</div>
       ${items.map(c => `
         <div class="region-item">
           <div class="region-item-main">
@@ -162,13 +175,13 @@ function lineHTML(line){
           <div class="station-row">
             <div class="station-main">
               <div class="station-name">${esc(st.name)}</div>
-              <div class="station-loc">${esc(st.si)} ${esc(st.gu)}</div>
+              <div class="station-loc">${esc(st.si)} ${esc(st.gu)}${st.dong ? ` ${esc(Array.isArray(st.dong)?st.dong.join('·'):st.dong)}` : ''}</div>
               ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
             </div>
             <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
               <span class="station-badge ${st.status==='개통'?'badge-open':'badge-plan'}">${esc(st.status)}</span>
               ${st.openDate ? `<span class="station-open-date">${esc(st.openDate)}</span>` : ""}
-              <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" onclick="toggleRegion('${line.id}','${esc(st.name)}','${esc(st.si)}','${esc(st.gu)}')">이 지역 단지</button>
+              <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" onclick="toggleRegion('${line.id}','${esc(st.name)}')">이 지역 단지</button>
             </div>
             ${regionPanelHTML(st, line.id)}
           </div>
