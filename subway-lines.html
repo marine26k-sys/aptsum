@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>노선 호재 — 아파트썸</title>
+<meta name="description" content="신안산선·월곶판교선·GTX-A/B/C 등 신설·공사중 지하철 노선의 역별 위치와 개통 현황을 한눈에 보는 페이지">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
+    --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
+    --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400; --green:#0E9F6E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
+  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
+  .back{position:absolute;top:50%;left:14px;transform:translateY(-50%);background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+  .back:active{background:rgba(255,255,255,.28)}
+
+  .line-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+  .line-tab{flex:none;text-align:center;padding:9px 13px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .line-tab.on{color:#fff;border-color:transparent}
+  .line-tab:active{opacity:.85}
+
+  .line-card{background:#fff;border-radius:16px;padding:14px;margin-bottom:14px;border:1.5px solid var(--line)}
+  .line-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .line-dot{flex:none;width:11px;height:11px;border-radius:3px}
+  .line-card-name{font-size:14px;font-weight:900;color:var(--navy)}
+  .line-summary{font-size:11.5px;color:var(--sub);margin-bottom:10px}
+
+  .station-list{border-top:1px solid var(--slate-bg)}
+  .station-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--slate-bg)}
+  .station-row:last-child{border-bottom:none}
+  .station-main{flex:1;min-width:0}
+  .station-name{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .station-loc{font-size:10.5px;color:var(--sub);margin-top:1px}
+  .station-note{font-size:9.5px;color:var(--sub);margin-top:3px;line-height:1.4}
+  .station-badge{flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .badge-open{color:#fff;background:var(--green)}
+  .badge-plan{color:var(--sub);background:var(--slate-bg)}
+  .station-open-date{font-size:9.5px;color:var(--sub);margin-top:2px;text-align:right}
+  .region-link{flex:none;border:none;background:var(--teal-soft);color:var(--teal-dark);font-size:10px;font-weight:700;border-radius:8px;padding:6px 8px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .region-link:active{background:var(--teal-light)}
+
+  .notice{background:#fff;border-radius:14px;border:1.5px solid var(--line);padding:12px 13px;margin-bottom:14px;font-size:11px;color:var(--sub);line-height:1.6}
+  .notice b{color:var(--ink)}
+
+  .disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
+  .disclaimer a{color:var(--teal-dark)}
+
+  .loading,.empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="./index.html" aria-label="메인으로">←</a>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>노선 호재</span>
+    <p>신안산선·월곶판교선·GTX 등 신설 노선 역별 현황</p>
+  </header>
+
+  <div id="app"><div class="loading">불러오는 중…</div></div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let DATA = null;
+let activeLine = "";
+
+async function load(){
+  try{
+    const res = await fetch("./data/subway-lines.json", { cache: "no-store" });
+    if(!res.ok) throw new Error("no data");
+    DATA = await res.json();
+    activeLine = DATA.lines[0] ? DATA.lines[0].id : "";
+    render();
+  }catch(e){
+    $("#app").innerHTML = `<div class="empty">노선 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+  }
+}
+
+function setLine(id){ activeLine = activeLine === id ? "" : id; render(); }
+
+// 급지 지도(index.html)로 넘어가서 이 역이 있는 시·도/구로 바로 필터링해서 보여주기 위해, localStorage에
+// "시·도::구" 키를 남겨두고 이동한다 — index.html의 loadTierData()가 로드 직후 이 키를 한 번 읽어 반영.
+function goToRegion(si, gu){
+  try{ localStorage.setItem('pendingTierRegion', `${si}::${gu}`); }catch(e){}
+  location.href = './index.html?m=tier';
+}
+
+function lineHTML(line){
+  return `
+    <div class="line-card">
+      <div class="line-card-hd">
+        <div class="line-dot" style="background:${line.color}"></div>
+        <div class="line-card-name">${esc(line.name)}</div>
+      </div>
+      <div class="line-summary">${esc(line.summary)}</div>
+      <div class="station-list">
+        ${line.stations.map(st => `
+          <div class="station-row">
+            <div class="station-main">
+              <div class="station-name">${esc(st.name)}</div>
+              <div class="station-loc">${esc(st.si)} ${esc(st.gu)}</div>
+              ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
+            </div>
+            <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span class="station-badge ${st.status==='개통'?'badge-open':'badge-plan'}">${esc(st.status)}</span>
+              ${st.openDate ? `<span class="station-open-date">${esc(st.openDate)}</span>` : ""}
+              <button class="region-link" onclick="goToRegion('${esc(st.si)}','${esc(st.gu)}')">이 지역 단지</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const shown = DATA.lines.filter(l => !activeLine || l.id === activeLine);
+  $("#app").innerHTML = `
+    <div class="notice">
+      <b>안내:</b> ${esc(DATA.meta.note)}
+    </div>
+
+    <div class="line-tabs">
+      ${DATA.lines.map(l => `<div class="line-tab ${activeLine===l.id?'on':''}" style="${activeLine===l.id?`background:${l.color}`:''}" onclick="setLine('${l.id}')">${esc(l.name)}</div>`).join("")}
+    </div>
+
+    ${shown.map(lineHTML).join("")}
+
+    <div class="disclaimer">
+      ${esc(DATA.meta.source)}<br>
+      정보 기준일: ${esc(DATA.meta.updated)} — 공정 지연, 노선/역명 변경 가능성이 있으니 투자·거주 결정 시 반드시 국토교통부·국가철도공단 등 공식 발표를 다시 확인하세요.<br>
+      <a href="./index.html">단지별 상세 분석 보기</a>
+    </div>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

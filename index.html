@@ -507,6 +507,7 @@
   <div class="tabs">
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
     <div class="tab" id="tabTM" onclick="setMode('tier')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 지도</div>
+    <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>노선 호재</a>
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
@@ -2958,7 +2959,11 @@ renderFavs();
 renderFavRegions();
 updateRegionFavBtn();
 refreshFavBadges();
-initFromURL();
+// setTimeout(0)으로 한 틱 미룸 — initFromURL()이 파일 이 지점보다 한참 아래(예: tierData 등 급지 지도 관련
+// let 선언, 4900번대)에서 선언되는 변수를 참조하는 경로(예: ?m=tier 공유 링크)를 타면, 스크립트가 아직
+// 그 아래까지 실행되지 않아 TDZ(ReferenceError: Cannot access ... before initialization)가 났던 버그 수정.
+// 한 틱 미루면 이 시점까지 스크립트 전체가 이미 다 실행된 뒤라 모든 let/const가 초기화돼 있다.
+setTimeout(initFromURL, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
@@ -4949,16 +4954,35 @@ const TIER_PROVINCES = ["서울", "경기", "인천", "부산"]; // 2026.09 인�
 const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억"; // 평단가 — 억 단위 소수점 둘째자리(수민 요청)
 const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억"; // 매매가(총액) — 기존 관행대로 소수점 첫째자리
 
+// 노선 호재(subway-lines.html)에서 "이 지역 단지 보기"를 누르면 localStorage에 "시·도::구" 키를 남겨두고
+// 여기로 넘어옴 — 급지 지도가 로드된 직후 딱 한 번 그 지역으로 필터를 맞춰준다(2026.09). URL 파라미터
+// 대신 localStorage를 쓴 이유: tier 탭은 원래 검색 파라미터(r/q 등)와 완전히 무관하게 동작해서(위 주석
+// 참고) 그 규칙을 안 건드리고 끼워 넣을 수 있음.
+function applyPendingTierRegion(){
+  const pending = localStorage.getItem('pendingTierRegion');
+  if(!pending) return;
+  localStorage.removeItem('pendingTierRegion');
+  const [si, loc] = pending.split('::');
+  if(!si || !loc) return;
+  // 급지 지도의 gu는 "안산 단원구"처럼 시·구 결합 표기라 신설역 데이터의 시 단위 표기("안산시")와
+  // 바로 안 맞는 경우가 많음(서울 자치구는 그대로 일치) — 접두어로 느슨하게 찾아 가장 가까운 구를 잡는다.
+  const short = loc.replace(/(시|구|군)$/, '');
+  const match = tierData.complexes.find(c => c.province === si && (c.gu === loc || c.gu.startsWith(short)));
+  if(!match) return;
+  tierState.province = match.province;
+  tierState.region = `${match.province}::${match.gu}`;
+}
 async function loadTierData(fromRestore){
   // fromRestore가 true면 popstate(뒤로가기)로 복원되는 중 — 이때 pushView()를 또 부르면 history가
   // 꼬여서(예: 뒤로가기 한 번이 제자리로 돌아오는 것처럼 느껴짐) 새 히스토리 항목을 안 쌓는다. 실제
   // 사용자가 탭을 눌러 들어온 경우에만(false/undefined) 히스토리에 한 단계로 기록.
-  if(tierData){ renderTier(); if(!fromRestore) pushTierView(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
+  if(tierData){ if(!fromRestore) applyPendingTierRegion(); renderTier(); if(!fromRestore) pushTierView(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
   const r0 = document.getElementById('result'); r0.innerHTML = `<div class="tier-loading-box">불러오는 중…</div>`; r0.classList.add('on');
   try{
     const res = await fetch('./data/tier-map.json', { cache: 'no-store' });
     if(!res.ok) throw new Error('no data');
     tierData = await res.json();
+    if(!fromRestore) applyPendingTierRegion();
     renderTier();
     if(!fromRestore) pushTierView();
   }catch(e){
