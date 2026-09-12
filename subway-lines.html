@@ -49,6 +49,7 @@
   .region-link.on{background:var(--teal-dark);color:#fff}
 
   .region-panel{flex:0 0 100%;width:100%;margin-top:2px;background:var(--slate-bg);border-radius:10px;padding:8px 10px}
+  .region-panel-note{font-size:9.5px;color:var(--sub);line-height:1.5;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fff}
   .region-panel-hd{font-size:10.5px;font-weight:700;color:var(--sub);margin-bottom:6px}
   .region-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #fff}
   .region-item:last-child{border-bottom:none}
@@ -142,9 +143,11 @@ function regionPanelHTML(st, lineId){
   if(!items.length) return `<div class="region-panel"><div class="region-empty">이 지역에서 조회되는 단지가 없습니다.</div></div>`;
   const dongLabel = st.dong ? (Array.isArray(st.dong) ? st.dong.join("·") : st.dong) : "";
   const scopeLabel = (!fellBack && dongLabel) ? `${esc(st.si)} ${esc(st.gu)} ${esc(dongLabel)}` : `${esc(st.si)} ${esc(st.gu)}`;
+  const countLabel = all.length > items.length ? `평단가 상위 ${items.length}개 (총 ${all.length}개 중)` : `평단가 상위 ${items.length}개`;
   return `
     <div class="region-panel">
-      <div class="region-panel-hd">${scopeLabel} · 평단가 상위 ${items.length}개${fellBack && dongLabel ? ` <span style="font-weight:400">(${esc(dongLabel)}엔 조회되는 단지가 없어 구 전체 기준)</span>` : ''}</div>
+      <div class="region-panel-note">최근 2년간 20~39평 거래가 2건 이상인 단지만 표시됩니다 — 거래가 드문 단지는 실제로 있어도 빠질 수 있어요.</div>
+      <div class="region-panel-hd">${scopeLabel} · ${countLabel}${fellBack && dongLabel ? ` <span style="font-weight:400">(${esc(dongLabel)}엔 조회되는 단지가 없어 구 전체 기준)</span>` : ''}</div>
       ${items.map(c => `
         <div class="region-item">
           <div class="region-item-main">
