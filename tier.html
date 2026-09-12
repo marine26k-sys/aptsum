@@ -200,14 +200,24 @@ function scopedFlagshipCount(){
 // 동별 순위 — 서울·경기·인천·부산 통합(또는 시·도 탭 선택 시 그 시·도 안)에서 동 단위로 대장주를 뽑아
 // 그 동의 급지 등급(6분위)별로 묶어서 보여줌. 등급은 그 동 대장주 단지의 등급(g)을 그대로 씀 — 등급
 // 사다리(6단계)와 같은 기준. 전부 다 보여주고 자르지 않음(수민 요청, 기존 TOP 30 제한 삭제).
+// 동별 순위 값 = 그 동 단지들 중 평단가 상위 10개(단지가 10개 미만이면 있는 만큼)의 평균 — 대장주
+// 단지 1개만 보던 것보다 그 동 전체 수준을 더 잘 대표함(수민 요청). 등급도 이 평균값 기준으로 새로 매김
+// (tierData.grades가 min 내림차순이라 첫 매치가 맞는 등급).
 function dongRankGroups(){
   const base = tierScoped();
   const byDong = new Map();
   for (const c of base) {
     const key = `${c.province}::${c.gu}::${c.dong}`;
-    if (!byDong.has(key) || byDong.get(key).ppy < c.ppy) byDong.set(key, c);
+    if (!byDong.has(key)) byDong.set(key, []);
+    byDong.get(key).push(c);
   }
-  const items = [...byDong.values()].sort((a,b) => b.ppy - a.ppy);
+  const items = [...byDong.entries()].map(([key, list]) => {
+    const [province, gu, dong] = key.split("::");
+    const top = list.slice().sort((a,b) => b.ppy - a.ppy).slice(0, 10);
+    const avgPpy = Math.round(top.reduce((s,c) => s + c.ppy, 0) / top.length);
+    const grade = tierData.grades.find(g => avgPpy >= g.min) || tierData.grades[tierData.grades.length-1];
+    return { province, gu, dong, ppy: avgPpy, count: top.length, g: grade.g };
+  }).sort((a,b) => b.ppy - a.ppy);
   return tierData.grades.map(g => ({ grade: g, items: items.filter(c => c.g === g.g) }));
 }
 // 등급 사다리에서 한 등급(rung)을 탭하면 그 밑에 바로 펼쳐지는 동 순위 아코디언 — 처음엔 20개만
@@ -225,7 +235,7 @@ function gradeRungDongListHTML(gradeNum){
             <div class="tier-row-no">${i+1}</div>
             <div class="tier-row-main">
               <div class="tier-row-name">${esc(c.dong)}</div>
-              <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
+              <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
             </div>
             <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
           </div>
@@ -275,7 +285,7 @@ function dongRankFullHTML(){
               <div class="tier-row-no">${i+1}</div>
               <div class="tier-row-main">
                 <div class="tier-row-name">${esc(c.dong)}</div>
-                <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
+                <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
               </div>
               <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
             </div>
