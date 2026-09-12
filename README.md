@@ -7,6 +7,7 @@
 | Key | 용도 | 필수 |
 |---|---|---|
 | `DATA_GO_KR_KEY` | 국토부 실거래 API (data.go.kr, Decoding 키) — 매매(`/api/analyze`)·분양권전매(`/api/presale`)·전세(`/api/rent`) 공용 | 필수 |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 뉴스 검색 API (`scripts/collect-subway-news.mjs`, GitHub Actions 전용) — "노선 호재" 탭의 관련 뉴스 자동 수집 | 선택(없으면 뉴스 섹션만 생략, 나머지 기능엔 영향 없음) |
 
 접근코드 잠금은 제거됨 — 사이트가 공개 상태이므로 링크 유출 시 API 한도 소모 주의.
 
@@ -496,3 +497,18 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - **동별 히트맵은 이 버그와 무관**: `tierDongHeatmapHTML()`의 `byDong`은 애초에 특정 `province+gu`로 필터링된 `inGu` 배열 안에서만 동 이름으로 그룹핑하므로(다른 구/시의 동과 섞일 수 없는 구조) 확인 결과 문제없음 — 수정 대상에서 제외.
 - **배포 시 참고**: `build-tier-map.mjs`만 수정된 배치 로직 버그라 배포 후 Actions에서 "급지 대시보드 데이터 생성" 워크플로 수동 실행 필요(재실행 전까지는 옛 `data/tier-map.json`에 버그가 그대로 남아있어 부산 중구·강서구가 계속 안 보임).
 - **배포 시 참고**: 결과 레코드에 `ar` 필드가 새로 추가되는 스키마 변경 — 배포 후 Actions에서 "급지 대시보드 데이터 생성" 워크플로 수동 실행 필요(실행 전까지는 옛 데이터에 `ar`이 없어 전용면적 표시가 자동으로 생략됨, 에러는 안 남).
+
+### 신설 지하철 노선(GTX·신안산선·월곶판교선) 호재 탭 추가 (2026.09)
+
+- 기존 "역세권" 탭은 K-apt 데이터의 `subwayLines`/`subwayWalk` 필드에 의존해서 **이미 개통된 노선**만 잡힘 — 신안산선·월곶판교선·GTX 같은 신설/공사중 노선은 반영되지 않음. 미개통 노선의 역 정보(위치·개통 예정일)를 구조화해서 제공하는 공식 API는 없어서(공공데이터포털·KRIC 레일포털 모두 이미 운영 중인 역만 제공) 언론 보도·국가철도공단 자료 기반으로 `data/subway-lines.json`에 수동 정리.
+- `subway-lines.html`: GTX-A/B/C, 신안산선, 월곶판교선의 노선별 역 목록·위치(시/구)·개통 상태(개통/미개통)·비고를 보여주는 신규 페이지. 역마다 "이 지역 단지" 버튼으로 급지 지도 탭의 해당 지역을 인라인으로 바로 보여줌.
+- `index.html`: 탭바에 "노선 호재" 링크 추가. 부수 버그 수정: `?m=tier` 공유 링크로 바로 진입하면 `tierData`가 선언되기 전에 `initFromURL()`이 실행되며 TDZ 에러로 급지 지도가 안 뜨던 문제를 `initFromURL()` 호출을 `setTimeout(0)`으로 한 틱 미뤄서 해결.
+
+### 노선 호재 탭 — 관련 뉴스 자동 수집 (2026.09)
+
+- **문제**: 위 `data/subway-lines.json`의 역 목록·개통상태는 수동 정리라, 착공 지연·역 신설 등 변경사항이 생겨도 사람이 뉴스를 찾아 매번 갱신해야 하는 부담이 있음(참고로 리치고 등 유사 서비스도 미개통 노선 정보를 공식 API가 아니라 "정비사업 사이트" 등 자체 수집으로 채우는 것으로 보임 — 구조화된 공식 소스가 없는 건 동일).
+- **접근**: 역 목록 자체를 뉴스에서 자동 파싱해 덮어쓰는 건 오탐 위험이 커서 하지 않고, 대신 노선별 **관련 최신 뉴스 링크**만 자동으로 모아 보여줘서 "이 정보가 아직 유효한지" 사람이 확인하기 쉽게 보조.
+- `scripts/collect-subway-news.mjs`: 네이버 뉴스 검색 API(`openapi.naver.com`)로 노선별 키워드("GTX-A", "신안산선" 등)를 검색해 최근 180일 이내·키워드가 실제 포함된 기사만 걸러 노선당 최대 5건을 `data/subway-news.json`에 저장. `collect-hhcnt.mjs` 등 기존 수집 스크립트와 동일하게 스크립트 안에서 직접 git add/commit/push까지 수행(push 실패 시 fetch+rebase 재시도 포함). 특정 노선 검색이 실패해도 그 노선만 기존 값을 유지하고 나머지는 갱신(부분 실패가 전체를 덮어쓰지 않도록).
+- `.github/workflows/collect-subway-news.yml`: 매주 월요일 04:00 KST 자동 실행(+ `workflow_dispatch`로 수동 실행/특정 노선만 재수집 가능). 다른 데이터 수집 워크플로와 `concurrency.group`을 공유해 동시 push 충돌 방지.
+- `subway-lines.html`: 각 노선 카드 하단에 "관련 최신 뉴스" 섹션 추가 — `data/subway-news.json`을 별도로 fetch해서 렌더링하며, 파일이 없거나 fetch 실패해도(예: `NAVER_CLIENT_ID`/`SECRET` 미설정으로 워크플로가 아직 한 번도 성공 못 한 상태) 그 섹션만 조용히 생략되고 나머지 페이지는 정상 동작.
+- **필요 설정**: [네이버 개발자센터](https://developers.naver.com/apps/#/register)에서 애플리케이션 등록(검색 API, 무료 — 일 25,000건) 후 발급받은 Client ID/Secret을 저장소 Settings → Secrets → Actions에 `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`로 등록해야 실제로 뉴스가 채워짐(등록 전엔 뉴스 섹션만 빈 채로 나머지 기능은 그대로 동작).
