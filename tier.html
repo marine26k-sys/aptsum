@@ -435,6 +435,8 @@ function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody()
 function showMore(){ tierState.shown += 50; renderList(); }
 
 load();
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+document.addEventListener("copy", (e) => e.preventDefault());
 </script>
 </body>
 </html>
