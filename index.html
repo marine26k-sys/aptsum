@@ -4954,35 +4954,16 @@ const TIER_PROVINCES = ["서울", "경기", "인천", "부산"]; // 2026.09 인�
 const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억"; // 평단가 — 억 단위 소수점 둘째자리(수민 요청)
 const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억"; // 매매가(총액) — 기존 관행대로 소수점 첫째자리
 
-// 노선 호재(subway-lines.html)에서 "이 지역 단지 보기"를 누르면 localStorage에 "시·도::구" 키를 남겨두고
-// 여기로 넘어옴 — 급지 지도가 로드된 직후 딱 한 번 그 지역으로 필터를 맞춰준다(2026.09). URL 파라미터
-// 대신 localStorage를 쓴 이유: tier 탭은 원래 검색 파라미터(r/q 등)와 완전히 무관하게 동작해서(위 주석
-// 참고) 그 규칙을 안 건드리고 끼워 넣을 수 있음.
-function applyPendingTierRegion(){
-  const pending = localStorage.getItem('pendingTierRegion');
-  if(!pending) return;
-  localStorage.removeItem('pendingTierRegion');
-  const [si, loc] = pending.split('::');
-  if(!si || !loc) return;
-  // 급지 지도의 gu는 "안산 단원구"처럼 시·구 결합 표기라 신설역 데이터의 시 단위 표기("안산시")와
-  // 바로 안 맞는 경우가 많음(서울 자치구는 그대로 일치) — 접두어로 느슨하게 찾아 가장 가까운 구를 잡는다.
-  const short = loc.replace(/(시|구|군)$/, '');
-  const match = tierData.complexes.find(c => c.province === si && (c.gu === loc || c.gu.startsWith(short)));
-  if(!match) return;
-  tierState.province = match.province;
-  tierState.region = `${match.province}::${match.gu}`;
-}
 async function loadTierData(fromRestore){
   // fromRestore가 true면 popstate(뒤로가기)로 복원되는 중 — 이때 pushView()를 또 부르면 history가
   // 꼬여서(예: 뒤로가기 한 번이 제자리로 돌아오는 것처럼 느껴짐) 새 히스토리 항목을 안 쌓는다. 실제
   // 사용자가 탭을 눌러 들어온 경우에만(false/undefined) 히스토리에 한 단계로 기록.
-  if(tierData){ if(!fromRestore) applyPendingTierRegion(); renderTier(); if(!fromRestore) pushTierView(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
+  if(tierData){ renderTier(); if(!fromRestore) pushTierView(); return; } // 이미 불러온 적 있으면 재조회 없이 그대로 다시 그림(탭 왔다갔다할 때마다 재요청 방지)
   const r0 = document.getElementById('result'); r0.innerHTML = `<div class="tier-loading-box">불러오는 중…</div>`; r0.classList.add('on');
   try{
     const res = await fetch('./data/tier-map.json', { cache: 'no-store' });
     if(!res.ok) throw new Error('no data');
     tierData = await res.json();
-    if(!fromRestore) applyPendingTierRegion();
     renderTier();
     if(!fromRestore) pushTierView();
   }catch(e){
