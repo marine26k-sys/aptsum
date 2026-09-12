@@ -51,6 +51,8 @@
   .tier-rung-bar-fill{height:100%;border-radius:6px;transition:width .5s ease}
   .tier-rung-count{flex:none;width:80px;text-align:right;font-size:11px;color:var(--sub);line-height:1.3}
   .tier-rung-count b{color:var(--ink);font-size:12.5px}
+  .tier-rung-panel{padding:2px 0 10px;border-bottom:1px solid var(--slate-bg)}
+  .tier-rung-panel .tier-list{border-color:var(--slate-bg)}
   .tier-filters{display:flex;gap:6px;margin-bottom:10px}
   .tier-filters select,.tier-filters input{flex:1;font-size:12px;padding:8px 9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-family:inherit}
   .tier-filters input{flex:1.4}
@@ -211,6 +213,31 @@ function dongRankGroups(){
   const items = [...byDong.values()].sort((a,b) => b.ppy - a.ppy);
   return tierData.grades.map(g => ({ grade: g, items: items.filter(c => c.g === g.g) }));
 }
+// 등급 사다리에서 한 등급(rung)을 탭하면 그 밑에 바로 펼쳐지는 동 순위 아코디언 — 처음엔 20개만
+// 보여주고, 그보다 많으면 "동별 순위" 전용 화면(급지 6분위 전체 보기)으로 넘어가는 링크를 붙인다.
+function gradeRungDongListHTML(gradeNum){
+  const group = dongRankGroups().find(g => g.grade.g === gradeNum);
+  if(!group || !group.items.length) return `<div class="tier-rung-panel"><div class="tier-empty" style="padding:16px 0">이 등급에 해당하는 동이 없습니다.</div></div>`;
+  const LIMIT = 20;
+  const shown = group.items.slice(0, LIMIT);
+  return `
+    <div class="tier-rung-panel">
+      <div class="tier-list">
+        ${shown.map((c,i) => `
+          <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
+            <div class="tier-row-no">${i+1}</div>
+            <div class="tier-row-main">
+              <div class="tier-row-name">${esc(c.dong)}</div>
+              <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
+            </div>
+            <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
+          </div>
+        `).join("")}
+      </div>
+      ${group.items.length > LIMIT ? `<button type="button" class="tier-more-btn" onclick="event.stopPropagation();setView('dongrank')">${group.items.length - LIMIT}개 더 보기 (전체 동별 순위로)</button>` : ""}
+    </div>
+  `;
+}
 function dongRankBannerHTML(){
   const label = tierState.province ? `${tierState.province} 동별 순위` : '동별 순위 (전국 통합)';
   const count = dongRankGroups().reduce((s,g) => s + g.items.length, 0);
@@ -301,7 +328,7 @@ function render(){
     <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
 
     <div class="tier-ladder">
-      <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
+      <div class="tier-ladder-title">등급별 단지 분포 (탭하면 동 순위가 펼쳐집니다)</div>
       ${gradeStats.map(g => `
         <div class="tier-rung ${tierState.grade===g.g?'on':''}" onclick="setGrade(${g.g})">
           <div class="tier-rung-dot" style="background:${g.color}"></div>
@@ -309,6 +336,7 @@ function render(){
           <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${g.color}"></div></div>
           <div class="tier-rung-count"><b>${g.count}</b>개<br>평균 ${tierFmtPy(g.avg)}</div>
         </div>
+        ${tierState.grade===g.g ? gradeRungDongListHTML(g.g) : ""}
       `).join("")}
     </div>
 
