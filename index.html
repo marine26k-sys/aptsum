@@ -258,6 +258,8 @@
   .rgitem.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:800}
   .rgitem .tick{flex:0 0 auto;font-size:11px;display:none}
   .rgitem.sel .tick{display:inline}
+  .rgitem.rgcityall{border-style:dashed;border-color:var(--teal);background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800}
+  .rgitem.rgcityall:active{background:var(--teal-light)}
   .rgft{flex:0 0 auto;display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:10px;padding:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -513,6 +515,8 @@
     </div>
     <div class="row2" id="optRow">
       <select id="monthsN" style="flex:1.3;min-width:0">
+        <option value="3" class="volOnly" style="display:none">최근 3개월</option>
+        <option value="6" class="volOnly" style="display:none">최근 6개월</option>
         <option value="12">최근 1년</option>
         <option value="24" selected>최근 2년</option>
         <option value="36">최근 3년</option>
@@ -587,6 +591,18 @@ REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
 const LAWD_TO_PROVINCE = {};
 REGIONS.forEach(([prov, arr]) => arr.forEach(([, lawd]) => { LAWD_TO_PROVINCE[lawd] = prov; }));
 const PROVINCE_DISPLAY = { '서울':'서울시', '경기':'경기도', '인천':'인천시', '부산':'부산시' };
+// 경기도는 시·도 전체 일괄 추가 대신(2026.09, 수민 요청 — 39개 시군구가 한 번에 담기는 게 과함),
+// 같은 시에 구가 2개 이상인 시(수원·성남·안양·안산·고양·용인·부천·화성)만 "OO시 전체" 일괄 추가를 지원.
+// 라벨이 "성남 분당구"처럼 "시 이름 + 공백 + 구 이름"이라 첫 공백 앞부분을 시 이름으로 그룹핑.
+const GG_CITY_MAP = {};
+(REGIONS.find(([g])=>g==='경기')?.[1] || []).forEach(([n,c])=>{
+  const sp = n.indexOf(' ');
+  if(sp===-1) return; // "과천시"처럼 구가 없는 단일 시·군은 제외(이미 그 자체로 1개 항목)
+  const city = n.slice(0,sp);
+  (GG_CITY_MAP[city] = GG_CITY_MAP[city] || []).push([n,c]);
+});
+const GG_MULTI_CITIES = Object.keys(GG_CITY_MAP).filter(city => GG_CITY_MAP[city].length >= 2);
+const CITYALL_PREFIX = 'CITYALL:';
 // 복수 지역 선택 라벨: 4곳 이하면 이름을 그대로 나열, 5곳 이상이면 "강서구 외 15곳"처럼 뭉개지 않고
 // 어느 시/도들이 섞여 있는지 보여준다("서울시, 경기도, 부산시, 인천시") — REGIONS 순서로 정렬,
 // 한 시/도 안에서만 5곳 이상 골랐으면 그 시/도 이름 하나만("경기도"). lawd 매칭 실패 시에만 기존
@@ -969,9 +985,17 @@ const sel = document.getElementById('lawd');
 // 시·도 전체 통합 조회용 가상 코드 — 값이 'ALL:서울' 형태. 실제 조회 시 해당 시·도의 모든 구/시군 코드로 펼쳐진다.
 // 조회량이 지역 수만큼 배로 늘어나므로 지역 랭킹 탭에서만 노출한다(setMode 참조).
 const ALL_PREFIX = 'ALL:';
-function isAllScope(v){ return String(v||'').startsWith(ALL_PREFIX); }
+// CITYALL: 접두는 경기도 안에서 구가 2개 이상인 시(성남·수원 등) 하나만 일괄 추가하는 값 — ALL:과 동일하게
+// "일괄 스코프"로 취급되도록 isAllScope에 같이 매칭시켜, 기존 ALL: 전용 로직(addRegion·데이터셋 hidden 처리 등)을
+// 그대로 재사용한다.
+function isAllScope(v){ return String(v||'').startsWith(ALL_PREFIX) || String(v||'').startsWith(CITYALL_PREFIX); }
 function lawdsOfScope(v){
-  const g = String(v).slice(ALL_PREFIX.length);
+  v = String(v);
+  if(v.startsWith(CITYALL_PREFIX)){
+    const city = v.slice(CITYALL_PREFIX.length);
+    return (GG_CITY_MAP[city] || []).map(([n,c])=>({name:n, lawd:c}));
+  }
+  const g = v.slice(ALL_PREFIX.length);
   const hit = REGIONS.find(([name])=>name===g);
   return hit ? hit[1].map(([n,c])=>({name:n, lawd:c})) : [];
 }
@@ -981,10 +1005,27 @@ lawdBlank.value = ''; lawdBlank.textContent = '지역을 선택하세요';
 sel.appendChild(lawdBlank);
 REGIONS.forEach(([g,arr])=>{
   const og = document.createElement('optgroup'); og.label=g;
-  const all = document.createElement('option');
-  all.value = ALL_PREFIX+g; all.textContent = g+' 전체'; all.dataset.scope='all';
-  og.appendChild(all);
-  arr.forEach(([n,c])=>{ const o=document.createElement('option'); o.value=c; o.textContent=n; og.appendChild(o); });
+  // "경기 전체" 일괄 옵션은 제외(수민 요청, 2026.09) — 서울·인천·부산은 유지, 경기는 구가 2개 이상인
+  // 시(성남·수원 등)만 "OO시 전체"로 대체 지원(아래 arr.forEach 안에서 시 단위로 삽입)
+  if(g !== '경기'){
+    const all = document.createElement('option');
+    all.value = ALL_PREFIX+g; all.textContent = g+' 전체'; all.dataset.scope='all';
+    og.appendChild(all);
+  }
+  let ggLastCity = null;
+  arr.forEach(([n,c])=>{
+    if(g==='경기'){
+      const sp = n.indexOf(' ');
+      const city = sp>-1 ? n.slice(0,sp) : null;
+      if(city && city!==ggLastCity && GG_MULTI_CITIES.includes(city)){
+        const cAll = document.createElement('option');
+        cAll.value = CITYALL_PREFIX+city; cAll.textContent = city+'시 전체'; cAll.dataset.scope='all';
+        og.appendChild(cAll);
+      }
+      ggLastCity = city;
+    }
+    const o=document.createElement('option'); o.value=c; o.textContent=n; og.appendChild(o);
+  });
   sel.appendChild(og);
 });
 const lastRegionPref = getLastRegionPref();
@@ -1076,12 +1117,25 @@ function buildRegionPicker(){
     // '전체' 버튼 노출 — 그동안 상한 25개인 탭에서만 노출했으나(2026.08), addRegion()이 상한 초과 시
     // 이미 안전하게 "최대 N개까지만 채우고 안내"로 처리하므로, 상한 5개(단기/반기/연간 저평가)에서도
     // 5개를 빠르게 채우는 용도로 유용하다는 수민 피드백으로 2026.09 재추가 — sel 쪽 supportsAllScopeOption과 동일 기준
-    if(multi && !q){
+    // 경기는 "경기 전체" 대신(수민 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)의 "OO시 전체" 알약을
+    // 별도 줄이 아니라 그 시의 구 알약들 바로 앞(같은 그리드 안)에 인라인으로 끼워 넣는다 — 어느 시 소속인지
+    // 바로 옆에서 보이도록.
+    if(multi && !q && g !== '경기'){
       html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
     }
+    let ggPickerLastCity = null;
     html += `<div class="rggrid">` + hits.map(([n,c])=>{
+      let prefix = '';
+      if(g==='경기' && multi && !q){
+        const sp = n.indexOf(' ');
+        const city = sp>-1 ? n.slice(0,sp) : null;
+        if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
+          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+        }
+        ggPickerLastCity = city;
+      }
       const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
-      return `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
+      return prefix + `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
     }).join('') + `</div>`;
   });
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
@@ -1284,6 +1338,9 @@ function setMode(m, fromRestore){
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='boxbreak'||m==='longtermrise') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
+  // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(수민 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
+  // 공유하는 셀렉트라 영향받지 않도록 표시만 토글.
+  document.querySelectorAll('#monthsN .volOnly').forEach(o => { o.style.display = m==='volume' ? '' : 'none'; });
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = m==='longtermrise' ? '' : 'none';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
@@ -2367,9 +2424,13 @@ function analyzeUpDown(all, months){
 // 평균이 아니다. "최근 1개월"도 마찬가지로 달력상의 월이 아니라 오늘 기준 최근 30일(day-based).
 // 비교 시점(3/6/9/12/24개월 전)과 평형(20평대/30평대 등)은 화면에서 사용자가 직접 고름(수민 요청) —
 // 다른 저평가 탭들처럼 20~37평 고정 범위나 특정 평대 강제가 아니라 pyBandMultiFilter를 그대로 재사용.
-// 항상 "많이 오른 순"(changePct 내림차순)으로만 정렬 — 등락 랭킹의 up 정렬과 동일한 방식.
+// 정렬은 changePct(%)가 아니라 changeAmt(변동 금액) 내림차순 — %로 정렬하면 저가 단지의 작은 금액
+// 변동이 퍼센트로는 과장돼 상위로 뜨는 왜곡이 있어 금액 기준으로 변경(수민 요청, 2026.09).
+// 최대 100개까지 노출(기존 50개에서 확대).
+// 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 수민 요청, 2026.09
+// — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
+// longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
 function analyzeLongTermRise(all, months, periodM){
-  all = all.filter(t=>!t.kind); // 매매만 집계(분양권·입주권 제외, 사용자 요청) — 여러 지역을 동시에 조회할 때는 분양권이 자동 병합돼 들어올 수 있어 여기서 명시적으로 한 번 더 거름
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
   // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
@@ -2385,7 +2446,7 @@ function analyzeLongTermRise(all, months, periodM){
     const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
     const recent = arr.filter(t=> dayDiff(t) <= 30); // 최근 1개월(최근 30일)
     const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
-    if(recent.length < 2 || past.length < 2) continue; // 두 구간 다 표본 2건 이상 있어야 신뢰 가능
+    if(recent.length < 1 || past.length < 1) continue; // 두 구간 다 표본 1건 이상(수민 요청, 2026.09 — 기존 2건에서 완화, 표본이 너무 좁게 잡히는 문제 보완)
     const recentAvg = avgA(recent), pastAvg = avgA(past);
     if(!pastAvg) continue;
     const changeAmt = R1(recentAvg - pastAvg);
@@ -2396,7 +2457,7 @@ function analyzeLongTermRise(all, months, periodM){
     results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0].kind||null,
       recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
   }
-  results.sort((a,b)=> b.changePct - a.changePct); // 많이 오른 순
+  results.sort((a,b)=> b.changeAmt - a.changeAmt); // 변동 금액(원화 기준) 많이 오른 순 — % 기준이면 저가 단지의 변동폭이 과대평가돼 왜곡될 수 있음(수민 요청)
   // 이 탭은 달력 월이 아니라 일 단위(day-based)로 비교 구간을 정하므로, 화면에 보여줄 기간도 "YY.MM ~ YY.MM
   // 중 N개월"(달력 월 뭉뚱그림)이 아니라 실제 계산에 쓰인 정확한 날짜로 표시한다 — 시작일은 정확히
   // periodM*30일 전, 종료일은 오늘.
@@ -2405,7 +2466,7 @@ function analyzeLongTermRise(all, months, periodM){
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
-    rows: results.slice(0,50) };
+    rows: results.slice(0,100) };
 }
 
 // ═══ 전세 등락 랭킹(2026.08 신규, 2026.09 전체 공개 전환 — 매매 등락 옆으로 이동) ═══
@@ -3364,7 +3425,7 @@ async function search(){
             rawMerged = raw.concat(converted);
           }
         }catch(e){ rawMerged = raw; }
-      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='longpeakdong' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap'){
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='longpeakdong' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap' || mode==='longtermrise'){
         rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
@@ -4383,6 +4444,10 @@ function renderGap(d){
 function renderNewHigh(d){
   const multiRegion = new Set((d.newHigh).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
+  // "이번 신고가" 판정 기준인 최근 30일 창(analyzeNewHigh의 isRecentDeal(top,30)과 동일 기준)을
+  // MM.DD~MM.DD로 표시 — "무엇과 무엇을 비교했는지"에 실제 기간까지 보여달라는 요청.
+  const fmtMD = dt => `${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+  const recentWindow = `${fmtMD(new Date(Date.now()-30*24*3600*1000))} ~ ${fmtMD(new Date())}`;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">최근 한 달 이내 신고가를 기록한 단지가 없습니다</div>';
@@ -4392,7 +4457,7 @@ function renderNewHigh(d){
       ${hdTop('신고가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 한 달 이내 갱신${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs('이전 최고가', '이번 신고가')}
+      ${hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -4517,7 +4582,7 @@ function renderPricePerPyeong(d){
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal-dark)">${x.pricePerPy.toLocaleString()}<span style="font-size:11px;font-weight:400">만원/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
+        <span class="val" style="color:var(--teal-dark)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
