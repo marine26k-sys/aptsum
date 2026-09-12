@@ -2372,7 +2372,9 @@ function analyzeUpDown(all, months){
 // 평균이 아니다. "최근 1개월"도 마찬가지로 달력상의 월이 아니라 오늘 기준 최근 30일(day-based).
 // 비교 시점(3/6/9/12/24개월 전)과 평형(20평대/30평대 등)은 화면에서 사용자가 직접 고름(수민 요청) —
 // 다른 저평가 탭들처럼 20~37평 고정 범위나 특정 평대 강제가 아니라 pyBandMultiFilter를 그대로 재사용.
-// 항상 "많이 오른 순"(changePct 내림차순)으로만 정렬 — 등락 랭킹의 up 정렬과 동일한 방식.
+// 정렬은 changePct(%)가 아니라 changeAmt(변동 금액) 내림차순 — %로 정렬하면 저가 단지의 작은 금액
+// 변동이 퍼센트로는 과장돼 상위로 뜨는 왜곡이 있어 금액 기준으로 변경(수민 요청, 2026.09).
+// 최대 100개까지 노출(기존 50개에서 확대).
 function analyzeLongTermRise(all, months, periodM){
   all = all.filter(t=>!t.kind); // 매매만 집계(분양권·입주권 제외, 사용자 요청) — 여러 지역을 동시에 조회할 때는 분양권이 자동 병합돼 들어올 수 있어 여기서 명시적으로 한 번 더 거름
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
@@ -2401,7 +2403,7 @@ function analyzeLongTermRise(all, months, periodM){
     results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0].kind||null,
       recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
   }
-  results.sort((a,b)=> b.changePct - a.changePct); // 많이 오른 순
+  results.sort((a,b)=> b.changeAmt - a.changeAmt); // 변동 금액(원화 기준) 많이 오른 순 — % 기준이면 저가 단지의 변동폭이 과대평가돼 왜곡될 수 있음(수민 요청)
   // 이 탭은 달력 월이 아니라 일 단위(day-based)로 비교 구간을 정하므로, 화면에 보여줄 기간도 "YY.MM ~ YY.MM
   // 중 N개월"(달력 월 뭉뚱그림)이 아니라 실제 계산에 쓰인 정확한 날짜로 표시한다 — 시작일은 정확히
   // periodM*30일 전, 종료일은 오늘.
@@ -2410,7 +2412,7 @@ function analyzeLongTermRise(all, months, periodM){
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
-    rows: results.slice(0,50) };
+    rows: results.slice(0,100) };
 }
 
 // ═══ 전세 등락 랭킹(2026.08 신규, 2026.09 전체 공개 전환 — 매매 등락 옆으로 이동) ═══
