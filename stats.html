@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>방문자 통계 — 아파트썸</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light-soft:#F2FBFB;
+    --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B; --line:#E2E8F0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
+  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
+  .back{position:absolute;top:50%;left:14px;transform:translateY(-50%);background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+  .back:active{background:rgba(255,255,255,.28)}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat-card{background:#fff;border-radius:16px;padding:14px 16px;border:1.5px solid var(--line)}
+  .stat-card .lbl{font-size:11.5px;color:var(--sub);font-weight:700;margin-bottom:4px}
+  .stat-card .val{font-size:24px;font-weight:900;color:var(--navy)}
+  .stat-card .val span{font-size:12px;font-weight:700;color:var(--sub);margin-left:2px}
+
+  .card{background:#fff;border-radius:16px;padding:14px 16px 16px;border:1.5px solid var(--line);margin-bottom:14px}
+  .card-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px}
+
+  .chart{display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px}
+  .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+  .chart-bar{width:100%;max-width:20px;background:var(--teal);border-radius:4px 4px 2px 2px;transition:height .4s ease}
+  .chart-bar.today{background:var(--navy)}
+  .chart-labels{display:flex;gap:4px}
+  .chart-lbl{flex:1;text-align:center;font-size:8.5px;color:var(--sub);min-width:0;overflow:hidden;white-space:nowrap}
+
+  .page-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-bg)}
+  .page-row:last-child{border-bottom:none}
+  .page-dot{flex:none;width:9px;height:9px;border-radius:3px;background:var(--teal)}
+  .page-main{flex:1;min-width:0}
+  .page-name{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .page-bar-track{margin-top:5px;height:6px;background:var(--slate-bg);border-radius:3px;overflow:hidden}
+  .page-bar-fill{height:100%;background:var(--teal);border-radius:3px;transition:width .4s ease}
+  .page-nums{flex:none;text-align:right}
+  .page-nums b{font-size:13px;color:var(--navy)}
+  .page-nums div{font-size:9.5px;color:var(--sub)}
+
+  .note{font-size:10px;color:var(--sub);text-align:center;margin-top:6px;line-height:1.6}
+  .loading,.err{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="./index.html" aria-label="메인으로">←</a>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>방문자 통계</span>
+    <p>아파트썸 3개 페이지 방문 현황</p>
+  </header>
+
+  <div id="app"><div class="loading">불러오는 중…</div></div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function load(){
+  try{
+    const res = await fetch('/api/stats', { cache: 'no-store' });
+    if(!res.ok) throw new Error('failed');
+    const d = await res.json();
+    render(d);
+  }catch(e){
+    $('#app').innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+  }
+}
+
+function render(d){
+  const maxTrend = Math.max(...d.trend.map(t => t.count), 1);
+  const maxPage = Math.max(...d.pages.map(p => p.total), 1);
+  const todayStr = d.trend[d.trend.length - 1].date;
+
+  $('#app').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">전체 방문</div><div class="val">${d.total.toLocaleString()}<span>회</span></div></div>
+      <div class="stat-card"><div class="lbl">오늘 방문</div><div class="val">${d.today.toLocaleString()}<span>회</span></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">최근 14일 추이</div>
+      <div class="chart">
+        ${d.trend.map(t => `
+          <div class="chart-col">
+            <div class="chart-bar ${t.date===todayStr?'today':''}" style="height:${Math.max((t.count/maxTrend*100), t.count>0?4:1)}%" title="${t.date} · ${t.count}회"></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="chart-labels">
+        ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace('-', '/')):''}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">페이지별 방문</div>
+      ${d.pages.map(p => `
+        <div class="page-row">
+          <div class="page-dot"></div>
+          <div class="page-main">
+            <div class="page-name">${esc(p.label)}</div>
+            <div class="page-bar-track"><div class="page-bar-fill" style="width:${(p.total/maxPage*100).toFixed(1)}%"></div></div>
+          </div>
+          <div class="page-nums"><b>${p.total.toLocaleString()}</b><div>오늘 ${p.today.toLocaleString()}</div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="note">페이지 로드 수 기준 집계이며(새로고침 포함), 유니크 방문자 수와는 다를 수 있습니다.<br>UTC 자정 기준으로 날짜가 바뀝니다.</div>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

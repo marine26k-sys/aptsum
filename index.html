@@ -322,7 +322,7 @@
     // 기존 visitor-badge.laobi.icu(제3자 뱃지 이미지)는 새로고침마다 중복 집계되고 광고 차단기에 막히는
     // 문제가 있어 자체 서버리스 함수로 교체.
     (function(){
-      fetch('/api/visits').then(r => r.json()).then(d => {
+      fetch('/api/visits?page=index').then(r => r.json()).then(d => {
         document.getElementById('visitTotal').textContent = `전체 ${d.total.toLocaleString()}`;
         document.getElementById('visitToday').textContent = `오늘 ${d.today.toLocaleString()}`;
       }).catch(() => {});
