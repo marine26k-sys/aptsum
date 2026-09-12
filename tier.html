@@ -144,7 +144,7 @@ function tierFiltered(){
     (!tierState.grade || c.g === tierState.grade) &&
     (!tierState.region || `${c.province}::${c.gu}` === tierState.region) &&
     (!tierState.dong || c.dong === tierState.dong) &&
-    (!tierState.q || c.nm.includes(tierState.q) || c.dong.includes(tierState.q))
+    (!tierState.q || c.nm.includes(tierState.q) || c.dong.includes(tierState.q) || c.gu.includes(tierState.q))
   );
 }
 // 검색창 입력마다 이 함수만 다시 그림(#tierListArea만 갱신) — 검색창 포커스를 유지하기 위함.
@@ -363,7 +363,7 @@ function render(){
 
     <div class="tier-filters">
       <select id="tierRegionSel" onchange="setRegion(this.value)">${tierRegionOptions()}</select>
-      <input id="tierQInput" type="text" placeholder="단지명·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
+      <input id="tierQInput" type="text" placeholder="단지명·구·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
     </div>
 
     <div id="tierBodyArea"></div>
