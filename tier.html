@@ -26,6 +26,15 @@
   .tier-prov-tab{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer}
   .tier-prov-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .tier-prov-tab:active{opacity:.85}
+  .tier-dongrank-banner{display:flex;align-items:center;justify-content:space-between;gap:8px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .tier-dongrank-banner span{font-size:10.5px;font-weight:600;opacity:.9;white-space:nowrap}
+  .tier-dongrank-banner:active{opacity:.9}
+  .tier-back-btn{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;font-family:inherit}
+  .tier-back-btn:active{background:var(--slate-bg)}
+  .tier-dongrank-group{margin-bottom:14px}
+  .tier-dongrank-group-hd{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .tier-dongrank-group-hd .tier-rung-dot{width:10px;height:10px}
+  .tier-dongrank-group-band{font-size:10px;font-weight:500;color:var(--sub);margin-right:auto}
   .tier-meta-line{font-size:11px;color:var(--sub);text-align:center;margin-bottom:10px}
   .tier-meta-line b{color:var(--ink)}
   .tier-ladder{background:#fff;border-radius:16px;padding:10px 14px 2px;margin-bottom:12px;border:1.5px solid var(--line)}
@@ -99,7 +108,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30 };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, view: "main" };
 
 async function load(){
   try{
@@ -190,8 +199,9 @@ function scopedFlagshipCount(){
   return tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).length;
 }
 // 동별 순위 — 서울·경기·인천·부산 통합(또는 시·도 탭 선택 시 그 시·도 안)에서 동 단위로 대장주를 뽑아
-// 평단가 순으로 줄 세운 랭킹. 기존 "지역별 대장주"(구/시 단위)보다 더 잘게 쪼갠 순위.
-function dongRankHTML(limit=30){
+// 그 동의 급지 등급(6분위)별로 묶어서 보여줌. 등급은 그 동 대장주 단지의 등급(g)을 그대로 씀 — 등급
+// 사다리(6단계)와 같은 기준. 전부 다 보여주고 자르지 않음(수민 요청, 기존 TOP 30 제한 삭제).
+function dongRankGroups(){
   const base = tierScoped();
   const byDong = new Map();
   for (const c of base) {
@@ -199,22 +209,35 @@ function dongRankHTML(limit=30){
     if (!byDong.has(key) || byDong.get(key).ppy < c.ppy) byDong.set(key, c);
   }
   const items = [...byDong.values()].sort((a,b) => b.ppy - a.ppy);
-  const shown = items.slice(0, limit);
-  if (!shown.length) return "";
+  return tierData.grades.map(g => ({ grade: g, items: items.filter(c => c.g === g.g) }));
+}
+function dongRankBannerHTML(){
+  const label = tierState.province ? `${tierState.province} 동별 순위` : '동별 순위 (전국 통합)';
+  const count = dongRankGroups().reduce((s,g) => s + g.items.length, 0);
+  return `<div class="tier-dongrank-banner" onclick="setView('dongrank')">📊 ${esc(label)} <span>${count.toLocaleString()}개 동 전체 보기 ›</span></div>`;
+}
+function dongRankFullHTML(){
+  const groups = dongRankGroups();
+  const total = groups.reduce((s,g) => s + g.items.length, 0);
   return `
-    <div class="tier-section-hd"><h2>동별 순위${tierState.province ? '' : ' (전국 통합)'}</h2><span class="cnt">TOP ${shown.length}</span></div>
-    <div class="tier-list">
-      ${shown.map((c,i) => `
-        <div class="tier-row" style="cursor:pointer" onclick="setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
-          <div class="tier-row-no">${i+1}</div>
-          <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.dong)}</div>
-            <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
-          </div>
-          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
+    <div class="tier-section-hd"><h2>${tierState.province ? esc(tierState.province) : '전국 통합'} 동별 순위 (급지 6분위)</h2><span class="cnt">${total.toLocaleString()}개 동</span></div>
+    ${groups.map(({grade, items}) => !items.length ? "" : `
+      <div class="tier-dongrank-group">
+        <div class="tier-dongrank-group-hd"><span class="tier-rung-dot" style="background:${grade.color}"></span>${esc(grade.label)} <span class="tier-dongrank-group-band">${esc(grade.band)}</span><span class="cnt">${items.length}개 동</span></div>
+        <div class="tier-list">
+          ${items.map((c,i) => `
+            <div class="tier-row" style="cursor:pointer" onclick="setView('main');setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
+              <div class="tier-row-no">${i+1}</div>
+              <div class="tier-row-main">
+                <div class="tier-row-name">${esc(c.dong)}</div>
+                <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · ${esc(c.nm)}</div>
+              </div>
+              <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
+            </div>
+          `).join("")}
         </div>
-      `).join("")}
-    </div>
+      </div>
+    `).join("")}
   `;
 }
 // 동별 평단가 히트맵 — 구/시를 선택했을 때만 노출. 동별 대장주(그 동에서 평단가가 가장 높은 단지) 1개씩 보여줌.
@@ -246,6 +269,23 @@ function dongHeatmapHTML(){
   `;
 }
 function render(){
+  const provTabsHTML = `
+    <div class="tier-prov-tabs">
+      <div class="tier-prov-tab ${tierState.province===''?'on':''}" onclick="setProvince('')">전체</div>
+      ${TIER_PROVINCES.map(p => `<div class="tier-prov-tab ${tierState.province===p?'on':''}" onclick="setProvince('${p}')">${p}</div>`).join("")}
+    </div>
+  `;
+
+  // 동별 순위 전용 화면 — 배너를 누르면 등급 사다리·히트맵·단지 목록 없이 전체 동을 급지 6분위로 묶어 다 보여줌.
+  if(tierState.view === 'dongrank'){
+    $("#app").innerHTML = `
+      ${provTabsHTML}
+      <button type="button" class="tier-back-btn" onclick="setView('main')">← 목록으로</button>
+      ${dongRankFullHTML()}
+    `;
+    return;
+  }
+
   const base = tierScoped();
   const gradeStats = tierData.grades.map(g => {
     const inGrade = base.filter(c => c.g === g.g);
@@ -255,10 +295,8 @@ function render(){
   const maxCount = Math.max(...gradeStats.map(g => g.count), 1);
 
   $("#app").innerHTML = `
-    <div class="tier-prov-tabs">
-      <div class="tier-prov-tab ${tierState.province===''?'on':''}" onclick="setProvince('')">전체</div>
-      ${TIER_PROVINCES.map(p => `<div class="tier-prov-tab ${tierState.province===p?'on':''}" onclick="setProvince('${p}')">${p}</div>`).join("")}
-    </div>
+    ${provTabsHTML}
+    ${dongRankBannerHTML()}
 
     <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
 
@@ -277,7 +315,6 @@ function render(){
     ${!tierState.grade && !tierState.region && !tierState.q ? `
     <div class="tier-section-hd"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역</span></div>
     ${heatmapHTML()}
-    ${dongRankHTML()}
     ` : ""}
 
     ${tierState.region ? dongHeatmapHTML() : ""}
@@ -298,6 +335,7 @@ function render(){
   `;
   renderList();
 }
+function setView(v){ tierState.view = v; render(); }
 
 function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; render(); }
 function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; render(); }
