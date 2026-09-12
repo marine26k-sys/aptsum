@@ -4578,6 +4578,7 @@ function renderPricePerPyeong(d){
 
     <div class="sec">
       <h3>전용면적 평단가 랭킹</h3>
+      <div class="rng" style="margin-bottom:8px;padding:9px 11px;background:var(--teal-soft);border-radius:9px;color:var(--navy);line-height:1.5">전용면적 평단가는 단지마다 다른 <b>전용률</b>(공급면적 대비 전용면적 비율)의 영향을 받지 않아, 흔히 쓰는 공급면적 평단가보다 단지 간 시세를 더 왜곡 없이 비교할 수 있는 <b>본질적인 시세</b> 지표입니다. 다만 매물·분양 시장에서 익숙한 "○○평" 표기는 보통 공급면적 기준이라, 표시된 평형과 체감이 다를 수 있습니다.</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
