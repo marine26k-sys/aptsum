@@ -85,19 +85,47 @@ let activeLine = "";
 let TIER = null; // data/tier-map.json — "이 지역 단지"를 처음 누를 때 딱 한 번만 불러와 캐싱
 let openStationKey = ""; // 지금 목록이 펼쳐진 역(라인id+역이름) — 하나만 펼쳐지게
 
+// 뒤로가기(예: "이 지역 단지" 펼친 채로 단지 상세를 보러 index.html로 갔다가 돌아옴)로 이 페이지에
+// 다시 들어왔을 때 탭/펼침 상태가 처음(GTX-A, 전부 접힘)으로 리셋되던 문제(2026.09 제보) — sessionStorage에
+// 마지막 상태를 남겨두고 로드 시 복원한다. 브라우저 bfcache로 되돌아오는 경우엔 JS 상태 자체가 그대로
+// 살아있어 이 복원 로직을 안 타지만, 새로고침/새 로드로 돌아오는 경우엔 이걸로 커버된다.
+const STATE_KEY = 'subwayLinesViewState';
+function saveState(){
+  try{ sessionStorage.setItem(STATE_KEY, JSON.stringify({ activeLine, openStationKey })); }catch(e){}
+}
+function restoreState(){
+  try{
+    const raw = sessionStorage.getItem(STATE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
 async function load(){
   try{
     const res = await fetch("./data/subway-lines.json", { cache: "no-store" });
     if(!res.ok) throw new Error("no data");
     DATA = await res.json();
-    activeLine = DATA.lines[0] ? DATA.lines[0].id : "";
+    const saved = restoreState();
+    if(saved && DATA.lines.some(l => l.id === saved.activeLine)){
+      activeLine = saved.activeLine;
+      openStationKey = saved.openStationKey || "";
+    } else {
+      activeLine = DATA.lines[0] ? DATA.lines[0].id : "";
+    }
+    if(openStationKey){
+      try{
+        const r2 = await fetch("./data/tier-map.json", { cache: "no-store" });
+        if(r2.ok) TIER = await r2.json();
+      }catch(e){ /* 펼쳐진 패널은 그대로 두되 아래 empty 처리로 폴백 */ }
+    }
     render();
   }catch(e){
     $("#app").innerHTML = `<div class="empty">노선 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
   }
 }
 
-function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; render(); }
+function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; saveState(); render(); }
 
 function stationKey(lineId, name){ return `${lineId}::${name}`; }
 
@@ -123,7 +151,7 @@ function complexesNear(si, gu, dong){
 
 async function toggleRegion(lineId, name){
   const key = stationKey(lineId, name);
-  if(openStationKey === key){ openStationKey = ""; render(); return; }
+  if(openStationKey === key){ openStationKey = ""; saveState(); render(); return; }
   if(!TIER){
     try{
       const res = await fetch("./data/tier-map.json", { cache: "no-store" });
@@ -131,6 +159,7 @@ async function toggleRegion(lineId, name){
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
   }
   openStationKey = key;
+  saveState();
   render();
 }
 
