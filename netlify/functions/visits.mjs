@@ -13,9 +13,10 @@ export default async () => {
   const store = getStore("visits");
   const today = new Date().toISOString().slice(0, 10); // UTC 날짜 기준 일일 카운터 키
 
+  // consistency: "strong" 필수 — 기본값(eventual)은 방금 쓴 값을 바로 못 읽어와 계속 0으로 보일 수 있음
   const [totalRaw, todayRaw] = await Promise.all([
-    store.get("total"),
-    store.get(`day-${today}`),
+    store.get("total", { consistency: "strong" }),
+    store.get(`day-${today}`, { consistency: "strong" }),
   ]);
 
   const total = (parseInt(totalRaw, 10) || 0) + 1;
