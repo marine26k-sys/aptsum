@@ -30,8 +30,10 @@
   .card{background:#fff;border-radius:16px;padding:14px 16px 16px;border:1.5px solid var(--line);margin-bottom:14px}
   .card-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px}
 
-  .chart{display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px}
+  .chart{display:flex;align-items:flex-end;gap:4px;height:126px;margin-bottom:6px}
   .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+  .chart-val{font-size:8.5px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap}
+  .chart-val.today{color:var(--navy)}
   .chart-bar{width:100%;max-width:20px;background:var(--teal);border-radius:4px 4px 2px 2px;transition:height .4s ease}
   .chart-bar.today{background:var(--navy)}
   .chart-labels{display:flex;gap:4px}
@@ -94,7 +96,8 @@ function render(d){
       <div class="chart">
         ${d.trend.map(t => `
           <div class="chart-col">
-            <div class="chart-bar ${t.date===todayStr?'today':''}" style="height:${Math.max((t.count/maxTrend*100), t.count>0?4:1)}%" title="${t.date} · ${t.count}회"></div>
+            <div class="chart-val ${t.date===todayStr?'today':''}">${t.count.toLocaleString()}</div>
+            <div class="chart-bar ${t.date===todayStr?'today':''}" style="height:${Math.max((t.count/maxTrend*82), t.count>0?4:2)}%" title="${t.date} · ${t.count}회"></div>
           </div>
         `).join('')}
       </div>
