@@ -366,7 +366,7 @@ function render(){
           <div class="tier-rung-dot" style="background:${g.color}"></div>
           <div class="tier-rung-info"><div class="tier-rung-label">${esc(g.label)}</div><div class="tier-rung-band">${esc(g.band)}</div></div>
           <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${g.color}"></div></div>
-          <div class="tier-rung-count"><b>${g.count}</b>개<br>평균 ${tierFmtPy(g.avg)}</div>
+          <div class="tier-rung-count"><b>${g.count}</b>개 단지<br>평균 ${tierFmtPy(g.avg)}</div>
         </div>
       `).join("")}
     </div>
