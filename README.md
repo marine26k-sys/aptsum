@@ -353,7 +353,7 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - `/manifest.json` — 홈 화면 추가 시 아이콘·스플래시 적용 (PWA `standalone` 모드)
 - **인앱 브라우저 경고 배너 제거**(2026.08): 인스타그램 등 인앱 브라우저에서 "홈 화면 추가가 안 돼요" 경고 배너가 자동으로 뜨던 걸 제거(수민 요청 — 팔로워가 인스타 링크로 들어올 때마다 노출돼 거슬림). 설치 버튼(`btn`)은 그대로 남겨두고, 눌렀을 때 뜨는 "다른 브라우저에서 열기" 안내 모달도 유지 — 자동 노출되는 배너만 삭제(관련 CSS·HTML·`closePwaInAppBanner()` 전부 정리).
 - `index.html` `<head>`에 OG·트위터 카드 메타 태그 추가 → 카톡·인스타 DM으로 링크 공유 시 미리보기 노출
-- **참고**: `og:image`/`og:url`이 `https://aptsum.netlify.app`로 설정되어 있음(2026.08 도메인 변경 반영). 도메인을 또 바꾸면 `index.html`의 두 값 + `assets/gen.py`의 og-image 하단 텍스트까지 함께 교체하고 `python3 gen.py`로 `og-image.png` 재생성 필요
+- **참고**: `og:image`/`og:url`이 `https://aptsum.kr`로 설정되어 있음(2026.09 실제 공유 도메인인 커스텀 도메인으로 통일). 도메인을 또 바꾸면 `index.html`의 두 값 + `assets/gen.py`의 og-image 하단 텍스트까지 함께 교체하고 `python3 gen.py`로 `og-image.png` 재생성 필요
 - 아이콘·OG 이미지를 다시 만들려면 `assets/gen.py` 실행 (Pillow 필요)
 
 ## 속도·호출 구조 (v2 아키텍처)

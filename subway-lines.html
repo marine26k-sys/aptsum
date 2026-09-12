@@ -245,6 +245,7 @@ function render(){
 load();
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("copy", (e) => e.preventDefault());
+fetch('/api/visits?page=subway').catch(() => {}); // 방문자 카운터(페이지별 집계, stats.html용) — 화면 표시는 없음
 </script>
 </body>
 </html>

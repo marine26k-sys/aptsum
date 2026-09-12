@@ -93,8 +93,8 @@ d.text((tx, ty), badge_text, font=badge_font, fill=WHITE)
 # body: value props (2026.07 — 탭이 9개로 늘어난 현재 구성에 맞게 갱신)
 items = [
     "국토부 실거래가 데이터 기반 · 완전 무료",
-    "단지 분석 · 비교 · 지역/거래량/등락 랭킹",
-    "신고가 · 단기/반기/연간 저평가 단지 자동 감지",
+    "단지 분석·비교 · 지역/거래량/등락 랭킹 · 저평가 감지",
+    "급지 분석(6단계 등급) · 신설 노선 교통 호재",
 ]
 y = badge_y1 + 78
 for line in items:
@@ -110,7 +110,7 @@ for p in pts:
     d.ellipse([p[0] - 8, p[1] - 8, p[0] + 8, p[1] + 8], fill=WHITE, outline=TEAL, width=5)
 d.text((cx0, cy0 - 40), "월평균 시세 추이", font=font(FONT_BOLD, 24), fill=SUB)
 
-d.text((MX, H - 64), "aptsum.netlify.app", font=font(FONT_MED, 24), fill=SUB)
+d.text((MX, H - 64), "aptsum.kr", font=font(FONT_MED, 24), fill=SUB)
 
 img.save("og-image.png")
 print("done")

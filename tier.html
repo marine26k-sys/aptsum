@@ -438,6 +438,7 @@ function showMore(){ tierState.shown += 50; renderList(); }
 load();
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("copy", (e) => e.preventDefault());
+fetch('/api/visits?page=tier').catch(() => {}); // 방문자 카운터(페이지별 집계, stats.html용) — 화면 표시는 없음
 </script>
 </body>
 </html>
