@@ -14,7 +14,8 @@
     --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400; --green:#0E9F6E;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  input,textarea{-webkit-user-select:text;user-select:text}
   .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
   header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
   .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
@@ -149,14 +150,21 @@ function complexesNear(si, gu, dong){
   return { items: inGu.sort((a,b)=>b.ppy-a.ppy), fellBack: true };
 }
 
+// index.html의 search()가 늦게 도착한 이전 요청이 화면을 덮어쓰는 걸 막으려고 쓰는 searchToken과
+// 동일한 패턴 — 첫 로딩(TIER가 아직 null)일 때 역 A를 눌렀다가 fetch가 끝나기 전에 역 B를 누르면,
+// 두 fetch 응답이 도착하는 순서가 클릭 순서와 다를 수 있어 마지막 클릭과 다른 역이 열려버리는 경합이
+// 있었음 — 토큰을 발급해 자신이 여전히 최신 요청인지 확인 후 아니면 조용히 폐기한다.
+let toggleToken = 0;
 async function toggleRegion(lineId, name){
   const key = stationKey(lineId, name);
   if(openStationKey === key){ openStationKey = ""; saveState(); render(); return; }
+  const myToken = ++toggleToken;
   if(!TIER){
     try{
       const res = await fetch("./data/tier-map.json", { cache: "no-store" });
       if(res.ok) TIER = await res.json();
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
+    if(myToken !== toggleToken) return; // 기다리는 동안 다른 역을 눌러 더 최신 요청이 발급됨 — 이 결과는 폐기
   }
   openStationKey = key;
   saveState();
