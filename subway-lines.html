@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>교통 호재 — 아파트썸</title>
+<meta name="description" content="신안산선·월곶판교선·GTX-A/B/C 등 신설·공사중 지하철 노선의 역별 위치와 개통 현황을 한눈에 보는 페이지">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
+    --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
+    --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400; --green:#0E9F6E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
+  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
+  .back{position:absolute;top:50%;left:14px;transform:translateY(-50%);background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+  .back:active{background:rgba(255,255,255,.28)}
+
+  .line-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .line-tab{flex:none;text-align:center;padding:9px 13px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .line-tab.on{color:#fff;border-color:transparent}
+  .line-tab:active{opacity:.85}
+
+  .line-card{background:#fff;border-radius:16px;padding:14px;margin-bottom:14px;border:1.5px solid var(--line)}
+  .line-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .line-dot{flex:none;width:11px;height:11px;border-radius:3px}
+  .line-card-name{font-size:14px;font-weight:900;color:var(--navy)}
+  .line-summary{font-size:11.5px;color:var(--sub);margin-bottom:10px}
+
+  .station-list{border-top:1px solid var(--slate-bg)}
+  .station-row{padding:6px 0;border-bottom:1px solid var(--slate-bg)}
+  .station-row:last-child{border-bottom:none}
+  .station-hd{display:flex;align-items:center;gap:6px}
+  .station-name{flex:none;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .station-loc{font-size:10.5px;color:var(--sub);margin-top:1px}
+  .station-note{font-size:9.5px;color:var(--sub);margin-top:2px;line-height:1.4}
+  .station-badge{flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .badge-open{color:#fff;background:var(--green)}
+  .badge-plan{color:var(--sub);background:var(--slate-bg)}
+  .station-open-date{flex:none;font-size:9.5px;color:var(--sub)}
+  .region-link{flex:none;margin-left:auto;border:none;background:var(--teal-soft);color:var(--teal-dark);font-size:10px;font-weight:700;border-radius:8px;padding:5px 8px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .region-link:active{background:var(--teal-light)}
+  .region-link.on{background:var(--teal-dark);color:#fff}
+
+  .region-panel{flex:0 0 100%;width:100%;margin-top:2px;background:var(--slate-bg);border-radius:10px;padding:8px 10px}
+  .region-panel-note{font-size:9.5px;color:var(--sub);line-height:1.5;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fff}
+  .region-panel-hd{font-size:10.5px;font-weight:700;color:var(--sub);margin-bottom:6px}
+  .region-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #fff}
+  .region-item:last-child{border-bottom:none}
+  .region-item-main{flex:1;min-width:0}
+  .region-item-name{font-size:11.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .region-item-sub{font-size:9.5px;color:var(--sub)}
+  .region-item-price{flex:none;font-size:11px;font-weight:700;color:var(--navy)}
+  .region-item-price span{font-size:9px;font-weight:400;color:var(--sub)}
+  .region-empty{font-size:11px;color:var(--sub);padding:6px 0}
+
+  .disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
+  .disclaimer a{color:var(--teal-dark)}
+
+  .loading,.empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="./index.html" aria-label="메인으로">←</a>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>교통 호재</span>
+  </header>
+
+  <div id="app"><div class="loading">불러오는 중…</div></div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let DATA = null;
+let activeLine = "";
+let TIER = null; // data/tier-map.json — "이 지역 단지"를 처음 누를 때 딱 한 번만 불러와 캐싱
+let openStationKey = ""; // 지금 목록이 펼쳐진 역(라인id+역이름) — 하나만 펼쳐지게
+
+// 뒤로가기(예: "이 지역 단지" 펼친 채로 단지 상세를 보러 index.html로 갔다가 돌아옴)로 이 페이지에
+// 다시 들어왔을 때 탭/펼침 상태가 처음(GTX-A, 전부 접힘)으로 리셋되던 문제(2026.09 제보) — sessionStorage에
+// 마지막 상태를 남겨두고 로드 시 복원한다. 브라우저 bfcache로 되돌아오는 경우엔 JS 상태 자체가 그대로
+// 살아있어 이 복원 로직을 안 타지만, 새로고침/새 로드로 돌아오는 경우엔 이걸로 커버된다.
+const STATE_KEY = 'subwayLinesViewState';
+function saveState(){
+  try{ sessionStorage.setItem(STATE_KEY, JSON.stringify({ activeLine, openStationKey })); }catch(e){}
+}
+function restoreState(){
+  try{
+    const raw = sessionStorage.getItem(STATE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+async function load(){
+  try{
+    const res = await fetch("./data/subway-lines.json", { cache: "no-store" });
+    if(!res.ok) throw new Error("no data");
+    DATA = await res.json();
+    const saved = restoreState();
+    if(saved && DATA.lines.some(l => l.id === saved.activeLine)){
+      activeLine = saved.activeLine;
+      openStationKey = saved.openStationKey || "";
+    } else {
+      activeLine = DATA.lines[0] ? DATA.lines[0].id : "";
+    }
+    if(openStationKey){
+      try{
+        const r2 = await fetch("./data/tier-map.json", { cache: "no-store" });
+        if(r2.ok) TIER = await r2.json();
+      }catch(e){ /* 펼쳐진 패널은 그대로 두되 아래 empty 처리로 폴백 */ }
+    }
+    render();
+  }catch(e){
+    $("#app").innerHTML = `<div class="empty">노선 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+  }
+}
+
+function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; saveState(); render(); }
+
+function stationKey(lineId, name){ return `${lineId}::${name}`; }
+
+// 급지 지도(index.html)의 gu는 "안산 단원구"처럼 시·구 결합 표기 — 이 역 데이터도 되도록 그 표기를 그대로
+// 써서(예: "안산 단원구") 정확히 맞춘다. 다만 gu를 도시 단위로만 적어둔 역(예: "부천시")은 접두어로 느슨하게
+// 찾아 그 아래 모든 구를 포함한다.
+function complexesInGu(si, gu){
+  const short = gu.replace(/(시|구|군)$/, '');
+  return TIER.complexes.filter(c => c.province === si && (c.gu === gu || c.gu.startsWith(short)));
+}
+// dong이 있으면 그 동(법정동)으로 더 좁혀서 보여준다 — 문자열 하나 또는 여러 동에 걸친 역이면 배열로도 옴.
+// 그 동에 조회되는 단지가 아예 없으면(신설역이라 거래가 드물거나 tier-map 집계 기준 미달) 조용히
+// 구 전체 결과로 넓혀서 보여주되, 넓혔다는 사실을 밝힌다(fellBack: true).
+function complexesNear(si, gu, dong){
+  if(!TIER) return { items: [], fellBack: false };
+  const inGu = complexesInGu(si, gu);
+  if(!dong) return { items: inGu.sort((a,b)=>b.ppy-a.ppy), fellBack: false };
+  const dongList = Array.isArray(dong) ? dong : [dong];
+  const inDong = inGu.filter(c => dongList.includes(c.dong));
+  if(inDong.length) return { items: inDong.sort((a,b)=>b.ppy-a.ppy), fellBack: false };
+  return { items: inGu.sort((a,b)=>b.ppy-a.ppy), fellBack: true };
+}
+
+async function toggleRegion(lineId, name){
+  const key = stationKey(lineId, name);
+  if(openStationKey === key){ openStationKey = ""; saveState(); render(); return; }
+  if(!TIER){
+    try{
+      const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+      if(res.ok) TIER = await res.json();
+    }catch(e){ /* 아래 empty 처리로 폴백 */ }
+  }
+  openStationKey = key;
+  saveState();
+  render();
+}
+
+function regionPanelHTML(st, lineId){
+  const key = stationKey(lineId, st.name);
+  if(openStationKey !== key) return "";
+  if(!TIER) return `<div class="region-panel"><div class="region-empty">단지 정보를 불러오지 못했습니다.</div></div>`;
+  const { items: all, fellBack } = complexesNear(st.si, st.gu, st.dong);
+  const items = all.slice(0, 15);
+  if(!items.length) return `<div class="region-panel"><div class="region-empty">이 지역에서 조회되는 단지가 없습니다.</div></div>`;
+  const dongLabel = st.dong ? (Array.isArray(st.dong) ? st.dong.join("·") : st.dong) : "";
+  const scopeLabel = (!fellBack && dongLabel) ? `${esc(st.si)} ${esc(st.gu)} ${esc(dongLabel)}` : `${esc(st.si)} ${esc(st.gu)}`;
+  const countLabel = all.length > items.length ? `평단가 상위 ${items.length}개 (총 ${all.length}개 중)` : `평단가 상위 ${items.length}개`;
+  return `
+    <div class="region-panel">
+      <div class="region-panel-note">최근 2년간 20~39평 거래가 2건 이상인 단지만 표시됩니다 — 거래가 드문 단지는 실제로 있어도 빠질 수 있어요.</div>
+      <div class="region-panel-hd">${scopeLabel} · ${countLabel}${fellBack && dongLabel ? ` <span style="font-weight:400">(${esc(dongLabel)}엔 조회되는 단지가 없어 구 전체 기준)</span>` : ''}</div>
+      ${items.map(c => `
+        <div class="region-item">
+          <div class="region-item-main">
+            <div class="region-item-name">${esc(c.nm)}</div>
+            <div class="region-item-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}</div>
+          </div>
+          <div class="region-item-price">${(c.ppy/10000).toFixed(2)}억<span>/평</span></div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function lineHTML(line){
+  return `
+    <div class="line-card">
+      <div class="line-card-hd">
+        <div class="line-dot" style="background:${line.color}"></div>
+        <div class="line-card-name">${esc(line.name)}</div>
+      </div>
+      <div class="line-summary">${esc(line.summary)}</div>
+      <div class="station-list">
+        ${line.stations.map(st => `
+          <div class="station-row">
+            <div class="station-hd">
+              <span class="station-name">${esc(st.name)}</span>
+              <span class="station-badge ${st.status==='개통'?'badge-open':'badge-plan'}">${esc(st.status)}</span>
+              ${st.openDate ? `<span class="station-open-date">${esc(st.openDate)}</span>` : ""}
+              <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" onclick="toggleRegion('${line.id}','${esc(st.name)}')">이 지역 단지</button>
+            </div>
+            <div class="station-loc">${esc(st.si)} ${esc(st.gu)}${st.dong ? ` ${esc(Array.isArray(st.dong)?st.dong.join('·'):st.dong)}` : ''}</div>
+            ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
+            ${regionPanelHTML(st, line.id)}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const shown = DATA.lines.filter(l => !activeLine || l.id === activeLine);
+  $("#app").innerHTML = `
+    <div class="line-tabs">
+      ${DATA.lines.map(l => `<div class="line-tab ${activeLine===l.id?'on':''}" style="${activeLine===l.id?`background:${l.color}`:''}" onclick="setLine('${l.id}')">${esc(l.name)}</div>`).join("")}
+    </div>
+
+    ${shown.map(lineHTML).join("")}
+
+    <div class="disclaimer">
+      ${esc(DATA.meta.source)}<br>
+      정보 기준일: ${esc(DATA.meta.updated)} — 공정 지연, 노선/역명 변경 가능성이 있으니 투자·거주 결정 시 반드시 국토교통부·국가철도공단 등 공식 발표를 다시 확인하세요.<br>
+      <a href="./index.html">단지별 상세 분석 보기</a>
+    </div>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

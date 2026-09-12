@@ -507,6 +507,7 @@
   <div class="tabs">
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
     <div class="tab" id="tabTM" onclick="setMode('tier')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 지도</div>
+    <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
@@ -2958,7 +2959,11 @@ renderFavs();
 renderFavRegions();
 updateRegionFavBtn();
 refreshFavBadges();
-initFromURL();
+// setTimeout(0)으로 한 틱 미룸 — initFromURL()이 파일 이 지점보다 한참 아래(예: tierData 등 급지 지도 관련
+// let 선언, 4900번대)에서 선언되는 변수를 참조하는 경로(예: ?m=tier 공유 링크)를 타면, 스크립트가 아직
+// 그 아래까지 실행되지 않아 TDZ(ReferenceError: Cannot access ... before initialization)가 났던 버그 수정.
+// 한 틱 미루면 이 시점까지 스크립트 전체가 이미 다 실행된 뒤라 모든 let/const가 초기화돼 있다.
+setTimeout(initFromURL, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
