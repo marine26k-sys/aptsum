@@ -496,3 +496,19 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - **동별 히트맵은 이 버그와 무관**: `tierDongHeatmapHTML()`의 `byDong`은 애초에 특정 `province+gu`로 필터링된 `inGu` 배열 안에서만 동 이름으로 그룹핑하므로(다른 구/시의 동과 섞일 수 없는 구조) 확인 결과 문제없음 — 수정 대상에서 제외.
 - **배포 시 참고**: `build-tier-map.mjs`만 수정된 배치 로직 버그라 배포 후 Actions에서 "급지 대시보드 데이터 생성" 워크플로 수동 실행 필요(재실행 전까지는 옛 `data/tier-map.json`에 버그가 그대로 남아있어 부산 중구·강서구가 계속 안 보임).
 - **배포 시 참고**: 결과 레코드에 `ar` 필드가 새로 추가되는 스키마 변경 — 배포 후 Actions에서 "급지 대시보드 데이터 생성" 워크플로 수동 실행 필요(실행 전까지는 옛 데이터에 `ar`이 없어 전용면적 표시가 자동으로 생략됨, 에러는 안 남).
+
+### `index.html`에 남아있던 급지 지도 구버전 임베디드 코드 정리 + `?m=tier` 딥링크 리다이렉트 (2026.09)
+
+- **배경**: 급지 지도는 한때(위 5~17차 개편) `index.html` 안의 탭 하나로 통합돼 있다가, 이후 다시 별도 페이지(`tier.html`)로 재분리됐음(PR #3, "급지 지도를 별도 페이지 탭으로 전환"). 이 과정에서 헤더의 "급지 분석" 탭(`#tabTM`)은 `onclick` 없는 순수 `<a href="./tier.html">`로 바뀌어 정상적으로는 절대 실행되지 않는데, `index.html` 안에 있던 구버전 임베디드 구현(`tierState`/`loadTierData`/`renderTier`/`tierSetProvince` 등 함수·변수, `.tier-*` CSS 클래스 전체, 총 ~320줄)이 지워지지 않고 그대로 남아있었음.
+- **버그**: `initFromURL()`이 여전히 `?m=tier` 쿼리 파라미터를 이 죽은 코드로 라우팅하고 있어서, 재분리 이전에 카톡·인스타 등으로 공유됐을 수 있는 옛 `?m=tier` 링크로 들어오면 — 이미 여러 차례 개편을 거친 현재의 `tier.html`과 달리 "동별 분석" 탭조차 없는, 기능이 한참 뒤처진 옛날 화면이 index.html 안에 그대로 렌더링되는 불일치가 있었음.
+- **수정**: `initFromURL()`에서 `m==='tier'`이면 `location.replace('./tier.html')`로 실제 페이지로 리다이렉트하도록 변경. `index.html` 안의 죽은 코드(변수·함수 정의, CSS, `setMode()`/`restoreView()`에 남아있던 관련 분기)를 전부 삭제 — 파일 용량도 함께 줄어듦(약 16KB).
+
+### `subway-lines.html` — "이 지역 단지" 패널 경합 조건(race condition) 수정 (2026.09)
+
+- **버그**: `toggleRegion()`이 첫 클릭 시(TIER가 아직 null인 상태) `data/tier-map.json`을 fetch하는데, 이 fetch가 끝나기 전에 다른 역을 연달아 클릭하면 두 fetch 응답이 도착하는 순서가 클릭 순서와 다를 수 있어, 마지막에 클릭한 역이 아니라 응답이 먼저 도착한 쪽의 패널이 열려버릴 수 있었음 — `index.html`의 `search()`가 `searchToken`으로 이미 막아둔 것과 동일한 유형의 경합.
+- **수정**: `toggleToken` 카운터를 추가해, fetch가 끝난 시점에 자신이 여전히 최신 요청인지 확인한 뒤 아니면 조용히 결과를 폐기하도록 수정. Playwright로 `tier-map.json` 응답을 인위적으로 지연시킨 뒤 역 A→역 B를 빠르게 연속 클릭 → 항상 마지막 클릭(B)의 패널이 열리는 것으로 검증.
+
+### `tier.html`/`subway-lines.html` — 드래그 시 텍스트가 선택(파랗게 하이라이트)되던 문제 수정 (2026.09)
+
+- **버그**: 우클릭/복사 방지(PR #4, "급지 분석·교통 호재 페이지 우클릭/복사 방지")가 `contextmenu`·`copy` 이벤트만 막아뒀고 실제 텍스트 선택(`user-select`)은 막지 않아서, 스크롤하려고 화면을 드래그하면 텍스트가 파랗게 선택되는 문제가 있었음(수민 리포트).
+- **수정**: 두 파일의 `body`에 `-webkit-user-select:none; user-select:none`(+ iOS 롱프레스 메뉴 방지용 `-webkit-touch-callout:none`)을 추가. 검색창(`input`/`textarea`)은 예외로 둬서 타이핑·선택이 정상 동작하도록 유지. Playwright로 마우스 드래그(down→move→up) 후 `window.getSelection().toString()`이 빈 문자열임을 확인해 검증.
