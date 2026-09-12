@@ -369,6 +369,11 @@ function render(){
     ${provTabsHTML}
     ${analysisTabsHTML}
 
+    <div class="tier-filters">
+      <select id="tierRegionSel" onchange="setRegion(this.value)">${tierRegionOptions()}</select>
+      <input id="tierQInput" type="text" placeholder="단지명·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
+    </div>
+
     <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 최고가 거래 기준</div>
 
     <div class="tier-ladder">
@@ -391,10 +396,6 @@ function render(){
     ${tierState.region ? dongHeatmapHTML() : ""}
 
     <div class="tier-section-hd"><h2>${tierState.grade ? esc(tierData.grades.find(g=>g.g===tierState.grade).label) : (tierState.dong ? esc(tierState.dong) : '전체 단지')}</h2><span class="cnt" id="tierListCnt"></span></div>
-    <div class="tier-filters">
-      <select id="tierRegionSel" onchange="setRegion(this.value)">${tierRegionOptions()}</select>
-      <input id="tierQInput" type="text" placeholder="단지명·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
-    </div>
 
     <div id="tierListArea"></div>
 
