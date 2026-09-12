@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>노선 호재 — 아파트썸</title>
+<title>교통 호재 — 아파트썸</title>
 <meta name="description" content="신안산선·월곶판교선·GTX-A/B/C 등 신설·공사중 지하철 노선의 역별 위치와 개통 현황을 한눈에 보는 페이지">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -59,9 +59,6 @@
   .region-item-price span{font-size:9px;font-weight:400;color:var(--sub)}
   .region-empty{font-size:11px;color:var(--sub);padding:6px 0}
 
-  .notice{background:#fff;border-radius:14px;border:1.5px solid var(--line);padding:12px 13px;margin-bottom:14px;font-size:11px;color:var(--sub);line-height:1.6}
-  .notice b{color:var(--ink)}
-
   .disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
   .disclaimer a{color:var(--teal-dark)}
 
@@ -72,8 +69,7 @@
 <div class="wrap">
   <header>
     <a class="back" href="./index.html" aria-label="메인으로">←</a>
-    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>노선 호재</span>
-    <p>신안산선·월곶판교선·GTX 등 신설 노선 역별 현황</p>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>교통 호재</span>
   </header>
 
   <div id="app"><div class="loading">불러오는 중…</div></div>
@@ -194,10 +190,6 @@ function lineHTML(line){
 function render(){
   const shown = DATA.lines.filter(l => !activeLine || l.id === activeLine);
   $("#app").innerHTML = `
-    <div class="notice">
-      <b>안내:</b> ${esc(DATA.meta.note)}
-    </div>
-
     <div class="line-tabs">
       ${DATA.lines.map(l => `<div class="line-tab ${activeLine===l.id?'on':''}" style="${activeLine===l.id?`background:${l.color}`:''}" onclick="setLine('${l.id}')">${esc(l.name)}</div>`).join("")}
     </div>
