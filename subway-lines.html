@@ -62,13 +62,6 @@
   .notice{background:#fff;border-radius:14px;border:1.5px solid var(--line);padding:12px 13px;margin-bottom:14px;font-size:11px;color:var(--sub);line-height:1.6}
   .notice b{color:var(--ink)}
 
-  .news-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--slate-bg)}
-  .news-hd{font-size:10.5px;font-weight:700;color:var(--sub);margin-bottom:6px}
-  .news-item{display:block;padding:5px 0;font-size:11px;color:var(--ink);text-decoration:none}
-  .news-item:active{opacity:.7}
-  .news-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .news-date{font-size:9.5px;color:var(--sub);margin-top:1px}
-
   .disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:20px;padding:0 10px;line-height:1.6}
   .disclaimer a{color:var(--teal-dark)}
 
@@ -91,7 +84,6 @@ const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 let DATA = null;
-let NEWS = null; // data/subway-news.json — 노선별 최신 관련 뉴스(자동 수집, 없거나 실패해도 페이지 동작엔 영향 없음)
 let activeLine = "";
 let TIER = null; // data/tier-map.json — "이 지역 단지"를 처음 누를 때 딱 한 번만 불러와 캐싱
 let openStationKey = ""; // 지금 목록이 펼쳐진 역(라인id+역이름) — 하나만 펼쳐지게
@@ -105,13 +97,7 @@ async function load(){
     render();
   }catch(e){
     $("#app").innerHTML = `<div class="empty">노선 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
-    return;
   }
-  // 뉴스는 부가 정보라 실패해도 조용히 무시(위 station 데이터 렌더는 이미 끝난 상태)
-  try{
-    const res = await fetch("./data/subway-news.json", { cache: "no-store" });
-    if(res.ok){ NEWS = await res.json(); render(); }
-  }catch(e){ /* 노선 정보만으로도 페이지는 정상 동작 */ }
 }
 
 function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; render(); }
@@ -163,22 +149,6 @@ function regionPanelHTML(st, lineId){
   `;
 }
 
-function newsHTML(line){
-  const items = NEWS && NEWS.lines && NEWS.lines[line.id];
-  if(!items || !items.length) return "";
-  return `
-    <div class="news-list">
-      <div class="news-hd">관련 최신 뉴스</div>
-      ${items.map(n => `
-        <a class="news-item" href="${esc(n.link)}" target="_blank" rel="noopener">
-          <span class="news-title">${esc(n.title)}</span>
-          <span class="news-date">${esc(n.pubDate)}</span>
-        </a>
-      `).join("")}
-    </div>
-  `;
-}
-
 function lineHTML(line){
   return `
     <div class="line-card">
@@ -204,7 +174,6 @@ function lineHTML(line){
           </div>
         `).join("")}
       </div>
-      ${newsHTML(line)}
     </div>
   `;
 }
