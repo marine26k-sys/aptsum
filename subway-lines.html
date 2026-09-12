@@ -34,17 +34,17 @@
   .line-summary{font-size:11.5px;color:var(--sub);margin-bottom:10px}
 
   .station-list{border-top:1px solid var(--slate-bg)}
-  .station-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--slate-bg)}
+  .station-row{padding:6px 0;border-bottom:1px solid var(--slate-bg)}
   .station-row:last-child{border-bottom:none}
-  .station-main{flex:1;min-width:0}
-  .station-name{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .station-hd{display:flex;align-items:center;gap:6px}
+  .station-name{flex:none;font-size:12.5px;font-weight:700;color:var(--ink)}
   .station-loc{font-size:10.5px;color:var(--sub);margin-top:1px}
-  .station-note{font-size:9.5px;color:var(--sub);margin-top:3px;line-height:1.4}
+  .station-note{font-size:9.5px;color:var(--sub);margin-top:2px;line-height:1.4}
   .station-badge{flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap}
   .badge-open{color:#fff;background:var(--green)}
   .badge-plan{color:var(--sub);background:var(--slate-bg)}
-  .station-open-date{font-size:9.5px;color:var(--sub);margin-top:2px;text-align:right}
-  .region-link{flex:none;border:none;background:var(--teal-soft);color:var(--teal-dark);font-size:10px;font-weight:700;border-radius:8px;padding:6px 8px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .station-open-date{flex:none;font-size:9.5px;color:var(--sub)}
+  .region-link{flex:none;margin-left:auto;border:none;background:var(--teal-soft);color:var(--teal-dark);font-size:10px;font-weight:700;border-radius:8px;padding:5px 8px;cursor:pointer;white-space:nowrap;font-family:inherit}
   .region-link:active{background:var(--teal-light)}
   .region-link.on{background:var(--teal-dark);color:#fff}
 
@@ -201,16 +201,14 @@ function lineHTML(line){
       <div class="station-list">
         ${line.stations.map(st => `
           <div class="station-row">
-            <div class="station-main">
-              <div class="station-name">${esc(st.name)}</div>
-              <div class="station-loc">${esc(st.si)} ${esc(st.gu)}${st.dong ? ` ${esc(Array.isArray(st.dong)?st.dong.join('·'):st.dong)}` : ''}</div>
-              ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
-            </div>
-            <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+            <div class="station-hd">
+              <span class="station-name">${esc(st.name)}</span>
               <span class="station-badge ${st.status==='개통'?'badge-open':'badge-plan'}">${esc(st.status)}</span>
               ${st.openDate ? `<span class="station-open-date">${esc(st.openDate)}</span>` : ""}
               <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" onclick="toggleRegion('${line.id}','${esc(st.name)}')">이 지역 단지</button>
             </div>
+            <div class="station-loc">${esc(st.si)} ${esc(st.gu)}${st.dong ? ` ${esc(Array.isArray(st.dong)?st.dong.join('·'):st.dong)}` : ''}</div>
+            ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
             ${regionPanelHTML(st, line.id)}
           </div>
         `).join("")}
