@@ -357,14 +357,6 @@ function render(){
     return;
   }
 
-  const base = tierScoped();
-  const gradeStats = tierData.grades.map(g => {
-    const inGrade = base.filter(c => c.g === g.g);
-    const avg = inGrade.length ? Math.round(inGrade.reduce((s,c) => s + c.ppy, 0) / inGrade.length) : 0;
-    return { ...g, count: inGrade.length, avg };
-  });
-  const maxCount = Math.max(...gradeStats.map(g => g.count), 1);
-
   $("#app").innerHTML = `
     ${provTabsHTML}
     ${analysisTabsHTML}
@@ -374,6 +366,36 @@ function render(){
       <input id="tierQInput" type="text" placeholder="단지명·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
     </div>
 
+    <div id="tierBodyArea"></div>
+
+    <div class="tier-disclaimer">
+      ${esc(tierData.meta.basis)}.<br>
+      단지마다 여러 평형(목록의 "○○평" 표기) 중 평단가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. 2년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
+      <a href="./index.html">단지별 상세 분석 보기</a>
+    </div>
+  `;
+  renderComplexBody();
+}
+// 검색어 입력 시 등급 사다리/히트맵을 숨기고 검색 결과를 필터 바로 아래 보여줌(동별 분석과 동일한 위치·동작).
+// #tierBodyArea 전체를 새로 그려도 이 안엔 입력창이 없어 검색창 포커스는 그대로 유지됨.
+function renderComplexBody(){
+  const q = tierState.q.trim();
+  if(q){
+    $("#tierBodyArea").innerHTML = `
+      <div class="tier-section-hd"><h2>검색 결과</h2><span class="cnt" id="tierListCnt"></span></div>
+      <div id="tierListArea"></div>
+    `;
+    renderList();
+    return;
+  }
+  const base = tierScoped();
+  const gradeStats = tierData.grades.map(g => {
+    const inGrade = base.filter(c => c.g === g.g);
+    const avg = inGrade.length ? Math.round(inGrade.reduce((s,c) => s + c.ppy, 0) / inGrade.length) : 0;
+    return { ...g, count: inGrade.length, avg };
+  });
+  const maxCount = Math.max(...gradeStats.map(g => g.count), 1);
+  $("#tierBodyArea").innerHTML = `
     <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 최고가 거래 기준</div>
 
     <div class="tier-ladder">
@@ -388,7 +410,7 @@ function render(){
       `).join("")}
     </div>
 
-    ${!tierState.grade && !tierState.region && !tierState.q ? `
+    ${!tierState.grade && !tierState.region ? `
     <div class="tier-section-hd"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역</span></div>
     ${heatmapHTML()}
     ` : ""}
@@ -398,12 +420,6 @@ function render(){
     <div class="tier-section-hd"><h2>${tierState.grade ? esc(tierData.grades.find(g=>g.g===tierState.grade).label) : (tierState.dong ? esc(tierState.dong) : '전체 단지')}</h2><span class="cnt" id="tierListCnt"></span></div>
 
     <div id="tierListArea"></div>
-
-    <div class="tier-disclaimer">
-      ${esc(tierData.meta.basis)}.<br>
-      단지마다 여러 평형(목록의 "○○평" 표기) 중 평단가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. 2년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
-      <a href="./index.html">단지별 상세 분석 보기</a>
-    </div>
   `;
   renderList();
 }
@@ -415,7 +431,7 @@ function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierSt
 function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; render(); }
 function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; render(); }
 function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; render(); }
-function setQuery(v){ tierState.q = v; tierState.shown = 30; renderList(); }
+function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody(); }
 function showMore(){ tierState.shown += 50; renderList(); }
 
 load();
