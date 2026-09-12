@@ -2427,8 +2427,10 @@ function analyzeUpDown(all, months){
 // 정렬은 changePct(%)가 아니라 changeAmt(변동 금액) 내림차순 — %로 정렬하면 저가 단지의 작은 금액
 // 변동이 퍼센트로는 과장돼 상위로 뜨는 왜곡이 있어 금액 기준으로 변경(수민 요청, 2026.09).
 // 최대 100개까지 노출(기존 50개에서 확대).
+// 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 수민 요청, 2026.09
+// — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
+// longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
 function analyzeLongTermRise(all, months, periodM){
-  all = all.filter(t=>!t.kind); // 매매만 집계(분양권·입주권 제외, 사용자 요청) — 여러 지역을 동시에 조회할 때는 분양권이 자동 병합돼 들어올 수 있어 여기서 명시적으로 한 번 더 거름
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
   // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
@@ -2444,7 +2446,7 @@ function analyzeLongTermRise(all, months, periodM){
     const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
     const recent = arr.filter(t=> dayDiff(t) <= 30); // 최근 1개월(최근 30일)
     const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
-    if(recent.length < 2 || past.length < 2) continue; // 두 구간 다 표본 2건 이상 있어야 신뢰 가능
+    if(recent.length < 1 || past.length < 1) continue; // 두 구간 다 표본 1건 이상(수민 요청, 2026.09 — 기존 2건에서 완화, 표본이 너무 좁게 잡히는 문제 보완)
     const recentAvg = avgA(recent), pastAvg = avgA(past);
     if(!pastAvg) continue;
     const changeAmt = R1(recentAvg - pastAvg);
@@ -3423,7 +3425,7 @@ async function search(){
             rawMerged = raw.concat(converted);
           }
         }catch(e){ rawMerged = raw; }
-      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='longpeakdong' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap'){
+      } else if(mode==='region' || mode==='volume' || mode==='updown' || mode==='peak' || mode==='longpeak' || mode==='longpeakdong' || mode==='newhigh' || mode==='newlow' || mode==='pyprice' || mode==='gap' || mode==='longtermrise'){
         rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
       }
       let items = windowF(floorF(rawMerged));
