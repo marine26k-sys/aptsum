@@ -317,11 +317,11 @@
   .tier-heat-price span{font-size:10px;font-weight:600;opacity:.85;margin-left:1px}
   .tier-heat-amt{font-size:11px;font-weight:600;opacity:.92;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tier-list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
-  .tier-row{display:flex;align-items:center;gap:10px;padding:4px 13px;border-bottom:1px solid var(--slate-bg)}
+  .tier-row{display:flex;align-items:flex-start;gap:10px;padding:6px 13px;border-bottom:1px solid var(--slate-bg)}
   .tier-row:last-child{border-bottom:none}
   .tier-row-no{flex:none;width:20px;font-size:11px;color:var(--sub);text-align:center}
   .tier-row-main{flex:1;min-width:0}
-  .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+  .tier-row-name{font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.3;overflow-wrap:anywhere}
   .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
   .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-row-price{flex:none;text-align:right}
@@ -506,7 +506,7 @@
 
   <div class="tabs">
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
-    <div class="tab" id="tabTM" onclick="setMode('tier')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 지도</div>
+    <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
     <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
@@ -5113,7 +5113,7 @@ function renderTier(){
       ${TIER_PROVINCES.map(p => `<div class="tier-prov-tab ${tierState.province===p?'on':''}" onclick="tierSetProvince('${p}')">${p}</div>`).join("")}
     </div>
 
-    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
+    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 최고가 거래 기준</div>
 
     <div class="tier-ladder">
       <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
