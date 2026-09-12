@@ -4386,7 +4386,7 @@ function renderNewHigh(d){
   // "이번 신고가" 판정 기준인 최근 30일 창(analyzeNewHigh의 isRecentDeal(top,30)과 동일 기준)을
   // MM.DD~MM.DD로 표시 — "무엇과 무엇을 비교했는지"에 실제 기간까지 보여달라는 요청.
   const fmtMD = dt => `${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
-  const recentWindow = `${fmtMD(new Date(Date.now()-30*24*3600*1000))}~${fmtMD(new Date())}`;
+  const recentWindow = `${fmtMD(new Date(Date.now()-30*24*3600*1000))} ~ ${fmtMD(new Date())}`;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">최근 한 달 이내 신고가를 기록한 단지가 없습니다</div>';
