@@ -287,9 +287,9 @@
         홈 화면에 추가
       </button>
     </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <img src="https://visitor-badge.laobi.icu/badge?page_id=aptsum.netlify.app&text=Total" alt="전체 방문자 수" loading="lazy" style="height:14px;opacity:.8">
-      <img id="dailyBadge" alt="오늘 방문자 수" loading="lazy" style="height:14px;opacity:.8">
+    <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--sub);font-weight:600">
+      <span id="visitTotal">전체 -</span>
+      <span id="visitToday">오늘 -</span>
     </div>
   </div>
   <div id="pwaModalBg" onclick="if(event.target===this)closePwaModal()">
@@ -318,11 +318,14 @@
     </a>
   </div>
   <script>
-    // 오늘 날짜를 page_id에 포함시켜, 날짜가 바뀌면 새 카운터로 자동 리셋되는 방식으로 "일일 방문자"를 구현
+    // 방문자 카운터 — /api/visits(Netlify Blobs 기반 자체 함수) 호출 1번으로 전체/오늘 카운트를 함께 올리고 받아옴.
+    // 기존 visitor-badge.laobi.icu(제3자 뱃지 이미지)는 새로고침마다 중복 집계되고 광고 차단기에 막히는
+    // 문제가 있어 자체 서버리스 함수로 교체.
     (function(){
-      const d = new Date();
-      const ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
-      document.getElementById('dailyBadge').src = `https://visitor-badge.laobi.icu/badge?page_id=aptsum.netlify.app-daily-${ymd}&text=Today`;
+      fetch('/api/visits').then(r => r.json()).then(d => {
+        document.getElementById('visitTotal').textContent = `전체 ${d.total.toLocaleString()}`;
+        document.getElementById('visitToday').textContent = `오늘 ${d.today.toLocaleString()}`;
+      }).catch(() => {});
     })();
   </script>
   <script>
