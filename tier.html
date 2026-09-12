@@ -26,9 +26,6 @@
   .tier-prov-tab{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer}
   .tier-prov-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .tier-prov-tab:active{opacity:.85}
-  .tier-dongrank-banner{display:flex;align-items:center;justify-content:space-between;gap:8px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;font-weight:700;cursor:pointer}
-  .tier-dongrank-banner span{font-size:10.5px;font-weight:600;opacity:.9;white-space:nowrap}
-  .tier-dongrank-banner:active{opacity:.9}
   .tier-back-btn{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;font-family:inherit}
   .tier-back-btn:active{background:var(--slate-bg)}
   .tier-dongrank-group{margin-bottom:14px}
@@ -110,7 +107,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, view: "main" };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, view: "main", dongRankGrade: null };
 
 async function load(){
   try{
@@ -238,10 +235,31 @@ function gradeRungDongListHTML(gradeNum){
     </div>
   `;
 }
-function dongRankBannerHTML(){
+// "동별 순위" 카드 — 등급 사다리(단지 필터용)와는 완전히 별개의 카드. 자체 상태(dongRankGrade)로
+// 등급 행을 펼치고 접는다 — 등급 사다리를 탭해도, 이 카드를 탭해도 서로 영향 안 줌.
+function toggleDongRankGrade(g){ tierState.dongRankGrade = tierState.dongRankGrade === g ? null : g; render(); }
+function dongRankCardHTML(){
+  const groups = dongRankGroups();
+  const total = groups.reduce((s,g) => s + g.items.length, 0);
+  const maxCount = Math.max(...groups.map(g => g.items.length), 1);
   const label = tierState.province ? `${tierState.province} 동별 순위` : '동별 순위 (전국 통합)';
-  const count = dongRankGroups().reduce((s,g) => s + g.items.length, 0);
-  return `<div class="tier-dongrank-banner" onclick="setView('dongrank')">📊 ${esc(label)} <span>${count.toLocaleString()}개 동 전체 보기 ›</span></div>`;
+  return `
+    <div class="tier-ladder">
+      <div class="tier-ladder-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(label)} <span style="font-weight:400;color:var(--sub)">· ${total.toLocaleString()}개 동</span></span>
+        <span style="font-size:11px;color:var(--teal-dark);cursor:pointer;font-weight:700" onclick="setView('dongrank')">전체보기 ›</span>
+      </div>
+      ${groups.map(({grade, items}) => `
+        <div class="tier-rung ${tierState.dongRankGrade===grade.g?'on':''}" onclick="toggleDongRankGrade(${grade.g})">
+          <div class="tier-rung-dot" style="background:${grade.color}"></div>
+          <div class="tier-rung-info"><div class="tier-rung-label">${esc(grade.label)}</div><div class="tier-rung-band">${esc(grade.band)}</div></div>
+          <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(items.length/maxCount*100).toFixed(1)}%;background:${grade.color}"></div></div>
+          <div class="tier-rung-count"><b>${items.length}</b>개 동</div>
+        </div>
+        ${tierState.dongRankGrade===grade.g ? gradeRungDongListHTML(grade.g) : ""}
+      `).join("")}
+    </div>
+  `;
 }
 function dongRankFullHTML(){
   const groups = dongRankGroups();
@@ -323,12 +341,12 @@ function render(){
 
   $("#app").innerHTML = `
     ${provTabsHTML}
-    ${dongRankBannerHTML()}
+    ${dongRankCardHTML()}
 
     <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
 
     <div class="tier-ladder">
-      <div class="tier-ladder-title">등급별 단지 분포 (탭하면 동 순위가 펼쳐집니다)</div>
+      <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
       ${gradeStats.map(g => `
         <div class="tier-rung ${tierState.grade===g.g?'on':''}" onclick="setGrade(${g.g})">
           <div class="tier-rung-dot" style="background:${g.color}"></div>
@@ -336,7 +354,6 @@ function render(){
           <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${g.color}"></div></div>
           <div class="tier-rung-count"><b>${g.count}</b>개<br>평균 ${tierFmtPy(g.avg)}</div>
         </div>
-        ${tierState.grade===g.g ? gradeRungDongListHTML(g.g) : ""}
       `).join("")}
     </div>
 
