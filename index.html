@@ -513,6 +513,8 @@
     </div>
     <div class="row2" id="optRow">
       <select id="monthsN" style="flex:1.3;min-width:0">
+        <option value="3" class="volOnly" style="display:none">최근 3개월</option>
+        <option value="6" class="volOnly" style="display:none">최근 6개월</option>
         <option value="12">최근 1년</option>
         <option value="24" selected>최근 2년</option>
         <option value="36">최근 3년</option>
@@ -1284,6 +1286,9 @@ function setMode(m, fromRestore){
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='updown'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='boxrange'||m==='boxbreak'||m==='longtermrise') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='updown'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='boxrange'||m==='turnover'||m==='jeonseupdown'||m==='boxbreak'||m==='surge'||m==='inversion'||m==='gaptrend'||m==='longtermrise') ? 'none' : '';
+  // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(수민 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
+  // 공유하는 셀렉트라 영향받지 않도록 표시만 토글.
+  document.querySelectorAll('#monthsN .volOnly').forEach(o => { o.style.display = m==='volume' ? '' : 'none'; });
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = m==='longtermrise' ? '' : 'none';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
