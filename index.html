@@ -5113,7 +5113,7 @@ function renderTier(){
       ${TIER_PROVINCES.map(p => `<div class="tier-prov-tab ${tierState.province===p?'on':''}" onclick="tierSetProvince('${p}')">${p}</div>`).join("")}
     </div>
 
-    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
+    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 최고가 거래 기준</div>
 
     <div class="tier-ladder">
       <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>

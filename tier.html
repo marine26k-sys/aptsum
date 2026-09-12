@@ -26,10 +26,12 @@
   .tier-prov-tab{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer}
   .tier-prov-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .tier-prov-tab:active{opacity:.85}
-  .tier-analysis-tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--slate-bg);border-radius:10px;padding:3px}
-  .tier-analysis-tab{flex:1;text-align:center;padding:8px 0;border-radius:8px;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer}
-  .tier-analysis-tab.on{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(15,43,61,.12)}
-  .tier-analysis-tab:active{opacity:.85}
+  .tier-analysis-tabs{display:flex;gap:8px;margin-bottom:14px;border-bottom:1.5px solid var(--line)}
+  .tier-analysis-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;text-align:center;padding:11px 0;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px;transition:color .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+  .tier-analysis-tab svg{flex:none;opacity:.7;transition:opacity .15s}
+  .tier-analysis-tab.on{color:var(--teal-dark);border-color:var(--teal)}
+  .tier-analysis-tab.on svg{opacity:1}
+  .tier-analysis-tab:active{background:var(--teal-light-soft)}
   .tier-meta-line{font-size:11px;color:var(--sub);text-align:center;margin-bottom:10px}
   .tier-meta-line b{color:var(--ink)}
   .tier-ladder{background:#fff;border-radius:16px;padding:10px 14px 2px;margin-bottom:12px;border:1.5px solid var(--line)}
@@ -73,6 +75,7 @@
   .tier-row-main{flex:1;min-width:0}
   .tier-row-name{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
   .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
+  .tier-grade-badge{display:inline-block;font-size:9px;font-weight:700;color:#fff;border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:1px;white-space:nowrap}
   .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-row-price{flex:none;text-align:right}
   .tier-row-price b{font-size:13px;color:var(--navy)}
@@ -141,7 +144,7 @@ function tierFiltered(){
     (!tierState.grade || c.g === tierState.grade) &&
     (!tierState.region || `${c.province}::${c.gu}` === tierState.region) &&
     (!tierState.dong || c.dong === tierState.dong) &&
-    (!tierState.q || c.nm.includes(tierState.q))
+    (!tierState.q || c.nm.includes(tierState.q) || c.dong.includes(tierState.q))
   );
 }
 // 검색창 입력마다 이 함수만 다시 그림(#tierListArea만 갱신) — 검색창 포커스를 유지하기 위함.
@@ -151,16 +154,19 @@ function renderList(){
   $("#tierListCnt").textContent = `${list.length.toLocaleString()}개`;
   $("#tierListArea").innerHTML = shown.length ? `
     <div class="tier-list">
-      ${shown.map((c,i) => `
+      ${shown.map((c,i) => {
+        const grade = tierData.grades.find(g => g.g === c.g);
+        return `
         <div class="tier-row">
           <div class="tier-row-no">${i+1}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
+            <div class="tier-row-name">${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div></div>
         </div>
-      `).join("")}
+      `;
+      }).join("")}
     </div>
     ${list.length > shown.length ? `<button class="tier-more-btn" onclick="showMore()">${list.length - shown.length}개 더 보기</button>` : ""}
   ` : `<div class="tier-empty">조건에 맞는 단지가 없습니다.</div>`;
@@ -226,16 +232,19 @@ function gradeRungDongListHTML(gradeNum){
   return `
     <div class="tier-rung-panel">
       <div class="tier-list">
-        ${group.items.map((c) => `
+        ${group.items.map((c) => {
+          const grade = tierData.grades.find(g => g.g === c.g);
+          return `
           <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();setTab('complex');setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
             <div class="tier-row-no">${c.rank}</div>
             <div class="tier-row-main">
-              <div class="tier-row-name">${esc(c.dong)}</div>
+              <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
               <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
             </div>
             <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
           </div>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     </div>
   `;
@@ -250,16 +259,19 @@ function dongSearchResultsHTML(){
   if(!matched.length) return `<div class="tier-empty">"${esc(q)}"에 해당하는 동이 없습니다.</div>`;
   return `
     <div class="tier-list">
-      ${matched.map((c) => `
+      ${matched.map((c) => {
+        const grade = tierData.grades.find(g => g.g === c.g);
+        return `
         <div class="tier-row" style="cursor:pointer" onclick="setTab('complex');setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
           <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.dong)}</div>
+            <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
             <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
         </div>
-      `).join("")}
+      `;
+      }).join("")}
     </div>
   `;
 }
@@ -327,8 +339,8 @@ function render(){
   // 탭으로 아예 나눔. 시·도 필터는 두 탭이 공유.
   const analysisTabsHTML = `
     <div class="tier-analysis-tabs">
-      <div class="tier-analysis-tab ${tierState.tab==='complex'?'on':''}" onclick="setTab('complex')">단지별 분석</div>
-      <div class="tier-analysis-tab ${tierState.tab==='dong'?'on':''}" onclick="setTab('dong')">동별 분석</div>
+      <div class="tier-analysis-tab ${tierState.tab==='complex'?'on':''}" onclick="setTab('complex')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><line x1="9" y1="8" x2="9.01" y2="8"/><line x1="15" y1="8" x2="15.01" y2="8"/><line x1="9" y1="13" x2="9.01" y2="13"/><line x1="15" y1="13" x2="15.01" y2="13"/></svg>단지별 분석</div>
+      <div class="tier-analysis-tab ${tierState.tab==='dong'?'on':''}" onclick="setTab('dong')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>동별 분석</div>
     </div>
   `;
 
@@ -357,7 +369,7 @@ function render(){
     ${provTabsHTML}
     ${analysisTabsHTML}
 
-    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 거래 기준</div>
+    <div class="tier-meta-line">단지 <b>${base.length.toLocaleString()}</b>개 · 최근 ${tierData.meta.months}개월 최고가 거래 기준</div>
 
     <div class="tier-ladder">
       <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
@@ -381,7 +393,7 @@ function render(){
     <div class="tier-section-hd"><h2>${tierState.grade ? esc(tierData.grades.find(g=>g.g===tierState.grade).label) : (tierState.dong ? esc(tierState.dong) : '전체 단지')}</h2><span class="cnt" id="tierListCnt"></span></div>
     <div class="tier-filters">
       <select id="tierRegionSel" onchange="setRegion(this.value)">${tierRegionOptions()}</select>
-      <input id="tierQInput" type="text" placeholder="단지명 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
+      <input id="tierQInput" type="text" placeholder="단지명·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
     </div>
 
     <div id="tierListArea"></div>
