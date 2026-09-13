@@ -1033,7 +1033,7 @@ REGIONS.forEach(([g,arr])=>{
   // 시(성남·수원 등)만 "OO시 전체"로 대체 지원(아래 arr.forEach 안에서 시 단위로 삽입)
   if(g !== '경기'){
     const all = document.createElement('option');
-    all.value = ALL_PREFIX+g; all.textContent = g+' 전체'; all.dataset.scope='all';
+    all.value = ALL_PREFIX+g; all.textContent = (PROVINCE_DISPLAY[g]||g)+' 전체'; all.dataset.scope='all';
     og.appendChild(all);
   }
   let ggLastCity = null;
@@ -1161,7 +1161,7 @@ function buildRegionPicker(){
           }
           ggPickerLastCity = city;
         } else if(i===0){
-          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체</button>`;
+          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(PROVINCE_DISPLAY[g]||g)} 전체</button>`;
         }
       }
       const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
