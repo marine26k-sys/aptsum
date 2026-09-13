@@ -601,13 +601,39 @@ const GG_CITY_MAP = {};
 });
 const GG_MULTI_CITIES = Object.keys(GG_CITY_MAP).filter(city => GG_CITY_MAP[city].length >= 2);
 const CITYALL_PREFIX = 'CITYALL:';
+// "OO시 전체"로 담아도 칩엔 구 단위(동안구·만안구 등)로 하나씩 쌓이던 걸, 해당 시의 구가 전부 선택돼 있으면
+// "안양시"처럼 시 단위 칩 하나로 합쳐 보여준다(수민 요청, 2026.09). 실제 조회용 lawd 목록(regionSel)은 그대로
+// 구 단위를 유지하고, 이 함수는 화면 표시용으로만 묶는다 — 제거 시엔 묶인 구 lawd를 한 번에 지운다.
+function groupRegionChips(items){
+  const presentLawds = new Set(items.map(x=>x.lawd));
+  const completeCities = GG_MULTI_CITIES.filter(city=>{
+    const m = GG_CITY_MAP[city] || [];
+    return m.length && m.every(([n,c])=>presentLawds.has(c));
+  });
+  const lawdToCity = new Map();
+  completeCities.forEach(city=>{ (GG_CITY_MAP[city]||[]).forEach(([n,c])=>lawdToCity.set(c, city)); });
+  const groups = [];
+  const emittedCities = new Set();
+  items.forEach(x=>{
+    const city = lawdToCity.get(x.lawd);
+    if(city){
+      if(emittedCities.has(city)) return;
+      emittedCities.add(city);
+      groups.push({city:true, name: city+'시', lawds: (GG_CITY_MAP[city]||[]).map(([n,c])=>c)});
+    }else{
+      groups.push({city:false, name:x.name, lawd:x.lawd});
+    }
+  });
+  return groups;
+}
 // 복수 지역 선택 라벨: 4곳 이하면 이름을 그대로 나열, 5곳 이상이면 "강서구 외 15곳"처럼 뭉개지 않고
 // 어느 시/도들이 섞여 있는지 보여준다("서울시, 경기도, 부산시, 인천시") — REGIONS 순서로 정렬,
 // 한 시/도 안에서만 5곳 이상 골랐으면 그 시/도 이름 하나만("경기도"). lawd 매칭 실패 시에만 기존
 // "○○ 외 N곳" 표기로 폴백.
 function regionScopeLabel(items){
   if(!items || !items.length) return '';
-  if(items.length<=4) return items.map(x=>x.name).join(' · ');
+  const groups = groupRegionChips(items);
+  if(groups.length<=4) return groups.map(x=>x.name).join(' · ');
   const order = REGIONS.map(([p])=>p);
   const provinces = [];
   for(const it of items){
@@ -1065,6 +1091,11 @@ function removeRegion(lawd){
   regionSel = regionSel.filter(x=>x.lawd!==lawd);
   saveRegionSel(); renderRegionChips();
 }
+function removeRegionGroup(lawds){
+  const set = new Set(lawds);
+  regionSel = regionSel.filter(x=>!set.has(x.lawd));
+  saveRegionSel(); renderRegionChips();
+}
 function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
@@ -1078,7 +1109,7 @@ function renderRegionChips(){
   }
   box.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:2px 0">
-      ${regionSel.map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick="removeRegion('${esc(x.lawd)}')" style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
+      ${groupRegionChips(regionSel).map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick='${x.city ? `removeRegionGroup(${JSON.stringify(x.lawds)})` : `removeRegion(${JSON.stringify(x.lawd)})`}' style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
       <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
     </div>
     <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
