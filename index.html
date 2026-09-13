@@ -245,9 +245,6 @@
   .rgbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 10px 10px}
   .rggrp{position:sticky;top:0;background:#fff;color:var(--sub);
     font-size:10px;font-weight:800;padding:7px 4px 4px;letter-spacing:.3px;z-index:1}
-  .rgall{display:block;width:100%;box-sizing:border-box;text-align:left;font-family:inherit;
-    border:1.5px dashed var(--teal);border-radius:8px;background:var(--teal-light-soft);
-    color:var(--teal-dark);font-size:11px;font-weight:800;padding:6px 9px;margin-bottom:5px;cursor:pointer}
   /* 칩 그리드: 세로로 쭉 훑는 대신 한 화면에 여러 개가 한꺼번에 보이도록 wrap 배치 (2026.07 개선) — 2026.09
      지역 UI 전반을 더 조밀하게(글씨·여백 축소, 수민 요청) */
   .rggrid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
@@ -1115,25 +1112,26 @@ function buildRegionPicker(){
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
     html += `<div class="rggrp">${esc(g)}</div>`;
-    // '전체' 버튼 노출 — 그동안 상한 25개인 탭에서만 노출했으나(2026.08), addRegion()이 상한 초과 시
+    // '전체' 알약 노출 — 그동안 상한 25개인 탭에서만 노출했으나(2026.08), addRegion()이 상한 초과 시
     // 이미 안전하게 "최대 N개까지만 채우고 안내"로 처리하므로, 상한 5개(단기/반기/연간 저평가)에서도
-    // 5개를 빠르게 채우는 용도로 유용하다는 수민 피드백으로 2026.09 재추가 — sel 쪽 supportsAllScopeOption과 동일 기준
-    // 경기는 "경기 전체" 대신(수민 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)의 "OO시 전체" 알약을
-    // 별도 줄이 아니라 그 시의 구 알약들 바로 앞(같은 그리드 안)에 인라인으로 끼워 넣는다 — 어느 시 소속인지
-    // 바로 옆에서 보이도록.
-    if(multi && !q && g !== '경기'){
-      html += `<button type="button" class="rgall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체 한번에 추가</button>`;
-    }
+    // 5개를 빠르게 채우는 용도로 유용하다는 수민 피드백으로 2026.09 재추가 — sel 쪽 supportsAllScopeOption과 동일 기준.
+    // 경기는 "경기 전체" 대신(수민 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)의 "OO시 전체" 알약만 지원.
+    // 서울·인천·부산의 "OO 전체"도 같은 크기의 작은 알약으로 통일(수민 요청, 2026.09) — 큰 블록 버튼 대신
+    // 그 시·도의 구 알약들 맨 앞에 같은 그리드 안 인라인으로 끼워 넣는다.
     let ggPickerLastCity = null;
-    html += `<div class="rggrid">` + hits.map(([n,c])=>{
+    html += `<div class="rggrid">` + hits.map(([n,c], i)=>{
       let prefix = '';
-      if(g==='경기' && multi && !q){
-        const sp = n.indexOf(' ');
-        const city = sp>-1 ? n.slice(0,sp) : null;
-        if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
-          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+      if(multi && !q){
+        if(g==='경기'){
+          const sp = n.indexOf(' ');
+          const city = sp>-1 ? n.slice(0,sp) : null;
+          if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
+            prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+          }
+          ggPickerLastCity = city;
+        } else if(i===0){
+          prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(g)} 전체</button>`;
         }
-        ggPickerLastCity = city;
       }
       const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
       return prefix + `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
