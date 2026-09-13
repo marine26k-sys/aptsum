@@ -175,31 +175,30 @@ function renderList(){
   ` : `<div class="tier-empty">조건에 맞는 단지가 없습니다.</div>`;
 }
 // 지역(구/시)별 대장주 히트맵 — 칸 색은 그 단지의 급지 등급색을 그대로 재사용.
+// "전체" 탭(시·도 미선택)에서는 서울·경기·인천·부산 구분 없이 평단가 순으로 한 데 섞어 보여준다
+// (수민 요청, 2026.09 — 예전엔 시·도별로 그룹 나눠 보여줬음). 시·도가 같은 구 이름이 겹치는 경우
+// (중구·강서구 등 서울↔부산)가 있어, 이 통합 뷰에서만 칸에 시·도명을 함께 표시해 구분한다.
 function heatmapHTML(){
-  const flags = tierData.flagships.filter(f => !tierState.province || f.province === tierState.province);
-  const groups = tierState.province ? [tierState.province] : TIER_PROVINCES;
-  return groups.map(p => {
-    const items = flags.filter(f => f.province === p).sort((a,b) => b.ppy - a.ppy);
-    if(!items.length) return "";
-    return `
-      <div class="tier-heat-group">
-        ${!tierState.province ? `<div class="tier-heat-group-title">${esc(p)} · ${items.length}개 지역</div>` : ""}
-        <div class="tier-heatmap">
-          ${items.map(f => {
-            const grade = tierData.grades.find(g => g.g === f.g);
-            return `
-              <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
-                <div class="tier-heat-region">${esc(f.gu)}</div>
-                <div class="tier-heat-name">${esc(f.nm)}</div>
-                <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
-                <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
-              </div>
-            `;
-          }).join("")}
-        </div>
+  const flags = tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).slice().sort((a,b) => b.ppy - a.ppy);
+  const showProvince = !tierState.province;
+  if(!flags.length) return "";
+  return `
+    <div class="tier-heat-group">
+      <div class="tier-heatmap">
+        ${flags.map(f => {
+          const grade = tierData.grades.find(g => g.g === f.g);
+          return `
+            <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
+              <div class="tier-heat-region">${showProvince?`${esc(f.province)} `:''}${esc(f.gu)}</div>
+              <div class="tier-heat-name">${esc(f.nm)}</div>
+              <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
+              <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
+            </div>
+          `;
+        }).join("")}
       </div>
-    `;
-  }).join("");
+    </div>
+  `;
 }
 function scopedFlagshipCount(){
   return tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).length;
