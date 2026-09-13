@@ -109,7 +109,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongQ: "" };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongQ: "", flagshipsOpen: false };
 
 async function load(){
   try{
@@ -412,8 +412,8 @@ function renderComplexBody(){
     </div>
 
     ${!tierState.grade && !tierState.region ? `
-    <div class="tier-section-hd"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역</span></div>
-    ${heatmapHTML()}
+    <div class="tier-section-hd" style="cursor:pointer" onclick="toggleFlagships()"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역 ${tierState.flagshipsOpen?'▲':'▼'}</span></div>
+    ${tierState.flagshipsOpen ? heatmapHTML() : ""}
     ` : ""}
 
     ${tierState.region ? dongHeatmapHTML() : ""}
@@ -431,6 +431,7 @@ function setProvince(p){ tierState.province = p; tierState.region = ""; tierStat
 function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; render(); }
 function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; render(); }
 function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; render(); }
+function toggleFlagships(){ tierState.flagshipsOpen = !tierState.flagshipsOpen; render(); }
 function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; render(); }
 function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody(); }
 function showMore(){ tierState.shown += 50; renderList(); }
