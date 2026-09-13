@@ -12,13 +12,19 @@ export const config = {
 
 const KNOWN_PAGES = ["index", "tier", "subway"];
 
+// 일일 카운터 키를 한국 시간(KST, UTC+9) 자정 기준으로 끊기 위한 헬퍼 — 9시간을 더한 뒤
+// toISOString()으로 UTC 구성요소를 읽으면 그게 곧 원래 시각의 KST 날짜가 된다.
+function kstYmd(date) {
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 export default async (req) => {
   const url = new URL(req.url);
   const pageParam = url.searchParams.get("page");
   const page = KNOWN_PAGES.includes(pageParam) ? pageParam : "index";
 
   const store = getStore("visits");
-  const today = new Date().toISOString().slice(0, 10); // UTC 날짜 기준 일일 카운터 키
+  const today = kstYmd(new Date()); // 한국 시간(KST) 자정 기준 일일 카운터 키(2026.09부터 UTC→KST로 변경)
 
   // consistency: "strong" 필수 — 기본값(eventual)은 방금 쓴 값을 바로 못 읽어와 계속 0으로 보일 수 있음
   const [totalRaw, todayRaw, pageTotalRaw, pageTodayRaw] = await Promise.all([

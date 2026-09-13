@@ -15,8 +15,9 @@ const PAGES = [
 
 const TREND_DAYS = 14;
 
+// visits.mjs와 동일한 기준(KST 자정) — 9시간을 더한 뒤 UTC 구성요소를 읽으면 원래 시각의 KST 날짜가 된다.
 function ymd(date) {
-  return date.toISOString().slice(0, 10);
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 export default async () => {
@@ -25,8 +26,7 @@ export default async () => {
   const today = ymd(now);
 
   const trendDates = Array.from({ length: TREND_DAYS }, (_, i) => {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - (TREND_DAYS - 1 - i));
+    const d = new Date(now.getTime() - (TREND_DAYS - 1 - i) * 24 * 60 * 60 * 1000);
     return ymd(d);
   });
 
