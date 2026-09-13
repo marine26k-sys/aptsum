@@ -118,6 +118,7 @@ async function load(){
     const res = await fetch("./data/tier-map.json", { cache: "no-store" });
     if(!res.ok) throw new Error("no data");
     tierData = await res.json();
+    history.replaceState({ tier: tierSnapshot() }, "");
     render();
   }catch(e){
     $("#app").innerHTML = `<div class="tier-empty">아직 급지 데이터가 없습니다.<br>배치가 한 번 돈 뒤에 다시 확인해주세요.</div>`;
@@ -425,15 +426,34 @@ function renderComplexBody(){
   `;
   renderList();
 }
-function setTab(t){ tierState.tab = t; render(); }
+// 브라우저 뒤로가기 지원 — 구/동 드릴다운(서초구→반포동 등)이 history 엔트리를 하나도 안 남겨서,
+// 뒤로가기를 누르면 한 단계씩 빠져나오지 못하고 곧장 이 페이지 밖(원래 첫 페이지)으로 나가버리던
+// 문제(수민 스크린샷으로 발견). 시·도/등급/구/동/탭처럼 "드릴다운"에 해당하는 상태 변경마다
+// pushState로 스냅샷을 쌓아, 뒤로가기 한 번에 그 이전 단계로만 돌아가도록 함. 검색어 입력·펼치기
+// 토글·더보기처럼 타이핑/UI 상태는 history에 안 남김(안 그러면 글자 하나마다 뒤로가기 스택이 쌓임).
+function tierSnapshot(){
+  return { province: tierState.province, grade: tierState.grade, region: tierState.region, dong: tierState.dong, tab: tierState.tab };
+}
+function pushTierHistory(){
+  history.pushState({ tier: tierSnapshot() }, "");
+}
+window.addEventListener("popstate", (e) => {
+  const snap = e.state && e.state.tier;
+  if(!snap || !tierData) return;
+  Object.assign(tierState, snap);
+  tierState.shown = 30;
+  render();
+});
+
+function setTab(t){ tierState.tab = t; tierState.shown = 30; pushTierHistory(); render(); }
 function setDongQuery(v){ tierState.dongQ = v; tierState.dongRankGrade = null; renderDongRankArea(); }
 
-function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; render(); }
-function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; render(); }
-function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; render(); }
-function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; render(); }
+function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; pushTierHistory(); render(); }
+function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; pushTierHistory(); render(); }
+function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
+function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
 function toggleFlagships(){ tierState.flagshipsOpen = !tierState.flagshipsOpen; render(); }
-function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; render(); }
+function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; pushTierHistory(); render(); }
 function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody(); }
 function showMore(){ tierState.shown += 50; renderList(); }
 
