@@ -120,13 +120,35 @@ async function load(){
         if(r2.ok) TIER = await r2.json();
       }catch(e){ /* 펼쳐진 패널은 그대로 두되 아래 empty 처리로 폴백 */ }
     }
+    history.replaceState({ subway: { activeLine, openStationKey } }, "");
     render();
   }catch(e){
     $("#app").innerHTML = `<div class="empty">노선 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
   }
 }
 
-function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; saveState(); render(); }
+// 노선 전환·"이 지역 단지" 펼치기마다 history 엔트리를 쌓아, 뒤로가기를 누르면 펼친 패널이 접히고
+// (급지 분석의 구/동 드릴다운과 동일한 방식) 그다음 뒤로가기에 이전 노선으로 돌아가도록 함
+// (수민 요청, 2026.09) — 이전엔 펼친 채로 뒤로가기하면 곧장 이 페이지 밖으로 나가버렸음.
+function pushSubwayHistory(){
+  history.pushState({ subway: { activeLine, openStationKey } }, "");
+}
+window.addEventListener("popstate", async (e) => {
+  const snap = e.state && e.state.subway;
+  if(!snap || !DATA) return;
+  activeLine = snap.activeLine;
+  openStationKey = snap.openStationKey;
+  if(openStationKey && !TIER){
+    try{
+      const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+      if(res.ok) TIER = await res.json();
+    }catch(e){ /* 아래 empty 처리로 폴백 */ }
+  }
+  saveState();
+  render();
+});
+
+function setLine(id){ activeLine = activeLine === id ? "" : id; openStationKey = ""; saveState(); pushSubwayHistory(); render(); }
 
 function stationKey(lineId, name){ return `${lineId}::${name}`; }
 
@@ -157,7 +179,7 @@ function complexesNear(si, gu, dong){
 let toggleToken = 0;
 async function toggleRegion(lineId, name){
   const key = stationKey(lineId, name);
-  if(openStationKey === key){ openStationKey = ""; saveState(); render(); return; }
+  if(openStationKey === key){ openStationKey = ""; saveState(); pushSubwayHistory(); render(); return; }
   const myToken = ++toggleToken;
   if(!TIER){
     try{
@@ -168,6 +190,7 @@ async function toggleRegion(lineId, name){
   }
   openStationKey = key;
   saveState();
+  pushSubwayHistory();
   render();
 }
 
