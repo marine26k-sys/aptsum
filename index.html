@@ -1254,7 +1254,16 @@ const PY_BANDS = [
 let pyBandMultiSel = []; // 선택된 band value 문자열들("23-27" 등), 비어있으면 "전체 평형"
 function pyBandMultiLabel(){
   if(!pyBandMultiSel.length) return '전체 평형';
-  const labels = PY_BANDS.filter(b=>pyBandMultiSel.includes(b.v)).map(b=>b.l);
+  const idxs = pyBandMultiSel.map(v=>PY_BANDS.findIndex(b=>b.v===v)).filter(i=>i>=0).sort((a,b)=>a-b);
+  // 연속 구간(23~27·28~31·32~36처럼 끊김 없이 이어짐)을 골랐으면 "23~36평"처럼 하나로 합쳐 보여준다
+  // (수민 요청, 2026.09) — 떨어진 구간을 섞어 골랐을 때만 기존 "OO 외 N개" 표기를 쓴다.
+  const contiguous = idxs.length>1 && idxs.every((idx,i)=> i===0 || idx===idxs[i-1]+1);
+  if(contiguous){
+    const lo = PY_BANDS[idxs[0]].v.split('-')[0];
+    const hi = PY_BANDS[idxs[idxs.length-1]].v.split('-')[1];
+    return `${lo}~${hi}평`;
+  }
+  const labels = idxs.map(i=>PY_BANDS[i].l);
   return labels.length<=2 ? labels.join(', ') : `${labels[0]} 외 ${labels.length-1}개`;
 }
 function renderPyBandMultiBtn(){
