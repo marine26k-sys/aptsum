@@ -84,6 +84,8 @@
   .tier-row-amt{font-size:9.5px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-more-btn{display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--teal-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
   .tier-more-btn:active{background:var(--teal-light-soft)}
+  .tier-toggle-btn{flex:none;font-size:11px;font-weight:700;color:var(--teal-dark);background:var(--teal-light-soft);border:1.5px solid var(--teal-soft);border-radius:999px;padding:6px 11px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .tier-toggle-btn:active{background:var(--teal-soft)}
   .tier-empty{text-align:center;padding:40px 20px;color:var(--sub);font-size:12.5px}
   .tier-disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:16px;padding:0 10px;line-height:1.5}
   .tier-disclaimer a{color:var(--teal-dark)}
@@ -109,13 +111,14 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongQ: "" };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongQ: "", flagshipsOpen: false };
 
 async function load(){
   try{
     const res = await fetch("./data/tier-map.json", { cache: "no-store" });
     if(!res.ok) throw new Error("no data");
     tierData = await res.json();
+    history.replaceState({ tier: tierSnapshot() }, "");
     render();
   }catch(e){
     $("#app").innerHTML = `<div class="tier-empty">아직 급지 데이터가 없습니다.<br>배치가 한 번 돈 뒤에 다시 확인해주세요.</div>`;
@@ -173,31 +176,30 @@ function renderList(){
   ` : `<div class="tier-empty">조건에 맞는 단지가 없습니다.</div>`;
 }
 // 지역(구/시)별 대장주 히트맵 — 칸 색은 그 단지의 급지 등급색을 그대로 재사용.
+// "전체" 탭(시·도 미선택)에서는 서울·경기·인천·부산 구분 없이 평단가 순으로 한 데 섞어 보여준다
+// (수민 요청, 2026.09 — 예전엔 시·도별로 그룹 나눠 보여줬음). 시·도가 같은 구 이름이 겹치는 경우
+// (중구·강서구 등 서울↔부산)가 있어, 이 통합 뷰에서만 칸에 시·도명을 함께 표시해 구분한다.
 function heatmapHTML(){
-  const flags = tierData.flagships.filter(f => !tierState.province || f.province === tierState.province);
-  const groups = tierState.province ? [tierState.province] : TIER_PROVINCES;
-  return groups.map(p => {
-    const items = flags.filter(f => f.province === p).sort((a,b) => b.ppy - a.ppy);
-    if(!items.length) return "";
-    return `
-      <div class="tier-heat-group">
-        ${!tierState.province ? `<div class="tier-heat-group-title">${esc(p)} · ${items.length}개 지역</div>` : ""}
-        <div class="tier-heatmap">
-          ${items.map(f => {
-            const grade = tierData.grades.find(g => g.g === f.g);
-            return `
-              <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
-                <div class="tier-heat-region">${esc(f.gu)}</div>
-                <div class="tier-heat-name">${esc(f.nm)}</div>
-                <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
-                <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
-              </div>
-            `;
-          }).join("")}
-        </div>
+  const flags = tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).slice().sort((a,b) => b.ppy - a.ppy);
+  const showProvince = !tierState.province;
+  if(!flags.length) return "";
+  return `
+    <div class="tier-heat-group">
+      <div class="tier-heatmap">
+        ${flags.map(f => {
+          const grade = tierData.grades.find(g => g.g === f.g);
+          return `
+            <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
+              <div class="tier-heat-region">${showProvince?`${esc(f.province)} `:''}${esc(f.gu)}</div>
+              <div class="tier-heat-name">${esc(f.nm)}</div>
+              <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
+              <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
+            </div>
+          `;
+        }).join("")}
       </div>
-    `;
-  }).join("");
+    </div>
+  `;
 }
 function scopedFlagshipCount(){
   return tierData.flagships.filter(f => !tierState.province || f.province === tierState.province).length;
@@ -412,8 +414,8 @@ function renderComplexBody(){
     </div>
 
     ${!tierState.grade && !tierState.region ? `
-    <div class="tier-section-hd"><h2>지역별 대장주</h2><span class="cnt">${scopedFlagshipCount()}개 지역</span></div>
-    ${heatmapHTML()}
+    <div class="tier-section-hd"><h2>지역별 대장주 <span class="cnt">${scopedFlagshipCount()}개 지역</span></h2><button type="button" class="tier-toggle-btn" onclick="toggleFlagships()">${tierState.flagshipsOpen?'접기 ▲':'펼쳐보기 ▼'}</button></div>
+    ${tierState.flagshipsOpen ? heatmapHTML() : ""}
     ` : ""}
 
     ${tierState.region ? dongHeatmapHTML() : ""}
@@ -424,14 +426,34 @@ function renderComplexBody(){
   `;
   renderList();
 }
-function setTab(t){ tierState.tab = t; render(); }
+// 브라우저 뒤로가기 지원 — 구/동 드릴다운(서초구→반포동 등)이 history 엔트리를 하나도 안 남겨서,
+// 뒤로가기를 누르면 한 단계씩 빠져나오지 못하고 곧장 이 페이지 밖(원래 첫 페이지)으로 나가버리던
+// 문제(수민 스크린샷으로 발견). 시·도/등급/구/동/탭처럼 "드릴다운"에 해당하는 상태 변경마다
+// pushState로 스냅샷을 쌓아, 뒤로가기 한 번에 그 이전 단계로만 돌아가도록 함. 검색어 입력·펼치기
+// 토글·더보기처럼 타이핑/UI 상태는 history에 안 남김(안 그러면 글자 하나마다 뒤로가기 스택이 쌓임).
+function tierSnapshot(){
+  return { province: tierState.province, grade: tierState.grade, region: tierState.region, dong: tierState.dong, tab: tierState.tab };
+}
+function pushTierHistory(){
+  history.pushState({ tier: tierSnapshot() }, "");
+}
+window.addEventListener("popstate", (e) => {
+  const snap = e.state && e.state.tier;
+  if(!snap || !tierData) return;
+  Object.assign(tierState, snap);
+  tierState.shown = 30;
+  render();
+});
+
+function setTab(t){ tierState.tab = t; tierState.shown = 30; pushTierHistory(); render(); }
 function setDongQuery(v){ tierState.dongQ = v; tierState.dongRankGrade = null; renderDongRankArea(); }
 
-function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; render(); }
-function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; render(); }
-function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; render(); }
-function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; render(); }
-function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; render(); }
+function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; pushTierHistory(); render(); }
+function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; pushTierHistory(); render(); }
+function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
+function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
+function toggleFlagships(){ tierState.flagshipsOpen = !tierState.flagshipsOpen; render(); }
+function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; pushTierHistory(); render(); }
 function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody(); }
 function showMore(){ tierState.shown += 50; renderList(); }
 
