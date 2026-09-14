@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>급지 분석 — 아파트썸</title>
+<link rel="canonical" href="https://aptsum.kr/tier.html">
 <meta name="description" content="서울·경기·인천·부산 아파트 단지를 평단가(공급면적 3.3㎡당 가격) 기준 6단계 급지로 나눠 한눈에 보는 지도">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -14,7 +15,7 @@
     --line:#E2E8F0; --red:#DC2626; --yellow:#F5B400;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:relative}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   input,textarea{-webkit-user-select:text;user-select:text}
   .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
   header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
@@ -76,7 +77,7 @@
   .tier-row-main{flex:1;min-width:0}
   .tier-row-name{font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.3;overflow-wrap:anywhere}
   .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
-  .tier-grade-badge{display:inline-block;font-size:9px;font-weight:700;color:#fff;border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:1px;white-space:nowrap}
+  .tier-grade-badge{display:inline-block;font-size:9px;font-weight:700;color:#fff;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:1px;white-space:nowrap}
   .tier-row-sub{font-size:10px;color:var(--sub);margin-top:0;line-height:1.15}
   .tier-row-price{flex:none;text-align:right}
   .tier-row-price b{font-size:13px;color:var(--navy)}
@@ -93,11 +94,10 @@
 </style>
 </head>
 <body>
-<div style="position:absolute;inset:0;z-index:1;pointer-events:none;background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczNDAnIGhlaWdodD0nMjgwJz48dGV4dCB4PSczMCcgeT0nMTUwJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZicgZm9udC1zaXplPScxMycgZmlsbD0ncmdiYSgxNSw0Myw2MSwwLjA4KScgdHJhbnNmb3JtPSdyb3RhdGUoLTIwIDE3MCAxNDApJz7slYTtjIztirjsjbg8L3RleHQ+PC9zdmc+');background-repeat:repeat" aria-hidden="true"></div>
 <div class="wrap">
   <header>
     <a class="back" href="./index.html" aria-label="메인으로">←</a>
-    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>급지 분석</span>
+    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg><span style="color:#00C2C2">아파트썸</span>&nbsp;급지 분석</span>
     <p>서울·경기·인천·부산 아파트, 평단가 기준 6단계</p>
   </header>
 
@@ -108,6 +108,9 @@
 const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억";
+// 목록 배지는 "최상급지" 대신 "최상"처럼 짧게 — 단지명과 한 줄에 놓이다 보니 "급지"가 매 줄 반복돼
+// 정작 읽어야 할 이름을 방해했음(수민 요청, 2026.09). 등급 사다리(범례)는 원래 라벨을 그대로 쓴다.
+const gradeShort = (label) => String(label || "").replace(/급지$/, "");
 const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
@@ -165,7 +168,7 @@ function renderList(){
         <div class="tier-row">
           <div class="tier-row-no">${i+1}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
+            <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div></div>
@@ -242,7 +245,7 @@ function gradeRungDongListHTML(gradeNum){
           <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
             <div class="tier-row-no">${c.rank}</div>
             <div class="tier-row-main">
-              <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
+              <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
               <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
             </div>
             <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
@@ -269,7 +272,7 @@ function dongSearchResultsHTML(){
         <div class="tier-row" style="cursor:pointer" onclick="openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
           <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
+            <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
             <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
