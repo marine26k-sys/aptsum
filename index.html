@@ -957,7 +957,10 @@ function restoreView(vi){
     document.getElementById('result').classList.remove('on');
     document.getElementById('result').innerHTML='';
     document.getElementById('searchBox').style.display = '';
-    document.getElementById('tabC').classList.add('on');
+    // ⚠️ 예전엔 여기서 tabC에 .on을 "추가"만 했는데, 그러면 직전에 보던 탭(예: 신고가)의 .on이 안 지워져서
+    // 단지 분석과 그 탭이 동시에 선택된 것처럼 보였음(mode 변수도 그 탭 그대로라 검색 버튼·필터 UI가
+    // 어긋난 상태로 남음 — 2026.09 수민 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
+    setMode('complex', true);
     return;
   }
   const inp = v.inputs;
