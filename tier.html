@@ -239,7 +239,7 @@ function gradeRungDongListHTML(gradeNum){
         ${group.items.map((c) => {
           const grade = tierData.grades.find(g => g.g === c.g);
           return `
-          <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();setTab('complex');setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
+          <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
             <div class="tier-row-no">${c.rank}</div>
             <div class="tier-row-main">
               <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
@@ -266,7 +266,7 @@ function dongSearchResultsHTML(){
       ${matched.map((c) => {
         const grade = tierData.grades.find(g => g.g === c.g);
         return `
-        <div class="tier-row" style="cursor:pointer" onclick="setTab('complex');setRegionFromHeat('${esc(c.province)}','${esc(c.gu)}');setDong('${esc(c.dong)}')">
+        <div class="tier-row" style="cursor:pointer" onclick="openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
           <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
             <div class="tier-row-name">${esc(c.dong)}${grade?` <span class="tier-grade-badge" style="background:${grade.color}">${esc(grade.label)}</span>`:''}</div>
@@ -455,6 +455,18 @@ function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.show
 function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
 function toggleFlagships(){ tierState.flagshipsOpen = !tierState.flagshipsOpen; render(); }
 function setDong(dong){ tierState.dong = tierState.dong === dong ? "" : dong; tierState.shown = 30; pushTierHistory(); render(); }
+// 동별 분석에서 동 하나를 눌러 "단지별 분석 + 그 구 + 그 동"으로 한 번에 이동 — 예전엔 onclick에서
+// setTab→setRegionFromHeat→setDong 세 함수를 연달아 불렀는데, 셋 다 history를 쌓게 되면서(2026.09
+// 뒤로가기 지원 추가) 클릭 한 번에 엔트리가 3개 쌓여 뒤로가기를 세 번 눌러야 동별 분석으로 돌아오는
+// 문제가 생겼음. 상태를 한 번에 바꾸고 history도 한 번만 쌓는다(렌더도 3회→1회로 줄어듦).
+function openDongFromRank(province, gu, dong){
+  tierState.tab = 'complex';
+  tierState.region = `${province}::${gu}`;
+  tierState.dong = dong;
+  tierState.shown = 30;
+  pushTierHistory();
+  render();
+}
 function setQuery(v){ tierState.q = v; tierState.shown = 30; renderComplexBody(); }
 function showMore(){ tierState.shown += 50; renderList(); }
 

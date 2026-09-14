@@ -157,6 +157,20 @@ function parseItems(xml, ymFallback) {
 
 const FETCH_TIMEOUT_MS = 8000; // 국토부 API가 느려질 때 무한 대기하지 않도록 요청당 타임아웃
 
+// 응답 실패 판정 — data.go.kr은 정상이든 오류든 항상 <header>를 달고 응답하기 때문에, 예전처럼
+// "<header>나 SERVICE 문자열이 있으면 성공"으로 보면 호출 한도 초과·키 오류 같은 에러 응답까지
+// "거래 0건인 정상적인 달"로 통과해버린다(2026.09 발견 — 배치 쪽에선 그 0건이 파일로 커밋돼 강남구
+// 202608이 통째로 빈 채 박제돼 있었음. shared/rtms-parse.mjs에 같은 수정 적용).
+// 모르는 성공 코드 때문에 전부 실패 처리되는 일이 없도록 "확실한 오류"만 실패로 본다.
+function rtmsFailed(t) {
+  if (!t) return true;
+  if (/<item[\s>]/.test(t)) return false;                        // 거래 데이터가 실제로 들어있음
+  if (/<totalCount>\s*0\s*<\/totalCount>/.test(t)) return false; // 거래가 정말 없는 달(정상 빈 응답)
+  const m = t.match(/<resultCode>\s*([^<]*?)\s*<\/resultCode>/);
+  if (m) return m[1].replace(/^0+/, "") !== "";                  // 00/000/0 만 정상, 그 외는 오류코드
+  return true;                                                   // header도 resultCode도 없는 이상한 응답
+}
+
 async function fetchText(key, lawd, ym, retries = 2) {
   for (let i = 0; i <= retries; i++) {
     const ac = new AbortController();
@@ -164,7 +178,7 @@ async function fetchText(key, lawd, ym, retries = 2) {
     try {
       const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`, { signal: ac.signal });
       const t = await r.text();
-      if (t && /<item[\s>]|<header>|SERVICE/.test(t)) return { text: t, failed: false };
+      if (!rtmsFailed(t)) return { text: t, failed: false };
       if (i === retries) return { text: t || "", failed: true };
     } catch (e) {
       if (i === retries) return { text: "", failed: true }; // 타임아웃(abort) 포함

@@ -957,7 +957,10 @@ function restoreView(vi){
     document.getElementById('result').classList.remove('on');
     document.getElementById('result').innerHTML='';
     document.getElementById('searchBox').style.display = '';
-    document.getElementById('tabC').classList.add('on');
+    // ⚠️ 예전엔 여기서 tabC에 .on을 "추가"만 했는데, 그러면 직전에 보던 탭(예: 신고가)의 .on이 안 지워져서
+    // 단지 분석과 그 탭이 동시에 선택된 것처럼 보였음(mode 변수도 그 탭 그대로라 검색 버튼·필터 UI가
+    // 어긋난 상태로 남음 — 2026.09 수민 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
+    setMode('complex', true);
     return;
   }
   const inp = v.inputs;
@@ -2126,6 +2129,9 @@ function analyzeNewHigh(all, months){
       apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${py}평`, area:top.area, amt:top.amt,
       date:`${ymLabel(top.ym)}.${top.d}`, floor:top.floor, build:top.build, kind:top.kind||null, n:arr.length,
       prevMax: prevMax || null, gapAmt, gapPct: prevMax? Math.round(gapAmt/prevMax*100) : null,
+      // 이 탭의 집계 기준은 30일 이내지만(국토부 신고기한이 최대 30일이라 7일로 좁히면 아직 신고 안 된
+      // 신고가를 놓침), 그중에서도 막 나온 따끈한 건은 눈에 띄게 구분해달라는 요청(2026.09) — 7일 이내면 N 배지.
+      fresh7: isRecentDeal(top, 7),
     });
   }
   results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
@@ -4523,9 +4529,9 @@ function renderNewHigh(d){
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
-      ${hint('매매·분양권·입주권 모두 포함', '표본 3건 이상만 집계')}
+      ${hint('매매·분양권·입주권 모두 포함', '표본 3건 이상만 집계 · <span class="nh">N</span> = 최근 7일 이내 계약')}
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.fresh7?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
