@@ -109,6 +109,22 @@ export function parseRent(xml, ymFallback) {
   return items;
 }
 
+// 응답 실패 판정 — data.go.kr은 정상이든 오류든 항상 <header>를 달고 응답하기 때문에, 예전처럼
+// "<header>나 SERVICE 문자열이 있으면 성공"으로 보면 호출 한도 초과·키 오류 같은 에러 응답까지
+// "거래 0건인 정상적인 달"로 통과해버린다. 배치(collect-trades.mjs)는 그 0건을 그대로 파일로 저장하고
+// git에 커밋하므로, 실제로는 거래가 있는 달이 통째로 빈 채 박제된다
+// (2026.09 발견 — 강남구 202608이 0건으로 저장돼 있었고, 같은 1분 사이에 조회된 화성 병점구도 동일).
+// resultCode로 판정하되, 모르는 성공 코드 때문에 전부 실패 처리되는 일이 없도록 "확실한 오류"만
+// 실패로 본다 — 실패로 보면 파일을 안 남기고 다음 실행 때 재시도하므로 데이터가 오염되지 않는다.
+export function rtmsFailed(t) {
+  if (!t) return true;
+  if (/<item[\s>]/.test(t)) return false;                        // 거래 데이터가 실제로 들어있음
+  if (/<totalCount>\s*0\s*<\/totalCount>/.test(t)) return false; // 거래가 정말 없는 달(정상 빈 응답)
+  const m = t.match(/<resultCode>\s*([^<]*?)\s*<\/resultCode>/);
+  if (m) return m[1].replace(/^0+/, "") !== "";                  // 00/000/0 만 정상, 그 외는 오류코드
+  return true;                                                   // header도 resultCode도 없는 이상한 응답
+}
+
 export async function fetchText(rtmsUrl, key, lawd, ym, retries = 2, timeoutMs = 20000) {
   for (let i = 0; i <= retries; i++) {
     try {
@@ -118,7 +134,7 @@ export async function fetchText(rtmsUrl, key, lawd, ym, retries = 2, timeoutMs =
         signal: AbortSignal.timeout(timeoutMs),
       });
       const t = await r.text();
-      if (t && /<item[\s>]|<header>|SERVICE/.test(t)) return { text: t, failed: false };
+      if (!rtmsFailed(t)) return { text: t, failed: false };
       if (i === retries) return { text: t || "", failed: true };
     } catch (e) {
       if (i === retries) return { text: "", failed: true }; // 타임아웃(AbortError)도 여기서 실패로 잡혀 재시도됨
