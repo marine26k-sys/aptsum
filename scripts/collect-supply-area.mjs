@@ -25,6 +25,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { ALL_LAWDS } from "../shared/regions.mjs";
+import { norm, resolveComplexNames } from "../shared/name-match.mjs";
 
 const PUSH_RETRIES = 5;
 const COMMIT_EVERY = 5; // 공급면적 수집은 단지당 비용이 커서(최대 MAX_PAGES 페이지) hhcnt보다 자주 중간 커밋
@@ -62,7 +63,6 @@ function commitProgress(message, allowEmpty = false) {
 }
 
 const AREA_URL = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo";
-const norm = (s) => String(s || "").replace(/\s/g, "");
 
 function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));
@@ -131,9 +131,11 @@ function recentYms(n) {
   }
   return out;
 }
+// 실거래에서 "이 단지에 실제로 거래된 전용면적 타입"과 "거래가 일어난 법정동"을 뽑는다.
+// 법정동은 이름이 비슷한 단지가 여러 개일 때 매칭 후보를 좁히는 데 쓴다(shared/name-match.mjs).
 async function loadKnownAreasByComplex(lawd) {
   const dir = path.join("data/analyze", lawd);
-  const map = {}; // normalizedName -> Set<roundedArea>
+  const map = new Map(); // normalizedName -> { areas:Set<roundedArea>, umds:Set<법정동명> }
   if (!existsSync(dir)) return map;
   const yms = new Set(recentYms(MONTHS_FOR_TYPES));
   for (const f of readdirSync(dir)) {
@@ -144,7 +146,10 @@ async function loadKnownAreasByComplex(lawd) {
       for (const t of j.items || []) {
         if (!t.area) continue;
         const k = norm(t.apt);
-        (map[k] = map[k] || new Set()).add(Math.round(t.area));
+        let e = map.get(k);
+        if (!e) { e = { areas: new Set(), umds: new Set() }; map.set(k, e); }
+        e.areas.add(Math.round(t.area));
+        if (t.umd) e.umds.add(t.umd);
       }
     } catch { /* 개별 월 파일 손상은 무시하고 계속 */ }
   }
@@ -251,6 +256,30 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
 }
 
+// 로그용 — 실거래명과 대장명이 다르면 둘 다 보여줘서 매칭이 맞는지 눈으로 확인할 수 있게 한다.
+function label(c, dealName) {
+  return norm(c.name) === dealName ? c.name : `${dealName}(대장: ${c.name})`;
+}
+
+// 2026.09 저장 키 이전 — 예전 파일은 "대장 단지명"을 키로 저장했다. 이제 서비스가 조회하는
+// "실거래 단지명"을 키로 쓰므로, 기존에 모아둔 타입 데이터를 새 키로 옮겨서 다시 수집하지 않게 한다.
+// (옮길 곳을 못 찾는 옛 키는 지우지 않고 그대로 둔다 — 지워서 얻을 게 없고, 혹시 맞는 키였을 수 있음)
+function migrateLegacyKeys(out, resolved, knownAreas) {
+  const hhNameToDeal = new Map();
+  for (const [dealName, c] of resolved) hhNameToDeal.set(norm(c.name), dealName);
+  for (const legacyKey of Object.keys(out.items)) {
+    // 실거래명 키지만 공백이 들어있는 옛 항목은 공백만 제거해 새 키로 합친다 — 안 그러면 같은 단지가
+    // 두 키로 중복 저장돼서 매번 한쪽을 다시 수집하게 된다.
+    const dealName = knownAreas.has(norm(legacyKey)) ? norm(legacyKey) : hhNameToDeal.get(norm(legacyKey));
+    if (!dealName || dealName === legacyKey) continue;
+    const prev = out.items[dealName] || [];
+    const merged = new Map(prev.map((t) => [Math.round(t.exclusiveArea), t]));
+    for (const t of out.items[legacyKey]) if (!merged.has(Math.round(t.exclusiveArea))) merged.set(Math.round(t.exclusiveArea), t);
+    out.items[dealName] = [...merged.values()];
+    delete out.items[legacyKey];
+  }
+}
+
 async function pool(items, limit, worker) {
   let i = 0;
   async function run() { while (i < items.length) { const idx = i++; await worker(items[idx]); } }
@@ -282,14 +311,19 @@ async function main() {
     // 영구 스킵했음. 그래서 "2/3개 타입 확보" 같은 건 나머지 1개를 영영 못 찾은 채로 고정됐음
     // (사용자 요청으로 변경: 목표 타입을 전부 찾을 때까지 계속 재시도). 단, 이미 다 찾은 것까지 매번
     // 다시 스캔하면 API 호출만 낭비이므로, "목표 개수만큼 다 채웠는지"로만 스킵 여부를 판단한다.
-    const targets = (hh.items || []).filter((c) => {
-      if (!c.kaptAddr || !c.bjdCode) return false; // hhcnt 데이터가 아직 kaptAddr/bjdCode 없는 옛 버전이면 스킵
-      const areas = knownAreas[norm(c.name)];
-      if (!areas || areas.size === 0) return false; // 실거래 데이터에서 이 단지의 전용면적 타입을 못 찾으면(이름 표기 차이 등) 스킵
-      const already = out.items[c.name];
-      if (already && already.length >= areas.size) return false; // 목표 타입 다 찾았으면 스킵(이어서 처리 이 경우에만 해당)
-      return true;
-    });
+    // 2026.09 변경 — 예전엔 "hhcnt 단지명과 실거래 단지명이 글자까지 똑같을 때"만 대상으로 삼아서
+    // 일치율이 23%뿐이었고(헬리오시티·리센츠·파크리오 같은 대형 단지도 통째로 누락), 표기 차이를
+    // 흡수하는 매칭으로 교체했다(shared/name-match.mjs 주석에 패턴 정리). 저장 키는 반드시
+    // "실거래 단지명"이어야 한다 — netlify/functions/analyze.mjs의 hubPyOverride()가 실거래 단지명으로
+    // 이 파일을 조회하기 때문에, 대장 단지명으로 저장하면 수집해놓고도 서비스에서 못 찾는다.
+    const resolved = resolveComplexNames(hh.items, knownAreas);
+    migrateLegacyKeys(out, resolved, knownAreas);
+    const targets = [...resolved.entries()]
+      .map(([dealName, c]) => ({ c, dealName, areas: knownAreas.get(dealName).areas }))
+      .filter(({ dealName, areas }) => {
+        const already = out.items[dealName];
+        return !(already && already.length >= areas.size); // 목표 타입 다 찾았으면 스킵
+      });
 
     // 2026.08: 동시 2~3개로도 대량 연속 처리 시 UND_ERR_CONNECT_TIMEOUT(데이터센터 IP 대역 차단 의심)이
     // 발생 — 1(완전 순차)로 낮추고, 단지 시작 전 대기도 늘림. 처리량보다 "막혀있으면 최대한 빨리 알아채고
@@ -302,12 +336,11 @@ async function main() {
     const CIRCUIT_BREAKER_THRESHOLD = 5;
     let consecutiveNetworkFailures = 0;
     let circuitOpen = false;
-    await pool(batch, 1, async (c) => {
+    await pool(batch, 1, async ({ c, dealName, areas: targetAreas }) => {
       if (circuitOpen) return; // 이미 중단 결정났으면 나머지는 건드리지 않음(그대로 미처리 상태로 남아 다음 실행에 재시도)
       await new Promise((res) => setTimeout(res, 500)); // 단지 시작 전 대기(2026.08 200ms→500ms)
       const bj = parseBunJi(c.kaptAddr);
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
-      const targetAreas = knownAreas[norm(c.name)];
       try {
         // K-apt(getAphusBassInfoV5)의 bjdCode는 "시군구코드(5)+동코드(5)" 합친 10자리 전체 코드로 옴
         // (실전 확인: "2638010100" 같은 형태) — 건축HUB의 bjdongCd 파라미터는 동 코드 5자리만 받아서
@@ -317,11 +350,11 @@ async function main() {
         if (Object.keys(types).length) {
           // 2026.09 — 재시도 시 이전에 이미 찾아둔 타입을 잃어버리지 않도록 병합. 반올림 전용면적을
           // 키로 합쳐서 저장(같은 타입이 다시 나오면 이번 결과로 갱신, 새 타입이면 추가).
-          const prevArr = out.items[c.name] || [];
+          const prevArr = out.items[dealName] || [];
           const merged = new Map(prevArr.map((t) => [Math.round(t.exclusiveArea), t]));
           for (const v of Object.values(types)) merged.set(Math.round(v.exclusiveArea), v);
-          out.items[c.name] = [...merged.values()];
-          console.log(`  ${c.name}: ${out.items[c.name].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
+          out.items[dealName] = [...merged.values()];
+          console.log(`  ${label(c, dealName)}: ${out.items[dealName].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
           if (debug.excludedRows.length) {
             // 2026.09 — 필터로 걸러낸 비주거/부속 행 개수. 몇 건 정도는 정상(관리동 등 실제로 존재)이지만
             // 개수가 비정상적으로 많으면(예: 수백~수천 건) 필터 조건이 뭔가 놓치고 있을 수 있어 같이 남긴다.
@@ -331,7 +364,7 @@ async function main() {
         } else if (debug.rateLimited) {
           // 2026.08 — "데이터가 없음"이 아니라 "재시도를 다 썼는데도 안 됨"인 경우는 명확히 구분해서 로그.
           // out.items에 저장 안 하므로 다음 실행 때 자동으로 재시도됨(영구 실패 아님).
-          console.log(`  ${c.name}: 속도 제한/네트워크 오류로 조회 실패(나중에 자동 재시도됨)${debug.lastError ? ` — ${debug.lastError}` : ""}`);
+          console.log(`  ${label(c, dealName)}: 속도 제한/네트워크 오류로 조회 실패(나중에 자동 재시도됨)${debug.lastError ? ` — ${debug.lastError}` : ""}`);
           consecutiveNetworkFailures++;
           if (consecutiveNetworkFailures >= CIRCUIT_BREAKER_THRESHOLD && !circuitOpen) {
             circuitOpen = true;
@@ -341,12 +374,12 @@ async function main() {
         } else {
           // 진단용(2026.08) — 목표 전용면적(targetAreas)과 실제 스캔 중 마주친 값(seenAreas)을 같이 찍어서
           // "페이지 부족(seenAreas가 targetAreas와 전혀 안 겹침)"인지 "반올림 미스매치(살짝 다른 값들이 보임)"인지 구분
-          const prevCount = (out.items[c.name] || []).length; // 2026.09 — 재시도 대상이라 이전에 이미 일부 찾아뒀을 수 있음
-          console.log(`  ${c.name}: 못 찾음(${prevCount}/${targetAreas.size}${prevCount ? ", 이번엔 신규 0" : ""}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
+          const prevCount = (out.items[dealName] || []).length; // 2026.09 — 재시도 대상이라 이전에 이미 일부 찾아뒀을 수 있음
+          console.log(`  ${label(c, dealName)}: 못 찾음(${prevCount}/${targetAreas.size}${prevCount ? ", 이번엔 신규 0" : ""}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
           consecutiveNetworkFailures = 0; // 이건 진짜 응답을 받은 케이스라 네트워크 실패가 아님 — 리셋
         }
       } catch (e) {
-        console.error(`  ${c.name}: 조회 실패 -`, e.message);
+        console.error(`  ${label(c, dealName)}: 조회 실패 -`, e.message);
       }
       processed++;
       if (processed % COMMIT_EVERY === 0) {
@@ -361,8 +394,8 @@ async function main() {
     // 2026.09 — "누적 확보"에 부분 성공(N/M, N<M)도 포함되게 바뀌어서(재시도 대상으로 남겨두려고),
     // 완전 확보와 부분 확보를 나눠서 보여준다 — 안 그러면 "누적 X개"가 다 끝난 것처럼 오해될 수 있음.
     const fullyDone = Object.entries(out.items).filter(([name, arr]) => {
-      const areas = knownAreas[norm(name)];
-      return areas && arr.length >= areas.size;
+      const e = knownAreas.get(norm(name));
+      return e && arr.length >= e.areas.size;
     }).length;
     const totalSaved = Object.keys(out.items).length;
     console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개, 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
