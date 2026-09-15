@@ -2969,13 +2969,13 @@ function hdTop(badgeLabel, subscriberOnly){
     <span class="hd-badge${subscriberOnly?' subscriber':''}">${esc(badgeLabel)}</span>
   </div>`;
 }
-// 랭킹 리스트가 캡처되어 외부에 그대로 공유되는 일이 많아, 2·7·12·17...위 사이에
+// 랭킹 리스트가 캡처되어 외부에 그대로 공유되는 일이 많아, 5·10·15...위 다음에
 // 출처 워터마크를 끼워넣는다(마지막 항목 뒤에는 넣지 않음).
 function rkWatermarkHTML(){
   return `<div class="rk-wm"><svg width="10" height="10" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>아파트썸 · aptsum.kr</div>`;
 }
 function rkSep(i, len){
-  return ((i+1)%5===2 && i<len-1) ? rkWatermarkHTML() : '';
+  return ((i+1)%5===0 && i<len-1) ? rkWatermarkHTML() : '';
 }
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
