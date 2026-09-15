@@ -212,6 +212,7 @@
      공정거래위원회 추천·보증 심사지침상 경제적 이해관계 고지 문구(coupangDisclosure)를 배너와 항상 함께 붙인다 —
      배너만 따로 떼어내 쓰면 안 됨(couponBannerHTML() 하나로만 만들어서 실수로 누락되는 걸 방지). */
   .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .coupang-ad-title{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:2px}
   .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
   .coupang-ad-item{width:104px;height:208px;overflow:hidden;border-radius:8px;flex:none}
   .coupang-ad-item iframe{width:120px;height:240px;border:none;transform:scale(.8667);transform-origin:top left}
@@ -1931,6 +1932,7 @@ function buildAgeLabel(build){
 // 고지 문구가 같이 누락되는 일이 없게 한다.
 function couponBannerHTML(){
   return `<div class="coupang-ad">
+    <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
     <div class="coupang-ad-row">
       <div class="coupang-ad-item">
         <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
