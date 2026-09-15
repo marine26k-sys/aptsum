@@ -748,3 +748,8 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 
 - **요청**: 구독 전용이었던 이 네 탭을 전부 삭제해 달라는 요청.
 - **삭제**: `analyzeBoxRange()`/`analyzeBoxBreak()`/`analyzeTurnover()`/`analyzeSurge()`(분석)와 `renderBoxRange()`/`renderBoxBreak()`/`renderTurnover()`/`renderSurge()`(렌더) 8개 함수를 통째로 제거. 탭 버튼(`tabBox`/`tabBBU`/`tabTO`/`tabSG`)과 5탭 노출 목록(`subTabs`)에서도 제거. `search()`의 두 조회 경로(복수 지역·단일 지역)에서 4개 모드 분기를 없애고, `newhigh`/`newlow`/`pyprice`/`longtermrise`가 공유하던 필터 분기에서 `boxrange`/`boxbreak`만 빠짐(신고가·신저가·평단가·매매 변동률은 그대로 유지). 손바뀜(회전율) 전용 세대수 후처리 블록(`d.mode==='turnover'` hhcnt 배치 조회·필터링)도 함께 제거. URL_MODES·multiModes·regionSelMax 등 모드 이름이 나열되던 모든 OR 체인, 그리고 `neededMN`/`effMN` 계산식의 해당 분기(각각 12·6·6·6개월 고정값)도 정리.
+
+## 단지 분석 탭 헤더에 "지하철 도보" 문구 다시 추가 (2026.09)
+
+- **배경**: 이전에 역세권 탭 목록·단지 분석 탭 헤더 양쪽에서 "지하철 도보"라는 앞말을 빼고 시간 값("10분이내")만 남겼는데(중복이라는 지적), 단지 분석 탭은 역세권 탭 목록과 나란히 붙어 있는 화면이 아니라 독립된 화면이라 "10분이내"만 덩그러니 나오면 무엇을 뜻하는 값인지 맥락이 없다는 지적으로 이 탭에서만 다시 붙여달라는 요청.
+- **구현**: `subwayMetaHTML(hh)`(단지 분석 탭 헤더 `complexMetaHTML`에서만 쓰임, 역세권 탭 목록 행과는 별개 함수)의 반환값 앞에 "지하철 도보"를 다시 붙임 — 역세권 탭 목록(`renderSubway`)은 그대로 시간 값만 표시.
