@@ -1029,6 +1029,13 @@ function restoreView(vi){
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 window.addEventListener('popstate', e=>{
+  if(document.getElementById('rgPanel').classList.contains('on')){
+    // 지역 선택 패널이 열린 상태에서의 popstate는 패널을 닫기 위한 것(직접 닫든, 뒤로가기로 닫든) —
+    // 결과 화면 복원 로직은 타지 않고 패널만 닫는다.
+    hideRegionPickerUI();
+    regionPickerPushed = false;
+    return;
+  }
   const vi = e.state && typeof e.state.vi==='number' ? e.state.vi : -1;
   restoreView(vi);
 });
@@ -1236,18 +1243,32 @@ function pickRegion(v){
   syncRegionPickBtn();
   closeRegionPicker();
 }
+// 지역 선택 패널이 열려있는 동안 뒤로가기(브라우저/제스처)를 누르면 history에 이 패널용 항목이 없어서
+// 페이지 자체를 벗어나(웹뷰가 닫히거나 화면이 꺼진 것처럼 보임) 버리던 문제(2026.09 제보) — 패널을 열 때
+// history 항목을 하나 쌓아두고, 뒤로가기로 그 항목이 소비되면 패널만 닫도록 처리.
+let regionPickerPushed = false;
 function openRegionPicker(rowSelectEl){
   cmpPickerRow = rowSelectEl || null; // 단지 비교 탭 행 버튼에서 호출되면 그 행의 select를 넘겨받음
   document.getElementById('rgSearch').value = '';
   buildRegionPicker();
   document.getElementById('rgDim').classList.add('on');
   document.getElementById('rgPanel').classList.add('on');
+  try{ history.pushState({modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
 }
-function closeRegionPicker(){
+function hideRegionPickerUI(){
   document.getElementById('rgDim').classList.remove('on');
   document.getElementById('rgPanel').classList.remove('on');
   syncRegionPickBtn();
   cmpPickerRow = null; // 다음에 singleRow의 "지역 선택"을 열 때 cmp 모드로 잘못 남아있지 않도록 항상 리셋
+}
+function closeRegionPicker(){
+  // 완료 버튼·딤드·지역 선택 등 UI로 닫을 때는 openRegionPicker에서 쌓아둔 history 항목을 되돌려
+  // popstate 핸들러가 hideRegionPickerUI()를 호출하게 한다(뒤로가기로 닫을 때와 경로를 통일).
+  if(regionPickerPushed){
+    regionPickerPushed = false;
+    try{ history.back(); return; }catch(e){}
+  }
+  hideRegionPickerUI();
 }
 
 sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
