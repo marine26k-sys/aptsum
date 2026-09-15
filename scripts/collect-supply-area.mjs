@@ -68,6 +68,12 @@ function commitProgress(message, allowEmpty = false) {
 // 긁고, 잘못된 평형이 서비스에 그대로 나간다. 저장을 안 하면 다음 실행 때 자동으로 재시도된다.
 const MAX_EXCLUSIVE_RATIO = 0.85;
 
+// 전유+공용이 "온전히 모였는지" 판정 — 전용률이 상한 이내면 그 세대의 공용 행을 다 읽은 것으로 본다.
+function isPlausibleSupply(exclu, pubuse) {
+  const supply = exclu + pubuse;
+  return supply > 0 && exclu / supply <= MAX_EXCLUSIVE_RATIO;
+}
+
 const AREA_URL = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo";
 
 function xtag(b, name) {
@@ -247,9 +253,14 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       }
       const rounded = Math.round(u.exclu);
       if (rounded > 0) seenAreas.add(rounded);
-      if (targetAreas.has(rounded)) foundTypes.add(rounded);
+      // 2026.09 수정 — 예전엔 "목표 전용면적을 만나면 확보"로 보고 바로 조기 종료했는데, 같은 세대의
+      // 공용 행이 뒤쪽 페이지에 있으면 그걸 못 읽은 채로 끝나버렸다. 그렇게 나온 공급면적은 실제보다
+      // 작고(전용률 85% 초과), 스캔이 결정적이라 다시 돌려도 같은 지점에서 같은 결과가 나와 영원히
+      // 복구되지 않는다(전체 타입의 23.4%가 이 상태였음). 그래서 "공용까지 그럴듯하게 모였을 때"만
+      // 확보로 친다 — 못 채우면 조기 종료 없이 MAX_PAGES까지 더 훑는다(호출은 늘지만 그래야 복구됨).
+      if (targetAreas.has(rounded) && isPlausibleSupply(u.exclu, u.pubuse)) foundTypes.add(rounded);
     }
-    if (foundTypes.size >= targetAreas.size) break; // 목표 타입 다 찾았으면 조기 종료(API 호출 절약)
+    if (foundTypes.size >= targetAreas.size) break; // 목표 타입을 (공용까지 온전히) 다 찾았으면 조기 종료
     if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 1000)); // 페이스 훨씬 보수적으로(2026.08 150ms→1000ms — 공격적인 요청 패턴이 IP 차단을 유발했을 가능성)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
@@ -257,8 +268,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   for (const u of Object.values(units)) {
     const rounded = Math.round(u.exclu);
     if (!targetAreas.has(rounded) || result[rounded]) continue;
-    const supply = u.exclu + u.pubuse;
-    if (!(supply > 0) || u.exclu / supply > MAX_EXCLUSIVE_RATIO) continue; // 공용을 다 못 잡음 → 저장 안 함(다음 실행에 재시도)
+    if (!isPlausibleSupply(u.exclu, u.pubuse)) continue; // 공용을 다 못 잡음 → 저장 안 함(같은 타입의 다른 세대나 다음 실행에서 재시도)
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round(supply * 100) / 100 };
   }
   return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
