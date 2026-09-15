@@ -281,6 +281,7 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
     const rounded = Math.round(u.exclu);
     if (!targetAreas.has(rounded) || result[rounded]) continue;
     if (!isPlausibleSupply(u.exclu, u.pubuse)) continue; // 공용을 다 못 잡음 → 저장 안 함(같은 타입의 다른 세대나 다음 실행에서 재시도)
+    const supply = u.exclu + u.pubuse;
     result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round(supply * 100) / 100 };
   }
   return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
