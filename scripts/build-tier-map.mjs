@@ -20,8 +20,10 @@
 // API는 전용면적만 주기 때문에, pyprice 탭은 정밀도를 위해 일부러 보간 없이 "전용면적÷3.3058"로
 // 계산한다(화면에도 "전용면적 평단가"라고 명시). 반면 이 대시보드는 애초에 정밀 분석이 아니라 근사
 // 등급 표시가 목적이라, 사람들이 흔히 말하는 "평당가"(공급면적 기준) 감각에 맞추는 걸 우선시했음.
-// 정밀 계산 대신 collect-trades.mjs가 각 거래에 이미 붙여둔 t.py(공급면적 관행 기준 평형 라벨 —
-// shared/rtms-parse.mjs의 areaToPy(), data/supply-area 실측치로 보정된 보간표)를 그대로 재사용한다.
+// 평형 라벨은 collect-trades.mjs가 각 거래에 붙여둔 t.py(shared/rtms-parse.mjs의 areaToPy() 보간표)를
+// 기본으로 쓰되, data/supply-area에 그 단지·타입의 실측 공급면적이 있으면 그 값으로 다시 계산한다
+// (2026.09 추가 — 아래 hubPyOf(). 그 전까지는 보간표만 써서, 같은 거래인데도 메인 앱의 hubPyOverride()와
+// 급지 대시보드가 서로 다른 평형을 쓰는 상태였음).
 //
 // 사용법: node scripts/build-tier-map.mjs [--months=24]
 
@@ -44,6 +46,32 @@ const GRADES = [
 function gradeOf(manwonPerPy) {
   for (const g of GRADES) if (manwonPerPy >= g.min) return g.g;
   return GRADES[GRADES.length - 1].g;
+}
+
+// 2026.09 — 단지별 실측 공급면적 보정(data/supply-area). 여기 오기 전까지 t.py는 collect-trades.mjs가
+// areaToPy() 보간표로만 계산한 값이라, 같은 실거래라도 메인 앱(netlify/functions/analyze.mjs의
+// hubPyOverride())보다 급지 대시보드가 덜 정확했다. 판정 로직·±3평 가드는 analyze.mjs와 완전히 동일하게
+// 맞춘다 — 두 곳이 서로 다른 평형을 쓰면 "단지 분석에선 34평인데 급지에선 33평"처럼 어긋나 보이므로.
+const SQM_PER_PY = 3.3058;
+const normName = (s) => String(s || "").replace(/\s/g, "");
+async function loadSupplyAreaMap(lawd) {
+  try {
+    const j = JSON.parse(await readFile(path.join("data/supply-area", `${lawd}.json`), "utf-8"));
+    const map = new Map();
+    for (const [name, types] of Object.entries(j.items || {})) map.set(normName(name), types);
+    return map;
+  } catch { return null; } // 파일 없음(아직 배치 안 돈 지역)/파싱 실패는 정상 — 보간값으로 폴백
+}
+function hubPyOf(supplyMap, apt, area, fallbackPy) {
+  if (!supplyMap || !(area > 0)) return fallbackPy;
+  const types = supplyMap.get(normName(apt));
+  if (!Array.isArray(types)) return fallbackPy;
+  const match = types.find((ty) => Math.round(ty.exclusiveArea) === Math.round(area));
+  if (!match || !Number.isFinite(match.supplyArea)) return fallbackPy;
+  const hubPy = Math.round(match.supplyArea / SQM_PER_PY);
+  // 실측이 관행 평형과 3평 넘게 벌어지면(주상복합 등) 신뢰하지 않고 보간값 유지 — analyze.mjs와 동일.
+  if (Math.abs(hubPy - fallbackPy) > 3) return fallbackPy;
+  return hubPy;
 }
 
 const LAWD_TO_REGION = new Map(ALL_REGIONS.map(([name, code]) => [code, name]));
@@ -105,6 +133,7 @@ async function main() {
     if (!region) continue; // 분구 코드 등 REGIONS에 없는 폴더는 스킵(현재 배치 구조상 안 생기지만 방어)
     const province = provinceOf(region, lawd);
     if (!ALLOWED_PROVINCES.has(province)) continue; // 인천 등 대상 외 지역 폴더는 통째로 스킵
+    const supplyMap = await loadSupplyAreaMap(lawd); // 지역당 한 번만 읽어서 아래 거래 루프에서 재사용
 
     for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
       let ymFiles;
@@ -119,11 +148,12 @@ async function main() {
         for (const t of j.items || []) {
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
+          const py = hubPyOf(supplyMap, t.apt, t.area, t.py); // 실측 공급면적이 있으면 그 값으로 평형 재계산
           totalTx++;
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
-          const pk = `${ck}|${t.py}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
+          const pk = `${ck}|${py}`;
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
           g.count++;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
           if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "2년 내 최고가"와 그 거래의 전용면적(㎡)
