@@ -66,6 +66,11 @@
   .disclaimer a{color:var(--teal-dark)}
 
   .loading,.empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+  .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+  .coupang-ad-item{width:104px;height:208px;overflow:hidden;border-radius:8px;flex:none}
+  .coupang-ad-item iframe{width:120px;height:240px;border:none;transform:scale(.8667);transform-origin:top left}
+  .coupang-disclosure{font-size:12.5px;font-weight:800;color:#333;text-align:center;max-width:280px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -87,6 +92,24 @@ function buildAgeLabel(build){
   if(!by) return '';
   const age = new Date().getFullYear() - by + 1;
   return age < 1 ? `${by}년 준공` : `${age}년차`;
+}
+// 쿠팡 파트너스 배너 — index.html의 couponBannerHTML()과 동일. 공정거래위원회 추천·보증 심사지침에 따라
+// 광고 배너와 고지문을 하나의 블록으로 묶어, 고지문 없이 배너만 노출되는 일이 없게 한다.
+function couponBannerHTML(){
+  return `<div class="coupang-ad">
+    <div class="coupang-ad-row">
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+    </div>
+    <p class="coupang-disclosure">이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+  </div>`;
 }
 
 const $ = (sel, el=document) => el.querySelector(sel);
@@ -228,6 +251,7 @@ function regionPanelHTML(st, lineId){
           <div class="region-item-price">${(c.ppy/10000).toFixed(2)}억<span>/평</span></div>
         </div>
       `).join("")}
+      ${couponBannerHTML()}
     </div>
   `;
 }
@@ -267,6 +291,8 @@ function render(){
     </div>
 
     ${shown.map(lineHTML).join("")}
+
+    ${couponBannerHTML()}
 
     <div class="disclaimer">
       ${esc(DATA.meta.source)}<br>

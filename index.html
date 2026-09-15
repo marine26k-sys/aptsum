@@ -55,15 +55,15 @@
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
-  .search-box{display:grid;gap:8px;margin-bottom:8px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
+  .search-box{display:grid;gap:7px;margin-bottom:8px;background:#fff;border-radius:13px;padding:11px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
-  .row2{display:flex;gap:8px}
-  select,input.q{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;background:#fff}
-  #optRow select{font-size:13px;padding:11px 6px 11px 10px}
+  .row2{display:flex;gap:7px}
+  select,input.q{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;font-family:inherit;background:#fff}
+  #optRow select{font-size:13px;padding:9px 6px 9px 9px}
   select:focus,input.q:focus{outline:none;border-color:var(--teal)}
   select{flex:0 0 138px;width:100%}
   input.q{flex:1;min-width:0}
-  .go{background:var(--teal);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+  .go{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer}
   .go:disabled{background:#93C9CC}
 
   .loading{display:none;text-align:center;padding:40px 0}
@@ -178,11 +178,11 @@
   .rk .val small{display:block;font-weight:400;color:var(--sub);font-size:10px;line-height:1.3}
   .rk .nm .clickable{cursor:pointer;border-bottom:1px dotted var(--sub)}
 
-  .cmp-row{display:flex;gap:8px;margin-bottom:8px}
+  .cmp-row{display:flex;gap:7px;margin-bottom:7px}
   .cmp-row select{flex:0 0 128px}
-  .cmp-row input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit}
+  .cmp-row input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;font-family:inherit}
   .cmp-row input:focus{outline:none;border-color:var(--teal)}
-  .cmp-row .rm{flex:none;width:40px;border:none;background:var(--slate-bg);border-radius:12px;color:var(--sub);font-size:16px;cursor:pointer}
+  .cmp-row .rm{flex:none;width:36px;border:none;background:var(--slate-bg);border-radius:10px;color:var(--sub);font-size:15px;cursor:pointer}
   .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}
   .legend span{font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
   .legend i{width:14px;height:3.5px;border-radius:2px;display:inline-block}
@@ -208,6 +208,14 @@
   .mpop-hd button{border:none;background:var(--slate-bg);border-radius:8px;width:28px;height:28px;font-size:15px;color:var(--sub);cursor:pointer}
   .mpop-note{font-size:10px;color:var(--sub);margin-top:6px;text-align:right}
   .src-note{font-size:10px;color:var(--sub);text-align:center;padding:4px 0 20px;line-height:1.6}
+  /* 쿠팡 파트너스 배너(2026.09, 수민 요청) — 검색 결과 카드 안, 맨 아래(.src-note 바로 위)에 삽입.
+     공정거래위원회 추천·보증 심사지침상 경제적 이해관계 고지 문구(coupangDisclosure)를 배너와 항상 함께 붙인다 —
+     배너만 따로 떼어내 쓰면 안 됨(couponBannerHTML() 하나로만 만들어서 실수로 누락되는 걸 방지). */
+  .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+  .coupang-ad-item{width:104px;height:208px;overflow:hidden;border-radius:8px;flex:none}
+  .coupang-ad-item iframe{width:120px;height:240px;border:none;transform:scale(.8667);transform-origin:top left}
+  .coupang-disclosure{font-size:12.5px;font-weight:800;color:#333;text-align:center;max-width:280px;line-height:1.45}
 
   .fbar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .fbar-lb{flex:0 0 64px;display:flex;flex-direction:column;gap:1px}
@@ -224,8 +232,8 @@
   /* 커스텀 지역 선택 — 네이티브 select 드롭다운은 행 높이를 OS가 그려서 CSS로 못 줄이므로 직접 그린다 */
   #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
   .rgpick{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;
-    background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;
-    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;
+    font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
   .rgpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rgpick b{flex:0 0 auto;font-size:10px;color:var(--sub)}
   .pybm-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(15,43,61,.14);z-index:50;padding:6px;max-height:260px;overflow-y:auto}
@@ -549,6 +557,8 @@
   <div class="chips" id="favRegions" style="margin:2px 0 6px"></div>
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
+
+  <div id="staticAdArea"></div>
 
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
   <div class="error" id="error"></div>
@@ -1893,6 +1903,27 @@ function buildAgeLabel(build){
   const age = new Date().getFullYear() - by + 1; // 준공한 해가 1년차
   return age < 1 ? `${by}년 준공` : `${age}년차`;
 }
+// 쿠팡 파트너스 배너(2026.09, 수민 요청) — 모든 검색 결과 카드 하단에 공통으로 삽입.
+// "이 포스팅은..." 문구는 쿠팡 파트너스 활동 안내에 있는 고지 문구를 배너 성격에 맞게 다듬은 것 —
+// 공정거래위원회 추천·보증 심사지침이 요구하는 건 경제적 이해관계(수수료 수취)를 밝히는 것이라
+// "포스팅"을 "배너"로만 바꿨다. 이 함수 하나로만 배너를 만들어서, 나중에 코드 링크가 바뀌어도
+// 고지 문구가 같이 누락되는 일이 없게 한다.
+function couponBannerHTML(){
+  return `<div class="coupang-ad">
+    <div class="coupang-ad-row">
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+    </div>
+    <p class="coupang-disclosure">이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+  </div>`;
+}
 function buildYearLabel(){
   const v = document.getElementById('buildYear').value;
   if(!v) return null;
@@ -3034,6 +3065,7 @@ renderFavs();
 renderFavRegions();
 updateRegionFavBtn();
 refreshFavBadges();
+document.getElementById('staticAdArea').innerHTML = couponBannerHTML(); // 검색 전 첫 화면에도 배너 노출(수민 요청)
 // setTimeout(0)으로 한 틱 미룸 — initFromURL()이 파일 이 지점보다 아래에서 선언되는 let/const를 참조하는
 // 경로를 타면, 스크립트가 아직 그 아래까지 실행되지 않아 TDZ(ReferenceError: Cannot access ... before
 // initialization)가 났던 버그 수정(예전엔 급지 지도가 index.html 안에 탭으로 통합돼 있어 tierData 등
@@ -3257,6 +3289,7 @@ function renderSubway(d){
     <div class="sec">
       ${rows}
     </div>
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형(55~65·80~95㎡) 우선, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4279,6 +4312,7 @@ function renderComplex(d){
     </div>
 
     <div id="complexDynamic">${complexDynamicHTML()}</div>
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4442,6 +4476,7 @@ function renderCompare(d){
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable"></div>
     </div>
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4470,6 +4505,7 @@ function renderRegion(d){
         <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4495,6 +4531,7 @@ function renderVolume(d){
         <span class="val">${x.n}건</span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4523,6 +4560,7 @@ function renderGap(d){
       <h3>전세가율 상위 (매매·전세 각 2건 이상 표본)</h3>
       ${rows}
     </div>
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가(조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4556,6 +4594,7 @@ function renderNewHigh(d){
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4585,6 +4624,7 @@ function renderNewLow(d){
         <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억 →</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~25% 하락 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4613,6 +4653,7 @@ function renderBoxRange(d){
         <span class="val">${x.center.toFixed(1)}억<small><span style="color:var(--sub)">${x.minAmt.toFixed(1)}~${x.maxAmt.toFixed(1)}억</span> · <b style="color:var(--teal-dark)">±${x.spreadPct}%</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 ${d.years} 평균가 ±${d.boxPct}% 이내 거래만 "박스권"으로 집계 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4643,6 +4684,7 @@ function renderBoxBreak(d){
         <span class="val ${x.direction==='up'?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">이전 박스 ${x.priorCenter.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">${x.direction==='up'?'▲':'▼'}${Math.abs(x.changePct)}%</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 6개월 박스(평균 ±${d.boxPct}%) 대비 가장 최근 거래 이탈 기준 · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4672,6 +4714,7 @@ function renderPricePerPyeong(d){
         <span class="val" style="color:var(--teal-dark)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 전용면적 기준(공급면적 아님)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4730,6 +4773,7 @@ function renderUpDown(d){
       ${rows(d.down, fmtRow)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교(각 2건 이상 표본 필요) · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4757,6 +4801,7 @@ function renderTurnover(d){
         <span class="val">${x.turnoverPct}%<small>${x.n}건 · ${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">최근 1년 거래건수÷세대수(K-apt) · 100세대 이상·표본 3건 이상만 집계 · 직거래 제외 · 출처: 국토교통부·K-apt (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4790,6 +4835,7 @@ function renderJeonseUpDown(d){
       ${rows(d.down, fmtRow)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">이전 2개월 평균 전세가 vs 최근 2개월 평균 전세가 비교(각 2건 이상 표본 필요) · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외) · 전세가 급락은 역전세 위험 신호로 참고</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4819,6 +4865,7 @@ function renderLongTermRise(d){
         <span class="val ${x.changeAmt>=0?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억(${Math.abs(x.changePct)}%)</b></small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계(분양권·입주권 제외) · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4847,6 +4894,7 @@ function renderSurge(d){
         <span class="val up">${x.recentAmt.toFixed(1)}억<small>${x.p3n}건→<b style="color:var(--teal-dark)">${x.r3n}건</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">최근 3개월 거래건수÷이전 3개월 거래건수 기준(2배 이상, 최근 6건 이상) · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4903,6 +4951,7 @@ function renderInversion(d){
       ${rows}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">전용면적 기준 평단가(전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4931,6 +4980,7 @@ function renderGapTrend(d){
         <span class="val ${x.direction==='up'?'up':'down'}">${x.direction==='up'?'▲':'▼'}${Math.abs(x.pctChange)}%p<small>${x.priorPct}%→${x.recentPct}%</small></span>`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">전세가율 = 전세보증금÷매매가 × 100(%) · 이전 4개월 vs 최근 4개월 비교 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -4954,6 +5004,7 @@ function renderShortUndervalue(d){
       ${divergenceHTML(d.divergence)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -5002,6 +5053,7 @@ function renderPeak(d){
       ${peakDivergenceHTML(d.divergence)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -5025,6 +5077,7 @@ function renderLongPeak(d){
       ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
     </div>
 
+    ${couponBannerHTML()}
   </div>
   <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교(각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
