@@ -1154,13 +1154,20 @@ function renderRegionChips(){
   const box = document.getElementById('regionChips');
   if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise')){ box.style.display='none'; return; }
   box.style.display = '';
+  // "신고가 (일주일)" 탭 전용 — 경기는 원래 39개 시군구라 시·도 전체 일괄 추가를 안 주는데(위 REGIONS
+  // 주석 참고), 이 탭만 예외로 "경기 전체" 버튼을 따로 둔다(수민 요청, 2026.09). addRegion('ALL:경기')는
+  // 기존 로직 그대로 재사용 — regionSelMax()(25개) 넘는 분은 자동으로 경고와 함께 잘림.
+  const gyeonggiAllBtn = (mode==='newhigh' && newHighWeekOnly)
+    ? `<span onclick="addRegion('ALL:경기')" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal-dark);background:var(--teal-light-soft);border:1px solid var(--teal-soft);border-radius:999px;padding:3px 9px">+ 경기 전체</span>`
+    : '';
   if(!regionSel.length){
-    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
+    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>${gyeonggiAllBtn ? `<div style="padding:4px 2px 0">${gyeonggiAllBtn}</div>` : ''}`;
     return;
   }
   box.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:2px 0">
       ${groupRegionChips(regionSel).map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick='${x.city ? `removeRegionGroup(${JSON.stringify(x.lawds)})` : `removeRegion(${JSON.stringify(x.lawd)})`}' style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
+      ${gyeonggiAllBtn}
       <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
     </div>
     <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
@@ -4624,9 +4631,9 @@ function renderNewHigh(d){
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
-      ${hint('매매·분양권·입주권 모두 포함', '표본 3건 이상만 집계 · <span class="nh">N</span> = 최근 7일 이내 계약')}
+      ${hint('매매·분양권·입주권 모두 포함', weekOnly ? '표본 3건 이상만 집계' : '표본 3건 이상만 집계 · <span class="nh">N</span> = 최근 7일 이내 계약')}
       ${rows(list, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.fresh7?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${(!weekOnly && x.fresh7)?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
