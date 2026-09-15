@@ -62,6 +62,12 @@ function commitProgress(message, allowEmpty = false) {
   }
 }
 
+// 2026.09 — 전용률(전용면적÷공급면적) 상한. 아파트는 계단·복도·엘리베이터 같은 주거공용이 반드시
+// 있어서 전용률이 85%를 넘을 수 없다. 그보다 높게 나온 건 이 스캔이 그 세대의 공용 행을 다 못 잡은
+// 것이므로(=수집 실패) 저장하지 않는다 — 저장해버리면 "이 타입은 확보됨"으로 간주돼 영영 다시 안
+// 긁고, 잘못된 평형이 서비스에 그대로 나간다. 저장을 안 하면 다음 실행 때 자동으로 재시도된다.
+const MAX_EXCLUSIVE_RATIO = 0.85;
+
 const AREA_URL = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo";
 
 function xtag(b, name) {
@@ -251,9 +257,27 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
   for (const u of Object.values(units)) {
     const rounded = Math.round(u.exclu);
     if (!targetAreas.has(rounded) || result[rounded]) continue;
-    result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round((u.exclu + u.pubuse) * 100) / 100 };
+    const supply = u.exclu + u.pubuse;
+    if (!(supply > 0) || u.exclu / supply > MAX_EXCLUSIVE_RATIO) continue; // 공용을 다 못 잡음 → 저장 안 함(다음 실행에 재시도)
+    result[rounded] = { exclusiveArea: Math.round(u.exclu * 100) / 100, supplyArea: Math.round(supply * 100) / 100 };
   }
   return { types: result, debug: { pagesScanned, seenAreas: [...seenAreas].sort((a,b)=>a-b), rateLimited, lastError, excludedRows } }; // debug는 2026.08 진단용(못 찾았을 때만 출력)
+}
+
+// 2026.09 — 이미 저장돼 있는 "전용률 85% 초과" 타입을 걷어낸다. 이걸 안 하면 두 가지가 동시에 막힌다:
+// (1) 잘못된 평형이 계속 서비스에 나가고, (2) targets 필터가 "타입 수를 다 채웠다"고 보고 그 단지를
+// 영영 다시 안 긁어서 스스로 복구되지 않는다. 지우면 다음 실행에 정상적으로 재수집 대상이 된다.
+function dropBrokenTypes(out) {
+  let dropped = 0;
+  for (const [name, types] of Object.entries(out.items)) {
+    if (!Array.isArray(types)) continue;
+    const kept = types.filter((t) => Number.isFinite(t.supplyArea) && t.supplyArea > 0 && t.exclusiveArea / t.supplyArea <= MAX_EXCLUSIVE_RATIO);
+    if (kept.length === types.length) continue;
+    dropped += types.length - kept.length;
+    if (kept.length) out.items[name] = kept;
+    else delete out.items[name];
+  }
+  return dropped;
 }
 
 // 로그용 — 실거래명과 대장명이 다르면 둘 다 보여줘서 매칭이 맞는지 눈으로 확인할 수 있게 한다.
@@ -318,6 +342,8 @@ async function main() {
     // 이 파일을 조회하기 때문에, 대장 단지명으로 저장하면 수집해놓고도 서비스에서 못 찾는다.
     const resolved = resolveComplexNames(hh.items, knownAreas);
     migrateLegacyKeys(out, resolved, knownAreas);
+    const droppedBroken = dropBrokenTypes(out);
+    if (droppedBroken) console.log(`[supply-area] ${lawd}: 공용면적이 덜 잡힌 타입 ${droppedBroken}개 제거(재수집 대상으로 되돌림)`);
     const targets = [...resolved.entries()]
       .map(([dealName, c]) => ({ c, dealName, areas: knownAreas.get(dealName).areas }))
       .filter(({ dealName, areas }) => {
