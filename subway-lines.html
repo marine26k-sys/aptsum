@@ -79,6 +79,16 @@
 </div>
 
 <script>
+// 준공연도 → 연식 표기(2026.09) — index.html의 buildAgeLabel()과 동일 규칙.
+// 년차는 준공한 해를 1년차로 세는 1-based 표기(2026년 준공 = 1년차, 2002년 준공 = 25년차).
+// 아직 준공 전(미래 연도)은 년차로 셀 수 없으므로 "2027년 준공"처럼 연도를 그대로 보여준다.
+function buildAgeLabel(build){
+  const by = parseInt(build, 10);
+  if(!by) return '';
+  const age = new Date().getFullYear() - by + 1;
+  return age < 1 ? `${by}년 준공` : `${age}년차`;
+}
+
 const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -213,7 +223,7 @@ function regionPanelHTML(st, lineId){
         <div class="region-item">
           <div class="region-item-main">
             <div class="region-item-name">${esc(c.nm)}</div>
-            <div class="region-item-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}</div>
+            <div class="region-item-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}</div>
           </div>
           <div class="region-item-price">${(c.ppy/10000).toFixed(2)}억<span>/평</span></div>
         </div>
