@@ -1112,7 +1112,13 @@ let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
-function regionSelMax(){ return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') ? REGION_MAX_RANK : REGION_MAX; } // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(수민 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
+function regionSelMax(){
+  // "신고가 (일주일)" 탭의 "경기 전체" 버튼(39개 시군구)이 25개에서 잘리지 않게, 이 탭만 예외로
+  // 상한을 REGION_MAX(45)까지 풀어준다(수민 요청, 2026.09) — 다른 지역 랭킹·저평가 탭들은 계산 부하
+  // 때문에 25개로 묶여있던 걸 그대로 유지.
+  if(mode==='newhigh' && newHighWeekOnly) return REGION_MAX;
+  return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='boxrange'||mode==='boxbreak'||mode==='surge'||mode==='inversion'||mode==='turnover'||mode==='jeonseupdown'||mode==='gaptrend'||mode==='longtermrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(수민 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
+}
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
   try{
