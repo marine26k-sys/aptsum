@@ -694,3 +694,4 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 
 - **요청**: 광고 배너 위에 "아파트썸 추천 부동산 서적"이라는 문구를 추가해달라는 요청 — 배너가 단순 광고가 아니라 아파트썸이 고른 추천 도서라는 느낌을 주기 위함.
 - **구현**: `couponBannerHTML()`(3개 파일 공통)에 `.coupang-ad-title`을 배너 행(`.coupang-ad-row`) 바로 위에 추가. 법정 고지문(`.coupang-disclosure`)은 계속 배너 아래에 그대로 유지 — 타이틀 추가가 쿠팡 파트너스 고지 의무를 대체하지 않도록 별개로 둠.
+- **테두리 스타일**: "관심 단지 요약 보기" 버튼(`#favDashBtn` — 청록 점선 테두리 + 연한 청록 배경)과 같은 느낌으로 맞춰달라는 요청 — `.coupang-ad`를 기존 `border-top:1px dashed`(위쪽만 얇은 구분선)에서 전체 박스형(`border:1.5px dashed var(--teal)`, `background:var(--teal-light-soft)`, `border-radius:12px`)으로 변경.
