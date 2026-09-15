@@ -105,6 +105,16 @@
 </div>
 
 <script>
+// 준공연도 → 연식 표기(2026.09) — index.html의 buildAgeLabel()과 동일 규칙.
+// 년차는 준공한 해를 1년차로 세는 1-based 표기(2026년 준공 = 1년차, 2002년 준공 = 25년차).
+// 아직 준공 전(미래 연도)은 년차로 셀 수 없으므로 "2027년 준공"처럼 연도를 그대로 보여준다.
+function buildAgeLabel(build){
+  const by = parseInt(build, 10);
+  if(!by) return '';
+  const age = new Date().getFullYear() - by + 1;
+  return age < 1 ? `${by}년 준공` : `${age}년차`;
+}
+
 const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억";
@@ -169,7 +179,7 @@ function renderList(){
           <div class="tier-row-no">${i+1}</div>
           <div class="tier-row-main">
             <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
-            <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${c.by}년`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
+            <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div></div>
         </div>
