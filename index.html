@@ -1881,6 +1881,16 @@ function applyBuildYearFilter(items){
     return v==='20+' ? age>20 : age<=(+v);
   });
 }
+// 준공연도 → 연식 표기(2026.09, 수민 요청). 화면에는 "2002년 준공" 대신 "24년차"로 보여준다 —
+// 사람들이 단지를 볼 때 실제로 따지는 건 절대 연도가 아니라 "지은 지 몇 년 됐나"이고, 위
+// applyBuildYearFilter()의 연식 필터와도 같은 기준(현재연도 - 준공연도)이라 화면·필터가 일치한다.
+// 올해 준공이거나 아직 준공 전(분양권 등 미래 연도)이면 "신축"으로 표기.
+function buildAgeLabel(build){
+  const by = parseInt(build, 10);
+  if(!by) return '';
+  const age = new Date().getFullYear() - by;
+  return age <= 0 ? '신축' : `${age}년차`;
+}
 function buildYearLabel(){
   const v = document.getElementById('buildYear').value;
   if(!v) return null;
@@ -3231,7 +3241,7 @@ function renderSubway(d){
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
     ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small>지하철 도보<b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${x.useDate.slice(0,4)}년 준공`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small>지하철 도보<b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
@@ -3727,7 +3737,7 @@ function subwayMetaHTML(hh){
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
 function complexMetaHTML(d){
-  return `${esc(d.umd)}${d.build? ` · ${d.build}년 준공` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
@@ -4454,7 +4464,7 @@ function renderRegion(d){
     <div class="sec">
       <h3>기간 최고가 거래</h3>
       ${rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4479,7 +4489,7 @@ function renderVolume(d){
     <div class="sec">
       <h3>거래량 상위</h3>
       ${rows(d.topVolume, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${d.pyBand? `<b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·`:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${!d.pyBand? '·전체 평형':''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${d.pyBand? `<b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·`:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${!d.pyBand? '·전체 평형':''}</small></span>
         <span class="val">${x.n}건</span>`)}
     </div>
 
@@ -4495,7 +4505,7 @@ function renderGap(d){
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}평(전용 ${x.area}㎡)</b> · ${esc(x.umd)}${(multiRegion&&x.gu)?` · ${esc(x.gu)}`:''}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}평(전용 ${x.area}㎡)</b> · ${esc(x.umd)}${(multiRegion&&x.gu)?` · ${esc(x.gu)}`:''}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
         <span class="val"><small style="display:inline">매매 ${x.saleAvg.toFixed(1)}억</small> <b style="color:var(--teal)">${x.pct}%</b><small style="display:block">전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">매매·전세가 모두 있는 단지가 없습니다</div>';
@@ -4540,7 +4550,7 @@ function renderNewHigh(d){
       <h3>신고가 갱신 단지</h3>
       ${hint('매매·분양권·입주권 모두 포함', '표본 3건 이상만 집계 · <span class="nh">N</span> = 최근 7일 이내 계약')}
       ${rows(d.newHigh, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.fresh7?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${x.fresh7?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4569,7 +4579,7 @@ function renderNewLow(d){
       <h3>하락 거래 단지</h3>
       ${hint('1년 내 최고가 대비 10~25% 하락한 최근(30일) 거래만 집계', '300세대 이상·1~5층·직거래 제외 · 급매 신호로 참고')}
       ${rows(d.newLow, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억 →</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4597,7 +4607,7 @@ function renderBoxRange(d){
       <h3>박스권 단지</h3>
       ${hint('표시된 평균가를 "현재 시세"로 참고', '변동폭 좁은 순 · 표본 3건 이상 · 1~4층·직거래 제외')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.n?`·표본 ${x.n}건`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.n?`·표본 ${x.n}건`:''}</small></span>
         <span class="val">${x.center.toFixed(1)}억<small><span style="color:var(--sub)">${x.minAmt.toFixed(1)}~${x.maxAmt.toFixed(1)}억</span> · <b style="color:var(--teal-dark)">±${x.spreadPct}%</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4627,7 +4637,7 @@ function renderBoxBreak(d){
       <h3>${esc(label)} 단지</h3>
       ${hint('표본 3건 이상만 집계', '1~4층·직거래 제외 · 상승 먼저, 하락 다음 순')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
         <span class="val ${x.direction==='up'?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">이전 박스 ${x.priorCenter.toFixed(1)}억</span>${x.amt.toFixed(1)}억<small><b style="color:var(--teal-dark)">${x.direction==='up'?'▲':'▼'}${Math.abs(x.changePct)}%</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4656,7 +4666,7 @@ function renderPricePerPyeong(d){
       <div class="rng" style="margin-bottom:8px;padding:9px 11px;background:var(--teal-soft);border-radius:9px;color:var(--navy);line-height:1.5">전용면적 평단가는 단지마다 다른 <b>전용률</b>(공급면적 대비 전용면적 비율)의 영향을 받지 않아, 흔히 쓰는 공급면적 평단가보다 단지 간 시세를 더 왜곡 없이 비교할 수 있는 <b>본질적인 시세</b> 지표입니다. 다만 매물·분양 시장에서 익숙한 "○○평" 표기는 보통 공급면적 기준이라, 표시된 평형과 체감이 다를 수 있습니다.</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
       ${rows(d.pyPrice, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/전용평</span><small><b style="color:var(--teal-dark)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4676,7 +4686,7 @@ function divergenceHTML(list){
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
@@ -4697,7 +4707,7 @@ function renderUpDown(d){
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
   const fmtRow = x => `
-    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
+    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
     <span class="val ${x.pct>=0?'up':'down'}">${x.pct>0?'+':''}${x.pct}%<small>평균 ${x.p3avg.toFixed(1)}→${x.r3avg.toFixed(1)}억</small></span>`;
   const html = `
   <div class="card">
@@ -4757,7 +4767,7 @@ function renderJeonseUpDown(d){
     ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
   const fmtRow = x => `
-    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
+    <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
     <span class="val ${x.pct>=0?'up':'down'}">${x.pct>0?'+':''}${x.pct}%<small>평균 ${x.p3avg.toFixed(1)}→${x.r3avg.toFixed(1)}억</small></span>`;
   const html = `
   <div class="card">
@@ -4803,7 +4813,7 @@ function renderLongTermRise(d){
       <h3>상승 단지</h3>
       ${hint(`"${d.periodM}개월 전"은 정확히 그 시점(30일 구간) 하나의 평균가`, '누적 평균 아님 · 표본 2건 이상(구간별) · 직거래 제외 · 많이 오른 순')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val ${x.changeAmt>=0?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억(${Math.abs(x.changePct)}%)</b></small></span>`)}
     </div>
 
@@ -4831,7 +4841,7 @@ function renderSurge(d){
       <h3>거래량 급증 단지</h3>
       ${hint('이전 3개월 대비 거래량 2배 이상 급증한 단지', '최근 3개월 6건 이상 · 매매만 · 최근 거래량 많은 순')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
         <span class="val up">${x.recentAmt.toFixed(1)}억<small>${x.p3n}건→<b style="color:var(--teal-dark)">${x.r3n}건</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
@@ -4846,7 +4856,7 @@ function renderInversion(d){
   const rows = d.rows.length ? d.rows.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-      <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
+      <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table inv-table" style="margin-top:10px">
         <colgroup><col style="width:16%"><col style="width:17%"><col style="width:25%"><col style="width:17%"><col style="width:25%"></colgroup>
         <tr>
@@ -4915,7 +4925,7 @@ function renderGapTrend(d){
       <h3>전세가율 변화 단지</h3>
       ${hint('매매·전세 각 2건 이상 표본 필요', '5층 이상만 · 상승 먼저, 하락 다음 순')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${x.build}년 준공`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
         <span class="val ${x.direction==='up'?'up':'down'}">${x.direction==='up'?'▲':'▼'}${Math.abs(x.pctChange)}%p<small>${x.priorPct}%→${x.recentPct}%</small></span>`)}
     </div>
 
@@ -4957,7 +4967,7 @@ function peakDivergenceHTML(list, prevLabel, recentLabel){
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
-          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${x.build}년 준공`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
