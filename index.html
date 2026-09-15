@@ -3329,7 +3329,7 @@ function renderSubway(d){
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
     ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small>지하철 도보<b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
