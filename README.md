@@ -743,3 +743,8 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 
 - **요청**: "매매 변동률"·"전세 변동률" 탭을 "거래량 랭킹" 앞으로 옮기고, 이어서 구독 전용이던 "역세권" 탭을 "교통 호재" 바로 다음 위치로 옮기면서 무료(전체 공개) 탭으로 전환해 달라는 요청.
 - **구현**: 탭 버튼은 DOM 순서 = 화면 노출 순서라, `<div class="tabs">` 안에서 해당 `<div class="tab">` 요소 자체를 원하는 위치로 옮기기만 하면 됨(모드 디스패치 로직은 탭 순서와 무관). "역세권"(`tabSub`)은 구독 전용 그룹(`subscriber` 클래스·`style="display:none"`)에 있던 걸 무료 탭 그룹("교통 호재" 링크 바로 다음)으로 옮기고, 5탭 노출 목록(`subTabs`)과 `hdTop()`의 구독 배지 인자도 함께 제거.
+
+## "박스권 시세"·"박스권 시세 변동"·"회전율"·"거래량 급증" 탭 삭제 (2026.09)
+
+- **요청**: 구독 전용이었던 이 네 탭을 전부 삭제해 달라는 요청.
+- **삭제**: `analyzeBoxRange()`/`analyzeBoxBreak()`/`analyzeTurnover()`/`analyzeSurge()`(분석)와 `renderBoxRange()`/`renderBoxBreak()`/`renderTurnover()`/`renderSurge()`(렌더) 8개 함수를 통째로 제거. 탭 버튼(`tabBox`/`tabBBU`/`tabTO`/`tabSG`)과 5탭 노출 목록(`subTabs`)에서도 제거. `search()`의 두 조회 경로(복수 지역·단일 지역)에서 4개 모드 분기를 없애고, `newhigh`/`newlow`/`pyprice`/`longtermrise`가 공유하던 필터 분기에서 `boxrange`/`boxbreak`만 빠짐(신고가·신저가·평단가·매매 변동률은 그대로 유지). 손바뀜(회전율) 전용 세대수 후처리 블록(`d.mode==='turnover'` hhcnt 배치 조회·필터링)도 함께 제거. URL_MODES·multiModes·regionSelMax 등 모드 이름이 나열되던 모든 OR 체인, 그리고 `neededMN`/`effMN` 계산식의 해당 분기(각각 12·6·6·6개월 고정값)도 정리.
