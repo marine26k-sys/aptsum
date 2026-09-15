@@ -553,6 +553,8 @@
     <button class="go" id="btn" onclick="search()">분석</button>
   </div>
 
+  <div id="staticAdArea"></div>
+
   <div class="chips" id="favRegions" style="margin:2px 0 6px"></div>
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
@@ -3056,6 +3058,7 @@ renderFavs();
 renderFavRegions();
 updateRegionFavBtn();
 refreshFavBadges();
+document.getElementById('staticAdArea').innerHTML = couponBannerHTML(); // 검색 전 첫 화면에도 배너 노출(수민 요청)
 // setTimeout(0)으로 한 틱 미룸 — initFromURL()이 파일 이 지점보다 아래에서 선언되는 let/const를 참조하는
 // 경로를 타면, 스크립트가 아직 그 아래까지 실행되지 않아 TDZ(ReferenceError: Cannot access ... before
 // initialization)가 났던 버그 수정(예전엔 급지 지도가 index.html 안에 탭으로 통합돼 있어 tierData 등

@@ -285,6 +285,8 @@ function render(){
 
     ${shown.map(lineHTML).join("")}
 
+    ${couponBannerHTML()}
+
     <div class="disclaimer">
       ${esc(DATA.meta.source)}<br>
       정보 기준일: ${esc(DATA.meta.updated)} — 공정 지연, 노선/역명 변경 가능성이 있으니 투자·거주 결정 시 반드시 국토교통부·국가철도공단 등 공식 발표를 다시 확인하세요.<br>
