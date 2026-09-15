@@ -732,3 +732,9 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - **요청**: 구독 전용 "기간별 변동률" 탭(매매 실거래 기준, 사용자가 고른 비교 시점 대비 등락 랭킹)의 이름을 "매매 변동률"로 바꾸고, 동일한 방식으로 전세 실거래를 분석하는 "전세 변동률" 탭을 새로 만들어 달라는 요청.
 - **구현**: `analyzeLongTermRise()`(기존 로직, mode 그대로 유지)의 결과를 감싸 `mode`만 `'jeonselongtermrise'`로 바꿔 반환하는 `analyzeJeonseLongTermRise()`를 신설 — 매매 등락/전세 등락 쌍(`analyzeUpDown`/`analyzeJeonseUpDown`)과 동일한 패턴. 화면 표시도 `renderLongTermRise` 옆에 `renderJeonseLongTermRise`를 추가해 배지·`hdVs` 문구만 "전세"로 바꿈. `search()`의 복수 지역(allScope)·단일 지역 두 경로 모두에 `jeonseupdown` 바로 옆에 `jeonselongtermrise` 분기를 추가해 전세 실거래(`mergedRent`/`rawJ`)를 평형·연식 필터(longtermrise와 동일한 필터 UI)에 흘려보내도록 구현.
 - **탭 이름 하나로 스무 곳 넘게 갈라져 있던 배관**: 이 탭은 지역 복수 선택(칩)·"○○ 전체"·즐겨찾기 지역 칩·뒤로가기 복원·공유 링크(URL_MODES)·평형 다중 선택 UI 표시 등 거의 모든 공통 UI 로직이 `mode==='longtermrise'`를 나열하는 긴 OR 체인으로 흩어져 있어, 새 탭 하나를 추가하려면 그 체인들 전부에 `mode==='jeonselongtermrise'`를 나란히 추가해야 했음(약 25곳). 탭바에 새 버튼(`tabJLTR`)과 5탭 구독 노출 목록(`subTabs`)도 함께 추가.
+
+## "매매 등락"·"전세 등락" 탭 삭제 + "매매 변동률"·"전세 변동률" 탭 전체 공개 전환 (2026.09)
+
+- **요청**: "매매 등락"/"전세 등락" 탭을 삭제하고, 구독 전용이던 "매매 변동률"/"전세 변동률" 탭을 무료(전체 공개) 탭으로 전환해 달라는 요청 — 두 쌍 다 "등락 랭킹"이라는 같은 성격이라 사용자가 고른 비교 시점까지 지원하는 변동률 탭 쪽으로 기능을 합치는 결정.
+- **삭제**: `analyzeUpDown()`/`analyzeJeonseUpDown()`(분석)과 `renderUpDown()`/`renderJeonseUpDown()`(렌더) 4개 함수를 통째로 제거. 탭 버튼(`tabU`/`tabJU`)과 `search()`의 두 조회 경로(복수 지역·단일 지역)에 있던 `mode==='updown'`/`'jeonseupdown'` 분기, `attachHHCountsAsync`의 세대수 조회 분기, `restoreView`의 렌더 분기, URL_MODES·multiModes 등 모드 이름이 나열되던 모든 OR 체인에서 두 모드를 제거. 공용 헬퍼 `buildRepRows()`는 다른 탭(단지 분석 등락 요약)에서도 쓰여서 그대로 유지.
+- **전체 공개 전환**: "매매 변동률"/"전세 변동률" 탭(`tabLTR`/`tabJLTR`)을 구독 전용 그룹(`subscriber` 클래스·`style="display:none"`·5탭 노출 목록 `subTabs`)에서 빼서 무료 탭 그룹으로 이동, `hdTop()` 호출에서도 구독 배지(`true` 인자)를 뺐다.
