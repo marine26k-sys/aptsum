@@ -3221,9 +3221,14 @@ async function searchSubway(){
   try{
     const items = await loadSubwayData(lawd);
     const maxWalk = +document.getElementById('subwayWalkMax').value;
+    // "역세권 여부" 판정을 subwayLines(호선) 유무가 아니라 subwayWalk(도보시간)만으로 한다(2026.09,
+    // 수민 요청). subwayLines는 K-apt 원본에 반복적으로 오기입돼 있어(경춘선·의정부경전철 등 — 단지
+    // 분석 탭도 2026.08부터 같은 이유로 호선/역명 표시를 중단함, subwayMetaHTML 참고) 이 필드가 비어
+    // 있거나 잘못 들어간 진짜 역세권 단지가 그동안 통째로 필터링에서 빠져 있었음. 도보시간은 단순
+    // 숫자값이라 오기입 여지가 상대적으로 적어 이것만 신뢰 기준으로 삼는다.
     let rows = items
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
-      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk);
+      .filter(it => it.walk && it.walk.max <= maxWalk);
 
     // 평단가(전용면적 평단가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
