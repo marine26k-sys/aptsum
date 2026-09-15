@@ -169,7 +169,9 @@
   .rk{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
   .rk:last-child{border-bottom:none}
   .rk .no{flex:none;width:20px;height:20px;border-radius:6px;background:var(--slate-bg);color:var(--sub);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
-  .rk:nth-child(-n+3) .no{background:var(--teal);color:#fff}
+  .rk .no.top3{background:var(--teal);color:#fff}
+  .rk-wm{display:flex;align-items:center;gap:5px;padding:5px 0;font-size:10px;color:var(--sub);opacity:.6}
+  .rk-wm svg{flex:none}
   .rk .nm{flex:1;min-width:0;font-weight:500;display:flex;flex-direction:column;gap:1px}
   .rk .nm .nm-title{white-space:normal;word-break:keep-all;line-height:1.2}
   .rk .nm .nm-title .nh{flex:none;vertical-align:1px}
@@ -2967,6 +2969,14 @@ function hdTop(badgeLabel, subscriberOnly){
     <span class="hd-badge${subscriberOnly?' subscriber':''}">${esc(badgeLabel)}</span>
   </div>`;
 }
+// 랭킹 리스트가 캡처되어 외부에 그대로 공유되는 일이 많아, 5·10·15...위 다음에
+// 출처 워터마크를 끼워넣는다(마지막 항목 뒤에는 넣지 않음).
+function rkWatermarkHTML(){
+  return `<div class="rk-wm"><svg width="10" height="10" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>아파트썸 · aptsum.kr</div>`;
+}
+function rkSep(i, len){
+  return ((i+1)%5===0 && i<len-1) ? rkWatermarkHTML() : '';
+}
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
 function hdVs(prevLabel, recentLabel){
@@ -3328,10 +3338,10 @@ function renderSubway(d){
   // 보여줄 수 없어 목록에 있어봐야 혼란만 줌.
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
-    ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no">${i+1}</span>
+    ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
-      </div>`).join('')
+      </div>${rkSep(i,filtered.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4538,7 +4548,7 @@ function renderRegion(d){
   const multiRegion = new Set((d.highDeals).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4564,7 +4574,7 @@ function renderRegion(d){
 function renderVolume(d){
   const regionName = sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4592,10 +4602,10 @@ function renderGap(d){
   const regionName = sel.options[sel.selectedIndex].textContent;
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const rows = d.rows.length
-    ? d.rows.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>
+    ? d.rows.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}평(전용 ${x.area}㎡)</b> · ${esc(x.umd)}${(multiRegion&&x.gu)?` · ${esc(x.gu)}`:''}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
         <span class="val"><small style="display:inline">매매 ${x.saleAvg.toFixed(1)}억</small> <b style="color:var(--teal)">${x.pct}%</b><small style="display:block">전세 ${x.rentAvg.toFixed(1)}억 (갭 ${x.gapAmt.toFixed(1)}억)</small></span>
-      </div>`).join('')
+      </div>${rkSep(i,d.rows.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">매매·전세가 모두 있는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4628,7 +4638,7 @@ function renderNewHigh(d){
   const fmtMD = dt => `${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
   const recentWindow = `${fmtMD(new Date(Date.now()-windowDays*24*3600*1000))} ~ ${fmtMD(new Date())}`;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : `<div class="rng" style="padding:6px 0">최근 ${weekOnly?'일주일':'한 달'} 이내 신고가를 기록한 단지가 없습니다</div>`;
   const html = `
   <div class="card">
@@ -4657,7 +4667,7 @@ function renderNewLow(d){
   const multiRegion = new Set((d.newLow).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">최근 한 달 이내 하락 거래를 기록한 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4686,7 +4696,7 @@ function renderBoxRange(d){
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">박스권 조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4715,7 +4725,7 @@ function renderBoxBreak(d){
   const label = '박스권 시세 변동';
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : `<div class="rng" style="padding:6px 0">${esc(label)} 조건에 맞는 단지가 없습니다</div>`;
   const html = `
   <div class="card">
@@ -4744,7 +4754,7 @@ function renderPricePerPyeong(d){
   const multiRegion = new Set((d.pyPrice).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4798,7 +4808,7 @@ function divergenceHTML(list){
 function renderUpDown(d){
   const regionName = sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
   const fmtRow = x => `
     <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}</small></span>
@@ -4831,7 +4841,7 @@ function renderTurnover(d){
   const multiRegion = new Set((d.turnover).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음</div>';
   const html = `
   <div class="card">
@@ -4858,7 +4868,7 @@ function renderJeonseUpDown(d){
   const multiRegion = new Set(([...d.up, ...d.down]).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요)</div>';
   const fmtRow = x => `
     <span class="nm"><span class="nm-title clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span><small><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
@@ -4891,7 +4901,7 @@ function renderLongTermRise(d){
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -4920,7 +4930,7 @@ function renderSurge(d){
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 거래량 급증 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -5004,7 +5014,7 @@ function renderGapTrend(d){
   const multiRegion = new Set((d.rows).map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
-    ? arr.map((x,i)=>`<div class="rk"><span class="no">${i+1}</span>${fmt(x)}</div>`).join('')
+    ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 전세가율 변화 데이터가 없습니다</div>';
   const html = `
   <div class="card">
