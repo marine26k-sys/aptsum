@@ -426,7 +426,7 @@
     document.addEventListener('DOMContentLoaded', function(){
       const SUBSCRIBER_KEY = 'apc:subscriberSub'; // 세 탭 공용 — 비밀번호 확인 후에만 세팅됨
       const SUBSCRIBER_CODE = 'aptsum26'; // 구독자에게만 공유하는 코드(인스타 구독 전용 피드에 안내)
-      const subTabs = ['tabNL', 'tabLPD', 'tabSub', 'tabBox', 'tabTO', 'tabBBU', 'tabSG', 'tabGT', 'tabNH7'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabNL', 'tabLPD', 'tabBox', 'tabTO', 'tabBBU', 'tabSG', 'tabGT', 'tabNH7'].map(id => document.getElementById(id)).filter(Boolean);
       const subDivider = document.getElementById('tabSubDivider');
       if (!subTabs.length) return;
       const reveal = () => { subTabs.forEach(t => { t.style.display = ''; }); if (subDivider) subDivider.style.display = ''; };
@@ -465,6 +465,7 @@
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
     <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
     <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
+    <div class="tab" id="tabSub" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
     <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
     <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
     <div class="tab" id="tabNH" onclick="newHighWeekOnly=false;setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
@@ -485,7 +486,6 @@
     <div class="tab-divider" id="tabSubDivider" style="display:none">구독 전용</div>
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 권역)</div>
-    <div class="tab subscriber" id="tabSub" style="display:none" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
     <div class="tab subscriber" id="tabBox" style="display:none" onclick="setMode('boxrange')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/><line x1="4" y1="12" x2="20" y2="12"/></svg>박스권 시세</div>
     <div class="tab subscriber" id="tabBBU" style="display:none" onclick="setMode('boxbreak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M15 9V4M15 4l-3 3M15 4l3 3"/></svg>박스권 시세 변동</div>
     <div class="tab subscriber" id="tabTO" style="display:none" onclick="setMode('turnover')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2 21 6 17 10"/><path d="M3 12V6h18"/><path d="M7 22 3 18 7 14"/><path d="M21 12v6H3"/></svg>회전율</div>
@@ -3327,7 +3327,7 @@ function renderSubway(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('역세권', true)}
+      ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
       <div class="meta">도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순</div>
     </div>

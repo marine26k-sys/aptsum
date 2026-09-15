@@ -738,3 +738,8 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - **요청**: "매매 등락"/"전세 등락" 탭을 삭제하고, 구독 전용이던 "매매 변동률"/"전세 변동률" 탭을 무료(전체 공개) 탭으로 전환해 달라는 요청 — 두 쌍 다 "등락 랭킹"이라는 같은 성격이라 사용자가 고른 비교 시점까지 지원하는 변동률 탭 쪽으로 기능을 합치는 결정.
 - **삭제**: `analyzeUpDown()`/`analyzeJeonseUpDown()`(분석)과 `renderUpDown()`/`renderJeonseUpDown()`(렌더) 4개 함수를 통째로 제거. 탭 버튼(`tabU`/`tabJU`)과 `search()`의 두 조회 경로(복수 지역·단일 지역)에 있던 `mode==='updown'`/`'jeonseupdown'` 분기, `attachHHCountsAsync`의 세대수 조회 분기, `restoreView`의 렌더 분기, URL_MODES·multiModes 등 모드 이름이 나열되던 모든 OR 체인에서 두 모드를 제거. 공용 헬퍼 `buildRepRows()`는 다른 탭(단지 분석 등락 요약)에서도 쓰여서 그대로 유지.
 - **전체 공개 전환**: "매매 변동률"/"전세 변동률" 탭(`tabLTR`/`tabJLTR`)을 구독 전용 그룹(`subscriber` 클래스·`style="display:none"`·5탭 노출 목록 `subTabs`)에서 빼서 무료 탭 그룹으로 이동, `hdTop()` 호출에서도 구독 배지(`true` 인자)를 뺐다.
+
+## 탭 순서 변경 + "역세권" 탭 전체 공개 전환 (2026.09)
+
+- **요청**: "매매 변동률"·"전세 변동률" 탭을 "거래량 랭킹" 앞으로 옮기고, 이어서 구독 전용이던 "역세권" 탭을 "교통 호재" 바로 다음 위치로 옮기면서 무료(전체 공개) 탭으로 전환해 달라는 요청.
+- **구현**: 탭 버튼은 DOM 순서 = 화면 노출 순서라, `<div class="tabs">` 안에서 해당 `<div class="tab">` 요소 자체를 원하는 위치로 옮기기만 하면 됨(모드 디스패치 로직은 탭 순서와 무관). "역세권"(`tabSub`)은 구독 전용 그룹(`subscriber` 클래스·`style="display:none"`)에 있던 걸 무료 탭 그룹("교통 호재" 링크 바로 다음)으로 옮기고, 5탭 노출 목록(`subTabs`)과 `hdTop()`의 구독 배지 인자도 함께 제거.
