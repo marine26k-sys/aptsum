@@ -92,8 +92,9 @@
   .tier-disclaimer a{color:var(--teal-dark)}
   .tier-loading-box{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
   .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
-  .coupang-ad-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-  .coupang-ad iframe{border-radius:8px;max-width:100%}
+  .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+  .coupang-ad-item{width:104px;height:208px;overflow:hidden;border-radius:8px;flex:none}
+  .coupang-ad-item iframe{width:120px;height:240px;border:none;transform:scale(.8667);transform-origin:top left}
   .coupang-disclosure{font-size:12.5px;font-weight:800;color:#333;text-align:center;max-width:280px;line-height:1.45}
 </style>
 </head>
@@ -123,9 +124,15 @@ function buildAgeLabel(build){
 function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-row">
-      <iframe src="https://coupa.ng/cpwXdE" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      <iframe src="https://coupa.ng/cpwXWl" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      <iframe src="https://coupa.ng/cpwYpC" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
     </div>
     <p class="coupang-disclosure">이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
   </div>`;

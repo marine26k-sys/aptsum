@@ -55,15 +55,15 @@
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
-  .search-box{display:grid;gap:8px;margin-bottom:8px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
+  .search-box{display:grid;gap:7px;margin-bottom:8px;background:#fff;border-radius:13px;padding:11px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
-  .row2{display:flex;gap:8px}
-  select,input.q{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;background:#fff}
-  #optRow select{font-size:13px;padding:11px 6px 11px 10px}
+  .row2{display:flex;gap:7px}
+  select,input.q{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;font-family:inherit;background:#fff}
+  #optRow select{font-size:13px;padding:9px 6px 9px 9px}
   select:focus,input.q:focus{outline:none;border-color:var(--teal)}
   select{flex:0 0 138px;width:100%}
   input.q{flex:1;min-width:0}
-  .go{background:var(--teal);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+  .go{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer}
   .go:disabled{background:#93C9CC}
 
   .loading{display:none;text-align:center;padding:40px 0}
@@ -212,8 +212,9 @@
      공정거래위원회 추천·보증 심사지침상 경제적 이해관계 고지 문구(coupangDisclosure)를 배너와 항상 함께 붙인다 —
      배너만 따로 떼어내 쓰면 안 됨(couponBannerHTML() 하나로만 만들어서 실수로 누락되는 걸 방지). */
   .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
-  .coupang-ad-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-  .coupang-ad iframe{border-radius:8px;max-width:100%}
+  .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+  .coupang-ad-item{width:104px;height:208px;overflow:hidden;border-radius:8px;flex:none}
+  .coupang-ad-item iframe{width:120px;height:240px;border:none;transform:scale(.8667);transform-origin:top left}
   .coupang-disclosure{font-size:12.5px;font-weight:800;color:#333;text-align:center;max-width:280px;line-height:1.45}
 
   .fbar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
@@ -231,8 +232,8 @@
   /* 커스텀 지역 선택 — 네이티브 select 드롭다운은 행 높이를 OS가 그려서 CSS로 못 줄이므로 직접 그린다 */
   #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
   .rgpick{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;
-    background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;
-    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;
+    font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
   .rgpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rgpick b{flex:0 0 auto;font-size:10px;color:var(--sub)}
   .pybm-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(15,43,61,.14);z-index:50;padding:6px;max-height:260px;overflow-y:auto}
@@ -1910,9 +1911,15 @@ function buildAgeLabel(build){
 function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-row">
-      <iframe src="https://coupa.ng/cpwXdE" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      <iframe src="https://coupa.ng/cpwXWl" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      <iframe src="https://coupa.ng/cpwYpC" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
+      <div class="coupang-ad-item">
+        <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
+      </div>
     </div>
     <p class="coupang-disclosure">이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
   </div>`;
