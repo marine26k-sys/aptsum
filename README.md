@@ -696,3 +696,4 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 - **구현**: `couponBannerHTML()`(3개 파일 공통)에 `.coupang-ad-title`을 배너 행(`.coupang-ad-row`) 바로 위에 추가. 법정 고지문(`.coupang-disclosure`)은 계속 배너 아래에 그대로 유지 — 타이틀 추가가 쿠팡 파트너스 고지 의무를 대체하지 않도록 별개로 둠.
 - **테두리 스타일**: "관심 단지 요약 보기" 버튼(`#favDashBtn` — 청록 점선 테두리 + 연한 청록 배경)과 같은 느낌으로 맞춰달라는 요청 — `.coupang-ad`를 기존 `border-top:1px dashed`(위쪽만 얇은 구분선)에서 전체 박스형(`border:1.5px dashed var(--teal)`, `background:var(--teal-light-soft)`, `border-radius:12px`)으로 변경.
 - **고지문 위치를 배너 위로**: 법정 고지문(`.coupang-disclosure`)이 배너 아래에 있던 걸 타이틀 바로 아래·배너 행 위로 옮김 — 순서가 타이틀 → 고지문 → 배너 3개로 바뀜.
+- **`index.html` 첫 화면 배너 위치를 결과/에러 영역 아래로**: "단지명 일치가 여러 개라 단지를 선택하세요" 같은 안내(`#error`)가 배너 아래에 뜨는 게 어색하다는 지적 — `#staticAdArea`를 `#loading`/`#error`/`#result`보다 위에서 아래로 옮김. 검색 전 첫 화면에선 결과·에러 영역이 비어있어 여전히 배너가 바로 보이고, 검색 후에는 결과·안내 문구가 배너보다 먼저 나오게 됨.
