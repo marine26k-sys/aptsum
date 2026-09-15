@@ -83,6 +83,12 @@ function areaToPy(area) {
 // 안 돌았거나 그 단지/타입이 아직 안 잡혔거나) 기존 areaToPy() 보간값을 그대로 쓴다. fetchStaticMonth와
 // 동일하게 origin으로 이 사이트 자신의 정적 파일(data/supply-area/*.json, publish="."로 그대로 호스팅됨)을
 // fetch — 없거나(아직 배치 안 됨) 실패하면 조용히 폴백. (analyze.mjs의 동일 로직 별도 사본)
+// 2026.09 — 전용률(전용면적÷공급면적) 상한. 아파트는 계단·복도·엘리베이터 같은 주거공용이 반드시
+// 있어서 전용률이 85%를 넘을 수 없다. 그보다 높게 나온 건 실측이 아니라 "건축HUB 스캔이 그 세대의
+// 공용 행을 다 못 잡은 것"(수집 실패)이다 — 전체 13,680개 타입 중 23.4%가 여기 해당했고, 그중 13.7%는
+// 공용이 아예 0이었다. 아래 ±3평 가드로는 이게 안 걸러진다(예: 전용 59㎡가 22평으로 나와도 보간값
+// 25평과 3평 차이라 그대로 통과) → 잘못된 평형이 화면에 그대로 나갔음.
+const MAX_EXCLUSIVE_RATIO = 0.85;
 const SQM_PER_PY = 3.3058;
 const norm = (s) => String(s || "").replace(/\s/g, "");
 const supplyAreaCache = new Map(); // lawd -> Map(정규화단지명 -> [{exclusiveArea, supplyArea}]) | null — 컨테이너 warm 재사용 동안만 캐시
@@ -110,6 +116,7 @@ async function hubPyOverride(items, lawd, origin) {
     const rounded = Math.round(t.area);
     const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
     if (!match || !Number.isFinite(match.supplyArea)) return t; // supplyArea가 없거나 숫자가 아니면 NaN평 표시 방지
+    if (!(match.supplyArea > 0) || match.exclusiveArea / match.supplyArea > MAX_EXCLUSIVE_RATIO) return t; // 공용 누락된 수집 실패분
     const hubPy = Math.round(match.supplyArea / SQM_PER_PY);
     // 2026.09 — 실측값이 기존 보간값(t.py)과 너무 동떨어지면 실측값을 버리고 보간값을 그대로 씀
     // (analyze.mjs 주석 참고 — 주상복합 등 특이 케이스에서 실측값이 시장 관행 라벨과 크게 벌어지는
