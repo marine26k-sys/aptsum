@@ -30,6 +30,7 @@ import { norm, resolveComplexNames } from "../shared/name-match.mjs";
 const PUSH_RETRIES = 5;
 const COMMIT_EVERY = 5; // 공급면적 수집은 단지당 비용이 커서(최대 MAX_PAGES 페이지) hhcnt보다 자주 중간 커밋
 const MAX_PAGES = 30;   // 단지당 안전 상한(30페이지 × 100건 = 최대 3,000건 조회) — 대형 단지도 보통 이 안에서 대표 타입 다 찾힘
+const GRACE_PAGES = 3;  // 목표 전용면적을 다 만난 뒤 공용까지 채우려고 더 볼 페이지 수(collectComplexSupplyArea 주석 참고)
 const MONTHS_FOR_TYPES = 24; // 최근 2년 실거래면 현재 거래되는 평형 타입은 거의 다 잡힘(단종된 옛 타입까지 다 찾을 필요는 없음)
 
 function pushWithRetry() {
@@ -217,7 +218,14 @@ async function fetchAreaPage(key, sigunguCd, bjdongCd, bun, ji, pageNo) {
 // (동,호)를 만나면 그 키를 계속 누적 추적(전유+공용 다 더함) — 페이지 상한까지 스캔.
 async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targetAreas) {
   const units = {}; // "동|호" -> {exclu, pubuse, matchedType}
-  const foundTypes = new Set();
+  const foundTypes = new Set(); // 공용까지 온전히 모인 타입
+  // 2026.09 — 목표 전용면적은 다 만났는데 공용이 안 채워지는 단지(공용이 부대시설 등으로 등록된 구조적
+  // 케이스)는 아무리 더 읽어도 안 채워진다. 그런 단지까지 매번 MAX_PAGES(30페이지)를 끝까지 훑으면
+  // 요청량이 폭증해서 건축HUB가 연결을 끊어버린다(UND_ERR_CONNECT_TIMEOUT 대량 발생 — 실전 확인).
+  // 그래서 "전유를 다 만난 뒤"에는 GRACE_PAGES 만큼만 더 보고 포기한다. 복구가 필요한 케이스는
+  // 공용 행이 전유 바로 뒤에 붙어 오므로(비산화성파크드림: 2행 차이) 이 정도면 충분히 잡힌다.
+  const foundExclu = new Set(); // 전유면적 기준으로만 만난 타입
+  let gracePages = 0;
   const seenAreas = new Set(); // 진단용 — 실제로 스캔 중 마주친 전유면적(반올림) 전부 기록
   const excludedRows = []; // 2026.09 — 아래 필터로 걸러낸 행 기록(진단/검증용, 개수가 비정상적으로 많으면 필터 조건 재검토 필요)
   let pagesScanned = 0;
@@ -258,9 +266,13 @@ async function collectComplexSupplyArea(key, sigunguCd, bjdongCd, bun, ji, targe
       // 작고(전용률 85% 초과), 스캔이 결정적이라 다시 돌려도 같은 지점에서 같은 결과가 나와 영원히
       // 복구되지 않는다(전체 타입의 23.4%가 이 상태였음). 그래서 "공용까지 그럴듯하게 모였을 때"만
       // 확보로 친다 — 못 채우면 조기 종료 없이 MAX_PAGES까지 더 훑는다(호출은 늘지만 그래야 복구됨).
-      if (targetAreas.has(rounded) && isPlausibleSupply(u.exclu, u.pubuse)) foundTypes.add(rounded);
+      if (targetAreas.has(rounded)) {
+        foundExclu.add(rounded);
+        if (isPlausibleSupply(u.exclu, u.pubuse)) foundTypes.add(rounded);
+      }
     }
     if (foundTypes.size >= targetAreas.size) break; // 목표 타입을 (공용까지 온전히) 다 찾았으면 조기 종료
+    if (foundExclu.size >= targetAreas.size && ++gracePages > GRACE_PAGES) break; // 전유는 다 봤는데 공용이 안 채워짐 → 포기
     if (page < MAX_PAGES) await new Promise((res) => setTimeout(res, 1000)); // 페이스 훨씬 보수적으로(2026.08 150ms→1000ms — 공격적인 요청 패턴이 IP 차단을 유발했을 가능성)
   }
   // targetAreas와 일치하는 (동,호)들만 골라 최종 결과로 정리 — 같은 타입 여러 유닛이 잡히면 첫 번째 것 사용
@@ -330,9 +342,15 @@ async function main() {
 
   await mkdir("data/supply-area", { recursive: true });
   let processed = 0;
+  // 2026.09 수정 — 회로차단기 상태를 지역 루프 "밖"으로 뺐다. 예전엔 루프 안에서 선언해서 지역이
+  // 바뀔 때마다 초기화됐고, "실행을 중단합니다"라고 찍어놓고 실제로는 다음 지역으로 넘어가 90개
+  // 지역을 끝까지 두드렸다(실전 로그로 확인). 막힌 상태에서 계속 두드리면 차단만 더 굳어진다.
+  const CIRCUIT_BREAKER_THRESHOLD = 5;
+  let consecutiveNetworkFailures = 0;
+  let circuitOpen = false;
 
   for (const lawd of lawds) {
-    if (processed >= limit) break;
+    if (processed >= limit || circuitOpen) break;
     const hhFile = path.join("data/hhcnt", `${lawd}.json`);
     if (!existsSync(hhFile)) { console.log(`[supply-area] ${lawd}: data/hhcnt 없음, 스킵(먼저 collect-hhcnt 실행 필요)`); continue; }
     const hh = JSON.parse(await readFile(hhFile, "utf-8"));
@@ -369,9 +387,6 @@ async function main() {
     // 회로차단기(circuit breaker, 2026.08 추가) — 연속으로 계속 네트워크 실패가 나면, 이미 막혀있다고
     // 보고 남은 수천 개를 헛되이 다 시도하는 대신 즉시 전체 실행을 중단한다(안 그러면 시간·API 시도만
     // 낭비하고, 혹시 진짜 차단 상태라면 계속 두드릴수록 차단이 더 굳어질 수도 있음).
-    const CIRCUIT_BREAKER_THRESHOLD = 5;
-    let consecutiveNetworkFailures = 0;
-    let circuitOpen = false;
     await pool(batch, 1, async ({ c, dealName, areas: targetAreas }) => {
       if (circuitOpen) return; // 이미 중단 결정났으면 나머지는 건드리지 않음(그대로 미처리 상태로 남아 다음 실행에 재시도)
       await new Promise((res) => setTimeout(res, 500)); // 단지 시작 전 대기(2026.08 200ms→500ms)
@@ -404,7 +419,7 @@ async function main() {
           consecutiveNetworkFailures++;
           if (consecutiveNetworkFailures >= CIRCUIT_BREAKER_THRESHOLD && !circuitOpen) {
             circuitOpen = true;
-            console.log(`\n⚠️  연속 ${CIRCUIT_BREAKER_THRESHOLD}개 단지 조회 실패 — 지금 이 환경에서 건축HUB API 자체가 막혀있는 것으로 보여 실행을 중단합니다.`);
+            console.log(`\n⚠️  연속 ${CIRCUIT_BREAKER_THRESHOLD}개 단지 조회 실패 — 지금 이 환경에서 건축HUB API 자체가 막혀있는 것으로 보여 남은 지역까지 전부 중단합니다.`);
             console.log(`   (재시도해도 소용없을 가능성이 높음 — 다른 환경/시간대에 다시 시도해보세요. 지금까지 성공한 데이터는 그대로 저장됨)\n`);
           }
         } else {
