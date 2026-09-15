@@ -1886,12 +1886,12 @@ function applyBuildYearFilter(items){
 // 년차는 준공한 해를 1년차로 세는 1-based 표기다(2026년 준공 = 1년차, 2002년 준공 = 25년차).
 // 위 applyBuildYearFilter()의 "N년 이내" 필터는 경과 기간(현재연도 - 준공연도)이라 기준이 1 다르다 —
 // 년차는 서수(1부터), 필터는 기간(0부터)이라 서로 다른 개념이고 그대로 둔다.
-// 아직 준공 전(분양권 등 미래 연도)이면 "신축"으로 표기.
+// 아직 준공 전(분양권 등 미래 연도)은 년차로 셀 수가 없으므로 "2027년 준공"처럼 연도를 그대로 보여준다.
 function buildAgeLabel(build){
   const by = parseInt(build, 10);
   if(!by) return '';
   const age = new Date().getFullYear() - by + 1; // 준공한 해가 1년차
-  return age < 1 ? '신축' : `${age}년차`;
+  return age < 1 ? `${by}년 준공` : `${age}년차`;
 }
 function buildYearLabel(){
   const v = document.getElementById('buildYear').value;
