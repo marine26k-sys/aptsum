@@ -3221,9 +3221,14 @@ async function searchSubway(){
   try{
     const items = await loadSubwayData(lawd);
     const maxWalk = +document.getElementById('subwayWalkMax').value;
+    // "역세권 여부" 판정을 subwayLines(호선) 유무가 아니라 subwayWalk(도보시간)만으로 한다(2026.09,
+    // 수민 요청). subwayLines는 K-apt 원본에 반복적으로 오기입돼 있어(경춘선·의정부경전철 등 — 단지
+    // 분석 탭도 2026.08부터 같은 이유로 호선/역명 표시를 중단함, subwayMetaHTML 참고) 이 필드가 비어
+    // 있거나 잘못 들어간 진짜 역세권 단지가 그동안 통째로 필터링에서 빠져 있었음. 도보시간은 단순
+    // 숫자값이라 오기입 여지가 상대적으로 적어 이것만 신뢰 기준으로 삼는다.
     let rows = items
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
-      .filter(it => it.subwayLines && it.subwayLines.length && it.walk && it.walk.max <= maxWalk);
+      .filter(it => it.walk && it.walk.max <= maxWalk);
 
     // 평단가(전용면적 평단가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
@@ -3324,7 +3329,7 @@ function renderSubway(d){
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
     ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small>지하철 도보<b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(stripAptSuffix(x.name))}')">${esc(stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
       </div>`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
@@ -3812,10 +3817,10 @@ async function search(){
 function subwayMetaHTML(hh){
   if(!hh || !hh.subwayWalk) return ''; // 역명/호선명 표시는 2026.08부터 전면 중단(K-apt 원본 데이터에 반복되는
   // 오기입 문제 — 경춘선(평촌목련2단지), 의정부경전철(한가람한양6차), 양평역(동탄 소재 단지) 등, 계속
-  // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "지하철 도보 N분 이내"처럼
-  // 구체적 역명/호선 없이 도보시간만 안내. subwayLines는 역세권 탭에서 "지하철 근처인지" 여부 판정에는
-  // 계속 쓰이지만(호선 선택 필터 자체는 2026.08 삭제), 화면 표시에서는 이제 안 씀.
-  return ` · 지하철 도보${esc(formatWalkDisplay(hh.subwayWalk))}`;
+  // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "N분 이내"처럼 구체적
+  // 역명/호선 없이 도보시간만 안내("지하철 도보" 같은 앞말도 2026.09 제거, 중복이라는 지적). subwayLines
+  // 필드는 신뢰도가 낮아 역세권 탭 필터에서도 더 이상 쓰지 않음(2026.09, searchSubway 참고).
+  return ` · ${esc(formatWalkDisplay(hh.subwayWalk))}`;
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
