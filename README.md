@@ -689,3 +689,9 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 
 - **문제**: "지역 선택" 패널(전체 화면 오버레이)이 열린 상태에서 브라우저/제스처 뒤로가기를 누르면, 이 패널을 위한 history 항목이 전혀 없어서 뒤로가기가 페이지 자체를 벗어나 버림(모바일 브라우저·웹뷰에서는 화면이 꺼진 것처럼 보임) — 지역 랭킹 등 다중 선택 모드는 패널이 계속 열려있는 채로 동작해서 더 오래 열어두다 뒤로가기를 누르는 경우가 많아 특히 자주 겪는 문제였음.
 - **수정**: `openRegionPicker()`에서 패널을 열 때 `history.pushState({modal:'region'}, '')`로 항목을 하나 쌓아두고, `popstate` 핸들러에서 패널이 열려있으면(뒤로가기든, 완료·딤드 클릭으로 `history.back()`을 호출해서든) 검색 결과 복원 로직 대신 패널만 닫도록 분리(`hideRegionPickerUI()`). 완료 버튼·딤드 클릭·지역 선택으로 닫는 기존 경로(`closeRegionPicker()`)도 쌓아둔 history 항목을 `history.back()`으로 되돌려 이 popstate 경로로 통일 — 뒤로가기로 닫든 버튼으로 닫든 history 스택이 항상 일관되게 유지됨.
+
+## 쿠팡 배너 위에 "아파트썸 추천 부동산 서적" 타이틀 추가 (2026.09)
+
+- **요청**: 광고 배너 위에 "아파트썸 추천 부동산 서적"이라는 문구를 추가해달라는 요청 — 배너가 단순 광고가 아니라 아파트썸이 고른 추천 도서라는 느낌을 주기 위함.
+- **구현**: `couponBannerHTML()`(3개 파일 공통)에 `.coupang-ad-title`을 배너 행(`.coupang-ad-row`) 바로 위에 추가. 법정 고지문(`.coupang-disclosure`)은 계속 배너 아래에 그대로 유지 — 타이틀 추가가 쿠팡 파트너스 고지 의무를 대체하지 않도록 별개로 둠.
+- **테두리 스타일**: "관심 단지 요약 보기" 버튼(`#favDashBtn` — 청록 점선 테두리 + 연한 청록 배경)과 같은 느낌으로 맞춰달라는 요청 — `.coupang-ad`를 기존 `border-top:1px dashed`(위쪽만 얇은 구분선)에서 전체 박스형(`border:1.5px dashed var(--teal)`, `background:var(--teal-light-soft)`, `border-radius:12px`)으로 변경.
