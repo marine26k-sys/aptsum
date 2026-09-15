@@ -2568,13 +2568,16 @@ function buildRepRows(all, months){
 // all: 평형 필터가 적용된 데이터(상승률·하락률 랭킹용) / allUnfiltered: 필터 적용 전 원본(초단기 저평가 단지용)
 // → 초단기 저평가 단지는 "가격"이 기준이라 화면상 "평형" 필터와는 성격이 달라서, 필터 선택과 무관하게 항상 20평대(20~29)·30평대(30~39) 두 구간으로 나눠 같은 평대끼리만 고정 계산
 function analyzeUpDown(all, months){
-  const rows = buildRepRows(all, months);
-  const up = rows.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct).slice(0,20);
-  const down = rows.filter(r=>r.pct<0).sort((a,b)=>a.pct-b.pct).slice(0,20);
+  const repRows = buildRepRows(all, months);
+  const up = repRows.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct);
+  const down = repRows.filter(r=>r.pct<0).sort((a,b)=>a.pct-b.pct);
+  // 상승률 상위/하락률 상위를 별도 섹션으로 나누던 걸 없애고, 등락률(pct) 하나로 정렬한
+  // 단일 랭킹(최대 100개)으로 통합 — 상승 단지가 위에서부터, 하락 단지가 아래로 자연스럽게 이어짐.
+  const rows = [...up, ...down].sort((a,b)=>b.pct-a.pct).slice(0,100);
   return { found:true, mode:'updown', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    up, down };
+    rows };
 }
 
 // ═══ 기간별 상승 랭킹(2026.09 신규, 구독 전용) ═══
@@ -3531,7 +3534,7 @@ async function search(){
         const rentItems = floorF(windowF(mergedRent));
         d = analyzeJeonseUpDown(rentItems, months);
         d.scopeLabel = scopeLabel;
-        if(!d.up.length && !d.down.length){ d = {found:false, note:'선택한 조건에 맞는 전세 거래가 없습니다. 지역을 조정해 보세요.'}; }
+        if(!d.rows.length){ d = {found:false, note:'선택한 조건에 맞는 전세 거래가 없습니다. 지역을 조정해 보세요.'}; }
       } else if(mode==='gaptrend'){
         const rentItems = floorF(windowF(mergedRent));
         d = analyzeGapTrend(items, rentItems, months);
@@ -3640,7 +3643,7 @@ async function search(){
         // 전세 실거래(rentItems)로 등락 랭킹과 동일한 로직 재사용 — 매매 items는 이 탭에서 안 씀
         const rentItems = windowF(rawJ);
         d = analyzeJeonseUpDown(rentItems, months);
-        if(!d.up.length && !d.down.length){ d = {found:false, note:'선택한 조건에 맞는 전세 거래가 없습니다. 지역을 조정해 보세요.'}; }
+        if(!d.rows.length){ d = {found:false, note:'선택한 조건에 맞는 전세 거래가 없습니다. 지역을 조정해 보세요.'}; }
       } else if(mode==='surge'){
         d = analyzeSurge(items, months);
         if(!d.rows.length){ d = {found:false, note:'조건에 맞는 거래량 급증 단지가 없습니다. 지역을 조정해 보세요.'}; }
@@ -3885,7 +3888,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       const attachAll = (list) => list && list.length
         ? fetchHHCntBatch(lawd, list.map(x=>x.apt)).then(map=>{ list.forEach(x=>{ x.hh = map[x.apt] || null; }); })
         : Promise.resolve();
-      await Promise.all([ attachAll(d.up), attachAll(d.down) ]);
+      await attachAll(d.rows);
       if(myToken===searchToken) renderUpDown(d);
     } else if(d.mode==='gap') {
       if(d.rows && d.rows.length){
@@ -4823,13 +4826,8 @@ function renderUpDown(d){
     </div>
 
     <div class="sec">
-      <h3>상승률 상위</h3>
-      ${rows(d.up, fmtRow)}
-    </div>
-
-    <div class="sec">
-      <h3 style="background:var(--red)">하락률 상위</h3>
-      ${rows(d.down, fmtRow)}
+      <h3>등락률 순위</h3>
+      ${rows(d.rows, fmtRow)}
     </div>
 
   </div>
@@ -4865,7 +4863,7 @@ function renderTurnover(d){
 }
 
 function renderJeonseUpDown(d){
-  const multiRegion = new Set(([...d.up, ...d.down]).map(x=>x.gu).filter(Boolean)).size > 1;
+  const multiRegion = new Set(d.rows.map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
@@ -4883,13 +4881,8 @@ function renderJeonseUpDown(d){
     </div>
 
     <div class="sec">
-      <h3>전세가 상승률 상위</h3>
-      ${rows(d.up, fmtRow)}
-    </div>
-
-    <div class="sec">
-      <h3 style="background:var(--red)">전세가 하락률 상위</h3>
-      ${rows(d.down, fmtRow)}
+      <h3>전세가 등락률 순위</h3>
+      ${rows(d.rows, fmtRow)}
     </div>
 
   </div>
