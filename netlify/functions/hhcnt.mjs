@@ -111,6 +111,14 @@ const NV_ALIAS = [
 function nvKey(s) {
   let x = String(s || "").replace(/\s/g, "").replace(/[()（）,.\-_·・'"]/g, "");
   x = x.replace(/(임대|분양)$/, "").replace(/아파트$/, "").replace(/아파트(?=\d)/g, "");
+  // shared/name-match.mjs의 nameKey()와 동일 규칙(두 곳 다 고칠 것) — "향촌마을현대4차"(실거래) ↔
+  // "향촌현대4차"(네이버)처럼 1기 신도시 하위 동네명 "마을"이 중간에 있다 없다 하는 경우를 지우고 비교(2026.09).
+  x = x.replace(/마을/g, "");
+  // "우성4"(실거래) ↔ "우성4차"(네이버)처럼 숫자+차/단지 접미사가 있다 없다 하는 경우도 지우고 비교.
+  // "차"와 "단지"가 실제로 다른 동을 가리키는 단지도 있어(현대6차 178세대 vs 현대6단지 421세대 등) —
+  // 그런 경우는 build-hhcnt-naver.mjs가 keyIndex를 null로 막고 아래 폴백 스캔도 세대수 불일치 시
+  // 포기하도록 이미 돼 있어 자동으로 안전하게 보류된다(nameKey() 주석 참고).
+  x = x.replace(/(\d+)(차|단지)$/, "$1");
   x = x.toUpperCase();
   for (const [re, to] of NV_ALIAS) x = x.replace(re, to);
   return x;
@@ -144,7 +152,8 @@ function applyNaver(nv, name, result) {
   const hit = naverLookup(nv, name);
   if (!hit) return result;
   const base = (result && result.found) ? result : { found: true, name };
-  return { ...base, found: true, name, hhcnt: hit.hh };
+  // far(용적률)는 K-apt 쪽엔 없는 필드라 지울 게 없음 — hit에 있을 때만 얹는다(없으면 기존 base 유지, undefined로 덮어써 지우지 않도록).
+  return { ...base, found: true, name, hhcnt: hit.hh, ...(hit.far != null ? { far: hit.far } : {}) };
 }
 
 function resolveSigungu(lawd) {

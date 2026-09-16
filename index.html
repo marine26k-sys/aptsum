@@ -1845,7 +1845,12 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.08 8→9: 평촌목련2단지아파트 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 경춘선 오기입 제거) —
 // 이미 캐시된 옛(경춘선 포함) 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
 // (2026.08 9→10: 한가람한양6차 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 의정부경전철 오기입 제거))
-const HH_CACHE_VER = 10;
+// (2026.09 10→11: hhcnt.mjs 응답에 far(용적률) 필드 추가 — 이미 캐시된 옛 응답엔 이 필드가 없어서
+// 버전을 안 올리면 용적률이 영원히 안 뜸)
+// (2026.09 11→12: nvKey()/nameKey()에 "마을" 제거 규칙 추가(향촌마을현대4차↔향촌현대4차 미매칭 수정) —
+// 매칭 로직이 바뀌었으니 캐시된 옛 미매칭(found:false 또는 세대수 없음) 응답을 무효화해야 함)
+// (2026.09 12→13: nvKey()/nameKey()에 숫자+차/단지 접미사 제거 규칙 추가(우성4↔우성4차 등 미매칭 수정))
+const HH_CACHE_VER = 13;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -3677,14 +3682,18 @@ function subwayMetaHTML(hh){
   if(!hh || !hh.subwayWalk) return ''; // 역명/호선명 표시는 2026.08부터 전면 중단(K-apt 원본 데이터에 반복되는
   // 오기입 문제 — 경춘선(평촌목련2단지), 의정부경전철(한가람한양6차), 양평역(동탄 소재 단지) 등, 계속
   // 새로 발견될 때마다 하나씩 override 거는 방식으로는 근본 해결이 안 됨 — 대신 "N분 이내"처럼 구체적
-  // 역명/호선 없이 도보시간만 안내("지하철 도보" 같은 앞말도 2026.09 제거, 중복이라는 지적). subwayLines
-  // 필드는 신뢰도가 낮아 역세권 탭 필터에서도 더 이상 쓰지 않음(2026.09, searchSubway 참고).
-  return ` · ${esc(formatWalkDisplay(hh.subwayWalk))}`;
+  // 역명/호선 없이 도보시간만 안내. "지하철 도보" 앞말은 한때 중복이라는 지적으로 뺐었는데(2026.09),
+  // 바로 앞에 용적률(예: "307%")이 붙게 되면서 "20분이내"만 남으면 무엇까지의 도보시간인지 다시
+  // 모호해져 도로 붙임(2026.09).
+  return ` · 지하철 도보 ${esc(formatWalkDisplay(hh.subwayWalk))}`;
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
 function complexMetaHTML(d){
-  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
+  // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
+  const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
+  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
