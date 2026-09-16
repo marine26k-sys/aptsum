@@ -1152,20 +1152,13 @@ function renderRegionChips(){
   const box = document.getElementById('regionChips');
   if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise')){ box.style.display='none'; return; }
   box.style.display = '';
-  // "신고가 (일주일)" 탭 전용 — 경기는 원래 39개 시군구라 시·도 전체 일괄 추가를 안 주는데(위 REGIONS
-  // 주석 참고), 이 탭만 예외로 "경기 전체" 버튼을 따로 둔다(수민 요청, 2026.09). addRegion('ALL:경기')는
-  // 기존 로직 그대로 재사용 — regionSelMax()(25개) 넘는 분은 자동으로 경고와 함께 잘림.
-  const gyeonggiAllBtn = (mode==='newhigh' && newHighWeekOnly)
-    ? `<span onclick="addRegion('ALL:경기')" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal-dark);background:var(--teal-light-soft);border:1px solid var(--teal-soft);border-radius:999px;padding:3px 9px">+ 경기 전체</span>`
-    : '';
   if(!regionSel.length){
-    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>${gyeonggiAllBtn ? `<div style="padding:4px 2px 0">${gyeonggiAllBtn}</div>` : ''}`;
+    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
     return;
   }
   box.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:2px 0">
       ${groupRegionChips(regionSel).map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick='${x.city ? `removeRegionGroup(${JSON.stringify(x.lawds)})` : `removeRegion(${JSON.stringify(x.lawd)})`}' style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
-      ${gyeonggiAllBtn}
       <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
     </div>
     <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
