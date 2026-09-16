@@ -2263,10 +2263,15 @@ function analyzeNewLow(all, months){
     });
   }
   results.sort((a,b)=> b.gapPct - a.gapPct); // 하락률 큰 순
+  // search()가 이 결과에 300세대 이상 필터를 나중에 걸기 때문에(아래 참고), 여기서 미리 100개로 잘라버리면
+  // 그중 다수가 300세대 미만이어도 더 뒤쪽 후보를 볼 수 없어 최종 결과가 확 줄어든다 — 지역을 여러 개
+  // 묶어 조회할수록(소규모 단지 후보가 늘어날수록) 손실이 커져서 지역 1개만 조회할 때보다 오히려 결과가
+  // 더 적게 나오는 원인이었다(2026.09 발견, 신고가(일주일) 탭과 동일한 패턴). 최종 100개 컷은 세대수
+  // 필터를 다 적용한 뒤 search()에서 한다.
   return { found:true, mode:'newlow', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newLow: results.slice(0,100) };
+    newLow: results };
 }
 
 // ═══ 전용면적 평단가 탭 ═══
@@ -2625,7 +2630,13 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,50) };
+    // 이후 search()의 400세대 필터 루프(DIVERGENCE_CAP 참고)가 "격차 큰 순으로 앞에서부터 조회하다
+    // 400세대 이상 50개가 모이면 멈춘다"는 전제로 짜여 있는데, 여기서 미리 50개로 잘라버리면 그 50개 중
+    // 상당수가 400세대 미만이어도 더 뒤쪽 후보를 볼 수가 없어 최종 결과가 50개보다 훨씬 적게 나옴 —
+    // 지역을 여러 개 묶어 조회할수록(소규모 단지 후보가 늘어날수록) 이 손실이 커져서, 오히려 지역을
+    // 적게 조회할 때보다 결과가 더 적게 나오는 원인이었다(2026.09 발견, 신고가(일주일) 탭과 동일한
+    // "필터 전에 미리 자르는" 패턴). 필터 루프가 볼 수 있는 후보 폭을 넉넉히 남겨둔다.
+    divergence: divergence.slice(0,300) };
 }
 
 // ═══ 저평가 (2026.07 잠금 해제 — 공개 탭 / v130에서 "분기 저평가"→"반기 저평가"로 개명) ═══
@@ -2688,7 +2699,8 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,50) };
+    // 400세대 필터가 미리 자른 뒤에 걸러지는 걸 막기 위해 넉넉히 남겨둠 — analyzeShortUndervalue 쪽 주석 참고
+    divergence: divergence.slice(0,300) };
 }
 
 // ═══ 연간 저평가 — "반기 저평가"(peak, 2026.07 이전 명칭 "분기 저평가")와 완전히 동일한 로직, 6개월 구간(6vs6) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
@@ -2768,7 +2780,8 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
-    divergence: divergence.slice(0,50) };
+    // 400세대 필터가 미리 자른 뒤에 걸러지는 걸 막기 위해 넉넉히 남겨둠 — analyzeShortUndervalue 쪽 주석 참고
+    divergence: divergence.slice(0,300) };
 }
 
 function analyzeCompare(itemsByLawd, targets, months){
@@ -3595,7 +3608,7 @@ async function search(){
         const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
         list.forEach(x=>{ x.hh = map[x.apt] || null; });
       }));
-      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300);
+      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300).slice(0,100);
     }
 
     // 평형 비교 저평가 탭: 세대수는 회전율처럼 계산에 쓰는 게 아니라 그냥 참고 정보로 붙인다(수민 요청) —
