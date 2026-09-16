@@ -1210,10 +1210,16 @@ function buildRegionPicker(){
       let prefix = '';
       if(multi && !q){
         if(g==='경기'){
+          // "신고가 (일주일)" 탭은 regionSelMax()가 45개까지 풀려 있어 "경기 전체"(39개)를 통으로 담을 수
+          // 있으므로(위 regionSelMax() 참고), 이 탭에 한해 경기 그룹 맨 앞(고양시 전체보다 앞)에
+          // "+ 경기 전체" 알약을 추가로 노출한다(수민 요청, 2026.09).
+          if(i===0 && mode==='newhigh' && newHighWeekOnly){
+            prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
+          }
           const sp = n.indexOf(' ');
           const city = sp>-1 ? n.slice(0,sp) : null;
           if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
-            prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+            prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
           }
           ggPickerLastCity = city;
         } else if(i===0){
