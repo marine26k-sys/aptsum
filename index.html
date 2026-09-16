@@ -1152,20 +1152,13 @@ function renderRegionChips(){
   const box = document.getElementById('regionChips');
   if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise')){ box.style.display='none'; return; }
   box.style.display = '';
-  // "신고가 (일주일)" 탭 전용 — 경기는 원래 39개 시군구라 시·도 전체 일괄 추가를 안 주는데(위 REGIONS
-  // 주석 참고), 이 탭만 예외로 "경기 전체" 버튼을 따로 둔다(수민 요청, 2026.09). addRegion('ALL:경기')는
-  // 기존 로직 그대로 재사용 — regionSelMax()(25개) 넘는 분은 자동으로 경고와 함께 잘림.
-  const gyeonggiAllBtn = (mode==='newhigh' && newHighWeekOnly)
-    ? `<span onclick="addRegion('ALL:경기')" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal-dark);background:var(--teal-light-soft);border:1px solid var(--teal-soft);border-radius:999px;padding:3px 9px">+ 경기 전체</span>`
-    : '';
   if(!regionSel.length){
-    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>${gyeonggiAllBtn ? `<div style="padding:4px 2px 0">${gyeonggiAllBtn}</div>` : ''}`;
+    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
     return;
   }
   box.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:2px 0">
       ${groupRegionChips(regionSel).map(x=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-soft);border:1px solid #B9E4E6;color:var(--teal-dark);border-radius:999px;padding:3px 6px 3px 9px;font-size:11px;font-weight:700">${esc(x.name)}<b onclick='${x.city ? `removeRegionGroup(${JSON.stringify(x.lawds)})` : `removeRegion(${JSON.stringify(x.lawd)})`}' style="cursor:pointer;font-size:13px;line-height:1;padding:0 2px;color:#00565C">×</b></span>`).join('')}
-      ${gyeonggiAllBtn}
       <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
     </div>
     <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
@@ -1210,10 +1203,16 @@ function buildRegionPicker(){
       let prefix = '';
       if(multi && !q){
         if(g==='경기'){
+          // "신고가 (일주일)" 탭은 regionSelMax()가 45개까지 풀려 있어 "경기 전체"(39개)를 통으로 담을 수
+          // 있으므로(위 regionSelMax() 참고), 이 탭에 한해 경기 그룹 맨 앞(고양시 전체보다 앞)에
+          // "+ 경기 전체" 알약을 추가로 노출한다(수민 요청, 2026.09).
+          if(i===0 && mode==='newhigh' && newHighWeekOnly){
+            prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
+          }
           const sp = n.indexOf(' ');
           const city = sp>-1 ? n.slice(0,sp) : null;
           if(city && city!==ggPickerLastCity && GG_MULTI_CITIES.includes(city)){
-            prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
+            prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
           }
           ggPickerLastCity = city;
         } else if(i===0){
@@ -1614,11 +1613,16 @@ function lsSave(lawd){
 // 완전 병렬이면 국토부 API·Netlify 함수에 순간적으로 동시 요청이 몰려 레이트리밋·타임아웃 위험이 있음(2026.07).
 // 4로 잡아서 신고가의 4개 조각은 한 번에(1라운드), 그 이상 조각이 필요한 경우(복수 지역 조회 등)만 여러 라운드로 나눔.
 const CHUNK_CONCURRENCY = 4;
+// 청크 하나가 실패해도(국토부 API 순간 오류·타임아웃) Promise.all이 통째로 reject되어 같은 지역의
+// 나머지 멀쩡한 청크(수십 개월치)까지 다 날아가던 문제(2026.09 발견 — 경기도 39개 시군구 통합 조회처럼
+// 지역 수가 많을수록 "어느 한 지역의 어느 한 달"이 실패할 확률이 누적돼, 결과적으로 지역 1개만 조회할
+// 때보다 오히려 총 결과가 더 적게 나오는 원인이었음). 청크별로 개별 catch해서 실패한 청크만 null로
+// 표시하고 나머지 성공한 청크는 그대로 살린다.
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
-    results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c))));
+    results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
   }
   return results;
 }
@@ -1645,9 +1649,14 @@ async function ensureMonths(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetch, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetch, lawd);
+    // 실패한 청크(items===null)는 캐시하지 않고 그대로 남겨둬 다음 조회 때 다시 시도한다 —
+    // 성공한 달만 캐시해야 이 지역의 나머지 정상 데이터가 실패한 달 때문에 통째로 사라지지 않는다.
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSave(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
@@ -1719,9 +1728,13 @@ async function ensureMonthsP(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetchP, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetchP, lawd);
+    // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSaveP(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
@@ -1794,9 +1807,13 @@ async function ensureMonthsJ(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetchJ, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetchJ, lawd);
+    // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSaveJ(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
@@ -2158,7 +2175,7 @@ function analyzeRegion(all, months){
 // "선택 조회기간(고정 3년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
-function analyzeNewHigh(all, months){
+function analyzeNewHigh(all, months, weekOnly){
   // 직거래(중개 없이 당사자끼리 신고, 특수관계 거래 가능성 있음)는 신고가 판정에서 아예 제외 —
   // 등락 랭킹·저평가 탭의 markOutliers()가 같은 이유로 직거래를 걸러내는 것과 동일한 원칙.
   // 신고가는 60,000명 팔로워에게 그대로 노출되는 공개 지표라, 특수관계자 간 1건의 시세 왜곡 거래만으로
@@ -2194,10 +2211,16 @@ function analyzeNewHigh(all, months){
     });
   }
   results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
+  // "신고가 (일주일)" 탭은 여기서 가격 상위 100개로 자른 뒤 화면(renderNewHigh)에서 최근 7일 이내(fresh7)만
+  // 다시 걸러내는 순서였는데, 그러면 지역을 여러 개 묶어 조회할수록(예: 경기도 전체 39개 시군구) 비싼
+  // 지역의 오래된(8~29일 전) 신고가가 상위 100개를 채워버려서, 정작 최근 7일 안에 갱신됐지만 가격은 상대적으로
+  // 낮은 다른 지역 신고가가 밀려나 통째로 안 보이는 문제가 있었음(2026.09 발견 — 구 1개만 조회할 때보다
+  // 오히려 "경기도 전체"가 결과가 더 적게 나오던 원인). 7일 필터를 먼저 적용한 뒤에 100개로 잘라야 한다.
+  const filtered = weekOnly ? results.filter(r=>r.fresh7) : results;
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: results.slice(0,100) };
+    newHigh: filtered.slice(0,100) };
 }
 
 // ═══ 신저가 탭 ═══
@@ -2240,10 +2263,15 @@ function analyzeNewLow(all, months){
     });
   }
   results.sort((a,b)=> b.gapPct - a.gapPct); // 하락률 큰 순
+  // search()가 이 결과에 300세대 이상 필터를 나중에 걸기 때문에(아래 참고), 여기서 미리 100개로 잘라버리면
+  // 그중 다수가 300세대 미만이어도 더 뒤쪽 후보를 볼 수 없어 최종 결과가 확 줄어든다 — 지역을 여러 개
+  // 묶어 조회할수록(소규모 단지 후보가 늘어날수록) 손실이 커져서 지역 1개만 조회할 때보다 오히려 결과가
+  // 더 적게 나오는 원인이었다(2026.09 발견, 신고가(일주일) 탭과 동일한 패턴). 최종 100개 컷은 세대수
+  // 필터를 다 적용한 뒤 search()에서 한다.
   return { found:true, mode:'newlow', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newLow: results.slice(0,100) };
+    newLow: results };
 }
 
 // ═══ 전용면적 평단가 탭 ═══
@@ -2602,7 +2630,13 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,50) };
+    // 이후 search()의 400세대 필터 루프(DIVERGENCE_CAP 참고)가 "격차 큰 순으로 앞에서부터 조회하다
+    // 400세대 이상 50개가 모이면 멈춘다"는 전제로 짜여 있는데, 여기서 미리 50개로 잘라버리면 그 50개 중
+    // 상당수가 400세대 미만이어도 더 뒤쪽 후보를 볼 수가 없어 최종 결과가 50개보다 훨씬 적게 나옴 —
+    // 지역을 여러 개 묶어 조회할수록(소규모 단지 후보가 늘어날수록) 이 손실이 커져서, 오히려 지역을
+    // 적게 조회할 때보다 결과가 더 적게 나오는 원인이었다(2026.09 발견, 신고가(일주일) 탭과 동일한
+    // "필터 전에 미리 자르는" 패턴). 필터 루프가 볼 수 있는 후보 폭을 넉넉히 남겨둔다.
+    divergence: divergence.slice(0,300) };
 }
 
 // ═══ 저평가 (2026.07 잠금 해제 — 공개 탭 / v130에서 "분기 저평가"→"반기 저평가"로 개명) ═══
@@ -2665,7 +2699,8 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    divergence: divergence.slice(0,50) };
+    // 400세대 필터가 미리 자른 뒤에 걸러지는 걸 막기 위해 넉넉히 남겨둠 — analyzeShortUndervalue 쪽 주석 참고
+    divergence: divergence.slice(0,300) };
 }
 
 // ═══ 연간 저평가 — "반기 저평가"(peak, 2026.07 이전 명칭 "분기 저평가")와 완전히 동일한 로직, 6개월 구간(6vs6) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
@@ -2745,7 +2780,8 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     recentYearLabel, prevYearLabel, sameDongOnly:!!sameDongOnly,
-    divergence: divergence.slice(0,50) };
+    // 400세대 필터가 미리 자른 뒤에 걸러지는 걸 막기 위해 넉넉히 남겨둠 — analyzeShortUndervalue 쪽 주석 참고
+    divergence: divergence.slice(0,300) };
 }
 
 function analyzeCompare(itemsByLawd, targets, months){
@@ -3346,7 +3382,7 @@ async function search(){
         if(!items.length){
           d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
         } else {
-          d = mode==='newhigh' ? analyzeNewHigh(items, months)
+          d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
             : mode==='newlow' ? analyzeNewLow(items, months)
             : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
             : analyzePricePerPyeong(items, months);
@@ -3464,7 +3500,7 @@ async function search(){
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longtermrise'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
-        d = mode==='newhigh' ? analyzeNewHigh(items, months)
+        d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
           : mode==='newlow' ? analyzeNewLow(items, months)
           : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
           : analyzePricePerPyeong(items, months);
@@ -3572,7 +3608,7 @@ async function search(){
         const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
         list.forEach(x=>{ x.hh = map[x.apt] || null; });
       }));
-      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300);
+      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300).slice(0,100);
     }
 
     // 평형 비교 저평가 탭: 세대수는 회전율처럼 계산에 쓰는 게 아니라 그냥 참고 정보로 붙인다(수민 요청) —
@@ -4434,9 +4470,10 @@ function renderGap(d){
 function renderNewHigh(d){
   // "신고가 (일주일)" 탭(newHighWeekOnly)은 별도 수집 없이 같은 30일 창 결과에서 실제 계약일이
   // 최근 7일 이내인 것(fresh7)만 걸러서 보여준다 — 수집 창을 7일로 좁히면 아직 신고 안 된 신고가를
-  // 놓치므로(analyzeNewHigh 참고) 표시 단계에서만 필터링.
+  // 놓치므로(analyzeNewHigh 참고) 표시 단계에서만 필터링. 7일 필터 자체는 이제 analyzeNewHigh가
+  // 가격 상위 100개로 자르기 전에 먼저 적용해서 넘겨주므로(2026.09 수정), d.newHigh를 그대로 쓴다.
   const weekOnly = newHighWeekOnly;
-  const list = weekOnly ? d.newHigh.filter(x=>x.fresh7) : d.newHigh;
+  const list = d.newHigh;
   const multiRegion = new Set(list.map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   // "이번 신고가" 판정 기준인 최근 30일 창(analyzeNewHigh의 isRecentDeal(top,30)과 동일 기준)을
