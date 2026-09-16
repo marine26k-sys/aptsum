@@ -1614,11 +1614,16 @@ function lsSave(lawd){
 // 완전 병렬이면 국토부 API·Netlify 함수에 순간적으로 동시 요청이 몰려 레이트리밋·타임아웃 위험이 있음(2026.07).
 // 4로 잡아서 신고가의 4개 조각은 한 번에(1라운드), 그 이상 조각이 필요한 경우(복수 지역 조회 등)만 여러 라운드로 나눔.
 const CHUNK_CONCURRENCY = 4;
+// 청크 하나가 실패해도(국토부 API 순간 오류·타임아웃) Promise.all이 통째로 reject되어 같은 지역의
+// 나머지 멀쩡한 청크(수십 개월치)까지 다 날아가던 문제(2026.09 발견 — 경기도 39개 시군구 통합 조회처럼
+// 지역 수가 많을수록 "어느 한 지역의 어느 한 달"이 실패할 확률이 누적돼, 결과적으로 지역 1개만 조회할
+// 때보다 오히려 총 결과가 더 적게 나오는 원인이었음). 청크별로 개별 catch해서 실패한 청크만 null로
+// 표시하고 나머지 성공한 청크는 그대로 살린다.
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
-    results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c))));
+    results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
   }
   return results;
 }
@@ -1645,9 +1650,14 @@ async function ensureMonths(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetch, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetch, lawd);
+    // 실패한 청크(items===null)는 캐시하지 않고 그대로 남겨둬 다음 조회 때 다시 시도한다 —
+    // 성공한 달만 캐시해야 이 지역의 나머지 정상 데이터가 실패한 달 때문에 통째로 사라지지 않는다.
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSave(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
@@ -1719,9 +1729,13 @@ async function ensureMonthsP(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetchP, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetchP, lawd);
+    // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSaveP(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
@@ -1794,9 +1808,13 @@ async function ensureMonthsJ(lawd, n){
     const chunks = [];
     if(freshMs.length) chunks.push(freshMs);
     for(let i=0;i<stableMs.length;i+=12) chunks.push(stableMs.slice(i,i+12));
-    const results = await fetchChunksLimited(chunks, postFetchJ, lawd);
-    chunks.forEach(c => c.forEach(ym => { cache[ym] = {t: now, items: []}; }));
-    results.flat().forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    const settled = await fetchChunksLimited(chunks, postFetchJ, lawd);
+    // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
+    for(const {chunk, items} of settled){
+      if(items === null) continue;
+      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
+      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+    }
     lsSaveJ(lawd);
   }
   return yms.flatMap(ym => cache[ym] ? cache[ym].items : []);
