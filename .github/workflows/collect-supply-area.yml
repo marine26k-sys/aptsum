@@ -7,9 +7,14 @@ on:
         description: "지역 코드(콤마 구분, 비우면 전체)"
         required: false
       limit:
-        description: "이번 실행에서 처리할 단지 수(비우면 최대한 다 처리)"
+        # 2026.09 발견 — 기본값이 99999("사실상 무제한")라 워크플로 실행이 timeout-minutes(360분) 안에
+        # 절대 안 끝나고 매번 중간에 강제로 cancel됨(실제로 04:21~10:21 6시간 내내 돌고도 2,105개 단지
+        # 처리 중 타임아웃). 스크립트 자체는 이미 처리된 단지를 건너뛰는 재시작 가능 설계(COMMIT_EVERY=5
+        # 중간 커밋)라, 한 번에 다 돌리려 하지 말고 타임아웃 전에 확실히 끝나는 크기로 여러 번 나눠 돌리는
+        # 쪽이 맞음 — 기본값을 1500으로 낮춤(6시간 실행에서 2,105개 처리된 실측 속도 기준 여유를 둔 값).
+        description: "이번 실행에서 처리할 단지 수(timeout 360분 안에 끝나야 함 — 너무 크게 잡지 말 것)"
         required: false
-        default: "99999"
+        default: "1500"
 
 permissions:
   contents: write
@@ -23,6 +28,9 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    # 360분은 GitHub-hosted 러너(ubuntu-latest)의 잡 실행 시간 하드 리밋이라 더 늘려도 효과 없음
+    # (2026.09 확인 — 정확히 6시간 지점에서 스텝이 "cancelled"로 강제 종료됨). limit 입력으로 실행 범위를
+    # 조절해서 이 시간 안에 끝내는 게 유일한 해결책.
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +51,7 @@ jobs:
         run: |
           node scripts/collect-supply-area.mjs \
             ${{ inputs.only && format('--only={0}', inputs.only) || '' }} \
-            --limit=${{ inputs.limit || '99999' }}
+            --limit=${{ inputs.limit || '1500' }}
 
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
         if: always()
