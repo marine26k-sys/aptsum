@@ -65,6 +65,14 @@ const PARTIAL_OVERRIDE = {
   // "의정부경전철"이 잘못 섞여 있음(의정부시 소재 노선이라 안양과 지리적으로 완전히 무관). 위 평촌목련2단지와
   // 동일한 유형의 원천 데이터 오기입 — SUBWAY_LINE_FIX에도 동일하게 반영(2026.08).
   "41173|한가람한양6차": { subwayLines: ["4호선"] },
+  // 안양 동안구 호계동 목련단지 — 실거래는 "목련우성5"/"목련우성7"처럼 [단지명+건설사+동번호] 순서인데
+  // K-apt는 "목련5단지우성"/"목련7단지우성"처럼 [단지명+번호+건설사] 순서라 토큰 순서가 달라 matchKapt()의
+  // 단순 포함(includes) 비교로도, naverLookup()의 접두/접미 비교로도 못 잡는다(2026.09, 수민 리포트 —
+  // 네이버 보정 도입 후 "목련우성5"가 전혀 다른 단지 "목련"(관양동, 48세대)에 잘못 걸렸던 게 발단, 원인은
+  // naverLookup의 후보명 길이 하한이 2자였던 별개 버그였지만 겸사겸사 이 단지도 K-apt 확정값으로 고정).
+  // data/hhcnt/41173.json의 "목련5단지우성"(683세대)·"목련7단지우성"(466세대)을 그대로 사용.
+  "41173|목련우성5": { hhcnt: 683 },
+  "41173|목련우성7": { hhcnt: 466 },
 };
 function applyPartialOverride(lawd, name, result) {
   const ov = PARTIAL_OVERRIDE[`${lawd}|${name.replace(/\s/g, "")}`];
@@ -139,7 +147,11 @@ function naverLookup(nv, name) {
   let hit = null;
   for (const key of Object.keys(nv.items)) {
     const kk = nvKey(key);
-    if (kk.length < 2) continue;
+    // 2026.09 버그 수정 — 후보명이 2자면(예: "목련") 그 자체가 흔한 접두어라 "목련우성5"(호계동, 683세대)
+    // 같은 전혀 다른 단지(관양동 "목련", 48세대)의 접두 관계로 잘못 걸림. shared/name-match.mjs의
+    // resolveComplexNames()는 후보 쪽에 이미 h.k.length>=3 조건을 걸어두는데 여기만 <2로 느슨했던 것 —
+    // 두 곳을 맞춰 후보명도 3자 이상만 인정.
+    if (kk.length < 3) continue;
     const ok = shortName ? kk.endsWith(k)
       : (kk.endsWith(k) || k.endsWith(kk) || kk.startsWith(k) || k.startsWith(kk));
     if (!ok) continue;
