@@ -65,6 +65,14 @@ const PARTIAL_OVERRIDE = {
   // "의정부경전철"이 잘못 섞여 있음(의정부시 소재 노선이라 안양과 지리적으로 완전히 무관). 위 평촌목련2단지와
   // 동일한 유형의 원천 데이터 오기입 — SUBWAY_LINE_FIX에도 동일하게 반영(2026.08).
   "41173|한가람한양6차": { subwayLines: ["4호선"] },
+  // 안양 동안구 호계동 목련단지 — 실거래는 "목련우성5"/"목련우성7"처럼 [단지명+건설사+동번호] 순서인데
+  // K-apt는 "목련5단지우성"/"목련7단지우성"처럼 [단지명+번호+건설사] 순서라 토큰 순서가 달라 matchKapt()의
+  // 단순 포함(includes) 비교로도, naverLookup()의 접두/접미 비교로도 못 잡는다(2026.09, 수민 리포트 —
+  // 네이버 보정 도입 후 "목련우성5"가 전혀 다른 단지 "목련"(관양동, 48세대)에 잘못 걸렸던 게 발단, 원인은
+  // naverLookup의 후보명 길이 하한이 2자였던 별개 버그였지만 겸사겸사 이 단지도 K-apt 확정값으로 고정).
+  // data/hhcnt/41173.json의 "목련5단지우성"(683세대)·"목련7단지우성"(466세대)을 그대로 사용.
+  "41173|목련우성5": { hhcnt: 683 },
+  "41173|목련우성7": { hhcnt: 466 },
 };
 function applyPartialOverride(lawd, name, result) {
   const ov = PARTIAL_OVERRIDE[`${lawd}|${name.replace(/\s/g, "")}`];
@@ -123,9 +131,23 @@ function nvKey(s) {
   for (const [re, to] of NV_ALIAS) x = x.replace(re, to);
   return x;
 }
-function naverLookup(nv, name) {
+// 2026.09 — "목련아파트"(호계동, 1994년 준공)가 "아파트" 접미사 제거만으로 키가 "목련"(2자)이 되면서
+// 전혀 다른 "목련"(관양동, 48세대, 1979년 준공)에 정확 일치로 잘못 걸렸던 걸 계기로, keyIndex 정확 매칭이
+// "현대"·"삼성" 같은 흔한 2자 이름에서 얼마나 위험한지 실거래 준공년도로 전수 검증했다(같은 구 안에서
+// 네이버 built 연도와 실거래 등록 연식을 대조). 결과: 짧은 키 144건 중 131건은 연식이 맞아떨어지는
+// 정상 매칭이었고, 명백히 틀린 건 13건뿐이었다. 그래서 "짧은 키는 무조건 불신"하는 일반 규칙 대신(그러면
+// 정상 매칭 131건까지 같이 잃음), 연식이 실제로 어긋난다고 확인된 이 13건만 콕 집어 네이버 조회를
+// 건너뛰게 막는다 — 나머지는 기존 K-apt 자동 매칭(대개 found:false였던 것들)으로 조용히 폴백된다.
+const NAVER_DENY = new Set([
+  "11260|백운아파트", "11350|건영아파트", "11380|현대아파트", "11590|대림아파트",
+  "11650|현대아파트", "11680|한솔마을", "11710|한양아파트", "26200|봉래",
+  "28177|행복", "28177|우성아파트", "28177|삼원아파트", "41173|목련아파트",
+  "BC-원미구|금강",
+]);
+function naverLookup(nv, lawd, name) {
   if (!nv) return null;
   const n = String(name || "").replace(/\s/g, "");
+  if (NAVER_DENY.has(`${lawd}|${n}`)) return null;
   if (nv.items[n]) return nv.items[n];
   const k = nvKey(n);
   const viaKey = nv.keyIndex[k];
@@ -139,7 +161,11 @@ function naverLookup(nv, name) {
   let hit = null;
   for (const key of Object.keys(nv.items)) {
     const kk = nvKey(key);
-    if (kk.length < 2) continue;
+    // 2026.09 버그 수정 — 후보명이 2자면(예: "목련") 그 자체가 흔한 접두어라 "목련우성5"(호계동, 683세대)
+    // 같은 전혀 다른 단지(관양동 "목련", 48세대)의 접두 관계로 잘못 걸림. shared/name-match.mjs의
+    // resolveComplexNames()는 후보 쪽에 이미 h.k.length>=3 조건을 걸어두는데 여기만 <2로 느슨했던 것 —
+    // 두 곳을 맞춰 후보명도 3자 이상만 인정.
+    if (kk.length < 3) continue;
     const ok = shortName ? kk.endsWith(k)
       : (kk.endsWith(k) || k.endsWith(kk) || kk.startsWith(k) || k.startsWith(kk));
     if (!ok) continue;
@@ -148,8 +174,8 @@ function naverLookup(nv, name) {
   }
   return hit;
 }
-function applyNaver(nv, name, result) {
-  const hit = naverLookup(nv, name);
+function applyNaver(nv, lawd, name, result) {
+  const hit = naverLookup(nv, lawd, name);
   if (!hit) return result;
   const base = (result && result.found) ? result : { found: true, name };
   // far(용적률)는 K-apt 쪽엔 없는 필드라 지울 게 없음 — hit에 있을 때만 얹는다(없으면 기존 base 유지, undefined로 덮어써 지우지 않도록).
@@ -433,7 +459,7 @@ export default async (req) => {
     // 네이버 세대수로 덮어쓰기(지하철 등 나머지 필드는 위에서 채운 K-apt 값 유지).
     // MANUAL_OVERRIDE로 이미 확정한 값은 건드리지 않는다 — 수동 확인값이 자동 매칭(네이버 포함)보다 우선.
     const nvMap = await loadNaverHh(new URL(req.url).origin, lawd);
-    if (nvMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyNaver(nvMap, nm, results[nm]); }
+    if (nvMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyNaver(nvMap, lawd, nm, results[nm]); }
 
     // 부분 보정(PARTIAL_OVERRIDE)은 네이버보다도 뒤 — 수동 확인값이 항상 최종 우선
     for (const nm of names) results[nm] = applyPartialOverride(lawd, nm, results[nm]);
@@ -488,7 +514,7 @@ export default async (req) => {
         if (hits.length) {
           const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
           const merged = fulls.length ? mergeFull(fulls) : null;
-          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
         }
       }
     }
@@ -516,10 +542,10 @@ export default async (req) => {
       : [[], []];
     const merged = mergeBasis(bases, subways);
     if (!merged) {
-      const patched = applyPartialOverride(lawd, name, applyNaver(nvGet, name, { found: false }));
+      const patched = applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: false }));
       return new Response(JSON.stringify(patched), { headers: patched.found ? cacheHeadersFound : cacheHeadersMiss });
     }
-    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
