@@ -144,7 +144,8 @@ function applyNaver(nv, name, result) {
   const hit = naverLookup(nv, name);
   if (!hit) return result;
   const base = (result && result.found) ? result : { found: true, name };
-  return { ...base, found: true, name, hhcnt: hit.hh };
+  // far(용적률)는 K-apt 쪽엔 없는 필드라 지울 게 없음 — hit에 있을 때만 얹는다(없으면 기존 base 유지, undefined로 덮어써 지우지 않도록).
+  return { ...base, found: true, name, hhcnt: hit.hh, ...(hit.far != null ? { far: hit.far } : {}) };
 }
 
 function resolveSigungu(lawd) {

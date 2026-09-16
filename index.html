@@ -1845,7 +1845,9 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.08 8→9: 평촌목련2단지아파트 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 경춘선 오기입 제거) —
 // 이미 캐시된 옛(경춘선 포함) 응답이 남아있으면 서버 로직을 고쳐도 그대로 재사용됨)
 // (2026.08 9→10: 한가람한양6차 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 의정부경전철 오기입 제거))
-const HH_CACHE_VER = 10;
+// (2026.09 10→11: hhcnt.mjs 응답에 far(용적률) 필드 추가 — 이미 캐시된 옛 응답엔 이 필드가 없어서
+// 버전을 안 올리면 용적률이 영원히 안 뜸)
+const HH_CACHE_VER = 11;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -3684,7 +3686,10 @@ function subwayMetaHTML(hh){
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
 function complexMetaHTML(d){
-  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
+  // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
+  const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
+  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
