@@ -1847,7 +1847,9 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.08 9→10: 한가람한양6차 subwayLines PARTIAL_OVERRIDE 추가(원본 데이터의 의정부경전철 오기입 제거))
 // (2026.09 10→11: hhcnt.mjs 응답에 far(용적률) 필드 추가 — 이미 캐시된 옛 응답엔 이 필드가 없어서
 // 버전을 안 올리면 용적률이 영원히 안 뜸)
-const HH_CACHE_VER = 11;
+// (2026.09 11→12: nvKey()/nameKey()에 "마을" 제거 규칙 추가(향촌마을현대4차↔향촌현대4차 미매칭 수정) —
+// 매칭 로직이 바뀌었으니 캐시된 옛 미매칭(found:false 또는 세대수 없음) 응답을 무효화해야 함)
+const HH_CACHE_VER = 12;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;

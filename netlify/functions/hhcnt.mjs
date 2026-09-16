@@ -111,6 +111,9 @@ const NV_ALIAS = [
 function nvKey(s) {
   let x = String(s || "").replace(/\s/g, "").replace(/[()（）,.\-_·・'"]/g, "");
   x = x.replace(/(임대|분양)$/, "").replace(/아파트$/, "").replace(/아파트(?=\d)/g, "");
+  // shared/name-match.mjs의 nameKey()와 동일 규칙 — "향촌마을현대4차"(실거래) ↔ "향촌현대4차"(네이버)처럼
+  // 1기 신도시 하위 동네명 "마을"이 중간에 있다 없다 하는 경우를 지우고 비교(2026.09). 두 곳 다 고칠 것.
+  x = x.replace(/마을/g, "");
   x = x.toUpperCase();
   for (const [re, to] of NV_ALIAS) x = x.replace(re, to);
   return x;

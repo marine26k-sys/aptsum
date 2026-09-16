@@ -31,6 +31,10 @@ export const norm = (s) => String(s || "").replace(/\s/g, "");
 export function nameKey(s) {
   let x = norm(s).replace(/[()（）,.\-_·・'"]/g, "");
   x = x.replace(/(임대|분양)$/, "").replace(/아파트$/, "").replace(/아파트(?=\d)/g, "");
+  // 1기 신도시(평촌·분당·산본 등)는 "향촌마을현대4차"처럼 하위 동네명 "마을"을 이름 중간에 붙이는 관행이
+  // 있는데, 실거래·네이버 표기가 이걸 붙였다 뗐다 해서(예: 실거래 [향촌마을현대4차] ↔ 네이버 [향촌현대4차])
+  // 접두/접미 규칙으론 못 잡는다(중간 삽입이라 어느 쪽도 아님) — 아예 지우고 비교(2026.09).
+  x = x.replace(/마을/g, "");
   x = x.toUpperCase();
   for (const [re, to] of ALIAS) x = x.replace(re, to);
   return x;
