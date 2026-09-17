@@ -69,14 +69,87 @@
 const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
+function showLogin(error = ""){
+  $("#app").innerHTML = \`
+    <div class="card">
+      <div class="card-title">관리자 인증</div>
+      <p style="margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.65">방문자 통계는 관리자만 볼 수 있습니다. Netlify에 설정한 통계 관리자 코드를 입력하세요.</p>
+      <form id="statsLoginForm">
+        <input id="statsCode" type="password" autocomplete="current-password" placeholder="통계 관리자 코드" aria-label="통계 관리자 코드" style="box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit">
+        <button type="submit" style="margin-top:10px;padding:10px 15px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer">통계 보기</button>
+      </form>
+      <div id="statsLoginError" role="alert" style="min-height:18px;margin-top:10px;color:#d95d5d;font-size:12px">\${esc(error)}</div>
+    </div>
+  \`;
+
+  $("#statsLoginForm").addEventListener("submit", submitStatsCode);
+  $("#statsCode").focus();
+}
+
+function showConfigError(){
+  $("#app").innerHTML = \`<div class="err">통계 관리자 인증이 아직 설정되지 않았습니다.<br>Netlify 환경 변수에 <b>STATS_ACCESS_CODE</b>를 추가한 뒤 다시 배포하세요.</div>\`;
+}
+
+async function submitStatsCode(event){
+  event.preventDefault();
+  const code = $("#statsCode").value;
+  const error = $("#statsLoginError");
+
+  if(!code){
+    error.textContent = "관리자 코드를 입력하세요.";
+    return;
+  }
+
+  const button = $("#statsLoginForm button");
+  button.disabled = true;
+  button.textContent = "확인 중…";
+
+  try{
+    const res = await fetch("/api/stats-auth", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+
+    if(res.ok){
+      await load();
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    error.textContent = data.error === "stats_auth_not_configured"
+      ? "Netlify에 STATS_ACCESS_CODE가 설정되지 않았습니다."
+      : "관리자 코드가 올바르지 않습니다.";
+  }catch(e){
+    error.textContent = "인증 요청에 실패했습니다. 잠시 후 다시 시도하세요.";
+  }finally{
+    if($("#statsLoginForm")){
+      button.disabled = false;
+      button.textContent = "통계 보기";
+    }
+  }
+}
+
 async function load(){
   try{
-    const res = await fetch('/api/stats', { cache: 'no-store' });
-    if(!res.ok) throw new Error('failed');
-    const d = await res.json();
-    render(d);
+    const res = await fetch("/api/stats", { cache: "no-store", credentials: "same-origin" });
+
+    if(res.status === 401){
+      showLogin();
+      return;
+    }
+
+    if(res.status === 503){
+      showConfigError();
+      return;
+    }
+
+    if(!res.ok) throw new Error("failed");
+    render(await res.json());
   }catch(e){
-    $('#app').innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+    $("#app").innerHTML = \`<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>\`;
   }
 }
 
@@ -85,43 +158,43 @@ function render(d){
   const maxPage = Math.max(...d.pages.map(p => p.total), 1);
   const todayStr = d.trend[d.trend.length - 1].date;
 
-  $('#app').innerHTML = `
+  $("#app").innerHTML = \`
     <div class="stat-grid">
-      <div class="stat-card"><div class="lbl">전체 방문</div><div class="val">${d.total.toLocaleString()}<span>회</span></div></div>
-      <div class="stat-card"><div class="lbl">오늘 방문</div><div class="val">${d.today.toLocaleString()}<span>회</span></div></div>
+      <div class="stat-card"><div class="lbl">전체 방문</div><div class="val">\${d.total.toLocaleString()}<span>회</span></div></div>
+      <div class="stat-card"><div class="lbl">오늘 방문</div><div class="val">\${d.today.toLocaleString()}<span>회</span></div></div>
     </div>
 
     <div class="card">
       <div class="card-title">최근 14일 추이</div>
       <div class="chart">
-        ${d.trend.map(t => `
+        \${d.trend.map(t => \`
           <div class="chart-col">
-            <div class="chart-val ${t.date===todayStr?'today':''}">${t.count.toLocaleString()}</div>
-            <div class="chart-bar ${t.date===todayStr?'today':''}" style="height:${Math.max((t.count/maxTrend*82), t.count>0?4:2)}%" title="${t.date} · ${t.count}회"></div>
+            <div class="chart-val \${t.date===todayStr?"today":""}">\${t.count.toLocaleString()}</div>
+            <div class="chart-bar \${t.date===todayStr?"today":""}" style="height:\${Math.max((t.count/maxTrend*82), t.count>0?4:2)}%" title="\${t.date} · \${t.count}회"></div>
           </div>
-        `).join('')}
+        \`).join("")}
       </div>
       <div class="chart-labels">
-        ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace('-', '/')):''}</div>`).join('')}
+        \${d.trend.map((t,i) => \`<div class="chart-lbl">\${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>\`).join("")}
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">페이지별 방문</div>
-      ${d.pages.map(p => `
+      \${d.pages.map(p => \`
         <div class="page-row">
           <div class="page-dot"></div>
           <div class="page-main">
-            <div class="page-name">${esc(p.label)}</div>
-            <div class="page-bar-track"><div class="page-bar-fill" style="width:${(p.total/maxPage*100).toFixed(1)}%"></div></div>
+            <div class="page-name">\${esc(p.label)}</div>
+            <div class="page-bar-track"><div class="page-bar-fill" style="width:\${(p.total/maxPage*100).toFixed(1)}%"></div></div>
           </div>
-          <div class="page-nums"><b>${p.total.toLocaleString()}</b><div>오늘 ${p.today.toLocaleString()}</div></div>
+          <div class="page-nums"><b>\${p.total.toLocaleString()}</b><div>오늘 \${p.today.toLocaleString()}</div></div>
         </div>
-      `).join('')}
+      \`).join("")}
     </div>
 
-    <div class="note">페이지 로드 수 기준 집계이며(새로고침 포함), 유니크 방문자 수와는 다를 수 있습니다.<br>한국 시간(KST) 자정 기준으로 날짜가 바뀝니다.</div>
-  `;
+    <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
+  \`;
 }
 
 load();
