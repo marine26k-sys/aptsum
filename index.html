@@ -2546,6 +2546,25 @@ function buildRepRows(all, months){
 // 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 운영자 요청, 2026.09
 // — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
 // longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
+function buildPriceBands(results){
+  const bandMap = new Map();
+  for(const row of results){
+    const band = Math.max(0, Math.floor(row.pastAvg));
+    const bucket = bandMap.get(band) || { band, pastSum:0, recentSum:0, up:0, down:0, flat:0, count:0 };
+    bucket.pastSum += row.pastAvg;
+    bucket.recentSum += row.recentAvg;
+    bucket.count++;
+    if(row.changeAmt > 0) bucket.up++; else if(row.changeAmt < 0) bucket.down++; else bucket.flat++;
+    bandMap.set(band, bucket);
+  }
+  return [...bandMap.values()].sort((a,b)=>a.band-b.band).map(b=>{
+    const pastAvg = R1(b.pastSum/b.count), recentAvg = R1(b.recentSum/b.count);
+    const changeAmt = R1(recentAvg-pastAvg);
+    return { band:b.band, label:b.band===0?'1억 미만':`${b.band}억대`, count:b.count,
+      pastAvg, recentAvg, changeAmt, changePct:pastAvg?Math.round(changeAmt/pastAvg*100):0,
+      up:b.up, down:b.down, flat:b.flat };
+  });
+}
 function analyzeLongTermRise(all, months, periodM){
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
@@ -2574,6 +2593,9 @@ function analyzeLongTermRise(all, months, periodM){
       recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
   }
   results.sort((a,b)=> b.changeAmt - a.changeAmt); // 변동 금액(원화 기준) 많이 오른 순 — % 기준이면 저가 단지의 변동폭이 과대평가돼 왜곡될 수 있음(운영자 요청)
+  // 비교 시작 시점 평균가를 1억원 단위로 묶는다. 예: pastAvg 5.0~5.99억원 → 5억대.
+  // 거래가 많은 한 단지가 전체 금액대를 좌우하지 않도록 단지+평형 행을 동일 가중치로 평균한다.
+  const priceBands = buildPriceBands(results);
   // 이 탭은 달력 월이 아니라 일 단위(day-based)로 비교 구간을 정하므로, 화면에 보여줄 기간도 "YY.MM ~ YY.MM
   // 중 N개월"(달력 월 뭉뚱그림)이 아니라 실제 계산에 쓰인 정확한 날짜로 표시한다 — 시작일은 정확히
   // periodM*30일 전, 종료일은 오늘.
@@ -2582,7 +2604,7 @@ function analyzeLongTermRise(all, months, periodM){
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
-    rows: results.slice(0,100) };
+    rows: results.slice(0,100), priceBands };
 }
 
 // ═══ 전세 변동률(2026.09 신규) ═══
@@ -4695,7 +4717,22 @@ function renderLongTermRise(d){
     </div>
 
     <div class="sec">
-      <h3>상승 단지</h3>
+      <h3>금액대별 변동률</h3>
+      ${hint('비교 시작 시점 평균가를 1억원 단위로 묶은 결과', '단지·평형별 동일 가중치 · 표본 수와 상승/하락 개수 함께 표시')}
+      ${d.priceBands && d.priceBands.length ? `<div class="tbl-scroll"><table class="peer-table">
+        <tr><th>시작 금액대</th><th class="tr-r">${d.periodM}개월 전</th><th class="tr-r">최근</th><th class="tr-r">변동</th><th class="tr-r">표본</th></tr>
+        ${d.priceBands.map(b=>`<tr>
+          <td><b style="color:var(--navy)">${esc(b.label)}</b></td>
+          <td class="tr-r">${b.pastAvg.toFixed(1)}억</td>
+          <td class="tr-r">${b.recentAvg.toFixed(1)}억</td>
+          <td class="tr-r"><b style="color:${b.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${b.changeAmt>=0?'▲':'▼'}${Math.abs(b.changeAmt).toFixed(1)}억 (${Math.abs(b.changePct)}%)</b></td>
+          <td class="tr-r">${b.count}개<br><span class="rng">상승 ${b.up} · 하락 ${b.down}</span></td>
+        </tr>`).join('')}
+      </table></div>` : '<div class="rng" style="padding:6px 0">조건에 맞는 금액대가 없습니다</div>'}
+    </div>
+
+    <div class="sec">
+      <h3>단지별 상세</h3>
       ${hint(`"${d.periodM}개월 전"은 정확히 그 시점(30일 구간) 하나의 평균가`, '누적 평균 아님 · 표본 2건 이상(구간별) · 직거래 제외 · 많이 오른 순')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
