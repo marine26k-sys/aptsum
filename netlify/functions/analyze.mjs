@@ -1,3 +1,4 @@
+import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
 // 환경변수: DATA_GO_KR_KEY(필수)
 
@@ -330,14 +331,7 @@ async function fetchStaticMonth(origin, lawd, ym) {
 
 // 오늘 기준 "최근 2개월"(당월+전월) — 이 범위는 실거래 신고가 계속 들어와 배치가 격주로만 돌아도
 // static JSON이 금방 낡아버리므로, 하이브리드 모드에서는 static 존재 여부와 무관하게 항상 실시간 호출한다.
-function currentAndPrevYm() {
-  // Netlify의 실행 시간대와 무관하게 한국 시간(KST) 기준으로 월을 판정한다.
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const cur = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  kst.setUTCMonth(kst.getUTCMonth() - 1);
-  const prev = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  return { cur, prev };
-}
+
 
 async function fetchShard(key, lawd, yms, origin) {
   if (!origin) return fetchShardLive(key, lawd, yms, origin);
@@ -397,20 +391,20 @@ export default async (req) => {
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (!yms.length) return Response.json({ error: "조회 월 없음" }, { status: 400 });
 
-  const r = await fetchShard(key, lawd, yms, url.origin);
+  const r = await collectMonths(yms, (ym) => fetchShard(key, lawd, [ym], url.origin));
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
   // 캐시 전략: 최신 2개월이 섞이거나 재시도까지 실패한 달이 있으면 30분, 전부 과거월이고 완전 성공이면 30일 (CDN 캐시)
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
   const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
-  return new Response(JSON.stringify({ items: r.items }), {
+  return new Response(JSON.stringify({ items: r.items, failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
-      "Netlify-CDN-Cache-Control": stable
+      "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
         ? "public, durable, max-age=2592000"
         : "public, max-age=1800",
-      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });
 };

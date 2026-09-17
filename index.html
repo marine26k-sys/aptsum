@@ -590,6 +590,7 @@
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
+  <div id="dataWarning" role="status" hidden style="padding:12px;color:#8a4b00;background:#fff3cd">일부 데이터 미수신: 결과가 불완전하거나 이전 데이터일 수 있습니다. 다시 검색하면 실패한 월을 재시도합니다.</div>
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
@@ -1569,7 +1570,7 @@ function addCmpRow(){
 // scripts/derive-py-anchors.mjs)로 교체. 4개 파일(analyze/presale/rent.mjs+shared/rtms-parse.mjs) 동일 반영)
 // (2026.09 11→12: PY_ANCHORS 5차 개편(미세조정) — 92~124㎡ 구간도 같은 실측 데이터로 재검증한 결과
 // 95/97/99/109/110 다섯 지점만 ±1평 오차가 있어 정확히 맞춤. 나머지 지점은 이미 실측과 일치해 그대로 둠)
-const CACHE_VER = 12;
+const CACHE_VER = 13;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -1617,7 +1618,8 @@ async function postFetch(lawd, yms){
   const res = await fetch(`/api/analyze?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
   const d = await res.json().catch(()=>({}));
   if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
-  return d.items || [];
+  if (!Array.isArray(d.items) || !Array.isArray(d.failedMonths)) throw new Error('월별 응답 형식 오류');
+  return { items: d.items, failedMonths: d.failedMonths };
 }
 
 // ── localStorage 영구 캐시 (압축 배열 포맷, 용량 초과 시 오래된 지역 삭제) ──
@@ -1670,12 +1672,30 @@ const CHUNK_CONCURRENCY = 4;
 // 지역 수가 많을수록 "어느 한 지역의 어느 한 달"이 실패할 확률이 누적돼, 결과적으로 지역 1개만 조회할
 // 때보다 오히려 총 결과가 더 적게 나오는 원인이었음). 청크별로 개별 catch해서 실패한 청크만 null로
 // 표시하고 나머지 성공한 청크는 그대로 살린다.
+const failedMonthRequests = new Set();
+function applyMonthResults(cache, chunk, result, now) {
+  if (result === null) return;
+  const failed = new Set(result.failedMonths);
+  const successful = new Set(chunk.filter(ym => !failed.has(ym)));
+  for (const ym of successful) cache[ym] = { t: now, items: [] };
+  for (const item of result.items) {
+    if (successful.has(item.ym)) cache[item.ym].items.push(item);
+  }
+}
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
   }
+  for (const { chunk, items } of results) {
+    for (const ym of chunk) {
+      const key = fetchFn.name + ':' + lawd + ':' + ym;
+      if (items === null || items.failedMonths.includes(ym)) failedMonthRequests.add(key);
+      else failedMonthRequests.delete(key);
+    }
+  }
+  document.getElementById('dataWarning').hidden = failedMonthRequests.size === 0;
   return results;
 }
 
@@ -1705,9 +1725,7 @@ async function ensureMonths(lawd, n){
     // 실패한 청크(items===null)는 캐시하지 않고 그대로 남겨둬 다음 조회 때 다시 시도한다 —
     // 성공한 달만 캐시해야 이 지역의 나머지 정상 데이터가 실패한 달 때문에 통째로 사라지지 않는다.
     for(const {chunk, items} of settled){
-      if(items === null) continue;
-      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
-      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+      applyMonthResults(cache, chunk, items, now);
     }
     lsSave(lawd);
   }
@@ -1760,7 +1778,8 @@ async function postFetchP(lawd, yms){
   const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
   const d = await res.json().catch(()=>({}));
   if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
-  return d.items || [];
+  if (!Array.isArray(d.items) || !Array.isArray(d.failedMonths)) throw new Error('월별 응답 형식 오류');
+  return { items: d.items, failedMonths: d.failedMonths };
 }
 async function ensureMonthsP(lawd, n){
   lsLoadP(lawd);
@@ -1783,9 +1802,7 @@ async function ensureMonthsP(lawd, n){
     const settled = await fetchChunksLimited(chunks, postFetchP, lawd);
     // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
     for(const {chunk, items} of settled){
-      if(items === null) continue;
-      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
-      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+      applyMonthResults(cache, chunk, items, now);
     }
     lsSaveP(lawd);
   }
@@ -1839,7 +1856,8 @@ async function postFetchJ(lawd, yms){
   const res = await fetch(`/api/rent?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`);
   const d = await res.json().catch(()=>({}));
   if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
-  return d.items || [];
+  if (!Array.isArray(d.items) || !Array.isArray(d.failedMonths)) throw new Error('월별 응답 형식 오류');
+  return { items: d.items, failedMonths: d.failedMonths };
 }
 async function ensureMonthsJ(lawd, n){
   lsLoadJ(lawd);
@@ -1862,9 +1880,7 @@ async function ensureMonthsJ(lawd, n){
     const settled = await fetchChunksLimited(chunks, postFetchJ, lawd);
     // 실패한 청크는 캐시하지 않고 남겨둬 다음 조회 때 재시도 (매매 캐시 ensureMonths와 동일한 정책)
     for(const {chunk, items} of settled){
-      if(items === null) continue;
-      chunk.forEach(ym => { cache[ym] = {t: now, items: []}; });
-      items.forEach(t => { if(cache[t.ym]) cache[t.ym].items.push(t); });
+      applyMonthResults(cache, chunk, items, now);
     }
     lsSaveJ(lawd);
   }
