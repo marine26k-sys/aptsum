@@ -165,7 +165,7 @@ async function load(){
 
 // 노선 전환·"이 지역 단지" 펼치기마다 history 엔트리를 쌓아, 뒤로가기를 누르면 펼친 패널이 접히고
 // (급지 분석의 구/동 드릴다운과 동일한 방식) 그다음 뒤로가기에 이전 노선으로 돌아가도록 함
-// (수민 요청, 2026.09) — 이전엔 펼친 채로 뒤로가기하면 곧장 이 페이지 밖으로 나가버렸음.
+// (운영자 요청, 2026.09) — 이전엔 펼친 채로 뒤로가기하면 곧장 이 페이지 밖으로 나가버렸음.
 function pushSubwayHistory(){
   history.pushState({ subway: { activeLine, openStationKey } }, "");
 }
