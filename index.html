@@ -91,7 +91,10 @@
   .price-band-meta{opacity:1!important;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
   .price-band-focus{display:inline-block;background:#E0B84D;color:#4A3607;font-size:14px;font-weight:900;line-height:1.2;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(224,184,77,.3)}
   .price-band-context{color:rgba(255,255,255,.88);font-size:12px;font-weight:700}
-  .price-band-date{margin-top:5px;color:rgba(255,255,255,.62);font-size:10.5px;font-weight:500;text-align:center}
+  .price-band-vs{margin-top:8px;background:rgba(127,212,217,.12);border-radius:8px;padding:7px 10px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:7px;text-align:center}
+  .price-band-vs b{display:block;color:#7FD4D9;font-size:11.5px;font-weight:700}
+  .price-band-vs small{display:block;margin-top:1px;color:rgba(255,255,255,.58);font-size:9.5px;font-weight:500;white-space:nowrap}
+  .price-band-vs svg{width:11px;height:11px;stroke:#7FD4D9}
   .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:5px 10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
   /* 탭마다 있던 "※..." 안내문 재설계(2026.09, 운영자 요청) — 예전엔 5~7개 절을 가운뎃점(·)으로 이어붙인
      한 줄짜리 회색 텍스트라 핵심(사용자가 결과를 해석할 때 꼭 알아야 할 한 가지)과 부가 조건(집계 기준)이
@@ -558,8 +561,9 @@
       </select>
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
-      <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value)search()">
-        <option value="3" selected>3개월 전</option>
+      <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value&&document.getElementById('priceBandN').value!=='')search()">
+        <option value="" selected disabled>시점 선택</option>
+        <option value="3">3개월 전</option>
         <option value="6">6개월 전</option>
         <option value="9">9개월 전</option>
         <option value="12">12개월 전</option>
@@ -568,10 +572,11 @@
         <option value="48">48개월 전</option>
         <option value="60">60개월 전</option>
       </select>
-      <select id="priceBandN" style="flex:1;min-width:0" onchange="if(sel.value)search()">
+      <select id="priceBandN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value!==''&&document.getElementById('priceBandPeriodN').value)search()">
+        <option value="" selected disabled>금액대 선택</option>
         <option value="0">1억 미만</option>
         <option value="1">1억대</option><option value="2">2억대</option><option value="3">3억대</option><option value="4">4억대</option>
-        <option value="5" selected>5억대</option><option value="6">6억대</option><option value="7">7억대</option><option value="8">8억대</option><option value="9">9억대</option>
+        <option value="5">5억대</option><option value="6">6억대</option><option value="7">7억대</option><option value="8">8억대</option><option value="9">9억대</option>
         <option value="10">10억대</option><option value="11">11억대</option><option value="12">12억대</option><option value="13">13억대</option><option value="14">14억대</option>
         <option value="15">15억대</option><option value="16">16억대</option><option value="17">17억대</option><option value="18">18억대</option><option value="19">19억대</option>
         <option value="20">20억대</option><option value="21">21억대</option><option value="22">22억대</option><option value="23">23억대</option><option value="24">24억대</option>
@@ -2618,9 +2623,11 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
   const todayDate = new Date();
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   const pastWindowEnd = new Date(Date.now() - ((periodM-1)*30+1)*24*3600*1000);
+  const recentWindowStart = new Date(Date.now() - 30*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
     pastPeriod:`${fmtDate(startDate)} ~ ${fmtDate(pastWindowEnd)}`,
+    recentPeriod:`${fmtDate(recentWindowStart)} ~ ${fmtDate(todayDate)}`,
     rows: includeAll ? results : results.slice(0,100) };
 }
 
@@ -3422,6 +3429,10 @@ async function search(){
   }
   if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
   if(mode!=='compare' && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
+  if(mode==='pricebandrise'){
+    if(!document.getElementById('priceBandPeriodN').value){ showError('비교할 시점을 선택해 주세요.'); return; }
+    if(document.getElementById('priceBandN').value===''){ showError('비교할 금액대를 선택해 주세요.'); return; }
+  }
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   const mN = +document.getElementById('monthsN').value;
@@ -4776,8 +4787,12 @@ function renderPriceBandRise(d){
     <div class="card-hd">
       ${hdTop('금액대별 변동률', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta price-band-meta"><strong class="price-band-focus">${d.periodM}개월 전 평균</strong><span class="price-band-context">vs 최근 1개월 평균</span></div>
-      <div class="price-band-date">${esc(d.pastPeriod)} 거래 평균 기준 · 당시 ${esc(d.priceBandLabel)}${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</div>
+      <div class="meta price-band-meta"><strong class="price-band-focus">${d.periodM}개월 전 ${esc(d.priceBandLabel)}</strong><span class="price-band-context">현재 가격 비교${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</span></div>
+      <div class="price-band-vs">
+        <span><b>${d.periodM}개월 전 평균</b><small>${esc(d.pastPeriod)}</small></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H3M7 21l-4-4 4-4M3 17h18"/></svg>
+        <span><b>최근 1개월 평균</b><small>${esc(d.recentPeriod)}</small></span>
+      </div>
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
