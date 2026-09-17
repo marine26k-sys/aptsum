@@ -7,8 +7,17 @@
 | Key | 용도 | 필수 |
 |---|---|---|
 | `DATA_GO_KR_KEY` | 국토부 실거래 API (data.go.kr, Decoding 키) — 매매(`/api/analyze`)·분양권전매(`/api/presale`)·전세(`/api/rent`) 공용 | 필수 |
+| `SUBSCRIBER_CODE` | 구독 전용 탭의 접근 코드. 반드시 새롭고 충분히 긴 값으로 설정하고 Git에 커밋하지 않음 | 구독 탭 사용 시 필수 |
+| `SUBSCRIBER_SESSION_SECRET` | 구독 세션 쿠키의 HMAC 서명용 비밀값. 32바이트 이상 무작위 값 권장 | 구독 탭 사용 시 필수 |
 
-접근코드 잠금은 제거됨 — 사이트가 공개 상태이므로 링크 유출 시 API 한도 소모 주의.
+### 구독 전용 탭 보호 설정
+
+1. Netlify **Project configuration → Environment variables**에 `SUBSCRIBER_CODE`, `SUBSCRIBER_SESSION_SECRET`를 설정한 뒤 재배포한다.
+2. 과거에 저장소나 클라이언트 코드에 있었던 접근 코드는 이미 노출된 값이므로 **절대 재사용하지 않는다**. 새 접근 코드는 길고 예측 불가능한 값으로 교체한다.
+3. 세션 비밀값은 예를 들어 `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`로 생성할 수 있다. 이 값을 바꾸면 기존 구독자 세션을 한 번에 무효화할 수 있다.
+4. 인증 성공 시 브라우저에는 30일짜리 `HttpOnly; Secure; SameSite=Strict` 서명 쿠키만 저장된다. 기존 방문자는 배포 후 한 번만 새 코드를 다시 입력하면 된다.
+
+이 방식은 **접근 코드 보유 여부**를 서버에서 검증한다. 인스타그램 등 외부 플랫폼의 실제 구독 상태를 개인별로 판정하려면 해당 플랫폼의 계정 연동·웹훅과 사용자 저장소가 별도로 필요하다.
 
 ## 배포
 
