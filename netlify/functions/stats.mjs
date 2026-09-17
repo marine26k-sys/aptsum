@@ -79,6 +79,9 @@ export default async (request) => {
   }
 
   const store = getStore("visits");
+  const ledgerStore = getStore("visit-ledger");
+  const ledgerRaw = await ledgerStore.get("v2", { consistency: "strong" });
+  const ledger = ledgerRaw ? JSON.parse(ledgerRaw) : null;
   const now = new Date();
   const today = ymd(now);
 
@@ -101,19 +104,19 @@ export default async (request) => {
     ),
   ]);
 
-  const total = parseInt(totalRaw, 10) || 0;
-  const todayCount = parseInt(todayRaw, 10) || 0;
+  const total = ledger ? (ledger.total || 0) : (parseInt(totalRaw, 10) || 0);
+  const todayCount = ledger ? ((ledger.days?.[today]?.total) || 0) : (parseInt(todayRaw, 10) || 0);
 
   const trend = trendDates.map((date, i) => ({
     date,
-    count: parseInt(trendRaw[i], 10) || 0,
+    count: ledger ? ((ledger.days?.[date]?.total) || 0) : (parseInt(trendRaw[i], 10) || 0),
   }));
 
   const pages = PAGES.map((p, i) => ({
     page: p.page,
     label: p.label,
-    total: parseInt(pageRaws[i][0], 10) || 0,
-    today: parseInt(pageRaws[i][1], 10) || 0,
+    total: ledger ? ((ledger.pageTotals?.[p.page]) || 0) : (parseInt(pageRaws[i][0], 10) || 0),
+    today: ledger ? ((ledger.days?.[today]?.pages?.[p.page]) || 0) : (parseInt(pageRaws[i][1], 10) || 0),
   }));
 
   return json({ total, today: todayCount, trend, pages });
