@@ -9,6 +9,7 @@
 | `DATA_GO_KR_KEY` | 국토부 실거래 API (data.go.kr, Decoding 키) — 매매(`/api/analyze`)·분양권전매(`/api/presale`)·전세(`/api/rent`) 공용 | 필수 |
 | `SUBSCRIBER_CODE` | 구독 전용 탭의 접근 코드. 반드시 새롭고 충분히 긴 값으로 설정하고 Git에 커밋하지 않음 | 구독 탭 사용 시 필수 |
 | `SUBSCRIBER_SESSION_SECRET` | 구독 세션 쿠키의 HMAC 서명용 비밀값. 32바이트 이상 무작위 값 권장 | 구독 탭 사용 시 필수 |
+| `STATS_ACCESS_CODE` | `/stats.html` 방문 통계 관리자 코드. 구독 코드와 다른 새 값으로 설정하고 Git에 커밋하지 않음 | 방문 통계를 볼 경우 필수 |
 
 ### 구독 전용 탭 보호 설정
 
@@ -18,6 +19,12 @@
 4. 인증 성공 시 브라우저에는 30일짜리 `HttpOnly; Secure; SameSite=Strict` 서명 쿠키만 저장된다. 기존 방문자는 배포 후 한 번만 새 코드를 다시 입력하면 된다.
 
 이 방식은 **접근 코드 보유 여부**를 서버에서 검증한다. 인스타그램 등 외부 플랫폼의 실제 구독 상태를 개인별로 판정하려면 해당 플랫폼의 계정 연동·웹훅과 사용자 저장소가 별도로 필요하다.
+
+### 방문 통계 관리자 설정
+
+1. Netlify **Project configuration → Environment variables**에 `STATS_ACCESS_CODE`를 새로 추가한다. `SUBSCRIBER_CODE`와 같은 값을 재사용하지 말고, 충분히 길고 예측하기 어려운 별도 값으로 만든다.
+2. 새 값을 저장한 뒤 재배포한다. 통계 화면(`/stats.html`)은 이 코드로 인증한 브라우저에서만 열리며, 인증 세션은 7일 후 만료된다.
+3. 코드가 노출됐다고 판단되면 `STATS_ACCESS_CODE`를 교체하고 재배포한다. 기존 관리자 세션을 즉시 모두 무효화하려면 `SUBSCRIBER_SESSION_SECRET`도 함께 교체한다.
 
 ## 배포
 
