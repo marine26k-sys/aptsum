@@ -331,10 +331,11 @@ async function fetchStaticMonth(origin, lawd, ym) {
 // 오늘 기준 "최근 2개월"(당월+전월) — 이 범위는 실거래 신고가 계속 들어와 배치가 격주로만 돌아도
 // static JSON이 금방 낡아버리므로, 하이브리드 모드에서는 static 존재 여부와 무관하게 항상 실시간 호출한다.
 function currentAndPrevYm() {
-  const d = new Date();
-  const cur = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  d.setMonth(d.getMonth() - 1);
-  const prev = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  // Netlify의 실행 시간대와 무관하게 한국 시간(KST) 기준으로 월을 판정한다.
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const cur = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
+  kst.setUTCMonth(kst.getUTCMonth() - 1);
+  const prev = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
   return { cur, prev };
 }
 

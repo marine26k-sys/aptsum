@@ -399,6 +399,26 @@ function mergeBasis(bases, subways = []) {
   return { hhcnt: hh, dongCnt, useDate, ...mergeSubway(subways) };
 }
 
+const KAPT_DETAIL_CONCURRENCY = 3;
+
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function run() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, run)
+  );
+  return results;
+}
+
 export default async (req) => {
   const key = process.env.DATA_GO_KR_KEY;
   if (!key) return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
@@ -461,13 +481,23 @@ export default async (req) => {
           matched[nm] = hits.map((h) => h.kaptCode);
         }
         const allCodes = [...new Set(Object.values(matched).flat())];
-        const [bases, subways] = await Promise.all([
-          Promise.all(allCodes.map((c) => fetchBasis(key, c))),
-          Promise.all(allCodes.map((c) => fetchDtl(key, c))),
-        ]);
+        // K-apt의 초당 요청 제한 때문에 배치 폴백에서 수백 개 요청을 동시에 보내면
+        // 429가 "단지 없음"으로 보일 수 있다. 단지별 두 조회를 순차로 하고 전체 동시성을 제한한다.
+        const details = await mapWithConcurrency(
+          allCodes,
+          KAPT_DETAIL_CONCURRENCY,
+          async (kaptCode) => {
+            const basis = await fetchBasis(key, kaptCode);
+            const subway = basis ? await fetchDtl(key, kaptCode) : null;
+            return { kaptCode, basis, subway };
+          }
+        );
         const basisByCode = {};
         const subwayByCode = {};
-        allCodes.forEach((c, i) => { basisByCode[c] = bases[i]; subwayByCode[c] = subways[i]; });
+        details.forEach(({ kaptCode, basis, subway }) => {
+          basisByCode[kaptCode] = basis;
+          subwayByCode[kaptCode] = subway;
+        });
         for (const nm of Object.keys(matched)) {
           const merged = mergeBasis(matched[nm].map((c) => basisByCode[c]), matched[nm].map((c) => subwayByCode[c]));
           results[nm] = merged ? { found: true, name: nm, ...merged } : { found: false };
