@@ -4,24 +4,39 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const start = html.indexOf('function buildPriceBands(');
-const end = html.indexOf('function analyzeLongTermRise(', start);
-const ctx = vm.createContext({ R1: n => Math.round(n * 10) / 10 });
+const start = html.indexOf('function filterPriceBandRows(');
+const end = html.indexOf('function analyzePriceBandRise(', start);
+const ctx = vm.createContext({});
 vm.runInContext(html.slice(start, end), ctx);
 
-test('groups by starting price in one-hundred-million-won bands', () => {
+test('selects apartments by their past price band boundaries', () => {
   const rows = [
-    { pastAvg: 5.0, recentAvg: 5.5, changeAmt: 0.5 },
-    { pastAvg: 5.9, recentAvg: 6.2, changeAmt: 0.3 },
-    { pastAvg: 6.0, recentAvg: 5.8, changeAmt: -0.2 },
-    { pastAvg: 0.8, recentAvg: 0.8, changeAmt: 0 },
+    { id:'under', pastAvg:4.9 },
+    { id:'lower', pastAvg:5.0 },
+    { id:'middle', pastAvg:5.9 },
+    { id:'upper', pastAvg:6.0 },
   ];
-  const bands = JSON.parse(JSON.stringify(ctx.buildPriceBands(rows)));
-  assert.deepEqual(bands.map(b => [b.label, b.count]), [['1억 미만',1],['5억대',2],['6억대',1]]);
-  assert.deepEqual(bands[1], { band:5, label:'5억대', count:2, pastAvg:5.5, recentAvg:5.9, changeAmt:0.4, changePct:7, up:2, down:0, flat:0 });
-  assert.equal(bands[2].down, 1);
+  assert.deepEqual(Array.from(ctx.filterPriceBandRows(rows, 5), x=>x.id), ['lower','middle']);
 });
 
-test('empty input produces no misleading band', () => {
-  assert.deepEqual(JSON.parse(JSON.stringify(ctx.buildPriceBands([]))), []);
+test('30 band includes every apartment at or above 30억원', () => {
+  const rows = [{pastAvg:29.9},{pastAvg:30},{pastAvg:42.5}];
+  assert.deepEqual(Array.from(ctx.filterPriceBandRows(rows, 30), x=>x.pastAvg), [30,42.5]);
+});
+
+test('subscriber price-band tab has all requested periods and defaults to 3 months / 5억원대', () => {
+  const row = html.match(/<div class="row2" id="priceBandRow"[\s\S]*?<\/div>/)?.[0] || '';
+  const periods = [...row.matchAll(/<option value="(3|6|9|12|24|36|48|60)"[^>]*>\1개월 전<\/option>/g)].map(m=>Number(m[1]));
+  assert.deepEqual(periods, [3,6,9,12,24,36,48,60]);
+  assert.match(row, /id="priceBandPeriodN"[\s\S]*?<option value="3" selected>/);
+  assert.match(row, /id="priceBandN"[\s\S]*?<option value="5" selected>5억대<\/option>/);
+  assert.match(html, /id="tabPBR" style="display:none"/);
+  assert.match(html, /needsSubscriberSession\(m\)[\s\S]*?m==='pricebandrise'/);
+});
+
+test('existing sale-change period selector remains unchanged', () => {
+  const row = html.match(/<div class="row2" id="risePeriodRow"[\s\S]*?<\/div>/)?.[0] || '';
+  const periods = [...row.matchAll(/<option value="(\d+)"/g)].map(m=>Number(m[1]));
+  assert.deepEqual(periods, [3,6,9,12,24]);
+  assert.doesNotMatch(row, /36개월|48개월|60개월/);
 });
