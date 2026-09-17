@@ -32,7 +32,8 @@ test('subscriber price-band tab has all requested periods and defaults to 3 mont
   assert.match(row, /id="priceBandN"[\s\S]*?<option value="5" selected>5억대<\/option>/);
   assert.match(html, /id="tabPBR" style="display:none"/);
   assert.match(html, /needsSubscriberSession\(m\)[\s\S]*?m==='pricebandrise'/);
-  assert.match(html, /class="price-band-focus">\$\{d\.periodM\}개월 전 \$\{esc\(d\.priceBandLabel\)\}/);
+  assert.match(html, /class="price-band-focus">\$\{d\.periodM\}개월 전 평균/);
+  assert.match(html, /class="price-band-date">\$\{esc\(d\.pastPeriod\)\} 거래 평균 기준 · 당시 \$\{esc\(d\.priceBandLabel\)\}/);
   assert.match(html, /\|\| mode==='pricebandrise'\) return REGION_MAX/);
   assert.match(html, /mode==='pricebandrise'\)\)\{[\s\S]*?\+ 경기 전체/);
 });
