@@ -1,3 +1,4 @@
+import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
 // 환경변수: DATA_GO_KR_KEY(필수)
 
@@ -16,7 +17,7 @@ const SPLIT_REGIONS = {
     oldCode: "41590", split: "202602",
     codes: { "동탄구": "41597", "만세구": "41591", "병점구": "41595", "효행구": "41593" },
     dongs: {
-      // "여울동"은 2026.03.01부로 "오산동"에서 개명된 법정동(수민 확인) — 이 필터는 분구 이전(2026.02 이전)
+      // "여울동"은 2026.03.01부로 "오산동"에서 개명된 법정동(운영자 확인) — 이 필터는 분구 이전(2026.02 이전)
       // 과거 거래를 통합코드(41590) 응답에서 걸러내는 용도라, 개명 이전 거래는 RTMS에 "오산동"으로
       // 남아있을 수 있어 옛 이름도 함께 남겨둠(둘 다 매치해도 안전 — 같은 동을 가리키는 이름일 뿐이라
       // 중복·오매칭 위험 없음). 개명 후 거래는 "여울동"으로 잡힘.
@@ -51,7 +52,7 @@ const SPLIT_REGIONS = {
 // 기준으로 구간 선형보간한다. 실제 전용률은 면적이 커질수록 높아지는 경향이 있어
 // 고정비율로는 중대형에서 오차가 커지므로, 앵커 방식이 훨씬 실제 표기에 가깝다.
 // (그래도 동일 전용면적이라도 단지별 구조(복도식/계단식)에 따라 ±1평형 편차는 있을 수 있음)
-// 2026.08 3차 개편(수민 실측 10개 단지 교차검증) — 이전(2차) 개편 값(39→16/49→20/59→24/84→34)이
+// 2026.08 3차 개편(운영자 실측 10개 단지 교차검증) — 이전(2차) 개편 값(39→16/49→20/59→24/84→34)이
 // 복수 출처 웹자료 기반이었는데, 올림픽파크포레온/헬리오시티/평촌자이퍼스니티 등 실제 단지 10곳의
 // 전용→공급 표기를 직접 대조해보니 오히려 39→18/49→21/59→25/84→33 등 "1차(원래)" 값에 더 가깝다는
 // 게 확인됨 — 특히 39/59/84㎡는 9개 단지 표본으로 거의 정확히 일치. 이번 앵커는 그 실측 평균을
@@ -59,7 +60,7 @@ const SPLIT_REGIONS = {
 // 역전이 발생(예: 116㎡ 단일표본이 114㎡보다 낮게 나옴 — 단지 구조 차이로 보임)해서, 가중 PAVA(단조
 // 증가 보정, 표본수를 가중치로)로 스무딩한 값. 그 결과 표본이 얇은 105~152㎡ 구간은 일부 평형대가
 // 통으로 눌려 보일 수 있음(정보 손실이지만 역전보다는 안전) — 이 구간은 표본이 더 쌓이면 재조정 필요.
-// (수민 가설, 미검증) 표본 적은 구간에서 역전이 나오는 건 2000년 이전 준공(복도식 위주, 공용면적
+// (운영자 가설, 미검증) 표본 적은 구간에서 역전이 나오는 건 2000년 이전 준공(복도식 위주, 공용면적
 // 배분 관행이 지금과 다름) 단지가 섞여있어서일 가능성 — 현재 이 표에는 준공년도가 없어 확인 불가.
 // 나중에 hhcnt/supply-area 쪽에 준공년도가 붙으면 pre-2000 단지를 걸러서 재검증하면 좋을 듯.
 // 2026.09 — hubPyOverride()가 data/supply-area 실측값을 매칭되는 단지/타입에 우선 적용하도록 연결됨
@@ -181,7 +182,7 @@ function parseItems(xml, ymFallback) {
       direct: xtag(b, "dealingGbn").includes("직") ? 1 : 0,
       // 2026.08 추가 — 건축HUB(건축물대장) API로 실제 전유/공용면적을 조회하려면 주소 코드(시군구+법정동+본번+부번)가
       // 필요한데, RTMS 응답에 본번(bonbun)·부번(bubun)이 이미 포함되어 있어 따로 추출. 법정동코드(umd명→5자리 코드)
-      // 매핑 테이블은 별도 준비 필요(수민이 국토부 법정동코드 전체자료를 구해주면 연결) — 그 전까지는 미사용 필드.
+      // 매핑 테이블은 별도 준비 필요(운영자가 국토부 법정동코드 전체자료를 구해주면 연결) — 그 전까지는 미사용 필드.
       bonbun: xtag(b, "bonbun"),
       bubun: xtag(b, "bubun"),
     });
@@ -330,14 +331,7 @@ async function fetchStaticMonth(origin, lawd, ym) {
 
 // 오늘 기준 "최근 2개월"(당월+전월) — 이 범위는 실거래 신고가 계속 들어와 배치가 격주로만 돌아도
 // static JSON이 금방 낡아버리므로, 하이브리드 모드에서는 static 존재 여부와 무관하게 항상 실시간 호출한다.
-function currentAndPrevYm() {
-  // Netlify의 실행 시간대와 무관하게 한국 시간(KST) 기준으로 월을 판정한다.
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const cur = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  kst.setUTCMonth(kst.getUTCMonth() - 1);
-  const prev = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  return { cur, prev };
-}
+
 
 async function fetchShard(key, lawd, yms, origin) {
   if (!origin) return fetchShardLive(key, lawd, yms, origin);
@@ -397,20 +391,20 @@ export default async (req) => {
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (!yms.length) return Response.json({ error: "조회 월 없음" }, { status: 400 });
 
-  const r = await fetchShard(key, lawd, yms, url.origin);
+  const r = await collectMonths(yms, (ym) => fetchShard(key, lawd, [ym], url.origin));
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
   // 캐시 전략: 최신 2개월이 섞이거나 재시도까지 실패한 달이 있으면 30분, 전부 과거월이고 완전 성공이면 30일 (CDN 캐시)
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
   const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
-  return new Response(JSON.stringify({ items: r.items }), {
+  return new Response(JSON.stringify({ items: r.items, failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
-      "Netlify-CDN-Cache-Control": stable
+      "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
         ? "public, durable, max-age=2592000"
         : "public, max-age=1800",
-      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });
 };

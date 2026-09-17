@@ -1,7 +1,7 @@
 // 국토부 실거래 XML 파싱 공용 유틸 — scripts/collect-trades.mjs 전용
 // (netlify/functions/*.mjs의 로직과 동일하지만, 서버 함수 코드는 건드리지 않기 위해 별도 사본으로 둔다)
 
-// 2026.08 3차 개편 — netlify/functions/analyze.mjs와 동일 앵커로 통일(수민 실측 10개 단지 교차검증,
+// 2026.08 3차 개편 — netlify/functions/analyze.mjs와 동일 앵커로 통일(운영자 실측 10개 단지 교차검증,
 // 가중 PAVA 스무딩). 배경 설명은 analyze.mjs의 PY_ANCHORS 주석 참고.
 const PY_ANCHORS = [
   [29, 14], [37, 15], [39, 18], [49, 21], [50, 21], [53, 21],

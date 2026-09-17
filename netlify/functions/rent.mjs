@@ -1,3 +1,4 @@
+import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 아파트 전월세 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
 // 환경변수: DATA_GO_KR_KEY(필수, analyze.mjs/presale.mjs와 공용)
 // 매매(analyze.mjs)·분양권(presale.mjs)과 완전히 별개인 API: 전월세 계약만 제공
@@ -44,7 +45,7 @@ const SPLIT_REGIONS = {
 // 전용면적(㎡) → 평형 환산: analyze.mjs와 동일 앵커 테이블(2026.08 3차 개편 버전으로 통일, 2026.09 —
 // 이전엔 이 파일이 개편 전 구버전 앵커를 그대로 쓰고 있어서 같은 84㎡가 매매는 33평, 전세는 34평으로
 // 라벨이 갈렸고, 전세가율 탭이 단지|동|평형|구 키로 매매·전세를 조인하다 보니 평형 라벨 불일치로
-// 정상 매물 쌍까지 대거 누락되는 문제가 있었음(수민 리포트로 발견) — analyze.mjs 앵커로 교체해 해결.
+// 정상 매물 쌍까지 대거 누락되는 문제가 있었음(운영자 리포트로 발견) — analyze.mjs 앵커로 교체해 해결.
 const PY_ANCHORS = [
   [29, 14], [37, 15], [39, 18], [49, 21], [50, 21], [53, 21],
   [59, 25], [60, 25], [63, 26], [68, 28], [76, 31], [77, 31],
@@ -292,14 +293,7 @@ async function fetchStaticMonth(origin, lawd, ym) {
   } catch (e) { return null; }
 }
 
-function currentAndPrevYm() {
-  // Netlify의 실행 시간대와 무관하게 한국 시간(KST) 기준으로 월을 판정한다.
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const cur = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  kst.setUTCMonth(kst.getUTCMonth() - 1);
-  const prev = `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, "0")}`;
-  return { cur, prev };
-}
+
 
 async function fetchShard(key, lawd, yms, origin) {
   if (!origin) return fetchShardLive(key, lawd, yms, origin);
@@ -357,18 +351,18 @@ export default async (req) => {
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (!yms.length) return Response.json({ error: "조회 월 없음" }, { status: 400 });
 
-  const r = await fetchShard(key, lawd, yms, url.origin);
+  const r = await collectMonths(yms, (ym) => fetchShard(key, lawd, [ym], url.origin));
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
   const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
-  return new Response(JSON.stringify({ items: r.items }), {
+  return new Response(JSON.stringify({ items: r.items, failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
-      "Netlify-CDN-Cache-Control": stable
+      "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
         ? "public, durable, max-age=2592000"
         : "public, max-age=1800",
-      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });
 };
