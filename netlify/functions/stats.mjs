@@ -27,7 +27,7 @@ function json(data, { status = 200 } = {}) {
 }
 
 function getCookie(request, name) {
-  const prefix = \`\${name}=\`;
+  const prefix = `${name}=`;
   return (request.headers.get("cookie") || "")
     .split(";")
     .map((part) => part.trim())
@@ -89,13 +89,13 @@ export default async (request) => {
 
   const [totalRaw, todayRaw, trendRaw, pageRaws] = await Promise.all([
     store.get("total", { consistency: "strong" }),
-    store.get(\`day-\${today}\`, { consistency: "strong" }),
-    Promise.all(trendDates.map((d) => store.get(\`day-\${d}\`, { consistency: "strong" }))),
+    store.get(`day-${today}`, { consistency: "strong" }),
+    Promise.all(trendDates.map((d) => store.get(`day-${d}`, { consistency: "strong" }))),
     Promise.all(
       PAGES.map((p) =>
         Promise.all([
-          store.get(\`page:\${p.page}:total\`, { consistency: "strong" }),
-          store.get(\`page:\${p.page}:day:\${today}\`, { consistency: "strong" }),
+          store.get(`page:${p.page}:total`, { consistency: "strong" }),
+          store.get(`page:${p.page}:day:${today}`, { consistency: "strong" }),
         ])
       )
     ),
