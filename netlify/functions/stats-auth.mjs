@@ -22,7 +22,7 @@ function json(data, { status = 200, headers = {} } = {}) {
 }
 
 function getCookie(request, name) {
-  const prefix = \`\${name}=\`;
+  const prefix = `${name}=`;
   return (request.headers.get("cookie") || "")
     .split(";")
     .map((part) => part.trim())
@@ -44,7 +44,7 @@ function createSession(secret) {
   const payload = Buffer.from(
     JSON.stringify({ exp: Math.floor(Date.now() / 1000) + MAX_AGE_SECONDS })
   ).toString("base64url");
-  return \`\${payload}.\${sign(payload, secret)}\`;
+  return `${payload}.${sign(payload, secret)}`;
 }
 
 function hasValidSession(request, secret) {
@@ -63,7 +63,7 @@ function hasValidSession(request, secret) {
 }
 
 function sessionCookie(value) {
-  return \`\${COOKIE_NAME}=\${value}; Path=/; Max-Age=\${MAX_AGE_SECONDS}; HttpOnly; Secure; SameSite=Strict\`;
+  return `${COOKIE_NAME}=${value}; Path=/; Max-Age=${MAX_AGE_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
 }
 
 export default async (request) => {
