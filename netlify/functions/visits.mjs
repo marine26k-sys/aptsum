@@ -26,7 +26,7 @@ function visitorFingerprint(context, req, today) {
 
   const userAgent = req.headers.get("user-agent") || "";
   return createHmac("sha256", secret)
-    .update(\`\${today}\\n\${ip}\\n\${userAgent}\`)
+    .update(`${today}\\n${ip}\\n${userAgent}`)
     .digest("base64url");
 }
 
@@ -45,13 +45,13 @@ async function incrementCounter(store, key) {
     if (result.modified) return next;
   }
 
-  throw new Error(\`Counter update contention for \${key}\`);
+  throw new Error(`Counter update contention for ${key}`);
 }
 
 async function readTotals(store, page, today) {
   const [totalRaw, todayRaw] = await Promise.all([
     store.get("total", { consistency: "strong" }),
-    store.get(\`day-\${today}\`, { consistency: "strong" }),
+    store.get(`day-${today}`, { consistency: "strong" }),
   ]);
 
   return { total: toCount(totalRaw), today: toCount(todayRaw) };
@@ -77,7 +77,7 @@ export default async (req, context) => {
   // 중복을 하루/페이지 단위로 막는다. 로컬 개발처럼 IP가 제공되지 않는 환경에서는 카운터만 갱신한다.
   if (fingerprint) {
     const dedupeStore = getStore("visit-dedupe");
-    const seen = await dedupeStore.set(\`seen:\${today}:\${page}:\${fingerprint}\`, "", {
+    const seen = await dedupeStore.set(`seen:${today}:${page}:${fingerprint}`, "", {
       onlyIfNew: true,
     });
 
@@ -91,9 +91,9 @@ export default async (req, context) => {
 
   const [total, todayCount] = await Promise.all([
     incrementCounter(store, "total"),
-    incrementCounter(store, \`day-\${today}\`),
-    incrementCounter(store, \`page:\${page}:total\`),
-    incrementCounter(store, \`page:\${page}:day:\${today}\`),
+    incrementCounter(store, `day-${today}`),
+    incrementCounter(store, `page:${page}:total`),
+    incrementCounter(store, `page:${page}:day:${today}`),
   ]);
 
   return new Response(JSON.stringify({ total, today: todayCount }), {
