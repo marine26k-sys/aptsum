@@ -88,6 +88,9 @@
   .hd-logo span{font-size:13px;font-weight:800;color:#00C2C2}
   .hd-badge{font-size:13px;font-weight:800;color:#fff;background:var(--teal);padding:6px 13px;border-radius:16px}
   .hd-badge.subscriber{background:#E0B84D;color:#4A3607}
+  .price-band-meta{opacity:1!important;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+  .price-band-focus{display:inline-block;background:#E0B84D;color:#4A3607;font-size:14px;font-weight:900;line-height:1.2;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(224,184,77,.3)}
+  .price-band-context{color:rgba(255,255,255,.88);font-size:12px;font-weight:700}
   .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:5px 10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
   /* 탭마다 있던 "※..." 안내문 재설계(2026.09, 운영자 요청) — 예전엔 5~7개 절을 가운뎃점(·)으로 이어붙인
      한 줄짜리 회색 텍스트라 핵심(사용자가 결과를 해석할 때 꼭 알아야 할 한 가지)과 부가 조건(집계 기준)이
@@ -4773,7 +4776,7 @@ function renderPriceBandRise(d){
     <div class="card-hd">
       ${hdTop('금액대별 변동률', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta"><b style="color:#7FD4D9">${d.periodM}개월 전 ${esc(d.priceBandLabel)}</b> · 현재 가격 비교${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</div>
+      <div class="meta price-band-meta"><strong class="price-band-focus">${d.periodM}개월 전 ${esc(d.priceBandLabel)}</strong><span class="price-band-context">현재 가격 비교${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</span></div>
       ${hdVs(`${d.periodM}개월 전 평균`, '최근 1개월 평균')}
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
