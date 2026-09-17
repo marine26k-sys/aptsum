@@ -1187,10 +1187,9 @@ const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 �
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
 function regionSelMax(){
-  // "신고가 (일주일)" 탭의 "경기 전체" 버튼(39개 시군구)이 25개에서 잘리지 않게, 이 탭만 예외로
-  // 상한을 REGION_MAX(45)까지 풀어준다(운영자 요청, 2026.09) — 다른 지역 랭킹·저평가 탭들은 계산 부하
-  // 때문에 25개로 묶여있던 걸 그대로 유지.
-  if(mode==='newhigh' && newHighWeekOnly) return REGION_MAX;
+  // "신고가 (일주일)"과 구독 전용 "금액대별 변동률"은 경기 전체(39개 시군구)를 한 번에 담을 수 있도록
+  // 상한을 REGION_MAX(45)까지 풀어준다. 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
+  if((mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise') return REGION_MAX;
   return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
 }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
@@ -1285,10 +1284,8 @@ function buildRegionPicker(){
       let prefix = '';
       if(multi && !q){
         if(g==='경기'){
-          // "신고가 (일주일)" 탭은 regionSelMax()가 45개까지 풀려 있어 "경기 전체"(39개)를 통으로 담을 수
-          // 있으므로(위 regionSelMax() 참고), 이 탭에 한해 경기 그룹 맨 앞(고양시 전체보다 앞)에
-          // "+ 경기 전체" 알약을 추가로 노출한다(운영자 요청, 2026.09).
-          if(i===0 && mode==='newhigh' && newHighWeekOnly){
+          // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 39개 시군구 일괄 추가 버튼을 노출한다.
+          if(i===0 && ((mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise')){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
           }
           const sp = n.indexOf(' ');
