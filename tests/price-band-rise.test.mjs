@@ -56,6 +56,8 @@ test('search controls use the compact tab-sized density on mobile', () => {
   assert.match(html, /\.search-box\{display:grid;gap:6px[\s\S]*?padding:9px/);
   assert.match(html, /select,input\.q\{[^}]*padding:7px 9px;font-size:12px/);
   assert.match(html, /\.go\{[^}]*padding:8px;font-size:12px/);
+  assert.match(html, /\.cmp-row input\{[^}]*padding:7px 9px;font-size:12px/);
+  assert.match(html, /\.rgpick\{[\s\S]*?padding:7px 9px;[\s\S]*?font-size:12px/);
 });
 
 test('existing sale-change period selector remains unchanged', () => {
