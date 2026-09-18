@@ -574,8 +574,8 @@
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
       <select id="priceBandBasis" style="flex:1;min-width:0" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
-        <option value="past" selected>과거 금액대 기준</option>
-        <option value="current">현재 금액대 기준</option>
+        <option value="current" selected>현재 금액대 기준</option>
+        <option value="past">과거 금액대 기준</option>
       </select>
       <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="" selected disabled>시점 선택</option>
@@ -795,7 +795,7 @@ function buildShareURL(inp){
     if(inp.mode==='pricebandrise'){
       if(inp.pbp) p.set('pbp', inp.pbp);
       if(inp.pb) p.set('pb', inp.pb);
-      if(inp.pbb==='current') p.set('pbb', 'current');
+      if(inp.pbb==='past') p.set('pbb', 'past');
     }
   }
   return location.pathname + '?' + p.toString();
@@ -842,7 +842,7 @@ async function initFromURL(){
     if(p.get('rp')) document.getElementById('risePeriodN').value = p.get('rp'); // 기간별 변동률의 비교 시점 — 아래 search()보다 먼저 복원해야 그 값으로 조회됨
     if(p.get('pbp')) document.getElementById('priceBandPeriodN').value = p.get('pbp');
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
-    if(p.get('pbb')==='current') document.getElementById('priceBandBasis').value = 'current';
+    if(p.get('pbb')==='past') document.getElementById('priceBandBasis').value = 'past';
     if(m==='region'||m==='volume'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='gaptrend'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='gap'){ search(); }
     else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
@@ -1120,7 +1120,7 @@ function restoreView(vi){
   if(inp.rp) document.getElementById('risePeriodN').value = inp.rp; // 기간별 변동률의 비교 시점(뒤로가기 복원)
   if(inp.pbp) document.getElementById('priceBandPeriodN').value = inp.pbp;
   if(inp.pb) document.getElementById('priceBandN').value = inp.pb;
-  document.getElementById('priceBandBasis').value = inp.pbb==='current' ? 'current' : 'past';
+  document.getElementById('priceBandBasis').value = inp.pbb==='past' ? 'past' : 'current';
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
