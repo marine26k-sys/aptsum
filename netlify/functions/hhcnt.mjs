@@ -81,17 +81,9 @@ function applyPartialOverride(lawd, name, result) {
   return { ...base, ...ov, found: true, name };
 }
 
-// ── 네이버 세대수 보강(2026.09) ──
-// K-apt(data/hhcnt)는 의무관리대상 공동주택만 있어 소규모 단지가 빠지고, 단지명도 "신당남산타운(분양)"처럼
-// 관리용 표기라 실거래명과 잘 안 맞는다. 그 결과 matchKapt()가 "한신"을 202세대, "두산"을 560세대 임대동에
-// 붙이는 오매칭이 있었고(아래 MANUAL/PARTIAL_OVERRIDE가 그걸 손으로 막아둔 것), 연 회전율이 20%를 넘는
-// 비현실적 매칭이 35건 더 있었다.
-// data/hhcnt-naver/<lawd>.json(scripts/build-hhcnt-naver.mjs 생성)이 있으면 그 세대수로 덮어쓴다.
-// **세대수만** 덮는다 — 지하철 노선·도보시간은 네이버 데이터에 없어서, K-apt 결과를 지우면 그 정보가 통째로
-// 사라진다. 그래서 기존 조회는 그대로 다 돌린 뒤 마지막에 hhcnt 값만 교체하는 순서로 붙였다.
-// 구 단위 매칭인 이유: /api/hhcnt가 동(umd)을 안 받는다. 동까지 쓰면 59.5%, 구만 쓰면 58.0%로 1.5%p
-// 차이뿐이라(서울 12개월 실거래 기준) API·클라이언트를 안 건드리는 쪽을 택했다. 구 안에서 이름이 겹치고
-// 세대수가 서로 다른 단지는 빌드 단계에서 아예 제외돼 K-apt 결과가 그대로 남는다.
+// ── 보조 단지 매핑(국토교통부 우선) ──
+// K-apt 정적/라이브 조회를 먼저 확정하고, 의무관리대상 미달 등으로 찾지 못한 경우에만 수집된 단지 매핑으로
+// 세대수를 보완한다. 같은 지역에서 같은 이름의 세대수가 서로 다른 항목은 생성 단계에서 제외돼 자동 보완하지 않는다.
 const naverCache = new Map(); // lawd -> {items, keyIndex} | null — 컨테이너 warm 재사용 동안만
 async function loadNaverHh(origin, lawd) {
   if (naverCache.has(lawd)) return naverCache.get(lawd);
@@ -102,7 +94,7 @@ async function loadNaverHh(origin, lawd) {
       const j = await r.json();
       if (j && j.items) data = { items: j.items, keyIndex: j.keyIndex || {} };
     }
-  } catch (e) { data = null; } // 파일 없음(서울 외 지역 등)은 정상 — 조용히 K-apt만 씀
+  } catch (e) { data = null; }
   naverCache.set(lawd, data);
   return data;
 }
@@ -195,11 +187,13 @@ function naverLookup(nv, lawd, name) {
   }
   return hit;
 }
-function applyNaver(nv, lawd, name, result) {
-  const hit = naverLookup(nv, lawd, name);
+function applyFallback(fallback, lawd, name, result) {
+  // 국토교통부에서 이미 확정된 값은 절대 덮어쓰지 않는다.
+  if (result && result.found && result.hhcnt > 0) return result;
+  const hit = naverLookup(fallback, lawd, name);
   if (!hit) return result;
   const base = (result && result.found) ? result : { found: true, name };
-  // far(용적률)는 K-apt 쪽엔 없는 필드라 지울 게 없음 — hit에 있을 때만 얹는다(없으면 기존 base 유지, undefined로 덮어써 지우지 않도록).
+  // 매핑표에 있는 보조 메타만 채우고, K-apt에서 온 필드는 유지한다.
   return { ...base, found: true, name, hhcnt: hit.hh, ...(hit.far != null ? { far: hit.far } : {}) };
 }
 
@@ -507,10 +501,9 @@ export default async (req) => {
       }
     }
 
-    // 네이버 세대수로 덮어쓰기(지하철 등 나머지 필드는 위에서 채운 K-apt 값 유지).
-    // MANUAL_OVERRIDE로 이미 확정한 값은 건드리지 않는다 — 수동 확인값이 자동 매칭(네이버 포함)보다 우선.
-    const nvMap = await loadNaverHh(new URL(req.url).origin, lawd);
-    if (nvMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyNaver(nvMap, lawd, nm, results[nm]); }
+    // 국토교통부에서 못 찾은 단지만 전체 단지 매핑표로 보완한다.
+    const fallbackMap = await loadNaverHh(new URL(req.url).origin, lawd);
+    if (fallbackMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyFallback(fallbackMap, lawd, nm, results[nm]); }
 
     // 부분 보정(PARTIAL_OVERRIDE)은 네이버보다도 뒤 — 수동 확인값이 항상 최종 우선
     for (const nm of names) results[nm] = applyPartialOverride(lawd, nm, results[nm]);
@@ -528,8 +521,8 @@ export default async (req) => {
   if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (name.length < 2) return Response.json({ error: "단지명 오류" }, { status: 400 });
 
-  // 단건 조회 경로도 배치와 동일하게 네이버 세대수로 덮어쓴다(아래 return들에서 applyNaver → applyPartialOverride 순).
-  const nvGet = await loadNaverHh(url.origin, lawd);
+  // 단건 조회 경로도 배치와 동일하게 국토교통부 우선, 매핑표 보완 순서를 사용한다.
+  const fallbackGet = await loadNaverHh(url.origin, lawd);
 
   const ov = checkOverride(lawd, name);
   if (ov) return new Response(JSON.stringify({ found: true, name, ...ov }), {
@@ -565,7 +558,7 @@ export default async (req) => {
         if (hits.length) {
           const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
           const merged = fulls.length ? mergeFull(fulls) : null;
-          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
         }
       }
     }
@@ -593,10 +586,10 @@ export default async (req) => {
       : [[], []];
     const merged = mergeBasis(bases, subways);
     if (!merged) {
-      const patched = applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: false }));
+      const patched = applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: false }));
       return new Response(JSON.stringify(patched), { headers: patched.found ? cacheHeadersFound : cacheHeadersMiss });
     }
-    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyNaver(nvGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });
