@@ -571,6 +571,10 @@
       </select>
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
+      <select id="priceBandBasis" style="flex:1;min-width:0" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
+        <option value="past" selected>과거 금액대 기준</option>
+        <option value="current">현재 금액대 기준</option>
+      </select>
       <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="" selected disabled>시점 선택</option>
         <option value="3">3개월 전</option>
@@ -763,6 +767,7 @@ function pushView(){
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
     pb: document.getElementById('priceBandN').value,
+    pbb: document.getElementById('priceBandBasis').value,
     nh7: newHighWeekOnly, // "신고가 (일주일)" 탭 여부(2026.09 신설, 구독 전용) — newhigh와 같은 mode를 공유하므로 뒤로가기 복원 시 따로 저장해야 함
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
@@ -788,6 +793,7 @@ function buildShareURL(inp){
     if(inp.mode==='pricebandrise'){
       if(inp.pbp) p.set('pbp', inp.pbp);
       if(inp.pb) p.set('pb', inp.pb);
+      if(inp.pbb==='current') p.set('pbb', 'current');
     }
   }
   return location.pathname + '?' + p.toString();
@@ -834,6 +840,7 @@ async function initFromURL(){
     if(p.get('rp')) document.getElementById('risePeriodN').value = p.get('rp'); // 기간별 변동률의 비교 시점 — 아래 search()보다 먼저 복원해야 그 값으로 조회됨
     if(p.get('pbp')) document.getElementById('priceBandPeriodN').value = p.get('pbp');
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
+    if(p.get('pbb')==='current') document.getElementById('priceBandBasis').value = 'current';
     if(m==='region'||m==='volume'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='gaptrend'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='gap'){ search(); }
     else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
@@ -1111,6 +1118,7 @@ function restoreView(vi){
   if(inp.rp) document.getElementById('risePeriodN').value = inp.rp; // 기간별 변동률의 비교 시점(뒤로가기 복원)
   if(inp.pbp) document.getElementById('priceBandPeriodN').value = inp.pbp;
   if(inp.pb) document.getElementById('priceBandN').value = inp.pb;
+  document.getElementById('priceBandBasis').value = inp.pbb==='current' ? 'current' : 'past';
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
@@ -2654,13 +2662,14 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
 
 // 구독 전용 금액대 비교: 시작 시점 평균가가 선택한 1억원 구간에 속한 단지·평형만 모두 남긴다.
 // 5억대는 5.0억원 이상 6.0억원 미만이며, 30은 30억원 이상 전체를 뜻한다.
-function filterPriceBandRows(rows, band){
-  return rows.filter(row => band===30 ? row.pastAvg>=30 : (row.pastAvg>=band && row.pastAvg<band+1));
+function filterPriceBandRows(rows, band, basis='past'){
+  const priceKey = basis==='current' ? 'recentAvg' : 'pastAvg';
+  return rows.filter(row => band===30 ? row[priceKey]>=30 : (row[priceKey]>=band && row[priceKey]<band+1));
 }
-function analyzePriceBandRise(all, months, periodM, band){
+function analyzePriceBandRise(all, months, periodM, band, basis='past'){
   const base = analyzeLongTermRise(all, months, periodM, true);
-  const rows = filterPriceBandRows(base.rows, band);
-  return { ...base, found:true, mode:'pricebandrise', rows, priceBand:band,
+  const rows = filterPriceBandRows(base.rows, band, basis);
+  return { ...base, found:true, mode:'pricebandrise', rows, priceBand:band, priceBandBasis:basis,
     priceBandLabel:band===0?'1억 미만':(band===30?'30억 이상':`${band}억대`) };
 }
 
@@ -3469,6 +3478,7 @@ async function search(){
   // 반복하다 매번 이전 요청이 취소(HTTP 499)되는 문제가 있었음(2026.07) — 3년(36개월, 조각 4개)으로 줄여 완화
   const risePeriodM = +document.getElementById('risePeriodN').value;
   const priceBandPeriodM = +document.getElementById('priceBandPeriodN').value;
+  const priceBandBasis = document.getElementById('priceBandBasis').value;
   const neededMN = mode==='shortval' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 4 : (mode==='inversion' ? 13 : (mode==='gaptrend' ? 8 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : mN)))))))));
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
@@ -3554,7 +3564,7 @@ async function search(){
           d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
             : mode==='newlow' ? analyzeNewLow(items, months)
             : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
-            : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value)
+            : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
             : analyzePricePerPyeong(items, months);
           d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
           d.buildYear = buildYearLabel();
@@ -3673,7 +3683,7 @@ async function search(){
         d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
           : mode==='newlow' ? analyzeNewLow(items, months)
           : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
-          : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value)
+          : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
           : analyzePricePerPyeong(items, months);
         d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
@@ -4799,18 +4809,24 @@ function renderLongTermRise(d){
 function renderPriceBandRise(d){
   const multiRegion = new Set(d.rows.map(x=>x.gu).filter(Boolean)).size > 1;
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
+  const isCurrentBasis = d.priceBandBasis==='current';
+  const focusLabel = isCurrentBasis ? `현재 ${d.priceBandLabel}` : `${d.periodM}개월 전 ${d.priceBandLabel}`;
+  const resultLabel = isCurrentBasis ? `현재 ${d.priceBandLabel}인 단지` : `${d.periodM}개월 전 ${d.priceBandLabel}였던 단지`;
+  const basisHint = isCurrentBasis
+    ? `최근 30일 평균가가 ${d.priceBand===30?'30억원 이상':`${d.priceBand}.0억 이상 ${d.priceBand+1}.0억 미만`}인 단지·평형`
+    : `${d.periodM}개월 전 30일 구간의 평균가가 ${d.priceBand===30?'30억원 이상':`${d.priceBand}.0억 이상 ${d.priceBand+1}.0억 미만`}인 단지·평형`;
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
         <span class="val ${x.changeAmt>=0?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억 (${Math.abs(x.changePct)}%)</b></small></span>
       </div>${rkSep(i,d.rows.length)}`).join('')
-    : '<div class="rng" style="padding:10px 0">선택한 시점에 해당 금액대였고 최근 거래도 있는 단지·평형이 없습니다.</div>';
+    : `<div class="rng" style="padding:10px 0">${isCurrentBasis?'현재':'선택한 시점에'} 해당 금액대였고 비교 가능한 거래가 있는 단지·평형이 없습니다.</div>`;
   const html = `
   <div class="card">
     <div class="card-hd">
       ${hdTop('금액대별 변동률', true)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
-      <div class="meta price-band-meta"><strong class="price-band-focus">${d.periodM}개월 전 ${esc(d.priceBandLabel)}</strong><span class="price-band-context">현재 가격 비교${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</span></div>
+      <div class="meta price-band-meta"><strong class="price-band-focus">${esc(focusLabel)}</strong><span class="price-band-context">${isCurrentBasis?`${d.periodM}개월 전 가격 비교`:'현재 가격 비교'}${d.pyBand?` · ${esc(d.pyBand)}`:''}${d.buildYear?` · ${esc(d.buildYear)}`:''}</span></div>
       <div class="price-band-vs">
         <span><b>${d.periodM}개월 전 평균</b><small>${esc(d.pastPeriod)}</small></span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H3M7 21l-4-4 4-4M3 17h18"/></svg>
@@ -4819,8 +4835,8 @@ function renderPriceBandRise(d){
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <h3>${d.periodM}개월 전 ${esc(d.priceBandLabel)}였던 단지 (${d.rows.length}개)</h3>
-      ${hint(`${d.periodM}개월 전 30일 구간의 평균가가 ${d.priceBand===30?'30억원 이상':`${d.priceBand}.0억 이상 ${d.priceBand+1}.0억 미만`}인 단지·평형`, '현재 가격은 최근 30일 평균 · 단지와 평형을 각각 비교 · 많이 오른 순')}
+      <h3>${esc(resultLabel)} (${d.rows.length}개)</h3>
+      ${hint(basisHint, '현재 가격은 최근 30일 평균 · 단지와 평형을 각각 비교 · 많이 오른 순')}
       ${rows}
     </div>
   </div>
