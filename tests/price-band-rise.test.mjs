@@ -52,6 +52,9 @@ test('subscriber price-band tab has all requested periods and requires explicit 
   assert.match(html, /최근 1개월 평균<\/b><small>\$\{esc\(d\.recentPeriod\)\}/);
   assert.match(html, /\|\| mode==='pricebandrise'\) return REGION_MAX/);
   assert.match(html, /mode==='pricebandrise'\)\)\{[\s\S]*?\+ 경기 전체/);
+  assert.match(html, /const rows = matchedRows\.slice\(0,100\);/);
+  assert.match(html, /matchedCount:matchedRows\.length, isLimited:matchedRows\.length>rows\.length/);
+  assert.match(html, /개 중 상위 \$\{d\.rows\.length\}개/);
 });
 
 test('search controls use the compact tab-sized density on mobile', () => {

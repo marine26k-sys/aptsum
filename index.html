@@ -2670,8 +2670,10 @@ function filterPriceBandRows(rows, band, basis='past'){
 }
 function analyzePriceBandRise(all, months, periodM, band, basis='past'){
   const base = analyzeLongTermRise(all, months, periodM, true);
-  const rows = filterPriceBandRows(base.rows, band, basis);
-  return { ...base, found:true, mode:'pricebandrise', rows, priceBand:band, priceBandBasis:basis,
+  const matchedRows = filterPriceBandRows(base.rows, band, basis);
+  // 경기 전체처럼 조건 충족 단지가 많은 곳도 화면·공유 결과가 과도하게 길어지지 않도록 상승 금액 순 상위 100개만 표시한다.
+  const rows = matchedRows.slice(0,100);
+  return { ...base, found:true, mode:'pricebandrise', rows, matchedCount:matchedRows.length, isLimited:matchedRows.length>rows.length, priceBand:band, priceBandBasis:basis,
     priceBandLabel:band===0?'1억 미만':(band===30?'30억 이상':`${band}억대`) };
 }
 
@@ -4837,7 +4839,7 @@ function renderPriceBandRise(d){
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <h3>${esc(resultLabel)} (${d.rows.length}개)</h3>
+      <h3>${esc(resultLabel)} (${d.isLimited ? `${d.matchedCount}개 중 상위 ${d.rows.length}개` : `${d.rows.length}개`})</h3>
       ${hint(basisHint, '현재 가격은 최근 30일 평균 · 단지와 평형을 각각 비교 · 많이 오른 순')}
       ${rows}
     </div>
