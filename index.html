@@ -55,15 +55,17 @@
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
-  .search-box{display:grid;gap:7px;margin-bottom:8px;background:#fff;border-radius:13px;padding:11px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
+  /* 검색 컨트롤은 분석 탭 알약 버튼과 같은 밀도로 맞춘다. 기존 16px·10px 패딩은 모바일에서
+     금액대별 3개 선택창이 카드 대부분을 차지해 탭보다 과하게 커 보였음. */
+  .search-box{display:grid;gap:6px;margin-bottom:8px;background:#fff;border-radius:13px;padding:9px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
-  .row2{display:flex;gap:7px}
-  select,input.q{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;font-family:inherit;background:#fff}
-  #optRow select{font-size:13px;padding:9px 6px 9px 9px}
+  .row2{display:flex;gap:6px}
+  select,input.q{border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;font-weight:700;font-family:inherit;background:#fff}
+  #optRow select{font-size:11.5px;padding:6px 7px}
   select:focus,input.q:focus{outline:none;border-color:var(--teal)}
   select{flex:0 0 138px;width:100%}
   input.q{flex:1;min-width:0}
-  .go{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer}
+  .go{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
   .go:disabled{background:#93C9CC}
 
   .loading{display:none;text-align:center;padding:40px 0}

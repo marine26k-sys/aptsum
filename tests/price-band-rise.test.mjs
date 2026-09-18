@@ -52,6 +52,12 @@ test('subscriber price-band tab has all requested periods and requires explicit 
   assert.match(html, /mode==='pricebandrise'\)\)\{[\s\S]*?\+ 경기 전체/);
 });
 
+test('search controls use the compact tab-sized density on mobile', () => {
+  assert.match(html, /\.search-box\{display:grid;gap:6px[\s\S]*?padding:9px/);
+  assert.match(html, /select,input\.q\{[^}]*padding:7px 9px;font-size:12px/);
+  assert.match(html, /\.go\{[^}]*padding:8px;font-size:12px/);
+});
+
 test('existing sale-change period selector remains unchanged', () => {
   const row = html.match(/<div class="row2" id="risePeriodRow"[\s\S]*?<\/div>/)?.[0] || '';
   const periods = [...row.matchAll(/<option value="(\d+)"/g)].map(m=>Number(m[1]));
