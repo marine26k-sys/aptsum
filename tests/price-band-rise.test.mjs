@@ -40,7 +40,9 @@ test('subscriber price-band tab has all requested periods and requires explicit 
   assert.deepEqual(periods, [3,6,9,12,24,36,48,60]);
   assert.match(row, /id="priceBandPeriodN"[\s\S]*?<option value="" selected disabled>시점 선택<\/option>/);
   assert.match(row, /id="priceBandN"[\s\S]*?<option value="" selected disabled>금액대 선택<\/option>/);
-  assert.match(row, /id="priceBandBasis"[\s\S]*?value="past" selected>과거 금액대 기준[\s\S]*?value="current">현재 금액대 기준/);
+  assert.match(row, /id="priceBandBasis"[\s\S]*?value="current" selected>현재 금액대 기준[\s\S]*?value="past">과거 금액대 기준/);
+  assert.match(html, /if\(inp\.pbb==='past'\) p\.set\('pbb', 'past'\)/);
+  assert.match(html, /value = inp\.pbb==='past' \? 'past' : 'current'/);
   assert.doesNotMatch(row, /value="(?:3|5)" selected/);
   assert.match(html, /id="tabPBR" style="display:none"/);
   assert.match(html, /needsSubscriberSession\(m\)[\s\S]*?m==='pricebandrise'/);
