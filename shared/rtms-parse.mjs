@@ -128,7 +128,13 @@ export function rtmsFailed(t) {
 // 실패 응답에서 resultCode/resultMsg를 뽑아 로그용 문구로 만든다 — "fetch 실패"라고만 찍히면
 // 원인(동시 요청 제한/키 오류/한도 초과 등)을 알 수 없어 배치가 막힐 때마다 매번 재조사해야 했음.
 function describeFailure(t, e) {
-  if (e) return e.name === "TimeoutError" || e.name === "AbortError" ? "timeout" : e.message;
+  if (e) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") return "timeout";
+    // Node fetch(undici)는 네트워크 레벨 실패 시 항상 "fetch failed"라고만 말하고 진짜 원인
+    // (ECONNRESET/ETIMEDOUT/인증서 오류 등)은 e.cause에 담아둔다 — cause 없이는 진단이 안 됨.
+    const cause = e.cause ? ` (${e.cause.code || e.cause.message || e.cause})` : "";
+    return `${e.message}${cause}`;
+  }
   if (!t) return "empty response";
   const code = t.match(/<resultCode>\s*([^<]*?)\s*<\/resultCode>/)?.[1];
   const msg = t.match(/<resultMsg>\s*([^<]*?)\s*<\/resultMsg>/)?.[1];
