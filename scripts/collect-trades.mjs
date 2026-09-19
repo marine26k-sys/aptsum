@@ -99,12 +99,16 @@ async function exists(p) {
 
 // 지역코드(lawd) → 실제 조회에 필요한 raw 코드 묶음 해석. 결과: [{code, ymFilter?, dongFilter?}] 형태가 아니라
 // analyze.mjs와 동일하게 "이 ym이 신규코드 구간인지 과거 통합코드 구간인지"를 판단해 그때그때 병합한다.
+function failInfo(...results) {
+  return results.find((r) => r.failed)?.info || "unknown";
+}
+
 async function fetchMergedMonth(cfg, key, lawd, ym) {
   if (lawd.startsWith("IC-")) return fetchIncheonMonth(cfg, key, lawd.slice(3), ym);
   const prefix = Object.keys(SPLIT_REGIONS).find((p) => lawd.startsWith(p));
   if (!prefix) {
     const r = await fetchText(cfg.url, key, lawd, ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym);
   }
   const scfg = SPLIT_REGIONS[prefix];
@@ -113,11 +117,11 @@ async function fetchMergedMonth(cfg, key, lawd, ym) {
   const dongs = scfg.dongs[gu];
   if (ym >= scfg.split) {
     const r = await fetchText(cfg.url, key, code, ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym);
   }
   const [rNew, rOld] = await Promise.all([fetchText(cfg.url, key, code, ym), fetchText(cfg.url, key, scfg.oldCode, ym)]);
-  if (rNew.failed || rOld.failed) return null;
+  if (rNew.failed || rOld.failed) throw new Error(failInfo(rNew, rOld));
   const a = cfg.parse(rNew.text, ym);
   const b = cfg.parse(rOld.text, ym).filter((t) => dongs.includes(t.umd));
   const seen = new Set();
@@ -136,32 +140,32 @@ async function fetchIncheonMonth(cfg, key, guName, ym) {
   const code = scfg.codes[guName];
   if (ym >= scfg.split) {
     const r = await fetchText(cfg.url, key, code, ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym);
   }
   if (guName === "제물포구") {
     const [c110, c140] = await Promise.all([fetchText(cfg.url, key, "28110", ym), fetchText(cfg.url, key, "28140", ym)]);
-    if (c110.failed || c140.failed) return null;
+    if (c110.failed || c140.failed) throw new Error(failInfo(c110, c140));
     const mainland = cfg.parse(c110.text, ym).filter((t) => !scfg.islandDongs.includes(t.umd));
     const dong = cfg.parse(c140.text, ym);
     return [...mainland, ...dong];
   }
   if (guName === "영종구") {
     const r = await fetchText(cfg.url, key, "28110", ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym).filter((t) => scfg.islandDongs.includes(t.umd));
   }
   if (guName === "서해구") {
     const r = await fetchText(cfg.url, key, "28260", ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym).filter((t) => !scfg.geomdanDongs.includes(t.umd));
   }
   if (guName === "검단구") {
     const r = await fetchText(cfg.url, key, "28260", ym);
-    if (r.failed) return null;
+    if (r.failed) throw new Error(failInfo(r));
     return cfg.parse(r.text, ym).filter((t) => scfg.geomdanDongs.includes(t.umd));
   }
-  return null;
+  throw new Error(`알 수 없는 인천 구: ${guName}`);
 }
 
 // 동시 실행 개수 제한 큐 (data.go.kr에 과도한 동시요청 방지)
@@ -199,13 +203,16 @@ async function main() {
       }
     }
 
-    const { ok, fail } = await pool(tasks, 8, async ({ lawd, ym }) => {
+    // 동시 실행 수: 예전엔 8이었는데, data.go.kr RTMS API의 초당/동시 요청 제한에 걸려 8개씩
+    // 한꺼번에 실패하는 현상이 있었음(일일 트래픽 한도는 운영 계정이라 넉넉함에도 발생 — 2026.09).
+    // 다른 배치(collect-hhcnt.mjs)가 쓰는 3과 동일하게 낮춤.
+    const { ok, fail } = await pool(tasks, 3, async ({ lawd, ym }) => {
       const dir = path.join(cfg.dir, lawd);
       const file = path.join(dir, `${ym}.json`);
       if (!opt.force && !refreshSet.has(ym) && (await exists(file))) return; // 과거월 + 이미 있음 → 스킵
 
+      // 실패 사유(resultCode 등)를 그대로 던져 로그에 남긴다 — 실패는 파일을 안 남겨서 다음 실행 때 재시도됨
       const items = await fetchMergedMonth(cfg, key, lawd, ym);
-      if (items === null) throw new Error(`${lawd} ${ym} fetch 실패`); // 실패는 파일을 안 남겨서 다음 실행 때 재시도됨
 
       await mkdir(dir, { recursive: true });
       await writeFile(file, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));

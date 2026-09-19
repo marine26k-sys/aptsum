@@ -125,7 +125,19 @@ export function rtmsFailed(t) {
   return true;                                                   // header도 resultCode도 없는 이상한 응답
 }
 
+// 실패 응답에서 resultCode/resultMsg를 뽑아 로그용 문구로 만든다 — "fetch 실패"라고만 찍히면
+// 원인(동시 요청 제한/키 오류/한도 초과 등)을 알 수 없어 배치가 막힐 때마다 매번 재조사해야 했음.
+function describeFailure(t, e) {
+  if (e) return e.name === "TimeoutError" || e.name === "AbortError" ? "timeout" : e.message;
+  if (!t) return "empty response";
+  const code = t.match(/<resultCode>\s*([^<]*?)\s*<\/resultCode>/)?.[1];
+  const msg = t.match(/<resultMsg>\s*([^<]*?)\s*<\/resultMsg>/)?.[1];
+  if (code || msg) return `resultCode=${code || "?"} resultMsg=${msg || "?"}`;
+  return t.slice(0, 120).replace(/\s+/g, " ");
+}
+
 export async function fetchText(rtmsUrl, key, lawd, ym, retries = 2, timeoutMs = 20000) {
+  let lastInfo = "";
   for (let i = 0; i <= retries; i++) {
     try {
       // 요청당 20초 타임아웃: data.go.kr이 응답 없이 커넥션만 붙잡고 있으면 이 워커가 무한정
@@ -135,11 +147,13 @@ export async function fetchText(rtmsUrl, key, lawd, ym, retries = 2, timeoutMs =
       });
       const t = await r.text();
       if (!rtmsFailed(t)) return { text: t, failed: false };
-      if (i === retries) return { text: t || "", failed: true };
+      lastInfo = describeFailure(t);
+      if (i === retries) return { text: t || "", failed: true, info: lastInfo };
     } catch (e) {
-      if (i === retries) return { text: "", failed: true }; // 타임아웃(AbortError)도 여기서 실패로 잡혀 재시도됨
+      lastInfo = describeFailure(null, e); // 타임아웃(AbortError)도 여기서 실패로 잡혀 재시도됨
+      if (i === retries) return { text: "", failed: true, info: lastInfo };
     }
     await new Promise((res) => setTimeout(res, 400 * (i + 1)));
   }
-  return { text: "", failed: true };
+  return { text: "", failed: true, info: lastInfo };
 }
