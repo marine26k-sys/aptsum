@@ -28,6 +28,7 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ALL_REGIONS } from "../shared/regions.mjs";
+import { resolveComplexNames } from "../shared/name-match.mjs";
 
 // 평단가(만원/평, 공급면적 기준) 기준 6단계 — 국민평형(전용 84㎡≈공급면적 기준 33평) 총액 등급
 // (30/20/15/11/8억)을 33평으로 나눠 평당가로 재환산한 값(9000/6000/4500/3300/2400만원/평)을
@@ -90,6 +91,9 @@ async function main() {
   // 동일 원칙). "구|동|정규화된 단지명" -> {원문 표기: 등장 횟수}
   const nameVariantsByCk = new Map();
   let totalTx = 0;
+  // lawd -> Map(정규화 실거래명 -> {umds:Set<법정동명>}) — hhcnt 퍼지 매칭(resolveComplexNames)에 필요한
+  // "이 이름이 어느 동에서 나왔는지" 정보. lawd별로 collect-supply-area.mjs와 동일한 방식으로 매칭한다.
+  const dealMetaByLawd = new Map();
 
   // presale 디렉토리(data/presale/<lawd>/<ym>.json)도 매매(analyze)와 동일한 방식으로 함께 스캔한다.
   // (2026.09 버그 수정: 원래 이 스크립트가 analyzeDir만 읽어서, 준공 전이라 매매 실거래가 아예 없고
@@ -131,12 +135,21 @@ async function main() {
           const variants = nameVariantsByCk.get(ck) || {};
           variants[t.apt] = (variants[t.apt] || 0) + 1;
           nameVariantsByCk.set(ck, variants);
+          let dealMeta = dealMetaByLawd.get(lawd);
+          if (!dealMeta) { dealMeta = new Map(); dealMetaByLawd.set(lawd, dealMeta); }
+          let dm = dealMeta.get(nameNorm);
+          if (!dm) { dm = { umds: new Set() }; dealMeta.set(nameNorm, dm); }
+          if (t.umd) dm.umds.add(t.umd);
         }
       }
     }
   }
 
-  // hhcnt(세대수/준공연도) 조인 — 있으면 참고 정보로 붙임(없어도 등급 계산엔 지장 없음)
+  // hhcnt(세대수/준공연도) 조인 — 있으면 참고 정보로 붙임(없어도 등급 계산엔 지장 없음).
+  // 예전엔 "hhcnt 단지명과 실거래 단지명이 공백 제거 후 글자까지 똑같을 때"만 매칭해서 일치율이
+  // 20% 안팎이었음(collect-supply-area.mjs가 동일한 문제를 겪고 고친 이력 — 위 367번째 줄 주석 참고).
+  // shared/name-match.mjs의 resolveComplexNames로 교체(표기 차이 흡수 + 법정동으로 후보 좁히기,
+  // 2026.09 발견 — 82%가 세대수/년식 미표시였음).
   const hhcntDir = "data/hhcnt";
   const hhLookup = new Map(); // "구|단지명(공백제거)" -> {hh, by}
   try {
@@ -146,9 +159,10 @@ async function main() {
       const region = LAWD_TO_REGION.get(lawd);
       if (!region) continue;
       const j = JSON.parse(await readFile(path.join(hhcntDir, f), "utf-8"));
-      for (const c of j.items || []) {
-        const norm = String(c.name || "").replace(/\s/g, "");
-        hhLookup.set(`${region}|${norm}`, { hh: c.hhcnt ?? null, by: c.useDate ? parseInt(String(c.useDate).slice(0, 4), 10) : null });
+      const dealMeta = dealMetaByLawd.get(lawd) || new Map();
+      const resolved = resolveComplexNames(j.items, dealMeta);
+      for (const [nameNorm, c] of resolved) {
+        hhLookup.set(`${region}|${nameNorm}`, { hh: c.hhcnt ?? null, by: c.useDate ? parseInt(String(c.useDate).slice(0, 4), 10) : null });
       }
     }
   } catch { /* hhcnt 없어도 계속 진행 */ }
