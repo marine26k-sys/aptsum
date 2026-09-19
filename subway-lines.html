@@ -50,7 +50,7 @@
   .region-link:active{background:var(--teal-light)}
   .region-link.on{background:var(--teal-dark);color:#fff}
 
-  .region-panel{flex:0 0 100%;width:100%;margin-top:2px;background:var(--slate-bg);border-radius:10px;padding:8px 10px}
+  .region-panel{width:100%;margin-top:2px;background:var(--slate-bg);border-radius:10px;padding:8px 10px}
   .region-panel-note{font-size:9.5px;color:var(--sub);line-height:1.5;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fff}
   .region-panel-hd{font-size:10.5px;font-weight:700;color:var(--sub);margin-bottom:6px}
   .region-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #fff}
@@ -273,7 +273,7 @@ function lineHTML(line){
               <span class="station-name">${esc(st.name)}</span>
               <span class="station-badge ${st.status==='개통'?'badge-open':'badge-plan'}">${esc(st.status)}</span>
               ${st.openDate ? `<span class="station-open-date">${esc(st.openDate)}</span>` : ""}
-              <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" onclick="toggleRegion('${line.id}','${esc(st.name)}')">이 지역 단지</button>
+              <button class="region-link ${openStationKey===stationKey(line.id,st.name)?'on':''}" data-toggle-line="${esc(line.id)}" data-toggle-station="${esc(st.name)}">이 지역 단지</button>
             </div>
             <div class="station-loc">${esc(st.si)} ${esc(st.gu)}${st.dong ? ` ${esc(Array.isArray(st.dong)?st.dong.join('·'):st.dong)}` : ''}</div>
             ${st.note ? `<div class="station-note">${esc(st.note)}</div>` : ""}
@@ -289,7 +289,7 @@ function render(){
   const shown = DATA.lines.filter(l => !activeLine || l.id === activeLine);
   $("#app").innerHTML = `
     <div class="line-tabs">
-      ${DATA.lines.map(l => `<div class="line-tab ${activeLine===l.id?'on':''}" style="${activeLine===l.id?`background:${l.color}`:''}" onclick="setLine('${l.id}')">${esc(l.name)}</div>`).join("")}
+      ${DATA.lines.map(l => `<div class="line-tab ${activeLine===l.id?'on':''}" style="${activeLine===l.id?`background:${l.color}`:''}" data-line-id="${esc(l.id)}">${esc(l.name)}</div>`).join("")}
     </div>
 
     ${shown.map(lineHTML).join("")}
@@ -303,6 +303,17 @@ function render(){
     </div>
   `;
 }
+
+// 노선 탭·"이 지역 단지" 버튼을 인라인 onclick 대신 위임 리스너로 바인딩 — 역 이름을 JS 문자열
+// 리터럴에 직접 꽂아 넣던 예전 방식은 이름에 작은따옴표가 들어간 역(예: 데이터의 note에 이미 등장하는
+// "구성('구성' 역 등)" 같은 표기)이 생기면 esc()로 HTML 엔티티 처리를 해도 브라우저가 속성값을 파싱하며
+// 다시 원문자로 되돌려 그 지점에서 onclick 문자열이 끊기는 문제가 있었음 — data-* 속성 + 위임 리스너로 전환.
+$("#app").addEventListener("click", (e) => {
+  const tab = e.target.closest(".line-tab");
+  if(tab){ setLine(tab.dataset.lineId); return; }
+  const btn = e.target.closest(".region-link");
+  if(btn){ toggleRegion(btn.dataset.toggleLine, btn.dataset.toggleStation); }
+});
 
 load();
 document.addEventListener("contextmenu", (e) => e.preventDefault());
