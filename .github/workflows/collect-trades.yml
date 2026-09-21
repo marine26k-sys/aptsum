@@ -25,6 +25,9 @@ on:
         description: "이미 있는 파일도 전부 강제 재수집"
         type: boolean
         default: false
+      only:
+        description: "특정 지역만 (콤마 구분 lawd 코드, 비우면 전체) — 지역 신규 추가 시 그 지역만 백필할 때 사용"
+        default: ""
 
 permissions:
   contents: write
@@ -90,6 +93,7 @@ jobs:
             --kinds=${{ github.event.inputs.kinds || 'analyze,presale,rent' }} \
             --months=${{ steps.months.outputs.months }} \
             --refresh=${{ github.event.inputs.refresh || '4' }} \
+            ${{ github.event.inputs.only && format('--only={0}', github.event.inputs.only) || '' }} \
             ${{ github.event.inputs.force == 'true' && '--force' || '' }}
 
       - name: 최초 백필 완료 표시 (자동 60개월 백필이 성공했을 때만)
