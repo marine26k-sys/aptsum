@@ -539,7 +539,7 @@
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 권역)</div>
     <div class="tab subscriber" id="tabGT" style="display:none" onclick="setMode('gaptrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M14 5h5v5"/></svg>전세가율 추세</div>
-    <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 (일주일)</div>
+    <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
     <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
@@ -738,7 +738,7 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
-// "신고가 (일주일)" 탭용 플래그(2026.09 신설, 구독 전용) — 별도 mode를 새로 만들지 않고 기존 'newhigh'
+// "신고가 속보 (7일)" 탭용 플래그(2026.09 신설, 구독 전용) — 별도 mode를 새로 만들지 않고 기존 'newhigh'
 // 파이프라인(국토부 신고기한이 최대 30일이라 30일 창으로 수집)을 그대로 재사용하되, 결과 중 실제 계약일이
 // 최근 7일 이내인 것만(fresh7) 걸러 보여준다. 30일 창을 7일로 좁혀서 다시 수집하면 아직 신고 안 된
 // 신고가를 놓치므로(analyzeNewHigh 주석 참고) 수집 로직은 안 건드리고 표시 단계에서만 필터링.
@@ -770,7 +770,7 @@ function pushView(){
     pbp: document.getElementById('priceBandPeriodN').value,
     pb: document.getElementById('priceBandN').value,
     pbb: document.getElementById('priceBandBasis').value,
-    nh7: newHighWeekOnly, // "신고가 (일주일)" 탭 여부(2026.09 신설, 구독 전용) — newhigh와 같은 mode를 공유하므로 뒤로가기 복원 시 따로 저장해야 함
+    nh7: newHighWeekOnly, // "신고가 속보 (7일)" 탭 여부(2026.09 신설, 구독 전용) — newhigh와 같은 mode를 공유하므로 뒤로가기 복원 시 따로 저장해야 함
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
@@ -1224,7 +1224,7 @@ const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 �
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
 function regionSelMax(){
-  // "신고가 (일주일)"과 구독 전용 "금액대별 변동률"은 경기 전체(39개 시군구)를 한 번에 담을 수 있도록
+  // "신고가 속보 (7일)"과 구독 전용 "금액대별 변동률"은 경기 전체(39개 시군구)를 한 번에 담을 수 있도록
   // 상한을 REGION_MAX(45)까지 풀어준다. 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
   if((mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise') return REGION_MAX;
   return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
@@ -2366,7 +2366,7 @@ function analyzeNewHigh(all, months, weekOnly){
     });
   }
   results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
-  // "신고가 (일주일)" 탭은 여기서 가격 상위 100개로 자른 뒤 화면(renderNewHigh)에서 최근 7일 이내(fresh7)만
+  // "신고가 속보 (7일)" 탭은 여기서 가격 상위 100개로 자른 뒤 화면(renderNewHigh)에서 최근 7일 이내(fresh7)만
   // 다시 걸러내는 순서였는데, 그러면 지역을 여러 개 묶어 조회할수록(예: 경기도 전체 39개 시군구) 비싼
   // 지역의 오래된(8~29일 전) 신고가가 상위 100개를 채워버려서, 정작 최근 7일 안에 갱신됐지만 가격은 상대적으로
   // 낮은 다른 지역 신고가가 밀려나 통째로 안 보이는 문제가 있었음(2026.09 발견 — 구 1개만 조회할 때보다
@@ -4657,7 +4657,7 @@ function renderGap(d){
 }
 
 function renderNewHigh(d){
-  // "신고가 (일주일)" 탭(newHighWeekOnly)은 별도 수집 없이 같은 30일 창 결과에서 실제 계약일이
+  // "신고가 속보 (7일)" 탭(newHighWeekOnly)은 별도 수집 없이 같은 30일 창 결과에서 실제 계약일이
   // 최근 7일 이내인 것(fresh7)만 걸러서 보여준다 — 수집 창을 7일로 좁히면 아직 신고 안 된 신고가를
   // 놓치므로(analyzeNewHigh 참고) 표시 단계에서만 필터링. 7일 필터 자체는 이제 analyzeNewHigh가
   // 가격 상위 100개로 자르기 전에 먼저 적용해서 넘겨주므로(2026.09 수정), d.newHigh를 그대로 쓴다.
@@ -4676,7 +4676,7 @@ function renderNewHigh(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop(weekOnly?'신고가 (일주일)':'신고가', weekOnly)}
+      ${hdTop(weekOnly?'신고가 속보 (7일)':'신고가', weekOnly)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 ${weekOnly?'일주일':'한 달'} 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
