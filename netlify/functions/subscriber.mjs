@@ -1,11 +1,10 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import {
+  COOKIE_NAME, MAX_AGE_SECONDS, sameValue, createSession, hasValidSession,
+} from "../../shared/sessions.mjs";
 
 export const config = {
   path: "/api/subscriber",
 };
-
-const COOKIE_NAME = "__Host-aptsum_subscriber";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 function response(body, { status = 200, headers = {} } = {}) {
   return Response.json(body, {
@@ -17,51 +16,6 @@ function response(body, { status = 200, headers = {} } = {}) {
       ...headers,
     },
   });
-}
-
-function cookieValue(request, name) {
-  const raw = request.headers.get("cookie") || "";
-  for (const part of raw.split(";")) {
-    const index = part.indexOf("=");
-    if (index === -1) continue;
-    const key = part.slice(0, index).trim();
-    if (key === name) return part.slice(index + 1).trim();
-  }
-  return null;
-}
-
-function sameValue(left, right) {
-  const leftBytes = Buffer.from(String(left), "utf8");
-  const rightBytes = Buffer.from(String(right), "utf8");
-  return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes);
-}
-
-function sign(payload, secret) {
-  return createHmac("sha256", secret).update(payload).digest("base64url");
-}
-
-function createSession(secret) {
-  const payload = Buffer.from(JSON.stringify({
-    version: 1,
-    expiresAt: Date.now() + MAX_AGE_SECONDS * 1000,
-  }), "utf8").toString("base64url");
-  return `${payload}.${sign(payload, secret)}`;
-}
-
-function hasValidSession(request, secret) {
-  const token = cookieValue(request, COOKIE_NAME);
-  if (!token) return false;
-
-  const pieces = token.split(".");
-  if (pieces.length !== 2 || !pieces[0] || !pieces[1]) return false;
-  if (!sameValue(pieces[1], sign(pieces[0], secret))) return false;
-
-  try {
-    const payload = JSON.parse(Buffer.from(pieces[0], "base64url").toString("utf8"));
-    return payload?.version === 1 && Number.isFinite(payload.expiresAt) && payload.expiresAt > Date.now();
-  } catch {
-    return false;
-  }
 }
 
 function sessionCookie(token) {
