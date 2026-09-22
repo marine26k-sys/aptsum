@@ -127,6 +127,15 @@
   .inv-table td:nth-child(1){white-space:normal} /* 평형 칸만 줄바꿈 허용(33평 저평가처럼 길어질 수 있어서) — 나머지는 기준(100%) 같은 문구가 안 잘리게 한 줄 고정 */
   .inv-table .grp-td{border-right:1px solid var(--line)}
   .peer-table tr:last-child td{border-bottom:none}
+  /* 저평가 실매물 탭 표(2026.09) — 칸마다 두 줄(단지/매물 링크, 평형/전용, 호가/층·동)이라 공용 peer-table보다 넉넉한 간격 */
+  .lst-table th{padding:6px 5px;font-size:10px}
+  .lst-table td{padding:8px 5px;font-size:11px;line-height:1.35;vertical-align:middle}
+  .lst-table th:nth-child(1),.lst-table td:nth-child(1){width:36%}
+  .lst-table th:nth-child(2),.lst-table td:nth-child(2){width:18%;white-space:normal}
+  .lst-table th:nth-child(3),.lst-table td:nth-child(3){width:21%}
+  .lst-table th:nth-child(4),.lst-table td:nth-child(4){width:25%}
+  .lst-table .sub{font-size:9.5px;color:var(--sub);margin-top:2px;white-space:nowrap}
+  .lst-table .sub a{color:var(--teal-dark);font-weight:700;text-decoration:underline}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
   td b{font-size:12.5px;color:var(--navy)}
@@ -5130,23 +5139,24 @@ const peakYmLabel = ym => /^\d{6}$/.test(ym||'') ? `${ym.slice(2,4)}.${ym.slice(
 function renderListingUndervalue(d){
   const list = d.divergence;
   const multiRegion = new Set(list.map(x=>x.gu).filter(Boolean)).size > 1;
-  // 표의 최저 호가 칸 — 가격 아래에 그 매물의 층·동과 네이버 매물 링크(2026.09 운영자 요청: 표 위 별도 줄 대신
+  // 표의 최저 호가 칸 — 가격 아래에 그 매물의 층·동(2026.09 운영자 요청: 표 위 별도 줄 대신
   // 표 안에서 바로 보이게). 별도 칸으로 빼면 모바일 폭을 넘어 칸이 좁아지면서 행이 비정상적으로 길어져 한 칸 안에 넣음.
   const listingSub = x => {
     const info = [listingFloorLabel(x.fl), x.dong].filter(Boolean).map(esc).join(' · ');
-    const link = x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:700;text-decoration:underline">네이버 매물</a>` : '';
-    return (info||link) ? `<div style="font-size:9.5px;line-height:1.4;color:var(--sub);white-space:nowrap;margin-top:1px">${info}${info&&link?'<br>':''}${link}</div>` : '';
+    return info ? `<div class="sub">${info}</div>` : '';
   };
+  // 네이버 매물 링크는 단지명 바로 아래(운영자 요청)
+  const listingLink = x => x.url ? `<div class="sub"><a href="${esc(x.url)}" target="_blank" rel="noopener">네이버 매물</a></div>` : '';
   const body = !list.length
     ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 동 · 400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
     : list.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5">급매</span>':''}</div>
-      <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
-        <tr><th>단지</th><th>평형</th><th class="tr-r">최고가</th><th class="tr-r">최저 호가 매물</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평(전용 ${x.area}㎡)</td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
-        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평(전용 ${p.area}㎡)</td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
+      <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
+        <tr><th>단지</th><th>평형</th><th class="tr-r">최고가</th><th class="tr-r">최저 호가</th></tr>
+        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${listingLink(x)}</td><td>${x.py}평<div class="sub">전용 ${x.area}㎡</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
+        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}${listingLink(p)}</td><td>${esc(p.py)}평<div class="sub">전용 ${p.area}㎡</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.gapAmt.toFixed(1)}억</b> 낮음</span>
@@ -5159,9 +5169,9 @@ function renderListingUndervalue(d){
     <div class="card-hd">
       ${hdTop('저평가 실매물', true)}
       <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
-      <div style="margin:4px 0 2px;text-align:center"><span style="display:inline-block;background:var(--teal);color:#fff;font-size:11px;font-weight:700;border-radius:12px;padding:2px 10px">입주가능 · 중층 이상</span></div>
+      <div style="margin:4px 0 2px;text-align:center"><span style="display:inline-block;background:var(--teal);color:#fff;font-size:11px;font-weight:700;border-radius:12px;padding:2px 10px">입주 가능 · 중층 이상</span></div>
       <div class="meta">동일 권역 비교 · 호가 기준일 ${esc(d.asOf||'-')}</div>
-      ${hdVs('조회 시점까지 최고가', '현재 최저 호가(입주가능·중층↑)')}
+      ${hdVs('조회 시점까지 최고가', '현재 최저 호가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
