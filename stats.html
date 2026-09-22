@@ -148,6 +148,7 @@ async function load(){
 
     if(!res.ok) throw new Error("failed");
     render(await res.json());
+    loadListingMeta();
   }catch(e){
     $("#app").innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
   }
@@ -193,9 +194,152 @@ function render(d){
       `).join("")}
     </div>
 
+    <div class="card" id="listingCard">
+      <div class="card-title">실매물 엑셀 업로드 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭</span></div>
+      <div id="listingMeta" style="font-size:12px;color:var(--sub);margin-bottom:10px">현재 데이터 확인 중…</div>
+      <label style="display:block;padding:11px 12px;border:1.5px dashed var(--line);border-radius:10px;text-align:center;font-size:12.5px;font-weight:700;color:var(--teal-dark);cursor:pointer">
+        엑셀 파일 선택 (.xlsx)
+        <input id="listingFile" type="file" accept=".xlsx,.xls,.csv" style="display:none">
+      </label>
+      <div id="listingStatus" role="status" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--ink);white-space:pre-line"></div>
+      <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 5년 실거래 최고가, 입주가능·중층 이상 매물의 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
+    </div>
+
     <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
   `;
 }
+
+// ═══ 실매물 엑셀 업로드(2026.09 신규) ═══
+// 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터. 엑셀 원본은 서버·GitHub 어디에도 올리지 않고, 여기서 단지·전용면적
+// 단위로 요약한 결과만 /api/listings로 보낸다(서버가 "시|구"를 지역코드로 바꿔 Netlify Blobs에 저장).
+// 필요한 컬럼: 시, 구, 법정동, 단지명, 매매가(억), 실거래최고가(억), 실거래최고_시점, 면적(평), 전용면적(㎡),
+//             층, 층구분, 동, 매물링크, 단지ID, 세대수, 준공년월, 확인일, 급매
+const LISTING_COLS = ["시","구","법정동","단지명","매매가(억)","실거래최고가(억)","면적(평)","전용면적(㎡)","층구분","입주구분","단지ID"];
+const MID_UP = new Set(["중층","고층"]); // "중층 이상" — 저층·1층 매물은 호가가 구조적으로 낮아 제외
+// 호가는 "입주가능" 매물만 — 세안고(세입자 낀) 매물은 실입주가 안 돼 호가가 낮게 나오므로 같은 선에서 비교할 수 없다(운영자 요청).
+// 최고가(실거래최고가)는 매물 상태와 무관한 평형 단위 값이라 모든 행에서 그대로 모은다.
+const MOVE_IN = "입주가능";
+
+async function loadListingMeta(){
+  const box = $("#listingMeta");
+  if(!box) return;
+  try{
+    const res = await fetch("/api/listings?meta=1", { cache:"no-store", credentials:"same-origin" });
+    const m = res.ok ? await res.json() : null;
+    box.innerHTML = m
+      ? `현재 데이터: <b style="color:var(--navy)">${esc(m.asOf||"-")} 기준</b> · ${m.regions}개 지역 · ${(m.types||0).toLocaleString()}개 평형<br>업로드 ${esc(new Date(m.uploadedAt).toLocaleString("ko-KR"))}${m.fileName?` · ${esc(m.fileName)}`:""}`
+      : "아직 업로드된 데이터가 없습니다.";
+  }catch(e){ box.textContent = "현재 데이터 정보를 불러오지 못했습니다."; }
+}
+
+function loadSheetJS(){
+  if(window.XLSX) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.onload = resolve; s.onerror = () => reject(new Error("엑셀 읽기 도구를 불러오지 못했습니다."));
+    document.head.appendChild(s);
+  });
+}
+
+// 단지ID+전용면적(㎡) 단위로 묶는다 — 엑셀의 실거래최고가는 전용면적 단위로 붙어 있다(같은 단지·같은 전용면적이면 항상 같은 값).
+function summarizeListings(rows){
+  const groups = new Map(); // "시|구" -> Map(단지ID|전용 -> 집계)
+  let asOf = "";
+  for(const r of rows){
+    const region = `${String(r["시"]).trim()}|${String(r["구"]).trim()}`;
+    const d = String(r["확인일"] ?? "").trim();
+    if(d > asOf) asOf = d;
+    const ex = Math.round(+r["전용면적(㎡)"]);
+    if(!(ex > 0)) continue;
+    const g = groups.get(region) || new Map();
+    groups.set(region, g);
+    const k = `${r["단지ID"]}|${ex}`;
+    const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:+r["세대수"]||null,
+      built:String(r["준공년월"]??""), ex, pyCnt:{}, peak:0, peakYm:"", ask:Infinity, n:0 };
+    g.set(k, x);
+    const py = +r["면적(평)"];
+    if(py) x.pyCnt[py] = (x.pyCnt[py]||0) + 1;
+    const peak = +r["실거래최고가(억)"];
+    if(peak > x.peak){ x.peak = peak; x.peakYm = String(r["실거래최고_시점"] ?? ""); }
+    if(!MID_UP.has(String(r["층구분"]).trim()) || String(r["입주구분"]).trim() !== MOVE_IN) continue;
+    const ask = +r["매매가(억)"];
+    if(!(ask > 0)) continue;
+    x.n++;
+    if(ask < x.ask) Object.assign(x, { ask, fl:String(r["층"]??""), dong:String(r["동"]??""), url:String(r["매물링크"]??""), d, urgent: r["급매"]==="급매"?1:0 });
+  }
+  const regions = {};
+  let types = 0;
+  for(const [region, g] of groups){
+    const items = [];
+    for(const x of g.values()){
+      if(!x.peak || !Number.isFinite(x.ask)) continue; // 최고가(거래 이력) 없거나 입주가능·중층 이상 매물이 없는 평형은 비교 불가
+      const py = +(Object.entries(x.pyCnt).sort((a,b)=>b[1]-a[1])[0]||[])[0] || null;
+      const { pyCnt, ...rest } = x;
+      items.push({ ...rest, py });
+    }
+    if(items.length){ regions[region] = items; types += items.length; }
+  }
+  const asOfLabel = asOf.length===8 ? `${asOf.slice(0,4)}.${asOf.slice(4,6)}.${asOf.slice(6)}` : asOf;
+  return { regions, types, asOf: asOfLabel };
+}
+
+async function postListings(body){
+  const res = await fetch("/api/listings", { method:"POST", cache:"no-store", credentials:"same-origin",
+    headers:{ "content-type":"application/json" }, body: JSON.stringify(body) });
+  if(res.status === 401) throw new Error("관리자 인증이 만료됐습니다. 새로고침 후 다시 로그인하세요.");
+  if(!res.ok) throw new Error(`업로드 실패 (HTTP ${res.status})`);
+  return res.json();
+}
+
+async function uploadListingFile(file){
+  const status = $("#listingStatus");
+  const input = $("#listingFile");
+  input.disabled = true;
+  try{
+    status.textContent = "엑셀 읽는 중…";
+    await loadSheetJS();
+    const wb = XLSX.read(await file.arrayBuffer(), { type:"array" });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:"" });
+    const missing = LISTING_COLS.filter(c => !(rows[0] && c in rows[0]));
+    if(!rows.length || missing.length) throw new Error(`필요한 컬럼이 없습니다: ${missing.join(", ") || "(데이터 없음)"}`);
+
+    const { regions, types, asOf } = summarizeListings(rows);
+    const keys = Object.keys(regions);
+    if(!keys.length) throw new Error("비교 가능한 평형이 없습니다(실거래최고가·입주가능 중층 이상 매물 확인 필요).");
+
+    const uploadId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    // 요청 본문 한도(약 6MB)를 넉넉히 피하도록 약 1MB씩 묶어서 보낸다.
+    const batches = []; let cur = {}, size = 0;
+    for(const k of keys){
+      const len = JSON.stringify(regions[k]).length;
+      if(size && size + len > 1_000_000){ batches.push(cur); cur = {}; size = 0; }
+      cur[k] = regions[k]; size += len;
+    }
+    if(size) batches.push(cur);
+
+    const lawds = [], unknown = [];
+    for(let i=0;i<batches.length;i++){
+      status.textContent = `${rows.length.toLocaleString()}행 → ${types.toLocaleString()}개 평형 요약 완료\n서버에 저장 중… (${i+1}/${batches.length})`;
+      const r = await postListings({ action:"put", uploadId, asOf, regions: batches[i] });
+      lawds.push(...r.saved); unknown.push(...r.unknown);
+    }
+    const fin = await postListings({ action:"finish", uploadId, asOf, lawds, rows: rows.length, types, fileName: file.name });
+    status.innerHTML = `<b style="color:var(--teal-dark)">업로드 완료</b> — ${esc(asOf)} 기준 · ${lawds.length}개 지역 · ${types.toLocaleString()}개 평형`
+      + (unknown.length ? `<br><span style="color:#d95d5d">지역코드를 못 찾아 제외: ${esc(unknown.join(", "))}</span>` : "")
+      + (fin.removed && fin.removed.length ? `<br>이번 파일에 없어 삭제된 지역 ${fin.removed.length}곳` : "");
+    loadListingMeta();
+  }catch(e){
+    status.innerHTML = `<span style="color:#d95d5d">${esc(e.message || "업로드 실패")}</span>`;
+  }finally{
+    input.disabled = false;
+    input.value = "";
+  }
+}
+
+document.addEventListener("change", (e) => {
+  if(e.target && e.target.id === "listingFile" && e.target.files[0]) uploadListingFile(e.target.files[0]);
+});
 
 load();
 </script>
