@@ -15,7 +15,10 @@
 //   전유/공용 여러 줄이 항상 연달아 오는 건 아닐 수 있어(예: 15동 706호는 3줄 연달아 옴), 목표
 //   전용면적과 일치하는 유닛을 찾은 뒤에도 그 (동,호) 키는 계속 누적 합산하면서 스캔을 이어감.
 //
-// 사용법: DATA_GO_KR_KEY=xxx BLDHUB_KEY=yyy node scripts/collect-supply-area.mjs [--only=11680] [--limit=20]
+// 사용법: DATA_GO_KR_KEY=xxx BLDHUB_KEY=yyy node scripts/collect-supply-area.mjs [--only=11680] [--limit=20] [--max-minutes=330]
+// - max-minutes: 이번 실행의 시간 예산(분, 기본 무제한) — 넘으면 새 단지를 더 시작하지 않고 정상 마무리(완료 커밋)한다.
+//   GitHub Actions 잡 하드 리밋(360분)에 걸려 강제 취소되면 "완료 커밋"(skip ci 없는 커밋 → Netlify 배포)이
+//   영영 안 생기므로, 워크플로에서는 그보다 조금 짧게 넘겨서 limit을 크게 잡아도 항상 스스로 끝나게 한다(2026.09).
 // - limit: 이번 실행에서 처리할 단지 수 상한(기본 30) — API 호출량이 커서(단지당 최대 MAX_PAGES 페이지)
 //   한 번에 전체를 다 못 돌리므로, 이미 처리된 단지는 건너뛰고 나머지를 이어서 처리하는 방식으로
 //   여러 번 실행에 걸쳐 점진적으로 채운다(collect-hhcnt.mjs의 재시작 가능 설계와 동일한 취지).
@@ -44,6 +47,12 @@ function pushWithRetry() {
     }
   }
 }
+// 2026.09 — 중간 커밋이 연속으로 실패하면(푸시 충돌 등) 더 수집해봐야 결과를 못 올리므로 실행을 멈춘다.
+// 예전엔 실패를 "계속 진행"으로 넘겨서, 옛 커밋으로 "Re-run"된 실행이 첫 커밋부터 data/supply-area 충돌로
+// 푸시가 막힌 채 4시간 동안 344번 커밋을 쌓기만 하고 하나도 못 올린 일이 있었다(run 35687809310 2차 시도).
+const MAX_COMMIT_FAILURES = 3;
+let consecutiveCommitFailures = 0;
+let pushBroken = false;
 function commitProgress(message, allowEmpty = false) {
   try {
     if (!existsSync("data/supply-area")) return;
@@ -56,10 +65,16 @@ function commitProgress(message, allowEmpty = false) {
     if (!diff && !allowEmpty) return;
     execSync(`git commit ${allowEmpty ? "--allow-empty " : ""}-m ${JSON.stringify(message)}`, { stdio: "inherit" });
     pushWithRetry();
+    consecutiveCommitFailures = 0;
     console.log(`  (중간 커밋 완료: ${message})`);
   } catch (e) {
-    console.error("  중간 커밋 실패(계속 진행):", e.message);
+    console.error("  중간 커밋 실패:", e.message);
     try { execSync("git rebase --abort", { stdio: "ignore" }); } catch {}
+    if (++consecutiveCommitFailures >= MAX_COMMIT_FAILURES && !pushBroken) {
+      pushBroken = true;
+      console.error(`\n⚠️  커밋·푸시가 연속 ${MAX_COMMIT_FAILURES}번 실패해 수집을 중단합니다 — 결과를 main에 올릴 수 없는 상태입니다.`);
+      console.error("   (옛 커밋으로 Re-run했거나 다른 작업이 같은 파일을 바꾼 경우 — 워크플로를 새로 실행(Run workflow)하세요)\n");
+    }
   }
 }
 
@@ -340,6 +355,18 @@ async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
   const lawds = args.only ? args.only.split(",") : ALL_LAWDS.filter((c) => /^\d{5}$/.test(c)); // 분구 지역(BC-/HS-/IC-)은 우선 제외 — 코드 체계가 달라 별도 처리 필요, 추후 확장
   const limit = parseInt(args.limit, 10) || 30;
+  const maxMinutes = parseFloat(args["max-minutes"]) || 0;
+  const startedAt = Date.now();
+  const timeUp = () => maxMinutes > 0 && Date.now() - startedAt > maxMinutes * 60000;
+  let timeUpLogged = false;
+  const shouldStop = () => {
+    if (pushBroken) return true;
+    if (timeUp()) {
+      if (!timeUpLogged) { timeUpLogged = true; console.log(`\n⏱  시간 예산 ${maxMinutes}분 도달 — 새 단지는 시작하지 않고 마무리합니다(남은 단지는 다음 실행에서 이어서 처리).\n`); }
+      return true;
+    }
+    return false;
+  };
 
   await mkdir("data/supply-area", { recursive: true });
   let processed = 0;
@@ -351,7 +378,7 @@ async function main() {
   let circuitOpen = false;
 
   for (const lawd of lawds) {
-    if (processed >= limit || circuitOpen) break;
+    if (processed >= limit || circuitOpen || shouldStop()) break;
     const hhFile = path.join("data/hhcnt", `${lawd}.json`);
     if (!existsSync(hhFile)) { console.log(`[supply-area] ${lawd}: data/hhcnt 없음, 스킵(먼저 collect-hhcnt 실행 필요)`); continue; }
     const hh = JSON.parse(await readFile(hhFile, "utf-8"));
@@ -389,7 +416,7 @@ async function main() {
     // 보고 남은 수천 개를 헛되이 다 시도하는 대신 즉시 전체 실행을 중단한다(안 그러면 시간·API 시도만
     // 낭비하고, 혹시 진짜 차단 상태라면 계속 두드릴수록 차단이 더 굳어질 수도 있음).
     await pool(batch, 1, async ({ c, dealName, areas: targetAreas }) => {
-      if (circuitOpen) return; // 이미 중단 결정났으면 나머지는 건드리지 않음(그대로 미처리 상태로 남아 다음 실행에 재시도)
+      if (circuitOpen || shouldStop()) return; // 이미 중단 결정났으면 나머지는 건드리지 않음(그대로 미처리 상태로 남아 다음 실행에 재시도)
       await new Promise((res) => setTimeout(res, 500)); // 단지 시작 전 대기(2026.08 200ms→500ms)
       const bj = parseBunJi(c.kaptAddr);
       if (!bj) { console.log(`  ${c.name}: 지번 파싱 실패(${c.kaptAddr}), 스킵`); return; }
@@ -453,7 +480,15 @@ async function main() {
     console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개, 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
   }
 
+  if (pushBroken) {
+    console.error("커밋·푸시 실패로 중단 — 이번 실행 결과는 main에 반영되지 않았습니다.");
+    process.exit(1);
+  }
   commitProgress(`chore: 공급면적 배치 수집 완료 커밋 ${new Date().toISOString()}`, true);
+  if (consecutiveCommitFailures > 0) { // 마지막(완료) 커밋을 못 올렸으면 결과가 main에 없으므로 실패로 표시
+    console.error("완료 커밋·푸시 실패 — 이번 실행 결과 일부가 main에 반영되지 않았습니다.");
+    process.exit(1);
+  }
 }
 
 main().catch((e) => {

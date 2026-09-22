@@ -12,7 +12,7 @@ on:
         # 처리 중 타임아웃). 스크립트 자체는 이미 처리된 단지를 건너뛰는 재시작 가능 설계(COMMIT_EVERY=5
         # 중간 커밋)라, 한 번에 다 돌리려 하지 말고 타임아웃 전에 확실히 끝나는 크기로 여러 번 나눠 돌리는
         # 쪽이 맞음 — 기본값을 1500으로 낮춤(6시간 실행에서 2,105개 처리된 실측 속도 기준 여유를 둔 값).
-        description: "이번 실행에서 처리할 단지 수(timeout 360분 안에 끝나야 함 — 너무 크게 잡지 말 것)"
+        description: "이번 실행에서 처리할 단지 수(시간 예산 330분이 먼저 차면 거기서 정상 마무리)"
         required: false
         default: "1500"
 
@@ -31,9 +31,15 @@ jobs:
     # 360분은 GitHub-hosted 러너(ubuntu-latest)의 잡 실행 시간 하드 리밋이라 더 늘려도 효과 없음
     # (2026.09 확인 — 정확히 6시간 지점에서 스텝이 "cancelled"로 강제 종료됨). limit 입력으로 실행 범위를
     # 조절해서 이 시간 안에 끝내는 게 유일한 해결책.
+    # 스크립트는 --max-minutes=330으로 스스로 먼저 마무리한다(완료 커밋·최종 푸시 시간 30분 여유).
     timeout-minutes: 360
     steps:
+      # ref: main — "Re-run"은 처음 실행 시점의 옛 커밋(github.sha)을 그대로 체크아웃한다. 그 사이 이 워크플로의
+      # 이전 시도가 data/supply-area를 수백 번 커밋해뒀으면, 옛 파일로 다시 수집해 첫 커밋부터 충돌 → 푸시가
+      # 전부 막힌 채 수 시간 헛돈다(2026.09 run 35687809310 2차 시도에서 실제 발생). 항상 최신 main에서 시작.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
@@ -51,7 +57,8 @@ jobs:
         run: |
           node scripts/collect-supply-area.mjs \
             ${{ inputs.only && format('--only={0}', inputs.only) || '' }} \
-            --limit=${{ inputs.limit || '1500' }}
+            --limit=${{ inputs.limit || '1500' }} \
+            --max-minutes=330
 
       - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
         if: always()
