@@ -135,7 +135,7 @@
   .lst-table th:nth-child(3),.lst-table td:nth-child(3){width:21%}
   .lst-table th:nth-child(4),.lst-table td:nth-child(4){width:25%}
   .lst-table .sub{font-size:9.5px;line-height:1.15;color:var(--sub);margin-top:0;white-space:nowrap}
-  .lst-table .sub a{color:var(--teal-dark);font-weight:700;text-decoration:underline}
+  .lst-table .lnk{display:inline-flex;align-items:center;justify-content:center;color:var(--teal-dark);margin-left:3px;vertical-align:-1px;padding:1px}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
   td b{font-size:12.5px;color:var(--navy)}
@@ -5145,8 +5145,8 @@ function renderListingUndervalue(d){
     const info = [listingFloorLabel(x.fl), x.dong].filter(Boolean).map(esc).join(' · ');
     return info ? `<div class="sub">${info}</div>` : '';
   };
-  // 네이버 매물 링크는 단지명 바로 아래(운영자 요청)
-  const listingLink = x => x.url ? `<div class="sub"><a href="${esc(x.url)}" target="_blank" rel="noopener">네이버 매물</a></div>` : '';
+  // 네이버 매물 링크 — 단지명 바로 옆 작은 외부 링크 아이콘(운영자 요청: 행마다 "네이버 매물" 글자가 반복되는 것보다 간결하게)
+  const listingLink = x => x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
   const body = !list.length
     ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 동 · 400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
     : list.map((x,i)=>`
