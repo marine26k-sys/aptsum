@@ -182,13 +182,15 @@ function tierRegionOptions(){
   }
   return html;
 }
+// 순위 번호 — 등급 필터를 빼고 나머지 조건(시·도·지역·동·검색)으로 거른 목록(평단가 내림차순) 기준으로 매긴다.
+// 그래서 등급을 탭해도 번호가 1부터 다시 시작하지 않고 전체 순위가 이어진다(2026.09 운영자 요청 — 동별 분석과 동일).
 function tierFiltered(){
-  return tierScoped().filter(c =>
-    (!tierState.grade || c.g === tierState.grade) &&
+  const ranked = tierScoped().filter(c =>
     (!tierState.region || `${c.province}::${c.gu}` === tierState.region) &&
     (!tierState.dong || c.dong === tierState.dong) &&
     (!tierState.q || c.nm.includes(tierState.q) || c.dong.includes(tierState.q) || c.gu.includes(tierState.q))
-  );
+  ).map((c, i) => ({ ...c, rank: i + 1 }));
+  return tierState.grade ? ranked.filter(c => c.g === tierState.grade) : ranked;
 }
 // 검색창 입력마다 이 함수만 다시 그림(#tierListArea만 갱신) — 검색창 포커스를 유지하기 위함.
 function renderList(){
@@ -201,7 +203,7 @@ function renderList(){
         const grade = tierData.grades.find(g => g.g === c.g);
         return `
         <div class="tier-row">
-          <div class="tier-row-no">${i+1}</div>
+          <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
             <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
