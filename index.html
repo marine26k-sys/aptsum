@@ -538,7 +538,7 @@
     <div class="tab-divider" id="tabSubDivider" style="display:none">구독 전용</div>
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 권역)</div>
-    <div class="tab subscriber" id="tabLPL" style="display:none" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>연간 저평가 (실매물)</div>
+    <div class="tab subscriber" id="tabLPL" style="display:none" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물 (입주가능, 중층 이상)</div>
     <div class="tab subscriber" id="tabGT" style="display:none" onclick="setMode('gaptrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M14 5h5v5"/></svg>전세가율 추세</div>
     <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
     <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
@@ -3474,7 +3474,7 @@ async function search(){
   }
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
-  // 연간 저평가 (실매물): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
+  // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   const mN = +document.getElementById('monthsN').value;
   const fM = (mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
@@ -5037,11 +5037,11 @@ function renderPeak(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
-// ═══ 연간 저평가 (실매물) — 2026.09 신규, 구독 전용 ═══
+// ═══ 저평가 실매물 (입주가능, 중층 이상) — 2026.09 신규, 구독 전용 ═══
 // "조회 시점까지 실거래 최고가가 서로 비슷했던(±2%) 단지들 중, 지금 나와 있는 중층 이상 매물의 최저 호가가
 // 비교군보다 크게 낮은 단지". 기존 "연간 저평가"(25년 최고가 vs 26년 최고가, 둘 다 실거래)의 비교군 규칙을
 // 그대로 따르되, 최근 쪽을 실매물 최저 호가로 바꾼 것. 데이터는 운영자가 stats.html에서 올린 네이버 실매물
-// 엑셀의 요약본(단지ID+전용면적 단위: peak=실거래최고가, ask=중층·고층 매물 중 최저 호가)이며, 구독 세션이
+// 엑셀의 요약본(단지ID+전용면적 단위: peak=실거래최고가, ask=입주가능 & 중층·고층 매물 중 최저 호가)이며, 구독 세션이
 // 확인된 요청에만 /api/listings가 내려준다(엑셀 원본·요약 모두 GitHub에 올리지 않음).
 const listingMem = {}; // lawd → {asOf, items} (세션 내 메모리 캐시 — 구독 전용 데이터라 localStorage엔 안 남김)
 async function fetchListings(lawd){
@@ -5059,7 +5059,7 @@ function analyzeListingUndervalue(all){
   const divergence = [];
   rows.forEach(r=>{
     const nearest = rows
-      .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && pyBand(o.py)===pyBand(r.py)
+      .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && o.umd===r.umd && pyBand(o.py)===pyBand(r.py) // 동일 권역(같은 구 안의 같은 법정동·읍·면)만 — 입지 차이가 큰 다른 동이 섞이지 않도록(운영자 요청, "연간 저평가(동일 권역)"과 같은 기준)
         && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 조회 시점까지 최고가가 서로 비슷했던(±2%) 단지
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
@@ -5136,12 +5136,12 @@ function renderListingUndervalue(d){
     return x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${inner}</a>` : inner;
   };
   const body = !list.length
-    ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
+    ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 동 · 400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
     : list.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5">급매</span>':''}</div>
-      <div class="rng" style="margin-top:2px">최저 호가 매물: ${esc(listingFloorLabel(x.fl))}${x.dong?` · ${esc(x.dong)}`:''}${x.n>1?` · 중층↑ 매물 ${x.n}건 중 최저`:''}${x.url?` · <a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:700">매물 보기 ↗</a>`:''}</div>
+      <div class="rng" style="margin-top:2px">최저 호가 매물: ${esc(listingFloorLabel(x.fl))}${x.dong?` · ${esc(x.dong)}`:''}${x.n>1?` · 입주가능·중층↑ 매물 ${x.n}건 중 최저`:''}${x.url?` · <a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:700">매물 보기 ↗</a>`:''}</div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">최고가</th><th class="tr-r">최저 호가</th></tr>
         <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평(전용 ${x.area}㎡)</td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r">${askCell(x, true)}</td></tr>
@@ -5155,19 +5155,20 @@ function renderListingUndervalue(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('연간 저평가 (실매물)', true)}
+      ${hdTop('저평가 실매물', true)}
       <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
+      <div class="meta">입주가능 · 중층 이상 매물 기준 · 동일 권역 비교</div>
       <div class="meta">호가 기준일 ${esc(d.asOf||'-')} · 비교 평형 ${d.typeN.toLocaleString()}개</div>
-      ${hdVs('조회 시점까지 최고가', '현재 최저 호가(중층↑)')}
+      ${hdVs('조회 시점까지 최고가', '현재 최저 호가(입주가능·중층↑)')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">조회 시점까지 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 중층 이상 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 동 안에서, 조회 시점까지 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 입주가능·중층 이상 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
       ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '호가를 누르면 해당 매물로 이동')}
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 중층·고층 매물만(저층·1층 제외) · 30% 넘게 낮은 호가는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 동(권역)·같은 평대(20~29평끼리, 30~37평끼리)에서 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 30% 넘게 낮은 호가는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 

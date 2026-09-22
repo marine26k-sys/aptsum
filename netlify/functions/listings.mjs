@@ -2,10 +2,10 @@ import { getStore } from "@netlify/blobs";
 import { hasValidSession, hasValidStatsSession } from "../../shared/sessions.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 
-// 구독 전용 "연간 저평가 (실매물)" 탭 데이터 — 2026.09 신규.
+// 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터 — 2026.09 신규.
 //
 // 운영자가 stats.html에서 네이버 실매물 크롤링 엑셀을 올리면, 브라우저가 단지·전용면적별로 요약(조회 시점까지
-// 실거래 최고가 + 중층 이상 최저 호가)한 결과만 이 함수로 보내고, 여기서 지역(lawd)별로 Netlify Blobs에 저장한다.
+// 실거래 최고가 + 입주가능·중층 이상 최저 호가)한 결과만 이 함수로 보내고, 여기서 지역(lawd)별로 Netlify Blobs에 저장한다.
 // 원본 엑셀·요약 데이터 모두 GitHub(=정적 배포 루트)에 올리지 않기 위한 구조다.
 //
 //   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}
