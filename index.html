@@ -5070,7 +5070,7 @@ function analyzeListingUndervalue(all){
     // 5% 이상 낮으면 채택. 30% 넘게 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
     // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록).
     if(gapPct <= -5 && gapPct >= -30){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url})).sort((a,b)=>b.ask-a.ask);
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, fl:o.fl, dong:o.dong})).sort((a,b)=>b.ask-a.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
@@ -5102,7 +5102,7 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
-    const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed, typeN:all.length,
+    const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
       divergence: analyzeListingUndervalue(all) };
     lastData = d;
@@ -5120,20 +5120,22 @@ async function searchListingUndervalue(myToken, lawd){
   }
 }
 
+// 매물 층 표기 — 네이버는 "중/26"(층 구분/총층)이나 "15/22"(해당층/총층)로 준다. 표에선 짧게 "중층"·"15층"만.
 function listingFloorLabel(fl){
-  const s = String(fl||'');
-  const m = s.match(/^(저|중|고)\/(\d+)$/);
-  return m ? `${m[1]}층/${m[2]}층` : (s.includes('/') ? s.replace('/', '층/')+'층' : s);
+  const s = String(fl||'').split('/')[0];
+  return /^(저|중|고)$/.test(s) ? `${s}층` : (/^\d+$/.test(s) ? `${s}층` : s);
 }
 const peakYmLabel = ym => /^\d{6}$/.test(ym||'') ? `${ym.slice(2,4)}.${ym.slice(4)}` : '';
 
 function renderListingUndervalue(d){
   const list = d.divergence;
   const multiRegion = new Set(list.map(x=>x.gu).filter(Boolean)).size > 1;
-  const askCell = (x, strong) => {
-    const v = `${x.ask.toFixed(1)}억`;
-    const inner = strong ? `<b style="color:var(--red)">${v}</b>` : v;
-    return x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${inner}</a>` : inner;
+  // 표의 최저 호가 칸 — 가격 아래에 그 매물의 층·동과 네이버 매물 링크(2026.09 운영자 요청: 표 위 별도 줄 대신
+  // 표 안에서 바로 보이게). 별도 칸으로 빼면 모바일 폭을 넘어 칸이 좁아지면서 행이 비정상적으로 길어져 한 칸 안에 넣음.
+  const listingSub = x => {
+    const info = [listingFloorLabel(x.fl), x.dong].filter(Boolean).map(esc).join(' · ');
+    const link = x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:700;text-decoration:underline">네이버 매물</a>` : '';
+    return (info||link) ? `<div style="font-size:9.5px;line-height:1.4;color:var(--sub);white-space:nowrap;margin-top:1px">${info}${info&&link?'<br>':''}${link}</div>` : '';
   };
   const body = !list.length
     ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 동 · 400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
@@ -5141,30 +5143,31 @@ function renderListingUndervalue(d){
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5">급매</span>':''}</div>
-      <div class="rng" style="margin-top:2px">최저 호가 매물: ${esc(listingFloorLabel(x.fl))}${x.dong?` · ${esc(x.dong)}`:''}${x.n>1?` · 입주가능·중층↑ 매물 ${x.n}건 중 최저`:''}${x.url?` · <a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:700">매물 보기 ↗</a>`:''}</div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
-        <tr><th>단지</th><th>평형</th><th class="tr-r">최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평(전용 ${x.area}㎡)</td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r">${askCell(x, true)}</td></tr>
-        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평(전용 ${p.area}㎡)</td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${askCell(p, false)}</td></tr>`).join('')}
+        <tr><th>단지</th><th>평형</th><th class="tr-r">최고가</th><th class="tr-r">최저 호가 매물</th></tr>
+        <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평(전용 ${x.area}㎡)</td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
+        ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평(전용 ${p.area}㎡)</td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="rng" style="font-size:9.5px">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.gapAmt.toFixed(1)}억</b> 낮음</span>
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.gapPct}%</span>
       </div>
     </div>`).join('');
+  // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 헤더에 눈에 띄는 알약 두 개로 강조(2026.09 운영자 요청)
+  const pill = t => `<span style="display:inline-block;background:#E0B84D;color:#4A3607;font-size:12.5px;font-weight:900;border-radius:14px;padding:4px 11px">${t}</span>`;
   const html = `
   <div class="card">
     <div class="card-hd">
       ${hdTop('저평가 실매물', true)}
       <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
-      <div class="meta">입주가능 · 중층 이상 매물 기준 · 동일 권역 비교</div>
-      <div class="meta">호가 기준일 ${esc(d.asOf||'-')} · 비교 평형 ${d.typeN.toLocaleString()}개</div>
+      <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 4px">${pill('입주가능 매물만')}${pill('중층 이상만')}</div>
+      <div class="meta">동일 권역 비교 · 호가 기준일 ${esc(d.asOf||'-')}</div>
       ${hdVs('조회 시점까지 최고가', '현재 최저 호가(입주가능·중층↑)')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 동 안에서, 조회 시점까지 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 입주가능·중층 이상 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
-      ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '호가를 누르면 해당 매물로 이동')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 동 안에서, 조회 시점까지 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 <b>입주가능·중층 이상</b> 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
+      ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '세안고·저층·1층 매물은 호가 계산에서 제외')}
       ${body}
     </div>
   </div>
