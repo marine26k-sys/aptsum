@@ -73,7 +73,7 @@
   .tier-list{background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
   .tier-row{display:flex;align-items:flex-start;gap:10px;padding:6px 13px;border-bottom:1px solid var(--slate-bg)}
   .tier-row:last-child{border-bottom:none}
-  .tier-row-no{flex:none;width:20px;font-size:11px;color:var(--sub);text-align:center}
+  .tier-row-no{flex:none;width:31px;font-size:10.5px;color:var(--sub);text-align:center;white-space:nowrap;letter-spacing:-.3px;font-variant-numeric:tabular-nums} /* 순위가 이어지면서(최대 5자리) 줄바꿈되지 않게 — 2026.09 */
   .tier-row-main{flex:1;min-width:0}
   .tier-row-name{font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.3;overflow-wrap:anywhere}
   .tier-presale-badge{font-size:9.5px;font-weight:700;color:#00565C;background:#e3f4f4;border-radius:5px;padding:1px 5px;vertical-align:1px}
@@ -150,7 +150,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongQ: "", flagshipsOpen: false };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: false };
 
 async function load(){
   try{
@@ -182,13 +182,15 @@ function tierRegionOptions(){
   }
   return html;
 }
+// 순위 번호 — 등급 필터를 빼고 나머지 조건(시·도·지역·동·검색)으로 거른 목록(평단가 내림차순) 기준으로 매긴다.
+// 그래서 등급을 탭해도 번호가 1부터 다시 시작하지 않고 전체 순위가 이어진다(2026.09 운영자 요청 — 동별 분석과 동일).
 function tierFiltered(){
-  return tierScoped().filter(c =>
-    (!tierState.grade || c.g === tierState.grade) &&
+  const ranked = tierScoped().filter(c =>
     (!tierState.region || `${c.province}::${c.gu}` === tierState.region) &&
     (!tierState.dong || c.dong === tierState.dong) &&
     (!tierState.q || c.nm.includes(tierState.q) || c.dong.includes(tierState.q) || c.gu.includes(tierState.q))
-  );
+  ).map((c, i) => ({ ...c, rank: i + 1 }));
+  return tierState.grade ? ranked.filter(c => c.g === tierState.grade) : ranked;
 }
 // 검색창 입력마다 이 함수만 다시 그림(#tierListArea만 갱신) — 검색창 포커스를 유지하기 위함.
 function renderList(){
@@ -201,7 +203,7 @@ function renderList(){
         const grade = tierData.grades.find(g => g.g === c.g);
         return `
         <div class="tier-row">
-          <div class="tier-row-no">${i+1}</div>
+          <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
             <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
@@ -268,32 +270,24 @@ function dongRankGroups(){
   items.forEach((c,i) => { c.rank = i + 1; }); // 전체 순위 — 등급별로 나눠 봐도 번호가 안 끊기고 이어지게
   return tierData.grades.map(g => ({ grade: g, items: items.filter(c => c.g === g.g) }));
 }
-// 등급 사다리에서 한 등급(rung)을 탭하면 그 밑에 바로 펼쳐지는 동 순위 아코디언 — 전부 다 보여줌(자르지 않음).
-function gradeRungDongListHTML(gradeNum){
-  const group = dongRankGroups().find(g => g.grade.g === gradeNum);
-  if(!group || !group.items.length) return `<div class="tier-rung-panel"><div class="tier-empty" style="padding:16px 0">이 등급에 해당하는 동이 없습니다.</div></div>`;
+// 동 한 줄 — 동별 목록·동 검색 결과 공용. 누르면 그 동의 단지별 분석으로 이동.
+function dongRowHTML(c){
+  const grade = tierData.grades.find(g => g.g === c.g);
   return `
-    <div class="tier-rung-panel">
-      <div class="tier-list">
-        ${group.items.map((c) => {
-          const grade = tierData.grades.find(g => g.g === c.g);
-          return `
-          <div class="tier-row" style="cursor:pointer" onclick="event.stopPropagation();openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
-            <div class="tier-row-no">${c.rank}</div>
-            <div class="tier-row-main">
-              <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
-              <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
-            </div>
-            <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
-          </div>
-        `;
-        }).join("")}
+    <div class="tier-row" style="cursor:pointer" onclick="openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
+      <div class="tier-row-no">${c.rank}</div>
+      <div class="tier-row-main">
+        <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
+        <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
       </div>
+      <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
     </div>
   `;
 }
-// "동별 순위" 카드 — 자체 상태(dongRankGrade)로 등급 행을 펼치고 접는다.
-function toggleDongRankGrade(g){ tierState.dongRankGrade = tierState.dongRankGrade === g ? null : g; renderDongRankArea(); }
+// 동별 분석도 단지별 분석처럼 등급을 탭하면 사다리 아래 목록이 그 등급으로 걸러진다(2026.09 운영자 요청 —
+// 예전엔 누른 등급 바로 밑에 아코디언으로 끼어 펼쳐져서 두 탭의 동작이 달랐음). 다시 누르면 전체 동.
+function setDongRankGrade(g){ tierState.dongRankGrade = tierState.dongRankGrade === g ? null : g; tierState.dongShown = 30; pushTierHistory(); renderDongRankArea(); }
+function showMoreDong(){ tierState.dongShown += 50; renderDongRankArea(); }
 // 동 검색 — 입력하면 등급 아코디언 대신 검색어가 포함된 동만 평단가순으로 쭉 보여줌(구/시 단위 검색도 가능).
 function dongSearchResultsHTML(){
   const q = tierState.dongQ.trim();
@@ -301,21 +295,7 @@ function dongSearchResultsHTML(){
   const matched = all.filter(c => c.dong.includes(q) || c.gu.includes(q)).sort((a,b) => b.ppy - a.ppy);
   if(!matched.length) return `<div class="tier-empty">"${esc(q)}"에 해당하는 동이 없습니다.</div>`;
   return `
-    <div class="tier-list">
-      ${matched.map((c) => {
-        const grade = tierData.grades.find(g => g.g === c.g);
-        return `
-        <div class="tier-row" style="cursor:pointer" onclick="openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
-          <div class="tier-row-no">${c.rank}</div>
-          <div class="tier-row-main">
-            <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
-            <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
-          </div>
-          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
-        </div>
-      `;
-      }).join("")}
-    </div>
+    <div class="tier-list">${matched.map(dongRowHTML).join("")}</div>
     ${couponBannerHTML()}
   `;
 }
@@ -325,19 +305,28 @@ function dongRankCardHTML(){
   const total = groups.reduce((s,g) => s + g.items.length, 0);
   const maxCount = Math.max(...groups.map(g => g.items.length), 1);
   const label = tierState.province ? `${tierState.province} 동별 순위` : '동별 순위 (통합)';
+  const sel = tierState.dongRankGrade;
+  const list = sel ? (groups.find(g => g.grade.g === sel)?.items || []) : groups.flatMap(g => g.items);
+  const shown = list.slice(0, tierState.dongShown);
   return `
     <div class="tier-ladder">
-      <div class="tier-ladder-title">${esc(label)} <span style="font-weight:400;color:var(--sub)">· ${total.toLocaleString()}개 동 (탭해서 펼치기)</span></div>
+      <div class="tier-ladder-title">${esc(label)} <span style="font-weight:400;color:var(--sub)">· ${total.toLocaleString()}개 동 (탭해서 필터링)</span></div>
       ${groups.map(({grade, items}) => `
-        <div class="tier-rung ${tierState.dongRankGrade===grade.g?'on':''}" onclick="toggleDongRankGrade(${grade.g})">
+        <div class="tier-rung ${sel===grade.g?'on':''}" onclick="setDongRankGrade(${grade.g})">
           <div class="tier-rung-dot" style="background:${grade.color}"></div>
           <div class="tier-rung-info"><div class="tier-rung-label">${esc(grade.label)}</div><div class="tier-rung-band">${esc(grade.band)}</div></div>
           <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(items.length/maxCount*100).toFixed(1)}%;background:${grade.color}"></div></div>
           <div class="tier-rung-count"><b>${items.length}</b>개 동</div>
         </div>
-        ${tierState.dongRankGrade===grade.g ? gradeRungDongListHTML(grade.g) : ""}
       `).join("")}
     </div>
+
+    <div class="tier-section-hd"><h2>${sel ? esc(tierData.grades.find(g=>g.g===sel).label) : '전체 동'}</h2><span class="cnt">${list.length.toLocaleString()}개</span></div>
+    ${shown.length ? `
+      <div class="tier-list">${shown.map(dongRowHTML).join("")}</div>
+      ${list.length > shown.length ? `<button class="tier-more-btn" onclick="showMoreDong()">${list.length - shown.length}개 더 보기</button>` : ""}
+      ${couponBannerHTML()}
+    ` : `<div class="tier-empty">이 등급에 해당하는 동이 없습니다.</div>`}
   `;
 }
 // 검색창 입력마다 이 함수만 다시 그림(#dongRankArea만 갱신) — 검색창 포커스 유지.
@@ -473,7 +462,7 @@ function renderComplexBody(){
 // pushState로 스냅샷을 쌓아, 뒤로가기 한 번에 그 이전 단계로만 돌아가도록 함. 검색어 입력·펼치기
 // 토글·더보기처럼 타이핑/UI 상태는 history에 안 남김(안 그러면 글자 하나마다 뒤로가기 스택이 쌓임).
 function tierSnapshot(){
-  return { province: tierState.province, grade: tierState.grade, region: tierState.region, dong: tierState.dong, tab: tierState.tab };
+  return { province: tierState.province, grade: tierState.grade, region: tierState.region, dong: tierState.dong, tab: tierState.tab, dongRankGrade: tierState.dongRankGrade };
 }
 function pushTierHistory(){
   history.pushState({ tier: tierSnapshot() }, "");
@@ -483,13 +472,14 @@ window.addEventListener("popstate", (e) => {
   if(!snap || !tierData) return;
   Object.assign(tierState, snap);
   tierState.shown = 30;
+  tierState.dongShown = 30;
   render();
 });
 
 function setTab(t){ tierState.tab = t; tierState.shown = 30; pushTierHistory(); render(); }
-function setDongQuery(v){ tierState.dongQ = v; tierState.dongRankGrade = null; renderDongRankArea(); }
+function setDongQuery(v){ tierState.dongQ = v; tierState.dongShown = 30; renderDongRankArea(); }
 
-function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.shown = 30; pushTierHistory(); render(); }
+function setProvince(p){ tierState.province = p; tierState.region = ""; tierState.dong = ""; tierState.grade = null; tierState.dongRankGrade = null; tierState.shown = 30; tierState.dongShown = 30; pushTierHistory(); render(); }
 function setGrade(g){ tierState.grade = tierState.grade === g ? null : g; tierState.shown = 30; pushTierHistory(); render(); }
 function setRegion(v){ tierState.region = v; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
 function setRegionFromHeat(province, gu){ tierState.region = `${province}::${gu}`; tierState.dong = ""; tierState.shown = 30; pushTierHistory(); render(); }
