@@ -5153,14 +5153,13 @@ function renderListingUndervalue(d){
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.gapPct}%</span>
       </div>
     </div>`).join('');
-  // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 헤더에 눈에 띄는 알약 두 개로 강조(2026.09 운영자 요청)
-  const pill = t => `<span style="display:inline-block;background:#E0B84D;color:#4A3607;font-size:12.5px;font-weight:900;border-radius:14px;padding:4px 11px">${t}</span>`;
+  // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 제목 아래 청록 배지로 표시 — 제목보다 작게(2026.09 운영자 요청)
   const html = `
   <div class="card">
     <div class="card-hd">
       ${hdTop('저평가 실매물', true)}
       <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
-      <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 4px">${pill('입주가능 매물만')}${pill('중층 이상만')}</div>
+      <div style="margin:4px 0 2px;text-align:center"><span style="display:inline-block;background:var(--teal);color:#fff;font-size:11px;font-weight:700;border-radius:12px;padding:2px 10px">입주가능 · 중층 이상</span></div>
       <div class="meta">동일 권역 비교 · 호가 기준일 ${esc(d.asOf||'-')}</div>
       ${hdVs('조회 시점까지 최고가', '현재 최저 호가(입주가능·중층↑)')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
