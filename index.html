@@ -128,14 +128,20 @@
   .inv-table .grp-td{border-right:1px solid var(--line)}
   .peer-table tr:last-child td{border-bottom:none}
   /* 저평가 실매물 탭 표(2026.09) — 칸마다 두 줄(단지/매물 링크, 평형/전용, 호가/층·동) — 행 간격은 최소로(운영자 요청) */
-  .lst-table th{padding:2px 5px;font-size:10px}
+  .lst-table th{padding:2px 5px;font-size:9.5px;white-space:nowrap}
   .lst-table td{padding:2px 5px;font-size:11px;line-height:1.2;vertical-align:middle}
-  .lst-table th:nth-child(1),.lst-table td:nth-child(1){width:41%}
-  .lst-table th:nth-child(2),.lst-table td:nth-child(2){width:16%;white-space:normal}
-  .lst-table th:nth-child(3),.lst-table td:nth-child(3){width:19%}
-  .lst-table th:nth-child(4),.lst-table td:nth-child(4){width:24%}
-  /* 단지명은 항상 한 줄 — 긴 이름은 말줄임(전체 이름은 title로). 칸마다 정확히 2줄(단지명 / 동+링크)로 고정 */
-  .lst-table .nm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lst-table th:nth-child(1),.lst-table td:nth-child(1){width:45%}
+  .lst-table th:nth-child(2),.lst-table td:nth-child(2){width:16%;white-space:nowrap}
+  .lst-table th:nth-child(3),.lst-table td:nth-child(3){width:16%}
+  .lst-table th:nth-child(4),.lst-table td:nth-child(4){width:23%}
+  .lst-table th,.lst-table td{padding-left:3px;padding-right:3px}
+  /* 단지 칸은 2줄 이내 — 단지명(말줄임 없이 전체) 바로 뒤에 동·링크를 이어 붙여 줄바꿈이 자연스럽게 흐르게 한다.
+     단지명은 띄어쓰기가 없어 글자 단위로 끊고(break-all), 동+링크는 한 덩어리로 붙여 둔다(운영자 요청) */
+  .lst-table .nm{word-break:break-all}
+  .lst-table td:nth-child(2) .sub{font-size:9px;letter-spacing:-.3px} /* "전용 102㎡"처럼 세 자리 면적도 360px 폭에서 칸 안에 */
+  .lst-table .nm.l2{font-size:10px}
+  .lst-table .nm.l3{font-size:9px;letter-spacing:-.2px}
+  .lst-table .dg{display:inline-block;white-space:nowrap;font-size:9.5px;color:var(--sub);margin-left:3px}
   .lst-table .sub{font-size:9.5px;line-height:1.15;color:var(--sub);margin-top:0;white-space:nowrap}
   .lst-table .lnk{display:inline-flex;align-items:center;justify-content:center;color:var(--teal-dark);margin-left:3px;vertical-align:-1px;padding:1px}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -5151,8 +5157,9 @@ function renderListingUndervalue(d){
   };
   // 네이버 매물 링크 — 단지명 바로 옆 작은 외부 링크 아이콘(운영자 요청: 행마다 "네이버 매물" 글자가 반복되는 것보다 간결하게)
   const listingLink = x => x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
-  // 단지명 아래 한 줄에 동 + 링크 아이콘 — 아이콘을 단지명 옆에 두면 긴 이름에서 아이콘만 다음 줄로 밀려 3줄이 됐다(운영자 요청)
-  const nameSub = x => (x.umd || x.url) ? `<div class="sub">${esc(x.umd||'')}${listingLink(x)}</div>` : '';
+  // 단지명 바로 뒤에 동 + 링크 아이콘(한 덩어리) — 별도 줄로 두면 긴 단지명이 줄바꿈될 때 3줄이 됐다(운영자 요청)
+  const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
+  const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
   const body = !list.length
     ? '<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · 400세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>'
     : list.map((x,i)=>`
@@ -5161,8 +5168,8 @@ function renderListingUndervalue(d){
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">5년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="nm" style="font-weight:700;color:var(--navy)" title="${esc(x.apt)}">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">전용 ${x.area}㎡</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="nm" title="${esc(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">전용 ${p.area}㎡</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">전용 ${x.area}㎡</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">전용 ${p.area}㎡</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b>보다 <b style="font-size:14px;color:var(--red)">${x.gapAmt.toFixed(1)}억</b> 낮음</span>
