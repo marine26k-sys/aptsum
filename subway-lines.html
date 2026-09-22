@@ -100,13 +100,13 @@ function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
     <div class="coupang-ad-row">
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwXdE">
         <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwXWl">
         <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwYpC">
         <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
     </div>
@@ -320,5 +320,6 @@ document.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("copy", (e) => e.preventDefault());
 fetch('/api/visits?page=subway').catch(() => {}); // 방문자 카운터(페이지별 집계, stats.html용) — 화면 표시는 없음
 </script>
+<script src="/assets/book-clicks.js" data-page="subway" defer></script>
 </body>
 </html>
