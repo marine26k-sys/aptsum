@@ -35,6 +35,10 @@ const COMMIT_EVERY = 5; // 공급면적 수집은 단지당 비용이 커서(최
 const MAX_PAGES = 30;   // 단지당 안전 상한(30페이지 × 100건 = 최대 3,000건 조회) — 대형 단지도 보통 이 안에서 대표 타입 다 찾힘
 const GRACE_PAGES = 3;  // 목표 전용면적을 다 만난 뒤 공용까지 채우려고 더 볼 페이지 수(collectComplexSupplyArea 주석 참고)
 const MONTHS_FOR_TYPES = 24; // 최근 2년 실거래면 현재 거래되는 평형 타입은 거의 다 잡힘(단종된 옛 타입까지 다 찾을 필요는 없음)
+// "못 찾음"(응답은 정상인데 목표 타입을 못 채움)은 스캔이 결정적이라 바로 다시 돌려도 결과가 같다.
+// 기록 없이 매번 재시도하면 같은 순서로 같은 단지들이 limit을 다 써버려, 한 번도 안 긁은 단지는 영영
+// 차례가 오지 않는다(2026.09 run 35775859231: 1,500개·3.5시간 조회했는데 신규 확보 0건).
+const MISS_COOLDOWN_DAYS = 30;
 
 function pushWithRetry() {
   for (let attempt = 1; attempt <= PUSH_RETRIES; attempt++) {
@@ -400,12 +404,20 @@ async function main() {
     migrateLegacyKeys(out, resolved, knownAreas);
     const droppedBroken = dropBrokenTypes(out);
     if (droppedBroken) console.log(`[supply-area] ${lawd}: 공용면적이 덜 잡힌 타입 ${droppedBroken}개 제거(재수집 대상으로 되돌림)`);
+    out.misses = out.misses || {}; // 실거래 단지명 -> { at: ISO, n: 연속 못 찾음 횟수 }
+    const cooldownMs = MISS_COOLDOWN_DAYS * 86400000;
+    let coolingDown = 0;
     const targets = [...resolved.entries()]
       .map(([dealName, c]) => ({ c, dealName, areas: knownAreas.get(dealName).areas }))
       .filter(({ dealName, areas }) => {
         const already = out.items[dealName];
-        return !(already && already.length >= areas.size); // 목표 타입 다 찾았으면 스킵
-      });
+        if (already && already.length >= areas.size) return false; // 목표 타입 다 찾았으면 스킵
+        const miss = out.misses[dealName];
+        if (miss && Date.now() - Date.parse(miss.at) < cooldownMs) { coolingDown++; return false; }
+        return true;
+      })
+      // 한 번도 안 긁은 단지 → 오래전에 못 찾은 단지 순. 같은 단지가 매번 앞자리를 차지하지 않게 한다.
+      .sort((a, b) => (out.misses[a.dealName] ? Date.parse(out.misses[a.dealName].at) : 0) - (out.misses[b.dealName] ? Date.parse(out.misses[b.dealName].at) : 0));
 
     // 2026.08: 동시 2~3개로도 대량 연속 처리 시 UND_ERR_CONNECT_TIMEOUT(데이터센터 IP 대역 차단 의심)이
     // 발생 — 1(완전 순차)로 낮추고, 단지 시작 전 대기도 늘림. 처리량보다 "막혀있으면 최대한 빨리 알아채고
@@ -433,6 +445,7 @@ async function main() {
           const merged = new Map(prevArr.map((t) => [Math.round(t.exclusiveArea), t]));
           for (const v of Object.values(types)) merged.set(Math.round(v.exclusiveArea), v);
           out.items[dealName] = [...merged.values()];
+          delete out.misses[dealName];
           console.log(`  ${label(c, dealName)}: ${out.items[dealName].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
           if (debug.excludedRows.length) {
             // 2026.09 — 필터로 걸러낸 비주거/부속 행 개수. 몇 건 정도는 정상(관리동 등 실제로 존재)이지만
@@ -456,6 +469,7 @@ async function main() {
           const prevCount = (out.items[dealName] || []).length; // 2026.09 — 재시도 대상이라 이전에 이미 일부 찾아뒀을 수 있음
           console.log(`  ${label(c, dealName)}: 못 찾음(${prevCount}/${targetAreas.size}${prevCount ? ", 이번엔 신규 0" : ""}) — 목표:[${[...targetAreas].sort((a,b)=>a-b).join(",")}] 실제스캔:[${debug.seenAreas.join(",")}] (${debug.pagesScanned}페이지)`);
           consecutiveNetworkFailures = 0; // 이건 진짜 응답을 받은 케이스라 네트워크 실패가 아님 — 리셋
+          out.misses[dealName] = { at: new Date().toISOString(), n: (out.misses[dealName]?.n || 0) + 1 };
         }
       } catch (e) {
         console.error(`  ${label(c, dealName)}: 조회 실패 -`, e.message);
@@ -477,7 +491,7 @@ async function main() {
       return e && arr.length >= e.areas.size;
     }).length;
     const totalSaved = Object.keys(out.items).length;
-    console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개, 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
+    console.log(`[supply-area] ${lawd}: 전체 ${hh.items?.length ?? "?"}개 단지 중 매칭 가능 대상 ${targets.length}개(못 찾음 쿨다운 ${coolingDown}개 제외), 이번 실행 ${batch.length}개 시도 → 누적 ${totalSaved}개 단지(완전 확보 ${fullyDone} / 부분 확보 ${totalSaved - fullyDone})`);
   }
 
   if (pushBroken) {
