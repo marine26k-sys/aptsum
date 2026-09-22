@@ -2124,17 +2124,19 @@ function buildAgeLabel(build){
 // 공정거래위원회 추천·보증 심사지침이 요구하는 건 경제적 이해관계(수수료 수취)를 밝히는 것이라
 // "포스팅"을 "배너"로만 바꿨다. 이 함수 하나로만 배너를 만들어서, 나중에 코드 링크가 바뀌어도
 // 고지 문구가 같이 누락되는 일이 없게 한다.
+// data-book(쿠팡 링크 코드)은 클릭 집계용(assets/book-clicks.js · /api/book-clicks) — 책을 바꾸면
+// netlify/functions/book-clicks.mjs의 BOOKS 목록도 같이 바꿔야 새 코드가 집계된다(목록에 없는 코드는 거부).
 function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
     <div class="coupang-ad-row">
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwXdE">
         <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwXWl">
         <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
-      <div class="coupang-ad-item">
+      <div class="coupang-ad-item" data-book="cpwYpC">
         <iframe src="https://coupa.ng/cpwYpC" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
       </div>
     </div>
@@ -5232,5 +5234,6 @@ function renderLongPeak(d){
     <button type="button" class="cl" onclick="closeFavDash()">닫기</button>
   </div>
 </div>
+<script src="/assets/book-clicks.js" data-page="index" defer></script>
 </body>
 </html>
