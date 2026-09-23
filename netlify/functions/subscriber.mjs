@@ -45,7 +45,7 @@ export default async (request, context) => {
 
   if (request.method === "GET") {
     const session = await getSubscriberSession(request, sessionSecret);
-    if (session?.kind === "personal") await touchDevice(session.sub, session.did);
+    if (session?.kind === "personal") await touchDevice(session.sub.id, session.did);
     return response({ subscribed: !!session });
   }
 
@@ -80,7 +80,7 @@ export default async (request, context) => {
       if (!isActive(sub)) return response({ error: sub.revoked ? "code_revoked" : "code_expired" }, { status: 403 });
       await throttle.success();
       const { token, did, maxAge } = createPersonalSession(sessionSecret, sub);
-      await touchDevice(sub, did, true);
+      await touchDevice(sub.id, did, true);
       return response({ subscribed: true }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
     }
   }

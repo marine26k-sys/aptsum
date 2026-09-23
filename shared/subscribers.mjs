@@ -2,8 +2,10 @@
 // 운영자가 stats.html에서 사람마다 코드를 발급하고 해지·재발급·만료일을 따로 관리할 수 있게 한다.
 //
 // 저장소(Netlify Blobs "subscribers"):
-//   sub:<id>    { id, name, code, gen, createdAt, expiresAt(ms|null), revoked, devices: { did: 마지막 접속 ms } }
-//   code:<코드>  { id }   — 로그인 시 코드로 구독자를 찾는 색인(코드는 정규화: 대문자, 영숫자만)
+//   sub:<id>        { id, name, code, gen, createdAt, expiresAt(ms|null), revoked } — 관리자만 쓴다
+//   code:<코드>      { id }   — 로그인 시 코드로 구독자를 찾는 색인(코드는 정규화: 대문자, 영숫자만)
+//   dev:<id>:<did>  { t }    — 기기별 마지막 접속 시각. 구독자 접속이 sub 레코드를 다시 쓰지 않도록 따로 둔다
+//                              (같이 두면 접속 기록 저장이 관리자의 해지·만료일 변경을 옛 값으로 덮어쓸 수 있음).
 //
 // 세션 쿠키(이름은 공용 비번과 같은 COOKIE_NAME):
 //   version 1 = 공용 비번 세션(shared/sessions.mjs) — 공용 비번이 설정돼 있는 동안 계속 유효
@@ -62,7 +64,9 @@ function personalKey(secret) {
 
 export function createPersonalSession(secret, sub) {
   const now = Date.now();
-  const expiresAt = Math.min(now + MAX_AGE_SECONDS * 1000, sub.expiresAt || Infinity);
+  // 구독 만료일은 쿠키에 새기지 않는다 — 확인할 때마다 저장소의 만료일을 보므로, 운영자가 연장하면 다시
+  // 로그인하지 않아도 이어서 쓸 수 있다.
+  const expiresAt = now + MAX_AGE_SECONDS * 1000;
   const did = randomBytes(9).toString("base64url"); // 기기(브라우저) 구분용 — "최근 접속 기기 수" 집계
   const payload = Buffer.from(JSON.stringify({ version: 2, sid: sub.id, gen: sub.gen, did, expiresAt }), "utf8").toString("base64url");
   return { token: `${payload}.${sign(payload, personalKey(secret))}`, did, maxAge: Math.max(0, Math.floor((expiresAt - now) / 1000)) };
@@ -92,20 +96,36 @@ export async function getSubscriberSession(request, secret) {
 }
 
 // 접속 기기 기록 — 로그인할 때와, 세션 확인 때 6시간에 한 번. 실패해도 로그인에는 영향 없음.
-export async function touchDevice(sub, did, force = false) {
+export async function touchDevice(subId, did, force = false) {
+  const store = subscriberStore();
+  const key = `dev:${subId}:${did}`;
+  try {
+    if (!force) {
+      const prev = await store.get(key, { type: "json" });
+      if (prev && Date.now() - prev.t < DEVICE_TOUCH_MS) return;
+    }
+    await store.setJSON(key, { t: Date.now() });
+  } catch { /* 기록 실패는 무시 */ }
+}
+
+// 관리자 목록용 — 구독자 id -> 최근 30일 기기별 마지막 접속 시각 배열. 30일 지난 기록은 여기서 지운다.
+export async function loadDevices() {
+  const store = subscriberStore();
   const now = Date.now();
-  sub.devices ||= {};
-  if (!force && sub.devices[did] && now - sub.devices[did] < DEVICE_TOUCH_MS) return;
-  sub.devices[did] = now;
-  for (const [k, t] of Object.entries(sub.devices)) if (now - t > DEVICE_WINDOW_MS) delete sub.devices[k];
-  try { await subscriberStore().setJSON(`sub:${sub.id}`, sub); } catch { /* 기록 실패는 무시 */ }
+  const bySub = new Map();
+  const { blobs } = await store.list({ prefix: "dev:" });
+  await Promise.all(blobs.map(async ({ key }) => {
+    const v = await store.get(key, { type: "json" }).catch(() => null);
+    if (!v || now - v.t > DEVICE_WINDOW_MS) { await store.delete(key).catch(() => {}); return; }
+    const subId = key.split(":")[1];
+    if (!bySub.has(subId)) bySub.set(subId, []);
+    bySub.get(subId).push(v.t);
+  }));
+  return bySub;
 }
 
-export function recentDevices(sub, now = Date.now()) {
-  return Object.values(sub.devices || {}).filter((t) => now - t <= DEVICE_WINDOW_MS).length;
-}
-
-export function lastSeen(sub) {
-  const times = Object.values(sub.devices || {});
-  return times.length ? Math.max(...times) : null;
+export async function clearDevices(subId) {
+  const store = subscriberStore();
+  const { blobs } = await store.list({ prefix: `dev:${subId}:` });
+  await Promise.all(blobs.map(({ key }) => store.delete(key)));
 }
