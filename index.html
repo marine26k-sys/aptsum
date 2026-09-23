@@ -1252,10 +1252,16 @@ let regionSel = []; // [{name, lawd}]
 const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
+// "경기 전체"(39개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
+// 요약만 읽는 비공개 탭 4종(저평가 실매물·실거래가 이하 매물·예산별 실매물·급매 모아보기, 2026.09 운영자 요청).
+function ggAllAllowed(){
+  return (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
+    || mode==='longpeaklisting' || mode==='listingbelow' || mode==='listingbudget' || mode==='listingurgent';
+}
 function regionSelMax(){
-  // "신고가 속보 (7일)"과 구독 전용 "금액대별 변동률"은 경기 전체(39개 시군구)를 한 번에 담을 수 있도록
-  // 상한을 REGION_MAX(45)까지 풀어준다. 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
-  if((mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise') return REGION_MAX;
+  // 경기 전체를 허용한 탭은 39개 시군구를 한 번에 담을 수 있도록 상한을 REGION_MAX(45)까지 풀어준다.
+  // 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
+  if(ggAllAllowed()) return REGION_MAX;
   return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingbelow'||mode==='listingurgent'||mode==='listingbudget'||mode==='inversion'||mode==='gaptrend'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
 }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
@@ -1351,7 +1357,7 @@ function buildRegionPicker(){
       if(multi && !q){
         if(g==='경기'){
           // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 39개 시군구 일괄 추가 버튼을 노출한다.
-          if(i===0 && ((mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise')){
+          if(i===0 && ggAllAllowed()){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
           }
           const sp = n.indexOf(' ');
