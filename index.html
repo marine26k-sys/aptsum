@@ -5209,7 +5209,8 @@ async function searchListingTab(myToken, lawd, tabMode){
         .sort((a,b)=> a.ask - b.ask || a.gapPct - b.gapPct); // 낮은 가격순(운영자 요청)
       d = { ...base, rows };
     } else {
-      d = { ...base, rows: items.filter(x => x.hh >= LISTING_MIN_HH) };
+      // 전고점보다 21% 이상 높은 호가(화면 표기 정수 % 기준)는 제외 — 비현실적 호가·입력 오류 가능성(운영자 요청, 2026.09)
+      d = { ...base, rows: items.filter(x => x.hh >= LISTING_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 21)) };
     }
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
@@ -5309,7 +5310,7 @@ function renderListingBudget(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_MIN_HH}세대 이상 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
