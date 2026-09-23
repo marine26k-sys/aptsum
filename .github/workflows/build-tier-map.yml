@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       months:
-        description: "최근 몇 개월 내 거래를 볼지(기본 24 = 2년, 평형별 2년 내 최고가 기준)"
+        description: "최근 몇 개월 내 거래를 볼지(기본 36 = 3년, 평형별 3년 내 최고가 기준)"
         required: false
-        default: "24"
+        default: "36"
 
 permissions:
   contents: write
@@ -40,10 +40,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # ⚠️ 폴백이 '6'이면 안 됨 — 스케줄 실행에선 inputs.months가 비어 있어서 폴백값이 그대로 쓰이는데,
-      # 급지 기준은 2026.09부터 "2년(24개월) 내 최고가"로 바뀌었다(입력칸 default도 24). 폴백만 옛 값(6)으로
+      # 급지 기준은 2026.09부터 "2년(24개월) 내 최고가" → 같은 달 "3년(36개월)"으로 바뀌었다(입력칸 default와 같게 유지). 폴백만 옛 값(6)으로
       # 남아 있어서, 스케줄을 붙이는 순간 자동 실행만 6개월 기준으로 계산될 뻔했음(2026.09 수정).
       - name: 급지 대시보드 데이터 생성 (data/tier-map.json)
-        run: node scripts/build-tier-map.mjs --months=${{ inputs.months || '24' }}
+        run: node scripts/build-tier-map.mjs --months=${{ inputs.months || '36' }}
 
       - name: 커밋 & 푸시
         run: |

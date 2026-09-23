@@ -190,6 +190,7 @@ async function main() {
   const lawds = opt.only || ALL_LAWDS;
   const yms = recentYms(opt.months);
   const refreshSet = new Set(yms.slice(0, opt.refresh)); // 최신 N개월
+  const failedKinds = []; // 실패가 한 건이라도 있었던 kind — 끝에서 실행 결과를 실패로 표시하는 데 씀
 
   for (const [kindIdx, kind] of opt.kinds.entries()) {
     const cfg = KIND_CONFIG[kind];
@@ -218,6 +219,7 @@ async function main() {
       await writeFile(file, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));
     });
     console.log(`${kind}: 성공 ${ok}건, 실패 ${fail}건 (총 ${tasks.length}건 중 스킵 제외)`);
+    if (fail > 0) failedKinds.push(`${kind} ${fail}건`);
 
     // kind별 커밋이 이 스크립트의 유일한 정상 커밋 지점이라, 마지막 kind가 아닌 중간 커밋만
     // [skip ci]를 붙여 Netlify 빌드를 유발하지 않게 함. 마지막 kind의 커밋은 skip ci 없이 남겨둬
@@ -225,6 +227,16 @@ async function main() {
     const isLast = kindIdx === opt.kinds.length - 1;
     const skipTag = isLast ? "" : " [skip ci]";
     commitProgress(`chore: ${kind} 실거래 배치 수집 중간 커밋 ${new Date().toISOString()}${skipTag}`);
+  }
+
+  // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
+  // UND_ERR_CONNECT_TIMEOUT) 스크립트가 정상 종료해서 Actions에 "성공"으로 떴다(운영자 지적).
+  // 한 건이라도 실패하면 exit code 1로 끝내 실행을 빨간색(실패)으로 표시한다. 성공한 데이터는 위에서
+  // kind마다 이미 커밋했고, 실패한 달은 파일을 남기지 않아 다음 실행(또는 Re-run) 때 자동으로 다시 받는다.
+  // process.exit 대신 exitCode를 써서 남은 출력이 잘리지 않게 한다.
+  if (failedKinds.length) {
+    console.error(`\n⚠️  수집 실패가 있습니다 (${failedKinds.join(", ")}) — 실패한 달은 다음 실행 때 자동 재시도됩니다. 바로 채우려면 이 워크플로를 다시 실행하세요.`);
+    process.exitCode = 1;
   }
 }
 

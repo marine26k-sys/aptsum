@@ -244,7 +244,7 @@ function regionPanelHTML(st, lineId){
   const countLabel = all.length > items.length ? `평단가 상위 ${items.length}개 (총 ${all.length}개 중)` : `평단가 상위 ${items.length}개`;
   return `
     <div class="region-panel">
-      <div class="region-panel-note">최근 2년간 20~39평 거래가 2건 이상인 단지만 표시됩니다 — 거래가 드문 단지는 실제로 있어도 빠질 수 있어요.</div>
+      <div class="region-panel-note">최근 3년간 20~39평 거래가 2건 이상인 단지만 표시됩니다 — 거래가 드문 단지는 실제로 있어도 빠질 수 있어요.</div>
       <div class="region-panel-hd">${scopeLabel} · ${countLabel}${fellBack && dongLabel ? ` <span style="font-weight:400">(${esc(dongLabel)}엔 조회되는 단지가 없어 구 전체 기준)</span>` : ''}</div>
       ${items.map(c => `
         <div class="region-item">
