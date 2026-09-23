@@ -452,6 +452,7 @@
     // 예전 window.aptsumSubscriberVerified처럼 전역 boolean을 true로 바꾸는 단순 우회를 막는다.
     const aptsumSubscriberGate = (() => {
       let verified = false;
+      let deactivate = () => {};
       let resolveReady;
       const ready = new Promise(resolve => { resolveReady = resolve; });
       document.addEventListener('DOMContentLoaded', function(){
@@ -466,6 +467,13 @@
       const activate = () => {
         verified = true;
         reveal();
+      };
+      // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
+      deactivate = () => {
+        verified = false;
+        subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
+        subDividers.forEach(d => { d.style.display = 'none'; });
+        if (typeof listingMem === 'object') Object.keys(listingMem).forEach(k => { delete listingMem[k]; });
       };
       const checkSession = async () => {
         try {
@@ -529,8 +537,24 @@
         });
       }
       });
-      return Object.freeze({ ready, isVerified: () => verified });
+      // 비공개 탭을 열거나 조회할 때마다 서버에 로그인 상태를 다시 확인한다. 페이지를 열어둔 사이에
+      // 만료·해지되면 여기서 잠긴다. 네트워크 오류·서버 오류는 판단을 보류하고 그대로 둔다
+      // (서버 데이터(/api/listings)는 어차피 서버가 따로 막으므로, 일시 장애로 멀쩡한 구독자를 잠그지 않도록).
+      const recheck = async () => {
+        if (!verified) return false;
+        try {
+          const r = await fetch('/api/subscriber', { credentials: 'same-origin', cache: 'no-store' });
+          if (!r.ok) return true;
+          if ((await r.json()).subscribed === true) return true;
+        } catch (e) {
+          return true;
+        }
+        deactivate();
+        return false;
+      };
+      return Object.freeze({ ready, isVerified: () => verified, recheck });
     })();
+    const SUBSCRIBER_ENDED_MSG = '비공개 탭 이용 기간이 끝났거나 접근 코드가 해지되었습니다. 계속 이용하시려면 운영자에게 문의해 주세요.';
   </script>
   <header>
     <div class="logo" id="logoTapZone">
@@ -1537,6 +1561,12 @@ function setMode(m, fromRestore){
   if (needsSubscriberSession(m) && !aptsumSubscriberGate.isVerified()) {
     if (!fromRestore) alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
     return false;
+  }
+  if (needsSubscriberSession(m)) {
+    // 탭 전환은 바로 하고, 로그인 상태는 뒤에서 다시 확인 — 만료·해지됐으면 단지 분석으로 돌려보낸다
+    aptsumSubscriberGate.recheck().then(ok => {
+      if (!ok && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
+    });
   }
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
@@ -3462,6 +3492,11 @@ async function search(){
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
+  if(needsSubscriberSession(mode) && !(await aptsumSubscriberGate.recheck())){
+    setMode('complex', true);
+    showError(SUBSCRIBER_ENDED_MSG);
+    return;
+  }
   const myToken = ++searchToken;
   updateRegionFavBtn();
   renderFavRegions();
@@ -5091,7 +5126,8 @@ async function searchListingUndervalue(myToken, lawd){
     pushView();
     saveLastRegionPref(lawd);
   }catch(err){
-    if(myToken===searchToken) showError(err.auth ? '비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.' : '오류: ' + esc(err.message));
+    if(err.auth) aptsumSubscriberGate.recheck();
+    if(myToken===searchToken) showError(err.auth ? SUBSCRIBER_ENDED_MSG : '오류: ' + esc(err.message));
   }finally{
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
@@ -5226,7 +5262,8 @@ async function searchListingTab(myToken, lawd, tabMode){
     pushView();
     saveLastRegionPref(lawd);
   }catch(err){
-    if(myToken===searchToken) showError(err.auth ? '비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.' : '오류: ' + esc(err.message));
+    if(err.auth) aptsumSubscriberGate.recheck();
+    if(myToken===searchToken) showError(err.auth ? SUBSCRIBER_ENDED_MSG : '오류: ' + esc(err.message));
   }finally{
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
