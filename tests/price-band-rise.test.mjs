@@ -50,8 +50,10 @@ test('subscriber price-band tab has all requested periods and defaults to curren
   assert.match(html, /const focusLabel = isCurrentBasis \? `현재 \$\{d\.priceBandLabel\}` : `\$\{d\.periodM\}개월 전 \$\{d\.priceBandLabel\}`/);
   assert.match(html, /\$\{d\.periodM\}개월 전 평균<\/b><small>\$\{esc\(d\.pastPeriod\)\}/);
   assert.match(html, /최근 1개월 평균<\/b><small>\$\{esc\(d\.recentPeriod\)\}/);
-  assert.match(html, /\|\| mode==='pricebandrise'\) return REGION_MAX/);
-  assert.match(html, /mode==='pricebandrise'\)\)\{[\s\S]*?\+ 경기 전체/);
+  // 경기 전체 허용 조건은 ggAllAllowed()로 묶였다(2026.09) — 상한(REGION_MAX)과 '+ 경기 전체' 버튼이 둘 다 이 함수를 따른다
+  assert.match(html, /function ggAllAllowed\(\)\{[\s\S]*?mode==='pricebandrise'[\s\S]*?\n\}/);
+  assert.match(html, /if\(ggAllAllowed\(\)\) return REGION_MAX/);
+  assert.match(html, /if\(i===0 && ggAllAllowed\(\)\)\{[\s\S]*?\+ 경기 전체/);
   assert.match(html, /const rows = matchedRows\.slice\(0,100\);/);
   assert.match(html, /matchedCount:matchedRows\.length, isLimited:matchedRows\.length>rows\.length/);
   assert.match(html, /개 중 상위 \$\{d\.rows\.length\}개/);
