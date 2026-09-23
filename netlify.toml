@@ -3,3 +3,11 @@
 
 [functions]
   directory = "netlify/functions"
+
+# index.html(실거래가 이하 매물 탭)이 단지명 비교키(nameKey)를 서버 스크립트와 같은 코드로 쓰려고
+# /shared/name-match.mjs를 브라우저에서 import()한다 — 모듈 스크립트는 MIME이 JavaScript가 아니면
+# 브라우저가 거부하므로 명시해 둔다(2026.09).
+[[headers]]
+  for = "/shared/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
