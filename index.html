@@ -5330,7 +5330,7 @@ async function searchListingTab(myToken, lawd, tabMode){
       // 최근 3개월 실거래 평균과 비교했으나 전고점 기준으로 변경). 화면엔 정수 %로 보이므로 반올림해 0%인 매물은 뺀다.
       const rows = items.filter(x => x.peak > 0).map(x => ({ ...x, area:x.ex, gapPct:(x.ask - x.peak) / x.peak * 100, gapAmt:R1(x.peak - x.ask) }))
         .filter(x => Math.round(x.gapPct) < 0)
-        .sort((a,b)=> a.gapPct - b.gapPct || b.gapAmt - a.gapAmt);
+        .sort((a,b)=> a.ask - b.ask || a.gapPct - b.gapPct); // 낮은 가격순(운영자 요청)
       d = { ...base, rows };
     } else if(tabMode === 'listingbelow'){
       const lawds = [...new Set(items.map(x=>x.lawd))];
@@ -5422,12 +5422,12 @@ function renderListingUrgent(d){
   <div class="card">
     ${listingHeaderHTML(d, '급매 모아보기', '최근 3년 최고가', '현재 급매 호가')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)"><b>급매</b> 표시가 있는 <b>입주가능·중층 이상</b> 매물 중, 호가가 최근 3년 실거래 최고가보다 낮은 매물 (많이 낮은 순)</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)"><b>급매</b> 표시가 있는 <b>입주가능·중층 이상</b> 매물 중, 호가가 최근 3년 실거래 최고가보다 낮은 매물 (낮은 가격순)</div>
       ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '단지·전용면적별 최저 호가 매물에 급매 표시가 있는 경우만')}
       ${body}
     </div>
   </div>
-  <div class="src-note">호가: 네이버 급매 표시 · 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 변동률: 최근 3년 실거래 최고가(엑셀 기준) 대비 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">호가: 네이버 급매 표시 · 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 변동률: 최근 3년 실거래 최고가(엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
