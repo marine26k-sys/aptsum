@@ -2143,6 +2143,13 @@ async function fetchHHCntBatch(lawd, names){
 // 매매 단지명(officialName)과 분양권 데이터를 매칭 — 표기가 완전히 같지 않을 수 있어 exact→substring 순으로 시도
 // ═══ 분석 엔진 (클라이언트) ═══
 const R1 = x => Math.round(x*10)/10;
+// 등락 표기 공통 — ▲0.5억 (2%) 빨강 / ▼0.5억 (2%) 파랑. 0.0억으로 반올림되면 화살표 없이 회색(운영자 요청:
+// "0.0억인데 왜 빨간색" — 이전엔 0 이상이면 모두 ▲빨강이었음)
+function chgHTML(amt, pct){
+  const a = R1(Math.abs(amt)), p = Math.abs(Math.round(pct));
+  if(a === 0) return `<b style="color:var(--sub)">0.0억 (${p}%)</b>`;
+  return amt > 0 ? `<b style="color:var(--red)">▲${a.toFixed(1)}억 (${p}%)</b>` : `<b style="color:var(--blue)">▼${a.toFixed(1)}억 (${p}%)</b>`;
+}
 // 저평가(단기/반기/연간) 비교군은 20평대(20~29)·30평대(30~39) 평대 단위로만 서로 비교 — 평대가 다르면 가격이 비슷해도 비교군에서 제외(2026.08)
 const pyBand = py => { const n = parseInt(py,10); if(n>=20 && n<=29) return 20; if(n>=30 && n<=39) return 30; return null; };
 const avgA = arr => arr.length ? arr.reduce((s,t)=>s+t.amt,0)/arr.length : null;
@@ -4850,7 +4857,7 @@ function renderLongTermRise(d){
       ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--red)':'var(--blue)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억 (${Math.abs(x.changePct)}%)</b></small></span>`)}
+        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
     </div>
 
   </div>
@@ -4869,7 +4876,7 @@ function renderPriceBandRise(d){
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}</small></span>
-        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--red)':'var(--blue)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억 (${Math.abs(x.changePct)}%)</b></small></span>
+        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>
       </div>${rkSep(i,d.rows.length)}`).join('')
     : `<div class="rng" style="padding:10px 0">${isCurrentBasis?'현재':'선택한 시점에'} 해당 금액대였고 비교 가능한 거래가 있는 단지·평형이 없습니다.</div>`;
   const html = `
@@ -4916,7 +4923,7 @@ function renderJeonseLongTermRise(d){
       ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--red)':'var(--blue)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억 (${Math.abs(x.changePct)}%)</b></small></span>`)}
+        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
     </div>
 
   </div>
@@ -5312,7 +5319,7 @@ function renderListingUrgent(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (급매 표시 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 3년 최고가 대비 낮은 호가)</div>`
     : list.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small><b style="color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(Math.round(x.gapPct))}%)</b></small></span>
+        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${chgHTML(-x.gapAmt, x.gapPct)}</small></span>
       </div>${rkSep(i,list.length)}`).join('');
   const html = `
   <div class="card">
@@ -5351,7 +5358,7 @@ function renderListingBudget(d){
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${drop===null?'':(drop<0?`<b style="color:var(--blue)">▼${R1(x.peak - x.ask).toFixed(1)}억 (${-drop}%)</b>`:`<b style="color:var(--red)">▲${R1(x.ask - x.peak).toFixed(1)}억 (${drop}%)</b>`)}</small></span>
+        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${drop===null?'':chgHTML(x.ask - x.peak, drop)}</small></span>
       </div>${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
