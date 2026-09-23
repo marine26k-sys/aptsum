@@ -5117,7 +5117,7 @@ function renderListingUndervalue(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`
     <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
-      <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
+      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
@@ -5226,11 +5226,12 @@ async function searchListingTab(myToken, lawd, tabMode){
   }
 }
 
-// 매물 행 공용 조각 — 단지명(클릭 시 단지 분석) + 급매 배지 + 네이버 매물 링크
+// 매물 행 공용 조각 — 단지명 + 급매 배지 + 네이버 매물 링크. 네이버 실매물 탭은 단지명을 단지 분석으로 연결하지
+// 않는다(운영자 요청, 2026.09 — 네이버 단지명이 실거래 표기와 달라 단지 분석에서 못 찾는 경우가 있음).
 function listingNameHTML(x, noUrgentBadge){
   const link = x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기" style="margin-left:4px;color:var(--sub)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
-  return `<span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${urgent}${link}</span>`;
+  return `<span class="nm-title"><span>${esc(x.apt)}</span>${urgent}${link}</span>`;
 }
 function listingInfoHTML(x, multiRegion){
   const fl = [listingFloorLabel(x.fl), x.dong].filter(Boolean).join(' ');
