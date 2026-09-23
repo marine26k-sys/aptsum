@@ -420,7 +420,7 @@
       if (window.__pwaIsInAppBrowser) {
         // 인스타/쓰레드 등 인앱 브라우저에서는 설치 자체가 불가 — 정식 브라우저로 열도록 안내
         document.getElementById('pwaModalBody').innerHTML =
-          '<div class="step"><div class="step-num">1</div><div>화면 오른쪽 위 <b>점 3개(⋮)</b> 또는 <b>공유 아이콘</b>을 눌러주세요.</div></div>' +
+          '<div class="step"><div class="step-num">1</div><div>화면 오른쪽 위 <b>점 3개 (⋮)</b> 또는 <b>공유 아이콘</b>을 눌러주세요.</div></div>' +
           '<div class="step"><div class="step-num">2</div><div><b>\'다른 브라우저에서 열기\'</b> (또는 \'Safari에서 열기\' / \'Chrome에서 열기\')를 선택해주세요.</div></div>' +
           '<div class="step"><div class="step-num">3</div><div>정식 브라우저로 열리면 다시 <b>\'홈 화면에 추가\'</b> 버튼을 눌러주세요.</div></div>';
         document.getElementById('pwaModalBg').style.display = 'flex';
@@ -443,7 +443,7 @@
       }
       // 이벤트가 아직 안 온 브라우저(설치 조건 미충족 등) 대비 안내
       document.getElementById('pwaModalBody').innerHTML =
-        '<div>브라우저 메뉴(⋮)에서 <b>\'앱 설치\'</b> 또는 <b>\'홈 화면에 추가\'</b>를 선택해주세요.</div>';
+        '<div>브라우저 메뉴 (⋮)에서 <b>\'앱 설치\'</b> 또는 <b>\'홈 화면에 추가\'</b>를 선택해주세요.</div>';
       document.getElementById('pwaModalBg').style.display = 'flex';
     }
 
@@ -595,7 +595,7 @@
          subscriber 명칭은 그대로 둠(표기만 변경).-->
     <div class="tab-divider" id="tabSubDivider" style="display:none">비공개 탭</div>
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
-    <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 권역)</div>
+    <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</div>
     <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
     <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
@@ -715,7 +715,7 @@
   <div class="mpop-box">
     <div class="mpop-hd"><h3 id="mpopTitle"></h3><button onclick="document.getElementById('mpop').classList.remove('on')">×</button></div>
     <div id="mpopChart"></div>
-    <div class="mpop-note">● 평균 반영 거래 · <span style="color:#94A3B8">✕ 제외(직거래/저가)</span> · 점 위 = 가격(억)</div>
+    <div class="mpop-note">● 평균 반영 거래 · <span style="color:#94A3B8">✕ 제외 (직거래/저가)</span> · 점 위 = 가격 (억)</div>
   </div>
 </div>
 
@@ -1019,7 +1019,7 @@ async function renderFavDash(){
       return favDashCard(r, last
         ? `<b style="font-size:15px;color:var(--navy)">${last.amt.toFixed(1)}억</b>
            <span style="font-size:11px;color:var(--sub);margin-left:6px">${esc(last.py)}평${last.area?` (전용 ${Math.floor(last.area)})`:''} · ${esc(ymLabel(last.ym))}.${esc(last.d)}</span>
-           <div style="font-size:10.5px;color:var(--sub);margin-top:2px">최근 등락 산출 불가(거래 부족)</div>`
+           <div style="font-size:10.5px;color:var(--sub);margin-top:2px">최근 등락 산출 불가 (거래 부족)</div>`
         : `<span style="color:var(--sub);font-size:12px">거래 데이터 부족</span>`);
     }
     const x = r.rep;
@@ -3014,7 +3014,7 @@ function analyzeCompare(itemsByLawd, targets, months){
   for(const tg of targets){
     const all = itemsByLawd[tg.lawd] || [];
     const m = matchComplex(all, tg.name);
-    if(m.multi){ missing.push(`${tg.name}(여러 단지 일치 — 정확한 단지명 입력)`); continue; }
+    if(m.multi){ missing.push(`${tg.name} (여러 단지 일치 — 정확한 단지명 입력)`); continue; }
     const hits = m.hits || [];
     if(!hits.length){ missing.push(tg.name); continue; }
     const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
@@ -3455,7 +3455,7 @@ function renderSubway(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가(전용면적 평단가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형(55~65·80~95㎡) 우선, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (전용면적 평단가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4156,7 +4156,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
       onpointerdown="chartHoverAt(event)" onpointermove="chartHoverAt(event)" onpointerleave="chartHoverEnd(event)" onclick="chartClick(event)"/>
   </svg></div>
-  <div class="chart-note">라인 = 월평균 ${priceLabel}(억) · 막대 = 월 거래량 · <span style="color:#DC2626">●</span>최고 <span style="color:#0F2B3D">●</span>최저<br>점을 탭하면 월/건수/범위 고정 표시, 다시 탭하면 상세</div>`;
+  <div class="chart-note">라인 = 월평균 ${priceLabel} (억) · 막대 = 월 거래량 · <span style="color:#DC2626">●</span>최고 <span style="color:#0F2B3D">●</span>최저<br>점을 탭하면 월/건수/범위 고정 표시, 다시 탭하면 상세</div>`;
 }
 
 let selPy = -1; // -1 = 전체
@@ -4165,8 +4165,8 @@ let tradesShown = TRADES_PAGE_SIZE; // "최근 거래 내역" 표시 건수 (더
 // ── 단지 분석 서브탭(매매/전세) ── 항상 하나만 렌더링(공유 DOM 컨테이너) — 전환 시 평형 선택은 초기화됨
 let complexView = 'sale'; // 'sale' | 'jeonse'
 function curComplexData(){ return complexView==='jeonse' ? (lastData && lastData.jeonse) : lastData; }
-const SALE_TRADES_FOOT = '평균·차트·최고가는 직거래 및 시세(동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권(국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
-const JEONSE_TRADES_FOOT = '평균·차트·최고가는 시세(동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약(반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+const SALE_TRADES_FOOT = '평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
+const JEONSE_TRADES_FOOT = '평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
@@ -4248,7 +4248,7 @@ function fbRow(label, b, color, pct){
 }
 function floorPremiumHTML(d, ci){
   const fb = d.byPy[ci].floorBand;
-  if(!fb) return '<div class="rng" style="padding:6px 0">저층·고층 비교에 필요한 거래(각 2건 이상)가 부족합니다</div>';
+  if(!fb) return '<div class="rng" style="padding:6px 0">저층·고층 비교에 필요한 거래 (각 2건 이상)가 부족합니다</div>';
   const vals = [fb.low, fb.mid, fb.high].filter(Boolean).map(b=>b.v);
   const minV = Math.min(...vals), maxV = Math.max(...vals);
   // 스케일 기준을 3개 값의 min~max가 아니라 실제 가격의 ±15%로 고정 → 작은 차이가 막대 길이로 과장되지 않음
@@ -4268,12 +4268,12 @@ function floorPremiumHTML(d, ci){
     <div class="trend" style="margin-bottom:10px;gap:18px">
       ${premBadge('중층', fb.mid)}
       ${premBadge('고층', fb.high)}
-      <span class="d">저층(${fb.low.fmin}~${fb.low.fmax}층 · ${fb.low.v.toFixed(1)}억) 대비 프리미엄</span>
+      <span class="d">저층 (${fb.low.fmin}~${fb.low.fmax}층 · ${fb.low.v.toFixed(1)}억) 대비 프리미엄</span>
     </div>
     ${fbRow('저층', fb.low, '#94A3B8', pct(fb.low.v))}
     ${fbRow('중층', fb.mid, '#00828A', fb.mid?pct(fb.mid.v):0)}
     ${fbRow('고층', fb.high, '#0F2B3D', pct(fb.high.v))}
-    <div class="rng" style="margin-top:4px">현재 층수 필터와 무관하게, 해당 평형의 관측된 최저~최고 층을 5등분(저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
+    <div class="rng" style="margin-top:4px">현재 층수 필터와 무관하게, 해당 평형의 관측된 최저~최고 층을 5등분 (저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
 }
 
 // ── 월 클릭 → 해당월 개별 거래 플로팅 산점도 ──
@@ -4612,7 +4612,7 @@ function renderCompare(d){
     <div class="sec">
       <div id="cmpLegend" class="legend" style="display:flex;flex-wrap:wrap;gap:10px"></div>
       <div id="cmpChart"></div>
-      <div class="chart-note">월평균 매매가(억) · 단지별 평형 선택 가능</div>
+      <div class="chart-note">월평균 매매가 (억) · 단지별 평형 선택 가능</div>
     </div>
 
     <div class="sec">
@@ -4678,7 +4678,7 @@ function renderVolume(d){
     </div>
 
   </div>
-  <div class="src-note">${periodLabel} 회전율 = 조회기간(${periodLabel}) 거래건수 ÷ 세대수 · 세대수가 확인된 단지만 표시${d.pyBand? ' · 선택한 평형 거래만 세므로 단지 전체 회전율보다 낮게 나옴':''} · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${periodLabel} 회전율 = 조회기간 (${periodLabel}) 거래건수 ÷ 세대수 · 세대수가 확인된 단지만 표시${d.pyBand? ' · 선택한 평형 거래만 세므로 단지 전체 회전율보다 낮게 나옴':''} · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4706,7 +4706,7 @@ function renderGap(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가(조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가 (조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4805,7 +4805,7 @@ function renderPricePerPyeong(d){
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 전용면적 기준(공급면적 아님)</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 전용면적 기준 (공급면적 아님)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4859,7 +4859,7 @@ function renderLongTermRise(d){
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계(분양권·입주권 제외) · 직거래 제외</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계 (분양권·입주권 제외) · 직거래 제외</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4925,7 +4925,7 @@ function renderJeonseLongTermRise(d){
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 전세만 집계(분양권·입주권 제외) · 직거래 제외 · 전세가 급락은 역전세 위험 신호로 참고</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 전세만 집계 (분양권·입주권 제외) · 직거래 제외 · 전세가 급락은 역전세 위험 신호로 참고</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4954,8 +4954,8 @@ function renderInversion(d){
         </tr>
         <tr${!x.isLowUnder?' style="background:var(--teal-soft)"':''}>
           <td><span style="font-weight:700;color:var(--navy)">${esc(x.refPy)}</span> <span class="rng">(전용 ${x.refArea})</span>${!x.isLowUnder?'<br><span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:9px;border-radius:20px;padding:1px 6px;margin-top:2px">저평가</span>':''}</td>
-          <td class="tr-r">${x.refPriorAmt.toFixed(1)}억</td><td class="tr-r grp-td">기준(100%)</td>
-          <td class="tr-r">${!x.isLowUnder?`<b style="color:var(--teal)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td><td class="tr-r">기준(100%)</td>
+          <td class="tr-r">${x.refPriorAmt.toFixed(1)}억</td><td class="tr-r grp-td">기준 (100%)</td>
+          <td class="tr-r">${!x.isLowUnder?`<b style="color:var(--teal)">${x.refAvgAmt.toFixed(1)}억</b>`:`${x.refAvgAmt.toFixed(1)}억`}</td><td class="tr-r">기준 (100%)</td>
         </tr>
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
@@ -4971,7 +4971,7 @@ function renderInversion(d){
       ${hdTop('평형 비교 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)}</div>
-      ${hdVs('이전 6개월(기준선)', '최근 1개월')}
+      ${hdVs('이전 6개월 (기준선)', '최근 1개월')}
     </div>
 
     <div class="sec">
@@ -4981,7 +4981,7 @@ function renderInversion(d){
     </div>
 
   </div>
-  <div class="src-note">전용면적 기준 평단가(전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
+  <div class="src-note">전용면적 기준 평단가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5004,7 +5004,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 1~4층·직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5051,7 +5051,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교(각 2건 이상 표본 필요) · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5194,7 +5194,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가(-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · 입주가능 매물만 (세안고 제외) · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5318,7 +5318,7 @@ function renderListingUrgent(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가(엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: 입주가능 (세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가 (엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5357,7 +5357,7 @@ function renderListingBudget(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">호가: 입주가능 (세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5380,7 +5380,7 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교(각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대(20~29)끼리·30평대(30~39)끼리만 각각 비교 · 직거래·저가(시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
