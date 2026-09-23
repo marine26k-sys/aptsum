@@ -222,7 +222,7 @@ async function main() {
       complexes: result.length,
       months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지+평형별 최근 ${months}개월(약 ${Math.round(months/12*10)/10}년) 내 최고가 기준(매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평단가(공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+평형별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평단가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,
