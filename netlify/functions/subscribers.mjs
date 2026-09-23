@@ -10,17 +10,17 @@
 import { randomBytes } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import {
-  subscriberStore, getSubscriber, newCode, normalizeCode, expiryFromDate, recentDevices, lastSeen,
+  subscriberStore, getSubscriber, newCode, normalizeCode, expiryFromDate, loadDevices, clearDevices,
 } from "../../shared/subscribers.mjs";
 
 export const config = { path: "/api/subscribers" };
 
 const json = (body, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store", Vary: "Cookie" } });
 
-function view(sub) {
+function view(sub, seen = []) {
   return {
     id: sub.id, name: sub.name, code: sub.code, createdAt: sub.createdAt, expiresAt: sub.expiresAt || null,
-    revoked: !!sub.revoked, devices: recentDevices(sub), lastSeen: lastSeen(sub),
+    revoked: !!sub.revoked, devices: seen.length, lastSeen: seen.length ? Math.max(...seen) : null,
   };
 }
 
@@ -47,7 +47,8 @@ export default async (request) => {
     const { blobs } = await store.list({ prefix: "sub:" });
     const subs = (await Promise.all(blobs.map((b) => store.get(b.key, { type: "json", consistency: "strong" })))).filter(Boolean);
     subs.sort((a, b) => b.createdAt - a.createdAt);
-    return json({ subscribers: subs.map(view), sharedCodeEnabled: !!process.env.SUBSCRIBER_CODE });
+    const devices = await loadDevices();
+    return json({ subscribers: subs.map((s) => view(s, devices.get(s.id))), sharedCodeEnabled: !!process.env.SUBSCRIBER_CODE });
   }
 
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -61,7 +62,7 @@ export default async (request) => {
     if (!name) return json({ error: "name_required" }, 400);
     const expiresAt = expiryFromDate(body.expires);
     if (Number.isNaN(expiresAt)) return json({ error: "invalid_expires" }, 400);
-    const sub = { id: randomBytes(6).toString("base64url"), name, gen: 1, createdAt: Date.now(), expiresAt, revoked: false, devices: {} };
+    const sub = { id: randomBytes(6).toString("base64url"), name, gen: 1, createdAt: Date.now(), expiresAt, revoked: false };
     await assignCode(store, sub);
     await store.setJSON(`sub:${sub.id}`, sub);
     return json({ subscriber: view(sub) });
@@ -82,10 +83,11 @@ export default async (request) => {
     await store.delete(`code:${normalizeCode(sub.code)}`);
     await assignCode(store, sub);
     sub.gen = (sub.gen || 1) + 1; // 기존 로그인 세션 무효화
-    sub.devices = {};
+    await clearDevices(sub.id);
   } else if (action === "delete") {
     await store.delete(`code:${normalizeCode(sub.code)}`);
     await store.delete(`sub:${sub.id}`);
+    await clearDevices(sub.id);
     return json({ deleted: true });
   } else {
     return json({ error: "invalid_action" }, 400);
