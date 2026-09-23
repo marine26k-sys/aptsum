@@ -6,7 +6,7 @@
 // 대상 범위: 서울·경기·인천·부산(2026.09 인천 재포함, 운영자 요청) — REGIONS에 있는 4개 시·도 전부 다룬다.
 //
 // "평단가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평단가"(pyprice) 탭과 같은 골격, 기준만 다름):
-// 1) 단지+평형(공급면적 기준 평형 라벨, 아래 참고)별로 "최근 2년 내 최고가" 거래 1건을 뽑는다(표본이
+// 1) 단지+평형(공급면적 기준 평형 라벨, 아래 참고)별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
 //    1건뿐인 평형은 이상치 방지로 제외 — pyprice 탭과 동일 원칙, 우연히 섞인 이례적 면적 1건이 대표로
 //    잘못 뽑히는 걸 막음).
 // 2) 그렇게 나온 평형별 최고가를 각 평형의 평단가로 환산한 뒤, 그중 평단가가 가장 높은 평형 딱 1개를
@@ -23,7 +23,7 @@
 // 정밀 계산 대신 collect-trades.mjs가 각 거래에 이미 붙여둔 t.py(공급면적 관행 기준 평형 라벨 —
 // shared/rtms-parse.mjs의 areaToPy(), data/supply-area 실측치로 보정된 보간표)를 그대로 재사용한다.
 //
-// 사용법: node scripts/build-tier-map.mjs [--months=24]
+// 사용법: node scripts/build-tier-map.mjs [--months=36]
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -68,7 +68,7 @@ const PY_MIN = 20, PY_MAX = 39; // 대표 평형 후보를 20~39평 범위로 �
 
 async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
-  const months = parseInt(args.months, 10) || 24; // "2년 내 최고가" 기준(운영자 요청, 2026.09) — 기존 6개월(최근 시세 스냅샷)에서 변경
+  const months = parseInt(args.months, 10) || 36; // "3년 내 최고가" 기준(운영자 요청, 2026.09) — 6개월 → 2년 → 3년으로 변경
 
   const analyzeDir = "data/analyze";
   let lawdDirs;
@@ -83,7 +83,7 @@ async function main() {
     recentYms.add(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  // "구|동|단지명|평형(py)" -> { maxAmt, count } — 평형 단위로 2년 내 최고가와 표본 수를 집계
+  // "구|동|단지명|평형(py)" -> { maxAmt, count } — 평형 단위로 기간 내 최고가와 표본 수를 집계
   const pyGroups = new Map();
   // 단지명 표기가 "청담 르엘"/"청담르엘"처럼 띄어쓰기만 다른 경우 서로 다른 단지로 갈라져 급지 목록에
   // 중복으로 뜨던 문제(2026.09 제보) — 그룹 키는 공백을 제거한 이름으로 통일해서 합치되, 화면에 보여줄
@@ -130,7 +130,7 @@ async function main() {
           const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
           g.count++;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
-          if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "2년 내 최고가"와 그 거래의 전용면적(㎡)
+          if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "기간 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
           const variants = nameVariantsByCk.get(ck) || {};
           variants[t.apt] = (variants[t.apt] || 0) + 1;
@@ -173,7 +173,7 @@ async function main() {
     if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
     if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
-    const ppy = Math.round((g.maxAmt * 10000) / g.py); // 평단가(만원/평) = 2년 내 최고가(만원) ÷ 공급면적 기준 평형
+    const ppy = Math.round((g.maxAmt * 10000) / g.py); // 평단가(만원/평) = 기간 내 최고가(만원) ÷ 공급면적 기준 평형
     const cur = byComplex.get(ck);
     if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, ppy });
   }
@@ -187,7 +187,7 @@ async function main() {
     result.push({
       gu: c.region, province: c.province, dong: c.dong, nm: displayName,
       ppy: c.ppy, py: c.py, ar: c.area != null ? Math.floor(c.area) : null, // 평단가(만원/평), 대표 평형(참고용), 그 거래의 전용면적(㎡, 다른 탭과 동일하게 내림)
-      amt: Math.round(c.maxAmt * 10000), // 그 평형의 2년 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
+      amt: Math.round(c.maxAmt * 10000), // 그 평형의 기간 내 최고가(매매가, 만원 단위) — 화면에 평단가와 함께 표시
       g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
       presaleOnly: !!c.presaleOnly, // 매매 실거래가 아직 없어 분양권·입주권만으로 집계된 단지(프론트에서 배지 표시용)
