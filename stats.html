@@ -154,6 +154,7 @@ async function load(){
     render(await res.json());
     loadBookClicks();
     loadListingMeta();
+    initSubscribers();
   }catch(e){
     $("#app").innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
   }
@@ -215,8 +216,123 @@ function render(d){
       <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·중층 이상 매물의 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
     </div>
 
+    <div class="card" id="subCard">
+      <div class="card-title">구독자 코드 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 비공개 탭 개인 접근 코드</span></div>
+      <form id="subForm" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <input id="subName" maxlength="40" placeholder="구독자 이름" aria-label="구독자 이름" style="flex:1 1 120px;min-width:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px">
+        <input id="subExpires" type="date" aria-label="만료일(비우면 무기한)" style="flex:0 1 140px;padding:7px 8px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-size:12px">
+        <button type="submit" style="flex:none;padding:8px 12px;border:0;border-radius:8px;background:var(--teal);color:#fff;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer">+ 새 코드 발급</button>
+      </form>
+      <div style="font-size:10px;color:var(--sub);margin-bottom:8px">만료일을 비우면 무기한입니다. 만료일이 지나면 그날 밤 12시에 자동으로 막힙니다.</div>
+      <div id="subStatus" role="status" style="min-height:16px;font-size:12px;color:var(--teal-dark);margin-bottom:4px"></div>
+      <div id="subList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
+    </div>
+
     <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
   `;
+}
+
+// ═══ 구독자별 개인 코드(2026.09 신규) ═══
+// 사람마다 다른 코드를 발급해 해지·재발급·만료일을 따로 관리한다(netlify/functions/subscribers.mjs).
+const fmtDay = (ms) => { const d = new Date(ms + 9*3600000); return `${d.getUTCMonth()+1}/${d.getUTCDate()}`; };
+const toDateInput = (ms) => ms ? new Date(ms + 9*3600000).toISOString().slice(0,10) : "";
+function agoText(ms){
+  if(!ms) return "접속 기록 없음";
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if(m < 60) return "방금 전";
+  if(m < 1440) return `${Math.floor(m/60)}시간 전`;
+  return `${Math.floor(m/1440)}일 전`;
+}
+async function subApi(body){
+  const res = await fetch("/api/subscribers", {
+    method: body ? "POST" : "GET", cache: "no-store", credentials: "same-origin",
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if(res.status === 401) throw new Error("관리자 인증이 만료됐습니다. 새로고침 후 다시 로그인하세요.");
+  const d = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error({ name_required:"이름을 입력하세요.", invalid_expires:"만료일 형식이 올바르지 않습니다.", not_found:"이미 삭제된 구독자입니다." }[d.error] || "처리하지 못했습니다. 잠시 후 다시 시도하세요.");
+  return d;
+}
+function subRow(s){
+  const now = Date.now();
+  const expired = s.expiresAt && s.expiresAt <= now;
+  const state = s.revoked ? ["해지됨","#d95d5d"] : expired ? ["만료됨","#d95d5d"] : ["사용 중","var(--teal-dark)"];
+  const warn = s.devices >= 4 ? ` <b style="color:#d95d5d">· 공유 의심</b>` : "";
+  const btn = (act, label, color="var(--sub)") => `<button data-act="${act}" data-id="${esc(s.id)}" style="padding:4px 6px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:${color};font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">${label}</button>`;
+  return `
+    <div class="page-row" style="display:block">
+      <div style="display:flex;align-items:center;gap:8px">
+        <b style="font-size:13px;color:var(--ink)">${esc(s.name)}</b>
+        <span style="font-size:10.5px;font-weight:800;color:${state[1]}">${state[0]}</span>
+        <code style="margin-left:auto;font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--navy)${s.revoked?";text-decoration:line-through;opacity:.5":""}">${esc(s.code)}</code>
+      </div>
+      <div style="font-size:11px;color:var(--sub);margin:3px 0 6px">
+        만료 ${s.expiresAt ? fmtDay(s.expiresAt) : "무기한"} · 최근 30일 기기 ${s.devices}대${warn} · ${agoText(s.lastSeen)}
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+        <input type="date" value="${toDateInput(s.expiresAt)}" data-exp="${esc(s.id)}" aria-label="${esc(s.name)} 만료일" style="width:112px;padding:3px 4px;border:1.5px solid var(--line);border-radius:6px;font:inherit;font-size:11px">
+        ${btn("expires","저장")}
+        ${btn("reissue","재발급")}
+        ${s.revoked ? btn("restore","해지 취소") : btn("revoke","해지","#d95d5d")}
+        ${btn("delete","삭제")}
+      </div>
+    </div>`;
+}
+async function loadSubscribers(msg = ""){
+  const box = $("#subList");
+  if(!box) return;
+  try{
+    const d = await subApi();
+    box.innerHTML = (d.subscribers.length
+      ? d.subscribers.map(subRow).join("")
+      : `<div style="padding:8px 0">아직 발급한 코드가 없습니다.</div>`)
+      + `<div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">`
+      + (d.sharedCodeEnabled
+        ? `공용 비번(SUBSCRIBER_CODE)도 아직 쓸 수 있습니다. 모두 개인 코드로 옮기면 Netlify 환경변수에서 SUBSCRIBER_CODE를 지우고 재배포하세요. 그러면 공용 비번으로 로그인한 기기는 로그아웃됩니다.`
+        : `공용 비번은 꺼져 있어 개인 코드로만 들어올 수 있습니다.`)
+      + `</div>`;
+    if(msg) $("#subStatus").textContent = msg;
+  }catch(e){
+    box.textContent = e.message || "구독자 목록을 불러오지 못했습니다.";
+  }
+}
+function initSubscribers(){
+  const form = $("#subForm");
+  if(!form) return;
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    try{
+      const d = await subApi({ action:"create", name: $("#subName").value, expires: $("#subExpires").value });
+      $("#subName").value = ""; $("#subExpires").value = "";
+      await loadSubscribers(`${d.subscriber.name}님 코드 발급: ${d.subscriber.code} — 이 코드를 구독자에게 전달하세요.`);
+    }catch(e){ $("#subStatus").textContent = e.message; }
+    finally{ btn.disabled = false; }
+  });
+  $("#subList").addEventListener("click", async (ev) => {
+    const b = ev.target.closest("button[data-act]");
+    if(!b) return;
+    const act = b.dataset.act, id = b.dataset.id;
+    const name = b.closest(".page-row").querySelector("b").textContent;
+    const confirmText = {
+      reissue: `${name}님 코드를 새로 바꿀까요? 기존 코드와 이미 로그인한 기기는 모두 막힙니다.`,
+      revoke: `${name}님을 해지할까요? 바로 로그아웃되고 이 코드로 다시 들어올 수 없습니다.`,
+      delete: `${name}님을 목록에서 삭제할까요? 이 코드는 더 이상 쓸 수 없습니다.`,
+    }[act];
+    if(confirmText && !confirm(confirmText)) return;
+    const body = { action: act, id };
+    if(act === "expires") body.expires = $(`input[data-exp="${CSS.escape(id)}"]`).value;
+    b.disabled = true;
+    try{
+      const d = await subApi(body);
+      const msg = { expires:"만료일을 저장했습니다.", revoke:`${name}님을 해지했습니다.`, restore:`${name}님 해지를 취소했습니다.`,
+        reissue:`${name}님 새 코드: ${d.subscriber?.code} — 이 코드를 다시 전달하세요.`, delete:`${name}님을 삭제했습니다.` }[act];
+      await loadSubscribers(msg);
+    }catch(e){ $("#subStatus").textContent = e.message; b.disabled = false; }
+  });
+  loadSubscribers();
 }
 
 // ═══ 추천 서적 클릭(2026.09 신규) ═══

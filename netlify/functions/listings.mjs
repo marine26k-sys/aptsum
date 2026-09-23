@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
-import { hasValidSession, hasValidStatsSession } from "../../shared/sessions.mjs";
+import { hasValidStatsSession } from "../../shared/sessions.mjs";
+import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 
 // 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터 — 2026.09 신규.
@@ -57,7 +58,7 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
-    if (!isAdmin && !hasValidSession(request, secret, process.env.SUBSCRIBER_CODE)) return json({ error: "subscriber_required" }, 401);
+    if (!isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });

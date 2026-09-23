@@ -513,6 +513,9 @@
             } else if (r.status === 401) {
               const left = (await r.json().catch(() => ({}))).remaining;
               alert(Number.isInteger(left) ? `접근 코드가 맞지 않습니다. (남은 시도 ${left}회)` : '접근 코드가 맞지 않습니다.');
+            } else if (r.status === 403) {
+              const err = (await r.json().catch(() => ({}))).error;
+              alert(err === 'code_revoked' ? '해지된 접근 코드입니다. 운영자에게 문의해 주세요.' : '기간이 끝난 접근 코드입니다. 운영자에게 문의해 주세요.');
             } else if (r.status === 429) {
               // 로그인 시도 제한(5회 실패 시 30분 잠금, 2026.09)
               const sec = (await r.json().catch(() => ({}))).retryAfter || 1800;
