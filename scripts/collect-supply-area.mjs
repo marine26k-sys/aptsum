@@ -445,7 +445,10 @@ async function main() {
           const merged = new Map(prevArr.map((t) => [Math.round(t.exclusiveArea), t]));
           for (const v of Object.values(types)) merged.set(Math.round(v.exclusiveArea), v);
           out.items[dealName] = [...merged.values()];
-          delete out.misses[dealName];
+          // 부분 확보 단지가 이미 아는 타입만 다시 찾은 경우도 "못 찾음"과 같다 — 기록 안 하면 매 실행
+          // 같은 단지를 반복한다(run 35797942327: 429건 전부 "기존 N + 신규/갱신 N", 타입 증가 0).
+          if (merged.size > prevArr.length || merged.size >= targetAreas.size) delete out.misses[dealName];
+          else out.misses[dealName] = { at: new Date().toISOString(), n: (out.misses[dealName]?.n || 0) + 1 };
           console.log(`  ${label(c, dealName)}: ${out.items[dealName].length}/${targetAreas.size}개 타입 확보${prevArr.length ? ` (기존 ${prevArr.length} + 이번 신규/갱신 ${Object.keys(types).length})` : ""}`);
           if (debug.excludedRows.length) {
             // 2026.09 — 필터로 걸러낸 비주거/부속 행 개수. 몇 건 정도는 정상(관리동 등 실제로 존재)이지만
