@@ -1,6 +1,7 @@
 // Netlify Function — 방문자 통계 관리자 인증
 // STATS_ACCESS_CODE는 서버에서만 비교하고, 성공하면 서명된 HttpOnly 쿠키만 내려준다.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 
 export const config = {
   path: "/api/stats-auth",
@@ -66,7 +67,7 @@ function sessionCookie(value) {
   return `${COOKIE_NAME}=${value}; Path=/; Max-Age=${MAX_AGE_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
 }
 
-export default async (request) => {
+export default async (request, context) => {
   const accessCode = process.env.STATS_ACCESS_CODE;
   const secret = process.env.SUBSCRIBER_SESSION_SECRET;
 
@@ -89,9 +90,18 @@ export default async (request) => {
     return json({ error: "invalid_json" }, { status: 400 });
   }
 
-  if (typeof body?.code !== "string" || !equal(body.code, accessCode)) {
-    return json({ error: "invalid_code" }, { status: 401 });
+  // 로그인 시도 제한 — 5번 틀리면 30분 잠금(shared/login-throttle.mjs). 비공개 탭과 저장소를 분리해
+  // 한쪽에서 잠겨도 다른 쪽 로그인에는 영향이 없다.
+  const throttle = createLoginThrottle("stats-throttle", request, context, secret);
+  const lockedFor = await throttle.lockedFor();
+  if (lockedFor) return tooManyAttempts(json, lockedFor);
+
+  if (typeof body?.code !== "string" || body.code.length > 256 || !equal(body.code, accessCode)) {
+    const r = await throttle.fail();
+    if (r.locked) return tooManyAttempts(json, r.retryAfter);
+    return json({ error: "invalid_code", remaining: r.remaining }, { status: 401 });
   }
+  await throttle.success();
 
   return json(
     { authenticated: true },
