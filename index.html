@@ -5356,8 +5356,9 @@ function renderListingBudget(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_MIN_HH}세대 이상 · 입주가능·중층 이상 매물)</div>`
     : list.map((x,i)=>{
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
+        // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
-        <span class="nm">${listingNameHTML(x)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
+        <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion)}</small></span>
         <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${drop===null?'':chgHTML(x.ask - x.peak, drop)}</small></span>
       </div>${rkSep(i,list.length)}`; }).join('');
   const html = `
