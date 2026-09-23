@@ -494,7 +494,7 @@
           await sessionReady;
           if (verified) return;
 
-          const code = prompt('구독자 전용 코드를 입력하세요');
+          const code = prompt('비공개 탭 접근 코드를 입력하세요');
           if (code === null) return;
           try {
             const r = await fetch('/api/subscriber', {
@@ -509,12 +509,12 @@
               // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
               setTimeout(() => { if (typeof initFromURL === 'function') initFromURL(); }, 0);
             } else if (r.status === 401) {
-              alert('구독자 코드가 맞지 않습니다.');
+              alert('접근 코드가 맞지 않습니다.');
             } else {
-              alert('구독자 인증을 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+              alert('접근 코드 인증을 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.');
             }
           } catch (e) {
-            alert('네트워크 오류로 구독자 인증을 처리할 수 없습니다.');
+            alert('네트워크 오류로 접근 코드 인증을 처리할 수 없습니다.');
           }
         });
       }
@@ -547,12 +547,14 @@
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
     <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
-    <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독(2,600원/월)
+    <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독
          콘텐츠라 하나로 묶었다(운영자 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
          전용이었음). 박스권은 2026.08 신설 때부터 처음부터 구독 전용으로 만듦(운영자 요청).
          로고 5번 탭 후 서버 인증이 완료되어야 넷 다 같이 노출. 위치도 탭바 맨
-         끝으로 옮겨서 무료 탭들과 섞이지 않게 함. 내부 함수/변수명(searchSubway 등)은 그대로 유지.-->
-    <div class="tab-divider" id="tabSubDivider" style="display:none">구독 전용</div>
+         끝으로 옮겨서 무료 탭들과 섞이지 않게 함. 내부 함수/변수명(searchSubway 등)은 그대로 유지.
+         2026.09 — 화면 표기를 "구독 전용"→"비공개 탭"으로 변경(구독비 없음, 운영자 요청). 코드·쿠키·API의
+         subscriber 명칭은 그대로 둠(표기만 변경).-->
+    <div class="tab-divider" id="tabSubDivider" style="display:none">비공개 탭</div>
     <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가(동일 권역)</div>
     <div class="tab subscriber" id="tabLPL" style="display:none" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물 (입주가능, 중층 이상)</div>
@@ -763,7 +765,7 @@ let lastData = null;
 let newHighWeekOnly = false;
 function openNewHigh7(){
   if (!aptsumSubscriberGate.isVerified()) {
-    alert('구독자 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
     return;
   }
   newHighWeekOnly = true;
@@ -837,7 +839,7 @@ async function initFromURL(){
   newHighWeekOnly = requestedMode==='newhigh' && p.get('nh7')==='1';
   if(needsSubscriberSession(requestedMode)) await aptsumSubscriberGate.ready;
   if(!setMode(requestedMode, true)){
-    showError('구독자 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    showError('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
     return;
   }
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
@@ -1512,7 +1514,7 @@ function needsSubscriberSession(m){
 }
 function setMode(m, fromRestore){
   if (needsSubscriberSession(m) && !aptsumSubscriberGate.isVerified()) {
-    if (!fromRestore) alert('구독자 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    if (!fromRestore) alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
     return false;
   }
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
@@ -5071,7 +5073,7 @@ const listingMem = {}; // lawd → {asOf, items} (세션 내 메모리 캐시 �
 async function fetchListings(lawd){
   if(listingMem[lawd]) return listingMem[lawd];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}`, { credentials:'same-origin', cache:'no-store' });
-  if(r.status===401) throw Object.assign(new Error('구독자 인증이 필요합니다.'), { auth:true });
+  if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return (listingMem[lawd] = await r.json());
 }
@@ -5135,7 +5137,7 @@ async function searchListingUndervalue(myToken, lawd){
     pushView();
     saveLastRegionPref(lawd);
   }catch(err){
-    if(myToken===searchToken) showError(err.auth ? '구독자 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.' : '오류: ' + esc(err.message));
+    if(myToken===searchToken) showError(err.auth ? '비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.' : '오류: ' + esc(err.message));
   }finally{
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
