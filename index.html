@@ -5203,6 +5203,7 @@ function renderListingUndervalue(d){
 // - 급매 모아보기: 급매 표시 매물 중 3년 최고가보다 호가가 낮은 매물을 낮은 가격순으로
 // (실거래가 이하 매물 탭은 만들었다가 운영자 요청으로 머지 전에 삭제)
 const LISTING_MIN_HH = 300; // 네이버 실매물 탭 3종 공통 최소 세대수(2026.09 운영자 요청 — 저평가 실매물은 원래 400)
+const URGENT_MIN_ASK = 4; // 급매 모아보기 최소 호가(억) — 4억 미만 매물은 제외(2026.09 운영자 요청)
 const LISTING_BUDGET_BANDS = [
   { v:'0-3', l:'3억 미만', lo:0, hi:3 },
   ...Array.from({length:12}, (_,i)=>({ v:`${i+3}-${i+4}`, l:`${i+3}억대`, lo:i+3, hi:i+4 })), // 3억대~14억대
@@ -5248,7 +5249,7 @@ async function searchListingTab(myToken, lawd, tabMode){
     if(tabMode === 'listingurgent'){
       // 급매 모아보기: 실거래 조회 없이 엑셀의 3년 최고가(전고점) 대비 호가 변동률이 음수인 급매만(운영자 요청 — 처음엔
       // 최근 3개월 실거래 평균과 비교했으나 전고점 기준으로 변경). 화면엔 정수 %로 보이므로 반올림해 0%인 매물은 뺀다.
-      const rows = items.filter(x => x.peak > 0 && x.hh >= LISTING_MIN_HH).map(x => ({ ...x, area:x.ex, gapPct:(x.ask - x.peak) / x.peak * 100, gapAmt:R1(x.peak - x.ask) }))
+      const rows = items.filter(x => x.peak > 0 && x.hh >= LISTING_MIN_HH && x.ask >= URGENT_MIN_ASK).map(x => ({ ...x, area:x.ex, gapPct:(x.ask - x.peak) / x.peak * 100, gapAmt:R1(x.peak - x.ask) }))
         .filter(x => Math.round(x.gapPct) < 0)
         .sort((a,b)=> a.ask - b.ask || a.gapPct - b.gapPct); // 낮은 가격순(운영자 요청)
       d = { ...base, rows };
@@ -5301,7 +5302,7 @@ function renderListingUrgent(d){
   const list = d.rows;
   const multiRegion = new Set(list.map(x=>x.gu).filter(Boolean)).size > 1;
   const body = !list.length
-    ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (급매 표시 · ${LISTING_MIN_HH}세대 이상 · 3년 최고가 대비 낮은 호가)</div>`
+    ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (급매 표시 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 3년 최고가 대비 낮은 호가)</div>`
     : list.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
         <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</small><small><b style="color:#2563EB">${x.gapAmt.toFixed(1)}억↓ (${Math.round(x.gapPct)}%)</b></small></span>
@@ -5312,11 +5313,11 @@ function renderListingUrgent(d){
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가보다 싸게 나온 급매 (낮은 가격순)</div>
       <div class="rng" style="margin-bottom:4px">급매 = 네이버 부동산 매물에 '급매' 문구가 있는 매물</div>
-      ${hint(`호가 기준 · ${LISTING_MIN_HH}세대↑ · 평형별 최저가 매물만`)}
+      ${hint(`호가 ${URGENT_MIN_ASK}억↑ · ${LISTING_MIN_HH}세대↑ · 평형별 최저가 매물만`)}
       ${body}
     </div>
   </div>
-  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가(엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: 입주가능(세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가(엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
