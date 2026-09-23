@@ -121,7 +121,11 @@ async function submitStatsCode(event){
     const data = await res.json().catch(() => ({}));
     error.textContent = data.error === "stats_auth_not_configured"
       ? "Netlify에 STATS_ACCESS_CODE가 설정되지 않았습니다."
-      : "관리자 코드가 올바르지 않습니다.";
+      : data.error === "too_many_attempts"
+        ? `관리자 코드를 여러 번 틀려 잠시 잠겼습니다. 약 ${Math.ceil((data.retryAfter || 1800) / 60)}분 후 다시 시도하세요.`
+        : Number.isInteger(data.remaining)
+          ? `관리자 코드가 올바르지 않습니다. (남은 시도 ${data.remaining}회)`
+          : "관리자 코드가 올바르지 않습니다.";
   }catch(e){
     error.textContent = "인증 요청에 실패했습니다. 잠시 후 다시 시도하세요.";
   }finally{

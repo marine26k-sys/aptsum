@@ -511,7 +511,12 @@
               // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
               setTimeout(() => { if (typeof initFromURL === 'function') initFromURL(); }, 0);
             } else if (r.status === 401) {
-              alert('접근 코드가 맞지 않습니다.');
+              const left = (await r.json().catch(() => ({}))).remaining;
+              alert(Number.isInteger(left) ? `접근 코드가 맞지 않습니다. (남은 시도 ${left}회)` : '접근 코드가 맞지 않습니다.');
+            } else if (r.status === 429) {
+              // 로그인 시도 제한(5회 실패 시 30분 잠금, 2026.09)
+              const sec = (await r.json().catch(() => ({}))).retryAfter || 1800;
+              alert(`접근 코드를 여러 번 틀려 잠시 잠겼습니다. 약 ${Math.ceil(sec / 60)}분 후 다시 시도해 주세요.`);
             } else {
               alert('접근 코드 인증을 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.');
             }
