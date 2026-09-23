@@ -4691,7 +4691,7 @@ function renderNewHigh(d){
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
-      ${hint('매매·분양권·입주권 모두 포함', weekOnly ? '표본 3건 이상만 집계' : '표본 3건 이상만 집계 · <span class="nh">N</span> = 최근 7일 이내 계약')}
+      ${hint('매매·분양권·입주권 포함', weekOnly ? '표본 3건↑' : '표본 3건↑ · <span class="nh">N</span> = 최근 7일 계약')}
       ${rows(list, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${(!weekOnly && x.fresh7)?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal-dark)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `▲${x.gapAmt.toFixed(1)}억(${x.gapPct}%) · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
@@ -4720,7 +4720,7 @@ function renderNewLow(d){
 
     <div class="sec">
       <h3>하락 거래 단지</h3>
-      ${hint('1년 내 최고가 대비 10~25% 하락한 최근(30일) 거래만 집계', '300세대 이상·1~5층·직거래 제외 · 급매 신호로 참고')}
+      ${hint('1년 최고가보다 10~25% 싸게 팔린 최근 30일 거래', '300세대↑ · 1~5층·직거래 제외')}
       ${rows(d.newLow, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.hh?`·${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?`·${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val down">${x.prevMax? `<span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">1년 최고 ${x.prevMax.toFixed(1)}억 →</span>` : ''}${x.amt.toFixed(1)}억<small>${x.prevMax? `<b style="color:var(--teal-dark)">▼${x.gapAmt.toFixed(1)}억(${x.gapPct}%)</b> · ` : ''}${esc(x.date)}</small></span>`)}
@@ -4805,7 +4805,7 @@ function renderLongTermRise(d){
 
     <div class="sec">
       <h3>단지별 상세</h3>
-      ${hint(`"${d.periodM}개월 전"은 정확히 그 시점(30일 구간) 하나의 평균가`, '누적 평균 아님 · 표본 2건 이상(구간별) · 직거래 제외 · 많이 오른 순')}
+      ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val ${x.changeAmt>=0?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억(${Math.abs(x.changePct)}%)</b></small></span>`)}
@@ -4822,9 +4822,8 @@ function renderPriceBandRise(d){
   const isCurrentBasis = d.priceBandBasis==='current';
   const focusLabel = isCurrentBasis ? `현재 ${d.priceBandLabel}` : `${d.periodM}개월 전 ${d.priceBandLabel}`;
   const resultLabel = isCurrentBasis ? `현재 ${d.priceBandLabel}인 단지` : `${d.periodM}개월 전 ${d.priceBandLabel}였던 단지`;
-  const basisHint = isCurrentBasis
-    ? `최근 30일 평균가가 ${d.priceBand===30?'30억원 이상':`${d.priceBand}.0억 이상 ${d.priceBand+1}.0억 미만`}인 단지·평형`
-    : `${d.periodM}개월 전 30일 구간의 평균가가 ${d.priceBand===30?'30억원 이상':`${d.priceBand}.0억 이상 ${d.priceBand+1}.0억 미만`}인 단지·평형`;
+  const bandLabel = d.priceBand===30 ? '30억 이상' : `${d.priceBand}억대`;
+  const basisHint = isCurrentBasis ? `현재 ${bandLabel} 단지·평형` : `${d.periodM}개월 전 기준 ${bandLabel} 단지·평형`;
   const rows = d.rows.length
     ? d.rows.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}</small></span>
@@ -4846,7 +4845,7 @@ function renderPriceBandRise(d){
     </div>
     <div class="sec">
       <h3>${esc(resultLabel)} (${d.isLimited ? `${d.matchedCount}개 중 상위 ${d.rows.length}개` : `${d.rows.length}개`})</h3>
-      ${hint(basisHint, '현재 가격은 최근 30일 평균 · 단지와 평형을 각각 비교 · 많이 오른 순')}
+      ${hint(basisHint, '현재가 = 최근 30일 평균')}
       ${rows}
     </div>
   </div>
@@ -4872,7 +4871,7 @@ function renderJeonseLongTermRise(d){
 
     <div class="sec">
       <h3>전세가 상승 단지</h3>
-      ${hint(`"${d.periodM}개월 전"은 정확히 그 시점(30일 구간) 하나의 평균가`, '누적 평균 아님 · 표본 2건 이상(구간별) · 직거래 제외 · 많이 오른 순')}
+      ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?`(전용 ${Math.floor(x.area)}㎡)`:''}</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.build?`·${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val ${x.changeAmt>=0?'up':'down'}"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small><b style="color:${x.changeAmt>=0?'var(--teal-dark)':'var(--red)'}">${x.changeAmt>=0?'▲':'▼'}${Math.abs(x.changeAmt).toFixed(1)}억(${Math.abs(x.changePct)}%)</b></small></span>`)}
@@ -4930,7 +4929,7 @@ function renderInversion(d){
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      ${hint('평단가 비율이 6개월새 5%+ 벌어지면 저평가 표시', '거래량 상위 2개 평형(20~39평) 비교 · 1~4층·직거래 제외')}
+      ${hint('같은 단지 평형 간 평단가 차가 6개월새 5%↑ 벌어짐', '1~4층·직거래 제외')}
       ${rows}
     </div>
 
@@ -4952,8 +4951,8 @@ function renderShortUndervalue(d){
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 2개월 평균 가격이 서로 유사했던 (±2% 이내) 단지들 중, 최근 2개월 평균가가 비교군 중앙값보다 5~15% 낮은 단지</div>
-      ${hint('실거래가 기준 — 최근 호가와 다를 수 있음')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">시세가 비슷했던 단지보다 최근 2개월 5~15% 싸게 거래된 단지</div>
+      ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${divergenceHTML(d.divergence)}
     </div>
 
@@ -5000,8 +4999,8 @@ function renderPeak(d){
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">이전 6개월 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 최근 6개월 최고가가 비교군 중앙값보다 5~15% 낮은 단지</div>
-      ${hint('실거래가 기준 — 최근 호가와 다를 수 있음')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">최고가가 비슷했던 단지보다 최근 6개월 최고가가 5~15% 낮은 단지</div>
+      ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${peakDivergenceHTML(d.divergence)}
     </div>
 
@@ -5144,8 +5143,8 @@ function renderListingUndervalue(d){
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 구 안에서, 최근 3년 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 <b>입주가능·중층 이상</b> 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
-      ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '세안고·저층·1층 매물은 호가 계산에서 제외')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가가 비슷했던 같은 구 단지보다 호가가 5% 이상 싼 단지</div>
+      ${hint('호가 기준 · 기준일 이후 변동 미반영', '세안고·저층 매물 제외')}
       ${body}
     </div>
   </div>
@@ -5265,8 +5264,8 @@ function renderListingUrgent(d){
   <div class="card">
     ${listingHeaderHTML(d, '급매 모아보기', '최근 3년 최고가', '현재 급매 호가')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)"><b>급매</b> 표시가 있는 <b>입주가능·중층 이상</b> 매물 중, 호가가 최근 3년 실거래 최고가보다 낮은 매물 (낮은 가격순)</div>
-      ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '단지·전용면적별 최저 호가 매물에 급매 표시가 있는 경우만')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가보다 싸게 나온 급매 (낮은 가격순)</div>
+      ${hint('호가 기준 · 기준일 이후 변동 미반영', '평형별 최저가 매물만')}
       ${body}
     </div>
   </div>
@@ -5304,9 +5303,9 @@ function renderListingBudget(d){
   <div class="card">
     ${listingHeaderHTML(d, '예산별 실매물', null, null)}
     <div class="sec">
-      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">고른 금액대로 살 수 있는 <b>입주가능·중층 이상</b> 매물 (단지별·평형별 최저 호가) — 낮은 가격순</div>
+      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
-      ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', `${LISTING_BUDGET_MIN_HH}세대 이상 단지만 · 평형 필터로 20평대·30평대 등만 골라볼 수 있음`)}
+      ${hint('호가 기준 · 기준일 이후 변동 미반영', `${LISTING_BUDGET_MIN_HH}세대↑ · 평형별 최저가 매물만`)}
       ${body}
     </div>
   </div>
@@ -5327,8 +5326,8 @@ function renderLongPeak(d){
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.sameDongOnly? '같은 동 안에서, ' : ''}${d.prevYearLabel} 최고가가 서로 유사했던 (±2% 이내) 단지들 중 ${d.recentYearLabel} 최고가가 비교군 중앙값보다 5~15% 낮은 단지</div>
-      ${hint('실거래가 기준 — 최근 호가와 다를 수 있음')}
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.sameDongOnly? '같은 동에서 ' : ''}${d.prevYearLabel} 최고가가 비슷했던 단지보다 ${d.recentYearLabel} 최고가가 5~15% 낮은 단지</div>
+      ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
     </div>
 
