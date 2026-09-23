@@ -210,7 +210,7 @@ function renderList(){
             <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
-          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div></div>
+          <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} · ${c.py}평${c.ar?` (전용 ${c.ar})`:''}</div></div>
         </div>
       `;
       }).join("")}
@@ -236,7 +236,7 @@ function heatmapHTML(){
             <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
               <div class="tier-heat-region">${showProvince?`${esc(f.province)} `:''}${esc(f.gu)}</div>
               <div class="tier-heat-name">${esc(f.nm)}</div>
-              <div class="tier-heat-amt">${tierFmtAmt(f.amt)} (${f.py}평${f.ar?`, 전용 ${f.ar}㎡`:''})</div>
+              <div class="tier-heat-amt">${tierFmtAmt(f.amt)} · ${f.py}평${f.ar?` (전용 ${f.ar})`:''}</div>
               <div class="tier-heat-price">${tierFmtPy(f.ppy)}<span>/평</span></div>
             </div>
           `;
@@ -355,7 +355,7 @@ function dongHeatmapHTML(){
         <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${grade.color}" onclick="setDong('${esc(c.dong)}')">
           <div class="tier-heat-region">${esc(c.dong)}</div>
           <div class="tier-heat-name">${esc(c.nm)}</div>
-          <div class="tier-heat-amt">${tierFmtAmt(c.amt)} (${c.py}평${c.ar?`, 전용 ${c.ar}㎡`:''})</div>
+          <div class="tier-heat-amt">${tierFmtAmt(c.amt)} · ${c.py}평${c.ar?` (전용 ${c.ar})`:''}</div>
           <div class="tier-heat-price">${tierFmtPy(c.ppy)}<span>/평</span></div>
         </div>
       `;
@@ -405,7 +405,7 @@ function render(){
 
     <div class="tier-disclaimer">
       ${esc(tierData.meta.basis)}.<br>
-      단지마다 여러 평형(목록의 "○○평" 표기) 중 평단가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. ${Math.round(tierData.meta.months/12*10)/10}년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
+      단지마다 여러 평형 (목록의 "○○평" 표기) 중 평단가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. ${Math.round(tierData.meta.months/12*10)/10}년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
       <a href="./index.html">단지별 상세 분석 보기</a>
     </div>
   `;
