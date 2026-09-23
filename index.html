@@ -5066,7 +5066,7 @@ function renderPeak(d){
 }
 
 // ═══ 저평가 실매물 (입주가능, 중층 이상) — 2026.09 신규, 구독 전용 ═══
-// "최근 5년 실거래 최고가가 서로 비슷했던(±2%) 단지들 중, 지금 나와 있는 중층 이상 매물의 최저 호가가
+// "최근 3년 실거래 최고가가 서로 비슷했던(±2%) 단지들 중, 지금 나와 있는 중층 이상 매물의 최저 호가가
 // 비교군보다 크게 낮은 단지". 기존 "연간 저평가"(25년 최고가 vs 26년 최고가, 둘 다 실거래)의 비교군 규칙을
 // 그대로 따르되, 최근 쪽을 실매물 최저 호가로 바꾼 것. 데이터는 운영자가 stats.html에서 올린 네이버 실매물
 // 엑셀의 요약본(단지ID+전용면적 단위: peak=실거래최고가, ask=입주가능 & 중층·고층 매물 중 최저 호가)이며, 구독 세션이
@@ -5088,7 +5088,7 @@ function analyzeListingUndervalue(all){
   rows.forEach(r=>{
     const nearest = rows
       .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && pyBand(o.py)===pyBand(r.py) // 같은 구 안에서 비교(2026.09 운영자 요청 — 동일 권역(같은 동)은 비교군이 너무 적어 구 단위로 되돌림)
-        && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 5년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 5년치(2021.08~) 중 최고가
+        && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 3년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 3년치 중 최고가(2026.09 운영자가 엑셀 추출 기간을 5년→3년으로 변경)
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
       .slice(0,5);
@@ -5176,7 +5176,7 @@ function renderListingUndervalue(d){
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평(전용 ${x.area}㎡)</b>${(multiRegion&&x.gu)?` · ${esc(x.gu)} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
-        <tr><th>단지</th><th>평형</th><th class="tr-r">5년 최고가</th><th class="tr-r">최저 호가</th></tr>
+        <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
         <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">전용 ${x.area}㎡</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--red)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
         ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">전용 ${p.area}㎡</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r">${p.ask.toFixed(1)}억${listingSub(p)}</td></tr>`).join('')}
       </table></div>
@@ -5195,16 +5195,16 @@ function renderListingUndervalue(d){
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">입주 가능 · 중층 이상</span>
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">같은 구 비교 <span style="opacity:.5">|</span> 기준일 ${esc(d.asOf||'-')}</span>
       </div>
-      ${hdVs('최근 5년 최고가', '현재 최저 실매물')}
+      ${hdVs('최근 3년 최고가', '현재 최저 실매물')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 구 안에서, 최근 5년 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 <b>입주가능·중층 이상</b> 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">같은 구 안에서, 최근 3년 실거래 최고가가 서로 유사했던 (±2% 이내) 단지들 중, 현재 <b>입주가능·중층 이상</b> 매물의 최저 호가가 비교군 중앙값보다 5% 이상 낮은 단지 (격차 큰 순)</div>
       ${hint('실매물 호가 기준 — 기준일 이후 거래·가격 변경은 반영 안 됨', '세안고·저층·1층 매물은 호가 계산에서 제외')}
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최근 5년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 30% 넘게 낮은 호가는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 30% 넘게 낮은 호가는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 

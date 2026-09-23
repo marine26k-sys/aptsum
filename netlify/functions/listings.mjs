@@ -57,7 +57,7 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
-    if (!isAdmin && !hasValidSession(request, secret)) return json({ error: "subscriber_required" }, 401);
+    if (!isAdmin && !hasValidSession(request, secret, process.env.SUBSCRIBER_CODE)) return json({ error: "subscriber_required" }, 401);
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });

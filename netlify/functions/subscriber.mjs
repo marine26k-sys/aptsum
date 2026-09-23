@@ -38,7 +38,7 @@ export default async (request) => {
   }
 
   if (request.method === "GET") {
-    return response({ subscribed: hasValidSession(request, sessionSecret) });
+    return response({ subscribed: hasValidSession(request, sessionSecret, accessCode) });
   }
 
   if (request.method !== "POST") {
@@ -60,7 +60,7 @@ export default async (request) => {
     return response({ error: "invalid_code" }, { status: 401 });
   }
 
-  const token = createSession(sessionSecret);
+  const token = createSession(sessionSecret, accessCode);
   return response(
     { subscribed: true },
     { headers: { "Set-Cookie": sessionCookie(token) } }

@@ -28,21 +28,31 @@ export function sign(payload, secret) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-export function createSession(secret) {
+// 구독자 쿠키 서명 키 = 비밀키 + 현재 비번(SUBSCRIBER_CODE)에서 파생 — 2026.09 추가.
+// 비번을 바꾸고 재배포하면 서명 키가 달라져 기존 로그인 쿠키가 전부 무효가 된다
+// (전에는 비밀키로만 서명해서, 비번을 바꿔도 이미 로그인한 기기는 30일간 계속 조회됐다 — 운영자 지적).
+// 비번 원문은 쿠키에 들어가지 않는다(HMAC 키 파생에만 쓰임).
+function subscriberKey(secret, code) {
+  return createHmac("sha256", secret).update(`subscriber-code:${code}`).digest("base64url");
+}
+
+export function createSession(secret, code) {
+  const key = subscriberKey(secret, code);
   const payload = Buffer.from(JSON.stringify({
     version: 1,
     expiresAt: Date.now() + MAX_AGE_SECONDS * 1000,
   }), "utf8").toString("base64url");
-  return `${payload}.${sign(payload, secret)}`;
+  return `${payload}.${sign(payload, key)}`;
 }
 
-export function hasValidSession(request, secret) {
+export function hasValidSession(request, secret, code) {
+  if (!code) return false;
   const token = cookieValue(request, COOKIE_NAME);
   if (!token) return false;
 
   const pieces = token.split(".");
   if (pieces.length !== 2 || !pieces[0] || !pieces[1]) return false;
-  if (!sameValue(pieces[1], sign(pieces[0], secret))) return false;
+  if (!sameValue(pieces[1], sign(pieces[0], subscriberKey(secret, code)))) return false;
 
   try {
     const payload = JSON.parse(Buffer.from(pieces[0], "base64url").toString("utf8"));
