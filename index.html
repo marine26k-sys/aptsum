@@ -5040,9 +5040,9 @@ function analyzeListingUndervalue(all){
     if(nearest.length < 2) return; // 본인 포함 3개 이상일 때만
     const askMedian = median(nearest.map(o=>o.ask));
     const gapPct = Math.round((r.ask - askMedian)/askMedian*100);
-    // 5% 이상 낮으면 채택. 25% 이상 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
-    // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25%.
-    if(gapPct <= -5 && gapPct > -25){
+    // 5% 이상 낮으면 채택. 25% 넘게(-26% 이하) 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
+    // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25% 넘게 — -25%까지는 표시.
+    if(gapPct <= -5 && gapPct >= -25){
       const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, fl:o.fl, dong:o.dong, umd:o.umd})).sort((a,b)=>b.ask-a.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
@@ -5149,7 +5149,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 중앙값보다 25% 이상 낮은 호가는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대(20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · 400세대 이상 · 입주가능 매물만(세안고 제외) · 중층·고층 매물만(저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가(-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
