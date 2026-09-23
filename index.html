@@ -54,10 +54,6 @@
   .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
-  /* 네이버 급매 탭 — 형광초록(2026.09 운영자 요청). 선택 시 배경이 밝아 글자는 짙은 초록으로 */
-  .tab.subscriber.neon{border-color:#39FF14;background:#EFFFE9}
-  .tab.subscriber.neon:not(.on){color:#1A7A0A}
-  .tab.subscriber.neon.on{background:#39FF14;border-color:#39FF14;color:#0B3D02;box-shadow:0 3px 10px rgba(57,255,20,.45)}
 
   /* 검색 컨트롤은 분석 탭 알약 버튼과 같은 밀도로 맞춘다. 기존 16px·10px 패딩은 모바일에서
      금액대별 3개 선택창이 카드 대부분을 차지해 탭보다 과하게 커 보였음. */
@@ -94,7 +90,6 @@
   .hd-logo span{font-size:13px;font-weight:800;color:#00C2C2}
   .hd-badge{font-size:13px;font-weight:800;color:#fff;background:var(--teal);padding:6px 13px;border-radius:16px}
   .hd-badge.subscriber{background:#E0B84D;color:#4A3607}
-  .hd-badge.neon{background:#39FF14;color:#0B3D02}
   .price-band-meta{opacity:1!important;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
   .price-band-focus{display:inline-block;background:#E0B84D;color:#4A3607;font-size:14px;font-weight:900;line-height:1.2;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(224,184,77,.3)}
   .price-band-context{color:rgba(255,255,255,.88);font-size:12px;font-weight:700}
@@ -603,7 +598,7 @@
     <div class="tab-divider" id="tabListingDivider" style="display:none">네이버 실매물 기준</div>
     <div class="tab subscriber" id="tabLPL" style="display:none" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물 (입주가능, 중층 이상)</div>
     <div class="tab subscriber" id="tabLBG" style="display:none" onclick="setMode('listingbudget')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>예산별 실매물</div>
-    <div class="tab subscriber neon" id="tabLUR" style="display:none" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>네이버 급매</div>
+    <div class="tab subscriber" id="tabLUR" style="display:none" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>네이버 급매</div>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
@@ -5321,7 +5316,7 @@ function renderListingUrgent(d){
       </div>${rkSep(i,list.length)}`).join('');
   const html = `
   <div class="card">
-    ${listingHeaderHTML(d, '네이버 급매', '최근 3년 최고가', '현재 급매 호가', undefined, 'neon')}
+    ${listingHeaderHTML(d, '네이버 급매', '최근 3년 최고가', '현재 급매 호가')}
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가보다 싸게 나온 급매 (낮은 가격순)</div>
       <div class="rng" style="margin-bottom:4px">급매 = 네이버 부동산 매물에 '급매' 문구가 있는 매물</div>
