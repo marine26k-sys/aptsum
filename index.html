@@ -5238,10 +5238,10 @@ function listingInfoHTML(x, multiRegion){
   const fl = [listingFloorLabel(x.fl), x.dong].filter(Boolean).join(' ');
   return `<b style="color:var(--teal-dark)">${esc(x.py)}평(전용 ${x.area||x.ex}㎡)</b>·${(multiRegion&&x.gu)?`${esc(x.gu)} `:''}${esc(x.umd)}${x.built?`·${buildAgeLabel(x.built)}`:''}${x.hh?`·${x.hh.toLocaleString()}세대`:''}${fl?`·${esc(fl)}`:''}`;
 }
-function listingHeaderHTML(d, badge, vsPrev, vsRecent){
+function listingHeaderHTML(d, badge, vsPrev, vsRecent, title){
   return `<div class="card-hd">
       ${hdTop(badge, true)}
-      <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
+      <h2>${esc(title || shortRegionLabel(d.scopeLabel||''))}</h2>
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">입주 가능 · 중층 이상</span>
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">${d.pyBand?`<b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span> `:''}기준일 ${esc(d.asOf||'-')}</span>
@@ -5302,7 +5302,7 @@ function renderListingBudget(d){
       </div>${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
-    ${listingHeaderHTML(d, '예산별 실매물', null, null)}
+    ${listingHeaderHTML(d, '예산별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
