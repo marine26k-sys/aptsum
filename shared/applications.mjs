@@ -19,6 +19,8 @@
 //   phone:<번호>    { id }  — 그 번호로 가장 최근에 낸 신청서(결제 통보를 신청서에 잇는 색인)
 //   mul:<결제번호>   { id }  — 결제 완료된 신청서(같은 통보 재전송·환불 통보를 찾는 색인)
 //   status: pending(결제 대기) → paid(결제 완료·코드 발급) | refunded(결제 취소·코드 해지)
+//           | canceled(결제 요청 취소 — PayApp에서 요청을 취소했거나 운영자가 stats.html에서 정리. 같은 신청서로 다시
+//             결제하면 그대로 결제 완료로 이어진다)
 //
 // 환경변수: PAYAPP_USERID(판매자 아이디), PAYAPP_LINKKEY(연동 KEY), PAYAPP_LINKVAL(연동 VALUE)
 //           PAYAPP_LINK_URL(결제 링크, 기본 https://www.payapp.kr/L/z4l7c4)
@@ -113,14 +115,14 @@ async function findApplication(store, mulNo, phone, now) {
   if (phone) {
     const idx = await getJSON(store, `phone:${phone}`);
     const app = idx && await getJSON(store, `app:${idx.id}`);
-    if (app && app.status === "pending" && now - app.createdAt <= MATCH_WINDOW_MS) return app;
+    if (app && (app.status === "pending" || app.status === "canceled") && now - app.createdAt <= MATCH_WINDOW_MS) return app;
   }
   return null;
 }
 
 // PayApp 통보 처리. 반환값의 ok가 false면 연동 정보가 틀린 요청(위조 가능성) — 그 외엔 PayApp에 "SUCCESS"를 돌려준다
 // (같은 통보를 여러 번 받아도 결과가 같게 처리).
-//   pay_state 4 = 결제 완료, 9·64 = 승인 취소(환불), 1 = 결제 요청(무시)
+//   pay_state 4 = 결제 완료, 9·64 = 승인 취소(환불), 8·16·32 = 결제 요청 취소, 1 = 결제 요청(무시)
 export async function handleFeedback(p, {
   env = process.env, appStore = applicationStore(), subStore = subscriberStore(), now = Date.now(),
 } = {}) {
@@ -176,6 +178,20 @@ export async function handleFeedback(p, {
     app.status = "refunded";
     await appStore.setJSON(`app:${app.id}`, app);
     return { ok: true, result: "refunded" };
+  }
+
+  if (state === "8" || state === "16" || state === "32") {
+    // 결제 요청 취소 — 결제번호로 이어진 신청서가 없으면 같은 번호의 최근 결제 대기 신청서를 찾는다
+    const idx = mulNo ? await getJSON(appStore, `mul:${mulNo}`) : null;
+    let app = idx && await getJSON(appStore, `app:${idx.id}`);
+    if (!app && phone) {
+      const pidx = await getJSON(appStore, `phone:${phone}`);
+      app = pidx && await getJSON(appStore, `app:${pidx.id}`);
+    }
+    if (!app || app.status !== "pending") return { ok: true, result: "ignored" };
+    app.status = "canceled";
+    await appStore.setJSON(`app:${app.id}`, app);
+    return { ok: true, result: "canceled" };
   }
 
   return { ok: true, result: "ignored" };

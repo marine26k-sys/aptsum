@@ -129,6 +129,16 @@ test('concurrent duplicate notifications issue only one code', async () => {
   assert.equal(subs().length, 1);
 });
 
+test('a canceled payment request marks the application canceled, and a later payment still matches it', async () => {
+  const { appStore, app, feed } = await setup();
+  assert.equal((await feed({ pay_state: '8', mul_no: '' })).result, 'canceled');
+  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'canceled');
+  assert.equal((await feed({ pay_state: '16', mul_no: '' })).result, 'ignored');
+  const r = await feed({ pay_state: '4' });
+  assert.equal(r.result, 'issued');
+  assert.equal(r.appId, app.id);
+});
+
 test('expiry date is counted in KST', () => {
   assert.equal(expiryDateAfter(30, Date.parse('2026-09-24T23:30:00+09:00')), '2026-10-24');
 });

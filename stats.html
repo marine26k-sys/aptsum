@@ -387,6 +387,7 @@ function appLine(a){
       </div>
       <div style="color:var(--sub)">${esc(appPhone(a))}${a.region ? ` · ${esc(a.region)} · ${esc(a.budget)}` : ""}</div>
       ${a.status === "paid" ? deliverBox(a) : ""}
+      ${a.status === "pending" ? `<button data-cancel="${esc(a.id)}" style="margin-top:3px;padding:3px 8px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--sub);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">취소 처리</button>` : ""}
     </div>`;
 }
 function appGroup(key, title, list){
@@ -421,6 +422,19 @@ async function loadApplications(){
 function initApplications(){
   const box = $("#appList");
   if(!box) return;
+  // 결제 대기 신청서 정리(결제 안 하고 나간 건, PayApp에서 요청을 취소한 건)
+  box.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("button[data-cancel]");
+    if(!b) return;
+    if(!confirm("이 신청서를 결제 취소로 정리할까요? (같은 신청서로 다시 결제하면 정상적으로 코드가 발급됩니다)")) return;
+    b.disabled = true;
+    try{
+      const res = await fetch("/api/apply", { method:"POST", cache:"no-store", credentials:"same-origin",
+        headers:{ "content-type":"application/json" }, body: JSON.stringify({ action:"cancel", id: b.dataset.cancel }) });
+      if(!res.ok && res.status !== 409) throw new Error();
+    }catch(e){ alert("처리하지 못했습니다. 잠시 후 다시 시도하세요."); }
+    loadApplications();
+  });
   box.addEventListener("change", async (ev) => {
     const cb = ev.target.closest("input[data-deliver]");
     if(!cb) return;
