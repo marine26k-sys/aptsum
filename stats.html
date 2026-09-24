@@ -153,6 +153,7 @@ async function load(){
     if(!res.ok) throw new Error("failed");
     render(await res.json());
     loadBookClicks();
+    initTabClicks();
     loadListingMeta();
     initSubscribers();
     initApplications();
@@ -201,6 +202,16 @@ function render(d){
       `).join("")}
     </div>
 
+    <div class="card" id="tabCard">
+      <div class="card-title">탭별 클릭 <span style="font-size:10.5px;font-weight:700;color:var(--sub)">· 메인 방문자 중 그 탭을 눌러 본 사람</span></div>
+      <div id="tabPeriod" style="display:flex;gap:4px;margin-bottom:8px">
+        <button data-p="d1" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">오늘</button>
+        <button data-p="d7" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">최근 7일</button>
+        <button data-p="d30" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">최근 30일</button>
+      </div>
+      <div id="tabBody" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
+    </div>
+
     <div class="card" id="bookCard">
       <div class="card-title">추천 서적 클릭 <span style="font-size:10.5px;font-weight:700;color:var(--sub)">· 쿠팡 파트너스 배너</span></div>
       <div id="bookBody" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
@@ -237,6 +248,59 @@ function render(d){
 
     <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
   `;
+  setupCollapsible();
+}
+
+// ═══ 카드 접기(2026.09 운영자 요청) ═══
+// 카드가 늘어나 스크롤이 길어져서, 맨 위 전체/오늘 방문 숫자만 늘 보이고 나머지 카드는 제목만 보이게 접어 둔다.
+// 제목을 누르면 펼쳐지고, 펼친 카드는 이 브라우저에 기억해 다음에 열 때도 펼쳐 둔다.
+// (카드 안 내용은 그대로 불러와 두므로 펼치면 바로 보인다. 접힌 동안에도 제목 옆 배지로 처리할 건수를 알린다.)
+const OPEN_KEY = "aptsum_stats_open";
+function loadOpenCards(){ try{ return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]")); }catch(e){ return new Set(); } }
+function saveOpenCards(set){ try{ localStorage.setItem(OPEN_KEY, JSON.stringify([...set])); }catch(e){} }
+function setupCollapsible(){
+  const open = loadOpenCards();
+  $("#app").querySelectorAll(".card").forEach((card, i) => {
+    const title = card.querySelector(".card-title");
+    if(!title) return;
+    const key = card.id || `card${i}`;
+    const body = document.createElement("div");
+    while(title.nextSibling) body.appendChild(title.nextSibling);
+    card.appendChild(body);
+    const arrow = document.createElement("span");
+    arrow.className = "fold-arrow";
+    arrow.style.cssText = "float:right;color:var(--sub);font-size:12px;transition:transform .15s";
+    arrow.textContent = "▾";
+    title.appendChild(arrow);
+    title.style.cursor = "pointer";
+    title.setAttribute("role", "button");
+    const set = (isOpen) => {
+      body.hidden = !isOpen;
+      title.style.marginBottom = isOpen ? "" : "0";
+      arrow.style.transform = isOpen ? "" : "rotate(-90deg)";
+    };
+    set(open.has(key));
+    title.addEventListener("click", () => {
+      const now = body.hidden;
+      set(now);
+      now ? open.add(key) : open.delete(key);
+      saveOpenCards(open);
+    });
+  });
+}
+// 접힌 카드 제목 옆에 붙는 알림 배지(예: 선별 메일 보낼 건)
+function setCardBadge(cardId, text){
+  const title = document.querySelector(`#${cardId} .card-title`);
+  if(!title) return;
+  let b = title.querySelector(".card-badge");
+  if(!text){ b?.remove(); return; }
+  if(!b){
+    b = document.createElement("span");
+    b.className = "card-badge";
+    b.style.cssText = "margin-left:6px;padding:1px 7px;border-radius:9px;background:#d95d5d;color:#fff;font-size:10.5px;font-weight:800;vertical-align:1px";
+    title.insertBefore(b, title.querySelector(".fold-arrow"));
+  }
+  b.textContent = text;
 }
 
 // ═══ 구독자별 개인 코드(2026.09 신규) ═══
@@ -411,6 +475,7 @@ async function loadApplications(){
     const todo = apps.filter(a => a.status === "paid" && !a.delivered);
     const waiting = apps.filter(a => a.status === "pending" && Date.now() - a.createdAt < 86400000);
     const done = apps.filter(a => (a.status === "paid" && a.delivered) || (a.status !== "paid" && a.status !== "pending"));
+    setCardBadge("appCard", todo.length ? `메일 보낼 건 ${todo.length}` : "");
     box.innerHTML = (d.paymentEnabled ? "" : `<div style="padding:6px 8px;margin-bottom:6px;border-radius:8px;background:#FFF4E5;color:#9A5B00;font-size:11px;line-height:1.6">PayApp 결제 연동 전입니다. Netlify 환경변수에 PAYAPP_USERID · PAYAPP_LINKKEY · PAYAPP_LINKVAL을 넣고 재배포하면 신청 페이지에서 결제가 열립니다. 그 전까지 신청 페이지는 기존 네이버폼으로 안내합니다.</div>`)
       + `<div style="font-size:12px;font-weight:800;color:${todo.length ? "#d95d5d" : "var(--teal-dark)"};margin-bottom:2px">${todo.length ? `선별 메일 보낼 건 ${todo.length}건` : "지금 처리할 건이 없습니다."}</div>`
       + todo.map(appRow).join("")
@@ -447,6 +512,60 @@ function initApplications(){
     loadApplications();
   });
   loadApplications();
+}
+
+// ═══ 탭별 클릭(2026.09 신규) ═══
+// index.html이 방문 1회당 한 번 보내는 "누른 탭 목록"을 탭별·기간별로 합친 값(netlify/functions/tab-clicks.mjs).
+// 같은 사람이 같은 탭을 하루에 여러 번 눌러도 1회 — 그래서 방문자 수로 나누면 "눌러 본 사람 비율"이 된다.
+const TAB_LABELS = [
+  ["국토부 · 단지", [["tabC","단지 분석"],["tabCmp","단지 비교"]]],
+  ["국토부 · 입지", [["tabTM","급지 분석"],["tabSL","교통 호재"],["tabSub","역세권"]]],
+  ["국토부 · 랭킹", [["tabR","지역 랭킹"],["tabV","거래량 랭킹"],["tabPP","평단가"],["tabGap","전세가율"]]],
+  ["국토부 · 흐름", [["tabNH","신고가"],["tabLTR","매매 변동률"],["tabJLTR","전세 변동률"]]],
+  ["국토부 · 저평가", [["tabSU","단기 저평가"],["tabP","반기 저평가"],["tabLP","연간 저평가"],["tabINV","평형 비교 저평가"]]],
+  ["네이버 실매물", [["tabLPL","저평가 실매물"],["tabLBG","예산별 실매물"],["tabLUR","급매 선별"]]],
+  ["비공개 탭", [["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"]]],
+  ["신청", [["tabApply","전 지역 이용 신청 버튼"]]],
+];
+let tabData = null, tabPeriod = "d7";
+function renderTabClicks(){
+  const box = $("#tabBody");
+  document.querySelectorAll("#tabPeriod button").forEach(b => {
+    const on = b.dataset.p === tabPeriod;
+    b.style.background = on ? "var(--teal)" : "#fff"; b.style.color = on ? "#fff" : "var(--ink)"; b.style.borderColor = on ? "var(--teal)" : "var(--line)";
+  });
+  const c = tabData[tabPeriod] || {}, visitors = tabData.visitors?.[tabPeriod] || 0;
+  const all = TAB_LABELS.flatMap(([, list]) => list.map(([id]) => c[id] || 0));
+  const max = Math.max(...all, 1);
+  const days = tabData.since + 1; // 집계가 시작된 뒤 지난 날 수(0이면 아직 기록 없음)
+  box.innerHTML = `
+    <div style="font-size:11px;color:var(--sub);margin-bottom:6px">같은 기간 메인 방문자 <b style="color:var(--navy)">${visitors.toLocaleString()}명</b> 기준${days > 0 && days < ({d1:1,d7:7,d30:30})[tabPeriod] ? ` · 집계 시작 ${days}일째라 기간이 짧습니다` : ""}</div>
+    ${TAB_LABELS.map(([group, list]) => `
+      <div style="font-size:10.5px;font-weight:800;color:var(--teal-dark);margin:8px 0 2px">${group}</div>
+      ${list.map(([id, label]) => {
+        const n = c[id] || 0, pct = visitors ? Math.round(n / visitors * 1000) / 10 : null;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+          <div style="flex:none;width:118px;font-size:11.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="flex:1;height:7px;background:var(--slate-bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.round(n / max * 100)}%;background:var(--teal);border-radius:4px"></div></div>
+          <div style="flex:none;width:74px;text-align:right;font-size:11px"><b style="color:var(--navy)">${n.toLocaleString()}</b>${pct !== null ? ` <span style="color:var(--sub)">${pct}%</span>` : ""}</div>
+        </div>`;
+      }).join("")}`).join("")}
+    <div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">방문자가 페이지를 떠날 때 그 방문에서 누른 탭을 모아 보내므로, 몇 분 늦게 반영될 수 있습니다. 비공개 탭은 인증한 사람에게만 보여서 비율이 낮게 나옵니다.</div>`;
+}
+async function initTabClicks(){
+  const box = $("#tabBody");
+  if(!box) return;
+  $("#tabPeriod").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-p]");
+    if(!b || !tabData) return;
+    tabPeriod = b.dataset.p; renderTabClicks();
+  });
+  try{
+    const res = await fetch("/api/tab-clicks", { cache:"no-store", credentials:"same-origin" });
+    if(!res.ok) throw new Error();
+    tabData = await res.json();
+    renderTabClicks();
+  }catch(e){ box.textContent = "탭별 클릭을 불러오지 못했습니다."; }
 }
 
 // ═══ 추천 서적 클릭(2026.09 신규) ═══
