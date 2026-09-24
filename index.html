@@ -48,8 +48,11 @@
   .tab:not(.on):active{background:var(--teal-soft)}
   /* 구독 전용 탭(역세권) 구분선 + 라벨 — 운영자 확인용 비밀탭(하락 거래·연간 저평가(동일 권역))과 섞이지 않도록
      시각적으로 분리(2026.08, 운영자 요청) */
-  /* 국토부 실거래 탭 묶음 소제목(단지 보기·입지·랭킹·가격 흐름·저평가 찾기) — 청록 구분선보다 한 단계 약하게 */
-  .tab-sub{flex-basis:100%;margin:3px 0 -2px 3px;font-size:10.5px;font-weight:700;color:var(--sub)}
+  /* 국토부 실거래 탭 묶음(단지 보기·입지·랭킹·가격 흐름·저평가 찾기) — 탭 영역이 길어지지 않도록 소제목을 따로 한 줄로
+     두지 않고 묶음 왼쪽 칸에 붙인다(2026.09 운영자 요청). 탭이 넘치면 오른쪽 칸 안에서만 줄바꿈된다. */
+  .tab-grp{flex-basis:100%;display:flex;align-items:flex-start;gap:5px}
+  .tab-grp-name{flex:none;width:44px;padding-top:6px;font-size:10px;font-weight:700;line-height:1.25;color:var(--sub);word-break:keep-all}
+  .tab-grp-tabs{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px}
   /* 탭 묶음 구분선(국토부 실거래 기준·비공개 탭·네이버 실매물 기준) — 2026.09 시인성 개선(운영자 요청): 회색 10px → 청록 11.5px 굵게 */
   .tab-divider{flex-basis:100%;display:flex;align-items:center;gap:6px;margin:2px 0 0;font-size:11.5px;font-weight:800;color:var(--teal)}
   .tab-divider::before{content:'';flex:none;width:10px;height:1.5px;background:var(--teal-light)}
@@ -596,27 +599,47 @@
     <div class="tab-divider" id="tabRtmsDivider" style="margin-top:0">국토부 실거래 기준</div>
     <!-- 국토부 실거래 탭 유형별 묶음(2026.09 운영자 요청) — 처음 온 사람이 "무엇을 알고 싶은지"로 탭을 고를 수 있게 소제목을 단다.
          탭 기능·id·공유 링크는 그대로이고 위치만 묶음별로 바꿨다. -->
-    <div class="tab-sub">단지 보기</div>
-    <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
-    <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
-    <div class="tab-sub">입지</div>
-    <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
-    <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
-    <div class="tab" id="tabSub" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
-    <div class="tab-sub">랭킹</div>
-    <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
-    <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
-    <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>전용면적 평단가</div>
-    <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
-    <div class="tab-sub">가격 흐름</div>
-    <div class="tab" id="tabNH" onclick="newHighWeekOnly=false;setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
-    <div class="tab" id="tabLTR" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</div>
-    <div class="tab" id="tabJLTR" onclick="setMode('jeonselongtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</div>
-    <div class="tab-sub">저평가 찾기</div>
-    <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
-    <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
-    <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
-    <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">단지 보기</div>
+      <div class="tab-grp-tabs">
+          <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
+          <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">입지</div>
+      <div class="tab-grp-tabs">
+          <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
+          <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
+          <div class="tab" id="tabSub" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">랭킹</div>
+      <div class="tab-grp-tabs">
+          <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역 랭킹</div>
+          <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</div>
+          <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</div>
+          <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">가격 흐름</div>
+      <div class="tab-grp-tabs">
+          <div class="tab" id="tabNH" onclick="newHighWeekOnly=false;setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
+          <div class="tab" id="tabLTR" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</div>
+          <div class="tab" id="tabJLTR" onclick="setMode('jeonselongtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</div>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">저평가 찾기</div>
+      <div class="tab-grp-tabs">
+          <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기 저평가</div>
+          <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
+          <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
+          <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
+      </div>
+    </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
          쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
     <div class="tab-divider" id="tabListingDivider">네이버 실매물 기준</div>
