@@ -3467,7 +3467,7 @@ function renderSubway(d){
     const candidates = pickSubwayPriceCandidates(x.bandResults).sort((a,b)=>a.area-b.area);
     // py(평형)는 실거래 데이터를 서버에서 받아올 때 이미 areaToPy()로 계산돼 있는 값을 그대로 재사용
     // (2026.08 — 공급면적 실측 배치가 아직 안 돌아서 보간표 기반 추정값이지만, 새로 개편된 앵커 기준)
-    const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평 (전용${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
+    const parts = candidates.map(t => `<div><span style="font-size:10px">${esc(t.py)}평 (전용 ${Math.floor(t.area)})</span> <b style="color:var(--teal-dark)">${t.amt.toFixed(1)}억</b></div>`);
     return parts.length ? `<span class="val" style="text-align:right;font-size:11px;white-space:nowrap">${parts.join('')}</span>` : '';
   };
   const withBadges = d.rows.map(x=>({ x, badge: priceBadges(x) }));
@@ -3540,6 +3540,11 @@ async function search(){
     return;
   }
   const myToken = ++searchToken;
+  // 입력 검증 오류(단지명·지역·금액대 미선택 등)로 아래에서 바로 return해도, 이전 탭의 결과 카드가 새 탭 아래에
+  // 그대로 남아 있지 않도록 먼저 비운다(2026.09 버그 검토에서 발견 — 예: 연간 저평가 결과가 뜬 채로 금액대별
+  // 변동률 탭에서 금액대 없이 조회하면 오류 문구 밑에 연간 저평가 카드가 계속 보였음)
+  document.getElementById('error').classList.remove('on');
+  { const r0 = document.getElementById('result'); r0.classList.remove('on'); r0.innerHTML=''; }
   updateRegionFavBtn();
   renderFavRegions();
   const name = document.getElementById('q').value.trim();
@@ -3896,7 +3901,7 @@ async function search(){
 
     // 매매·병합 데이터로 매칭 실패했을 때, 분양권 원본(rawP)에서도 이름 유사 후보를 추가로 찾아 추천에 포함
     // (표기 순서가 뒤바뀐 경우 등 substring 매칭조차 실패하는 오타성 불일치를 "혹시 이 단지?"로 구제)
-    if(!d.found && !d.multi && rawP.length){
+    if(mode==='complex' && !d.found && !d.multi && rawP.length){
       const q = name.replace(/\s/g,'');
       const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
       const pNames = [...new Set(rawP.map(t=>t.apt))].filter(n=>!(d.suggest||[]).includes(n));
@@ -4710,7 +4715,7 @@ function renderVolume(d){
     <div class="sec">
       <h3>거래량 상위</h3>
       ${rows(d.topVolume, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${d.pyBand? `<b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>·`:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${!d.pyBand? '·전체 평형':''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}')">${esc(x.apt)}</span>${x.surge?'<span class="nh" style="background:#D97706">거래급증</span>':''}</span><small>${d.pyBand? `<b style="color:var(--teal-dark)">${esc(x.mainPy)}</b> · `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${!d.pyBand? ' · 전체 평형':''}</small></span>
         <span class="val">${x.n}건${turnoverLabel(x)}</span>`)}
     </div>
 
