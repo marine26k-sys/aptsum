@@ -42,9 +42,31 @@ export function isActive(sub, now = Date.now()) {
   return !!sub && !sub.revoked && !(sub.expiresAt && sub.expiresAt <= now);
 }
 
-export async function getSubscriber(id) {
+// 새 코드를 뽑아 색인(code:)에 등록하고 sub.code에 넣는다(sub 레코드 저장은 호출한 쪽에서).
+export async function assignCode(store, sub) {
+  for (let i = 0; i < 5; i++) {
+    const code = newCode();
+    const key = `code:${normalizeCode(code)}`;
+    if (await store.get(key, { consistency: "strong" })) continue; // 이미 쓰는 코드면 다시 뽑기
+    await store.setJSON(key, { id: sub.id });
+    sub.code = code;
+    return;
+  }
+  throw new Error("code_generation_failed");
+}
+
+// 새 구독자 발급 — stats.html 수동 발급과 결제 완료 자동 발급(shared/applications.mjs)이 같이 쓴다.
+// extra: 자동 발급 때 붙이는 신청서 id 등(orderId)
+export async function createSubscriber({ name, expiresAt = null, ...extra }, store = subscriberStore()) {
+  const sub = { id: randomBytes(6).toString("base64url"), name, gen: 1, createdAt: Date.now(), expiresAt, revoked: false, ...extra };
+  await assignCode(store, sub);
+  await store.setJSON(`sub:${sub.id}`, sub);
+  return sub;
+}
+
+export async function getSubscriber(id, store = subscriberStore()) {
   if (!id) return null;
-  try { return (await subscriberStore().get(`sub:${id}`, { type: "json", consistency: "strong" })) || null; }
+  try { return (await store.get(`sub:${id}`, { type: "json", consistency: "strong" })) || null; }
   catch { return null; }
 }
 

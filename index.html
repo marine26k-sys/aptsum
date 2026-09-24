@@ -53,6 +53,7 @@
   .tab-divider::after{content:'';flex:1;height:1.5px;background:var(--line)}
   .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
   .tab.subscriber:not(.on){color:#8A6D1F}
+  .tab.apply-cta{text-decoration:none;background:var(--navy);border-color:var(--navy);color:#fff}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
   /* 검색 컨트롤은 분석 탭 알약 버튼과 같은 밀도로 맞춘다. 기존 16px·10px 패딩은 모바일에서
@@ -475,7 +476,9 @@
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
       if (!subTabs.length) { resolveReady(false); return; }
 
+      const applyCta = document.getElementById('tabApply');
       const reveal = () => {
+        if (applyCta) applyCta.style.display = 'none';
         subTabs.forEach(t => { t.style.display = ''; });
         subDividers.forEach(d => { d.style.display = ''; });
       };
@@ -486,6 +489,7 @@
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
         verified = false;
+        if (applyCta) applyCta.style.display = '';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
         subDividers.forEach(d => { d.style.display = 'none'; });
         if (typeof listingMem === 'object') Object.keys(listingMem).forEach(k => { delete listingMem[k]; });
@@ -569,7 +573,12 @@
       };
       return Object.freeze({ ready, isVerified: () => verified, recheck });
     })();
-    const SUBSCRIBER_ENDED_MSG = '비공개 탭 이용 기간이 끝났거나 접근 코드가 해지되었습니다. 계속 이용하시려면 운영자에게 문의해 주세요.';
+    // 비공개 탭 신청·코드 입력 페이지(apply.html, 2026.09 원스톱 신청) — 인증이 필요한 곳마다 이리로 안내한다.
+    const SUBSCRIBER_APPLY_LINK = '<a href="./apply.html" style="color:inherit;font-weight:800;text-decoration:underline">이용 신청 · 코드 입력 →</a>';
+    const SUBSCRIBER_ENDED_MSG = `비공개 탭 이용 기간이 끝났거나 접근 코드가 해지되었습니다. ${SUBSCRIBER_APPLY_LINK}`;
+    function askSubscriberApply(){
+      if (confirm('비공개 탭 이용 신청이 필요합니다.\n신청 페이지로 이동할까요? (접근 코드가 있으면 거기서 입력할 수 있어요)')) location.href = './apply.html';
+    }
   </script>
   <header>
     <div class="logo" id="logoTapZone">
@@ -614,6 +623,8 @@
     <div class="tab subscriber" id="tabLPL" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물 (입주가능, 중층 이상)</div>
     <div class="tab subscriber" id="tabLBG" onclick="setMode('listingbudget')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>예산별 실매물</div>
     <div class="tab subscriber" id="tabLUR" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</div>
+    <!-- 비공개 탭 원스톱 신청(2026.09) — 인증 안 된 사람에게만 보인다(인증되면 aptsumSubscriberGate가 숨김) -->
+    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>전 지역 이용 신청 · 코드 입력</a>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
@@ -842,7 +853,7 @@ let lastData = null;
 let newHighWeekOnly = false;
 function openNewHigh7(){
   if (!aptsumSubscriberGate.isVerified()) {
-    alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    askSubscriberApply();
     return;
   }
   newHighWeekOnly = true;
@@ -919,7 +930,7 @@ async function initFromURL(){
   newHighWeekOnly = requestedMode==='newhigh' && p.get('nh7')==='1';
   if(needsSubscriberSession(requestedMode) || isListingMode(requestedMode)) await aptsumSubscriberGate.ready;
   if(!setMode(requestedMode, true)){
-    showError('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    showError(`비공개 탭 인증이 필요합니다. ${SUBSCRIBER_APPLY_LINK}`);
     return;
   }
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
@@ -1620,10 +1631,10 @@ function listingTrialBlocked(lawd){
 function listingTrialBadgeHTML(){
   return isListingTrial() ? `<div style="margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.45);border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span></div>` : '';
 }
-const LISTING_TRIAL_MSG = '무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요.';
+const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
   if (needsSubscriberSession(m) && !aptsumSubscriberGate.isVerified()) {
-    if (!fromRestore) alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
+    if (!fromRestore) askSubscriberApply();
     return false;
   }
   if (isListingMode(m) && !fromRestore && isListingTrial()) {

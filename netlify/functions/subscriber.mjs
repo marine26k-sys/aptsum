@@ -1,5 +1,5 @@
 import {
-  COOKIE_NAME, MAX_AGE_SECONDS, sameValue, createSession,
+  sameValue, createSession, subscriberCookie as sessionCookie,
 } from "../../shared/sessions.mjs";
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import {
@@ -22,17 +22,6 @@ function response(body, { status = 200, headers = {} } = {}) {
       ...headers,
     },
   });
-}
-
-function sessionCookie(token, maxAge = MAX_AGE_SECONDS) {
-  return [
-    `${COOKIE_NAME}=${token}`,
-    "Path=/",
-    `Max-Age=${maxAge}`,
-    "HttpOnly",
-    "Secure",
-    "SameSite=Strict",
-  ].join("; ");
 }
 
 export default async (request, context) => {

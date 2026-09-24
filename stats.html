@@ -155,6 +155,7 @@ async function load(){
     loadBookClicks();
     loadListingMeta();
     initSubscribers();
+    initApplications();
   }catch(e){
     $("#app").innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
   }
@@ -214,6 +215,12 @@ function render(d){
       </label>
       <div id="listingStatus" role="status" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--ink);white-space:pre-line"></div>
       <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·중층 이상 매물의 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
+    </div>
+
+    <div class="card" id="appCard">
+      <div class="card-title">이용 신청 · 결제 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· apply.html 원스톱 신청</span></div>
+      <div style="font-size:10px;color:var(--sub);margin-bottom:8px;line-height:1.6">결제가 완료되면 접근 코드가 자동 발급되고(아래 구독자 코드 목록에 "신청 뒷번호"로 표시), 신청자는 바로 비공개 탭을 쓸 수 있습니다. 맞춤 선별 메일을 보낸 뒤 "메일 보냄"을 눌러 표시해 두세요.</div>
+      <div id="appList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
     <div class="card" id="subCard">
@@ -333,6 +340,60 @@ function initSubscribers(){
     }catch(e){ $("#subStatus").textContent = e.message; b.disabled = false; }
   });
   loadSubscribers();
+}
+
+// ═══ 이용 신청 · 결제(2026.09 원스톱 신청) ═══
+// apply.html 신청서 + PayApp 결제 결과(netlify/functions/apply.mjs). 결제 완료 건은 코드가 자동 발급돼 있다.
+const APP_STATE = { pending:["결제 대기","var(--sub)"], paid:["결제 완료","var(--teal-dark)"], canceled:["결제 취소","var(--sub)"],
+  refunded:["환불·해지","#d95d5d"], mismatch:["금액 불일치 — 확인 필요","#d95d5d"] };
+function appRow(a){
+  const st = APP_STATE[a.status] || [a.status, "var(--sub)"];
+  const d = new Date(a.createdAt + 9*3600000);
+  const when = `${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`;
+  const phone = a.phone.replace(/^(\d{3})(\d{3,4})(\d{4})$/, "$1-$2-$3");
+  return `
+    <div class="page-row" style="display:block">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <b style="font-size:12.5px;color:var(--ink)">${esc(a.email)}</b>
+        <span style="font-size:10.5px;font-weight:800;color:${st[1]}">${st[0]}</span>
+        ${a.code ? `<code style="margin-left:auto;font-size:12.5px;font-weight:800;color:var(--navy)">${esc(a.code)}</code>` : ""}
+      </div>
+      <div style="font-size:11px;color:var(--sub);margin:2px 0 4px">${when} · ${esc(phone)} · ${a.price.toLocaleString()}원${a.expiresAt ? ` · 만료 ${fmtDay(a.expiresAt)}` : ""}</div>
+      <div style="font-size:11.5px;color:var(--ink);line-height:1.6;background:var(--slate-bg);border-radius:8px;padding:6px 8px">
+        지역: ${esc(a.region)}<br>금액대: ${esc(a.budget)} · 평수: ${esc(a.size)}<br>입주: ${esc(a.movein)}<br>층/세대/연차: ${esc(a.condition)}
+      </div>
+      ${a.status === "paid" ? `<label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11.5px;font-weight:700;color:${a.delivered ? "var(--teal-dark)" : "#d95d5d"};cursor:pointer">
+        <input type="checkbox" data-deliver="${esc(a.id)}" ${a.delivered ? "checked" : ""}> ${a.delivered ? "선별 메일 보냄" : "선별 메일 보내야 함"}</label>` : ""}
+    </div>`;
+}
+async function loadApplications(){
+  const box = $("#appList");
+  if(!box) return;
+  try{
+    const res = await fetch("/api/apply?list=1", { cache:"no-store", credentials:"same-origin" });
+    if(res.status === 401) throw new Error("관리자 인증이 만료됐습니다. 새로고침 후 다시 로그인하세요.");
+    if(!res.ok) throw new Error("신청 목록을 불러오지 못했습니다.");
+    const d = await res.json();
+    const shown = d.applications.filter(a => a.status !== "pending" || Date.now() - a.createdAt < 86400000);
+    box.innerHTML = (d.paymentEnabled ? "" : `<div style="padding:6px 8px;margin-bottom:6px;border-radius:8px;background:#FFF4E5;color:#9A5B00;font-size:11px;line-height:1.6">PayApp 결제 연동 전입니다. Netlify 환경변수에 PAYAPP_USERID · PAYAPP_LINKKEY · PAYAPP_LINKVAL을 넣고 재배포하면 신청 페이지에서 결제가 열립니다. 그 전까지 신청 페이지는 기존 네이버폼으로 안내합니다.</div>`)
+      + (shown.length ? shown.map(appRow).join("") : `<div style="padding:8px 0">아직 신청이 없습니다.</div>`);
+  }catch(e){ box.textContent = e.message; }
+}
+function initApplications(){
+  const box = $("#appList");
+  if(!box) return;
+  box.addEventListener("change", async (ev) => {
+    const cb = ev.target.closest("input[data-deliver]");
+    if(!cb) return;
+    cb.disabled = true;
+    try{
+      const res = await fetch("/api/apply", { method:"POST", cache:"no-store", credentials:"same-origin",
+        headers:{ "content-type":"application/json" }, body: JSON.stringify({ action:"delivered", id: cb.dataset.deliver, delivered: cb.checked }) });
+      if(!res.ok) throw new Error();
+    }catch(e){ cb.checked = !cb.checked; alert("저장하지 못했습니다. 잠시 후 다시 시도하세요."); }
+    loadApplications();
+  });
+  loadApplications();
 }
 
 // ═══ 추천 서적 클릭(2026.09 신규) ═══
