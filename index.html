@@ -48,9 +48,10 @@
   .tab:not(.on):active{background:var(--teal-soft)}
   /* 구독 전용 탭(역세권) 구분선 + 라벨 — 운영자 확인용 비밀탭(하락 거래·연간 저평가(동일 권역))과 섞이지 않도록
      시각적으로 분리(2026.08, 운영자 요청) */
-  .tab-divider{flex-basis:100%;display:flex;align-items:center;gap:6px;margin:2px 0 0;font-size:10px;font-weight:700;color:var(--sub)}
-  .tab-divider::before{content:'';flex:none;width:10px;height:1.5px;background:var(--line)}
-  .tab-divider::after{content:'';flex:1;height:1.5px;background:var(--line)}
+  /* 탭 묶음 구분선(국토부 실거래 기준·비공개 탭·네이버 실매물 기준) — 2026.09 시인성 개선(운영자 요청): 회색 10px → 청록 11.5px 굵게 */
+  .tab-divider{flex-basis:100%;display:flex;align-items:center;gap:6px;margin:2px 0 0;font-size:11.5px;font-weight:800;color:var(--teal)}
+  .tab-divider::before{content:'';flex:none;width:10px;height:1.5px;background:var(--teal-light)}
+  .tab-divider::after{content:'';flex:1;height:1.5px;background:var(--teal-light)}
   .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.apply-cta{text-decoration:none;background:var(--navy);border-color:var(--navy);color:#fff}
@@ -335,7 +336,7 @@
 <div class="wrap">
   <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px 8px">
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-      <a href="https://aptsumbiz.netlify.app" style="font-size:12px;font-weight:700;color:#fff;background:var(--teal);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,130,138,.28)">📩 채널 소개 & 비즈니스 문의</a>
+      <a href="https://aptsumbiz.netlify.app" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);border-radius:7px;padding:3px 8px;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(0,130,138,.25)">📩 비즈니스 문의</a>
       <button id="pwaInstallBtn" onclick="handlePwaInstallClick()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
         홈 화면에 추가
@@ -589,6 +590,8 @@
   </header>
 
   <div class="tabs">
+    <!-- 그룹 구분선(2026.09 운영자 요청) — 아래 "네이버 실매물 기준"과 짝을 이루도록 맨 위 공개 탭 묶음에도 데이터 출처를 표시 -->
+    <div class="tab-divider" id="tabRtmsDivider" style="margin-top:0">국토부 실거래 기준</div>
     <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
     <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
     <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
@@ -605,6 +608,12 @@
     <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</div>
     <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간 저평가</div>
     <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교 저평가</div>
+    <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
+         쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
+    <div class="tab-divider" id="tabListingDivider">네이버 실매물 기준</div>
+    <div class="tab subscriber" id="tabLPL" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</div>
+    <div class="tab subscriber" id="tabLBG" onclick="setMode('listingbudget')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>예산별 실매물</div>
+    <div class="tab subscriber" id="tabLUR" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</div>
     <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독
          콘텐츠라 하나로 묶었다(운영자 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
          전용이었음). 박스권은 2026.08 신설 때부터 처음부터 구독 전용으로 만듦(운영자 요청).
@@ -617,12 +626,6 @@
     <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</div>
     <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
     <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
-    <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
-         쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
-    <div class="tab-divider" id="tabListingDivider">네이버 실매물 기준</div>
-    <div class="tab subscriber" id="tabLPL" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물 (입주가능, 중층 이상)</div>
-    <div class="tab subscriber" id="tabLBG" onclick="setMode('listingbudget')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>예산별 실매물</div>
-    <div class="tab subscriber" id="tabLUR" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</div>
     <!-- 비공개 탭 원스톱 신청(2026.09) — 인증 안 된 사람에게만 보인다(인증되면 aptsumSubscriberGate가 숨김) -->
     <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>전 지역 이용 신청 · 코드 입력</a>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
