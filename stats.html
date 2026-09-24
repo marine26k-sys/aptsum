@@ -219,7 +219,7 @@ function render(d){
 
     <div class="card" id="appCard">
       <div class="card-title">이용 신청 · 결제 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· apply.html 원스톱 신청</span></div>
-      <div style="font-size:10px;color:var(--sub);margin-bottom:8px;line-height:1.6">결제가 완료되면 접근 코드가 자동 발급되고(아래 구독자 코드 목록에 "신청 뒷번호"로 표시), 신청자는 바로 비공개 탭을 쓸 수 있습니다. 맞춤 선별 메일을 보낸 뒤 "메일 보냄"을 눌러 표시해 두세요.</div>
+      <div style="font-size:10px;color:var(--sub);margin-bottom:8px;line-height:1.6">결제가 완료되면(PayApp 공통 통보 URL로 확인) 결제창에 넣은 휴대폰 번호로 신청서를 찾아 접근 코드가 자동 발급되고(아래 구독자 코드 목록에 "신청 뒷번호"로 표시), 신청자는 바로 비공개 탭을 쓸 수 있습니다. 맞춤 선별 메일을 보낸 뒤 "메일 보냄"을 눌러 표시해 두세요.</div>
       <div id="appList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
@@ -354,14 +354,16 @@ function appRow(a){
   return `
     <div class="page-row" style="display:block">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <b style="font-size:12.5px;color:var(--ink)">${esc(a.email)}</b>
+        <b style="font-size:12.5px;color:var(--ink)">${a.unmatched ? "신청서 없음" : esc(a.email)}</b>
         <span style="font-size:10.5px;font-weight:800;color:${st[1]}">${st[0]}</span>
         ${a.code ? `<code style="margin-left:auto;font-size:12.5px;font-weight:800;color:var(--navy)">${esc(a.code)}</code>` : ""}
       </div>
       <div style="font-size:11px;color:var(--sub);margin:2px 0 4px">${when} · ${esc(phone)} · ${a.price.toLocaleString()}원${a.expiresAt ? ` · 만료 ${fmtDay(a.expiresAt)}` : ""}</div>
-      <div style="font-size:11.5px;color:var(--ink);line-height:1.6;background:var(--slate-bg);border-radius:8px;padding:6px 8px">
+      ${a.unmatched
+        ? `<div style="font-size:11.5px;color:#9A5B00;line-height:1.6;background:#FFF4E5;border-radius:8px;padding:6px 8px">결제 링크로 바로 결제했거나 결제창에 신청서와 다른 번호를 넣은 건입니다. 코드는 자동 발급돼 있으니, 위 번호로 연락하거나 같은 시간대의 "결제 대기" 신청서 메일로 코드를 보내 주세요.</div>`
+        : `<div style="font-size:11.5px;color:var(--ink);line-height:1.6;background:var(--slate-bg);border-radius:8px;padding:6px 8px">
         지역: ${esc(a.region)}<br>금액대: ${esc(a.budget)} · 평수: ${esc(a.size)}<br>입주: ${esc(a.movein)}<br>층/세대/연차: ${esc(a.condition)}
-      </div>
+      </div>`}
       ${a.status === "paid" ? `<label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11.5px;font-weight:700;color:${a.delivered ? "var(--teal-dark)" : "#d95d5d"};cursor:pointer">
         <input type="checkbox" data-deliver="${esc(a.id)}" ${a.delivered ? "checked" : ""}> ${a.delivered ? "선별 메일 보냄" : "선별 메일 보내야 함"}</label>` : ""}
     </div>`;
