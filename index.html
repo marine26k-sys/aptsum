@@ -2454,7 +2454,8 @@ function analyzeNewHigh(all, months, weekOnly){
   // 지역의 오래된(8~29일 전) 신고가가 상위 100개를 채워버려서, 정작 최근 7일 안에 갱신됐지만 가격은 상대적으로
   // 낮은 다른 지역 신고가가 밀려나 통째로 안 보이는 문제가 있었음(2026.09 발견 — 구 1개만 조회할 때보다
   // 오히려 "경기도 전체"가 결과가 더 적게 나오던 원인). 7일 필터를 먼저 적용한 뒤에 100개로 잘라야 한다.
-  const filtered = weekOnly ? results.filter(r=>r.fresh7) : results;
+  // 속보 탭은 이전 최고가와 같은 값(동일가 재현)은 빼고 실제로 가격을 넘어선 신고가만(운영자 요청, 2026.09)
+  const filtered = weekOnly ? results.filter(r=>r.fresh7 && !(r.prevMax && r.gapAmt<=0)) : results;
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -4741,7 +4742,7 @@ function renderNewHigh(d){
 
     <div class="sec">
       <h3>신고가 갱신 단지</h3>
-      ${hint('매매·분양권·입주권 포함', weekOnly ? '표본 3건↑' : '표본 3건↑ · <span class="nh">N</span> = 최근 7일 계약')}
+      ${hint('매매·분양권·입주권 포함', weekOnly ? '표본 3건↑ · 동일가 제외' : '표본 3건↑ · <span class="nh">N</span> = 최근 7일 계약')}
       ${rows(list, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</span>${(!weekOnly && x.fresh7)?'<span class="nh" title="최근 7일 이내 계약">N</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)">${x.amt.toFixed(1)}억<small>${x.prevMax? (x.gapAmt>0 ? `<b style="color:var(--red)">▲${x.gapAmt.toFixed(1)}억 (${x.gapPct}%)</b> · ` : `동일가 재현 · `) : ''}${esc(x.date)}</small></span>`)}
