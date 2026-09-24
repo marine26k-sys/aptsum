@@ -469,7 +469,7 @@
       let resolveReady;
       const ready = new Promise(resolve => { resolveReady = resolve; });
       document.addEventListener('DOMContentLoaded', function(){
-      // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 맛보기로 조회할 수 있어 항상 노출 —
+      // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 무료 체험으로 조회할 수 있어 항상 노출 —
       // 여기(인증 시에만 노출·해지 시 숨김) 목록에서 뺐다. 지역 제한은 listingTrialBlocked()와 서버(/api/listings)가 건다.
       const subTabs = ['tabNL', 'tabLPD', 'tabNH7', 'tabPBR'].map(id => document.getElementById(id)).filter(Boolean);
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
@@ -1592,25 +1592,25 @@ function pyBandMultiFilter(items){
 function needsSubscriberSession(m){
   return m==='newlow'||m==='longpeakdong'||m==='pricebandrise'||(m==='newhigh'&&newHighWeekOnly);
 }
-// ═══ 네이버 실매물 기준 탭 맛보기 (2026.09 운영자 요청) ═══
+// ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
 const LISTING_TRIAL_LAWD = '11680';
 function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
-// 맛보기 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
+// 무료 체험 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
 function listingTrialBlocked(lawd){
   if(!isListingTrial()) return false;
   const codes = regionSel.length ? regionSel.map(r=>r.lawd) : [lawd];
   return !(codes.length === 1 && codes[0] === LISTING_TRIAL_LAWD);
 }
-const LISTING_TRIAL_MSG = '네이버 실매물 기준 탭은 <b>강남구</b>만 맛보기로 조회할 수 있습니다. 다른 지역은 비공개 탭 인증 후 이용해 주세요.';
+const LISTING_TRIAL_MSG = '무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요.';
 function setMode(m, fromRestore){
   if (needsSubscriberSession(m) && !aptsumSubscriberGate.isVerified()) {
     if (!fromRestore) alert('비공개 탭 인증이 필요합니다. 로고를 빠르게 5번 눌러 인증해 주세요.');
     return false;
   }
   if (isListingMode(m) && !fromRestore && isListingTrial()) {
-    // 맛보기 사용자는 강남구로 맞춰 둔다(다른 지역을 골라 두었어도 바로 조회되도록)
+    // 무료 체험 사용자는 강남구로 맞춰 둔다(다른 지역을 골라 두었어도 바로 조회되도록)
     regionSel = []; try{ saveRegionSel(); renderRegionChips(); }catch(e){}
     if([...sel.options].some(o=>o.value===LISTING_TRIAL_LAWD)) sel.value = LISTING_TRIAL_LAWD;
   }
@@ -5420,7 +5420,7 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
       </div>
       ${vsPrev ? hdVs(vsPrev, vsRecent) : ''}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
-      ${isListingTrial() ? `<div style="margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#4A3607;background:#E0B84D;border-radius:10px;padding:2px 9px">맛보기 · 강남구만 조회 가능</span></div>` : ''}
+      ${isListingTrial() ? `<div style="margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#4A3607;background:#E0B84D;border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span></div>` : ''}
     </div>`;
 }
 

@@ -20,7 +20,7 @@ export const config = {
 };
 
 const LAWDS = new Set(ALL_LAWDS);
-const TRIAL_LAWDS = new Set(["11680"]); // 인증 없이 맛보기로 열어 두는 지역(강남구) — index.html의 LISTING_TRIAL_LAWD와 같게 유지
+const TRIAL_LAWDS = new Set(["11680"]); // 인증 없이 무료 체험으로 열어 두는 지역(강남구) — index.html의 LISTING_TRIAL_LAWD와 같게 유지
 const GU_TO_LAWD = new Map();
 for (const [si, list] of REGIONS) for (const [gu, code] of list) GU_TO_LAWD.set(`${si}|${gu}`, code);
 
@@ -61,7 +61,7 @@ export default async (request) => {
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
-    // 맛보기(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
+    // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
     return json(data || { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
