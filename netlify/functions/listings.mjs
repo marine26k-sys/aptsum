@@ -9,7 +9,7 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 // 실거래 최고가 + 입주가능·중층 이상 최저 호가)한 결과만 이 함수로 보내고, 여기서 지역(lawd)별로 Netlify Blobs에 저장한다.
 // 원본 엑셀·요약 데이터 모두 GitHub(=정적 배포 루트)에 올리지 않기 위한 구조다.
 //
-//   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}
+//   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
@@ -20,6 +20,7 @@ export const config = {
 };
 
 const LAWDS = new Set(ALL_LAWDS);
+const TRIAL_LAWDS = new Set(["11680"]); // 인증 없이 맛보기로 열어 두는 지역(강남구) — index.html의 LISTING_TRIAL_LAWD와 같게 유지
 const GU_TO_LAWD = new Map();
 for (const [si, list] of REGIONS) for (const [gu, code] of list) GU_TO_LAWD.set(`${si}|${gu}`, code);
 
@@ -58,9 +59,10 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
-    if (!isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
+    // 맛보기(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
+    if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
     return json(data || { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
   }
