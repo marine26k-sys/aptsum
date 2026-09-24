@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateApplication, createClaim, readClaim, newApplication, requestPayment, handleFeedback, applyConfig, expiryDateAfter,
+  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, expiryDateAfter,
 } from '../shared/applications.mjs';
 
 function fakeStore() {
@@ -35,47 +35,33 @@ test('claim tokens are bound to the secret and id', () => {
   assert.equal(readClaim('s3cret', ''), null);
 });
 
-test('config defaults to 9,900 won for 30 days and needs all PayApp keys', () => {
-  assert.deepEqual(applyConfig({}), { price: 9900, days: 30, paymentEnabled: false });
+test('config defaults to 9,900 won for 30 days, the PayApp payment link, and needs all PayApp keys', () => {
+  assert.deepEqual(applyConfig({}), { price: 9900, days: 30, payUrl: 'https://www.payapp.kr/L/z4l7c4', paymentEnabled: false });
   assert.equal(applyConfig(ENV).paymentEnabled, true);
   assert.equal(applyConfig({ ...ENV, APPLY_PRICE: '12000' }).price, 12000);
+  assert.equal(applyConfig({ ...ENV, PAYAPP_LINK_URL: 'https://www.payapp.kr/L/other' }).payUrl, 'https://www.payapp.kr/L/other');
 });
 
-test('payrequest sends the application id and return/feedback urls', async () => {
-  const app = newApplication(validateApplication(FORM).data, 9900);
-  let sent;
-  const fetchImpl = async (url, init) => { sent = new URLSearchParams(init.body); return new Response('state=1&mul_no=777&payurl=https%3A%2F%2Fpayapp.kr%2Fp%2F1'); };
-  const r = await requestPayment(app, { origin: 'https://aptsum.kr', claim: 'c.l', env: ENV, fetchImpl });
-  assert.deepEqual(r, { payurl: 'https://payapp.kr/p/1', mulNo: '777' });
-  assert.equal(sent.get('cmd'), 'payrequest');
-  assert.equal(sent.get('price'), '9900');
-  assert.equal(sent.get('recvphone'), '01012345678');
-  assert.equal(sent.get('var1'), app.id);
-  assert.equal(sent.get('feedbackurl'), 'https://aptsum.kr/api/payapp-feedback');
-  assert.equal(sent.get('returnurl'), 'https://aptsum.kr/apply.html?claim=c.l');
-
-  const bad = await requestPayment(app, { origin: 'x', claim: 'c', env: ENV, fetchImpl: async () => new Response('state=0&errorMessage=%EC%98%A4%EB%A5%98') });
-  assert.equal(bad.error, 'payapp_error');
-  assert.equal(bad.message, '오류');
-});
-
-async function setup() {
+const NOW = Date.parse('2026-09-24T10:00:00+09:00');
+async function setup({ createdAt = NOW - 60000 } = {}) {
   const appStore = fakeStore(), subStore = fakeStore();
-  const app = newApplication(validateApplication(FORM).data, 9900);
-  app.mulNo = '777';
-  await appStore.setJSON(`app:${app.id}`, app);
-  const feed = (extra) => handleFeedback({ userid: 'aptsum', linkkey: 'KEY', linkval: 'VAL', var1: app.id, mul_no: '777', price: '9900', ...extra },
-    { env: ENV, appStore, subStore, now: Date.parse('2026-09-24T10:00:00+09:00') });
-  return { appStore, subStore, app, feed };
+  const app = newApplication(validateApplication(FORM).data, 9900, createdAt);
+  await saveApplication(app, appStore);
+  const feed = (extra, now = NOW) => handleFeedback({ userid: 'aptsum', linkkey: 'KEY', linkval: 'VAL', recvphone: '01012345678', mul_no: '777', price: '9900', ...extra },
+    { env: ENV, appStore, subStore, now });
+  const subs = () => [...subStore.m.keys()].filter(k => k.startsWith('sub:'));
+  return { appStore, subStore, app, feed, subs };
 }
 
-test('payment completion issues exactly one personal code', async () => {
-  const { appStore, subStore, app, feed } = await setup();
+test('payment link completion is matched to the application by phone and issues exactly one code', async () => {
+  const { appStore, subStore, app, feed, subs } = await setup();
   assert.equal((await feed({ pay_state: '1' })).result, 'ignored');
-  const r = await feed({ pay_state: '4' });
+  const r = await feed({ pay_state: '4', recvphone: '010-1234-5678' });
   assert.equal(r.result, 'issued');
+  assert.equal(r.appId, app.id);
   const saved = await appStore.get(`app:${app.id}`, { type: 'json' });
   assert.equal(saved.status, 'paid');
+  assert.equal(saved.mulNo, '777');
   const sub = await subStore.get(`sub:${saved.subId}`, { type: 'json' });
   assert.match(sub.code, /^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
   assert.equal(sub.orderId, app.id);
@@ -84,7 +70,27 @@ test('payment completion issues exactly one personal code', async () => {
   assert.ok(await subStore.get(`code:${sub.code.replace('-', '')}`, { type: 'json' }));
   // PayApp 재통보 — 코드를 또 만들지 않는다
   assert.equal((await feed({ pay_state: '4' })).result, 'already_issued');
-  assert.equal([...subStore.m.keys()].filter(k => k.startsWith('sub:')).length, 1);
+  assert.equal(subs().length, 1);
+});
+
+test('payment without a matching application still issues a code for the operator', async () => {
+  const { appStore, subStore, app, feed, subs } = await setup();
+  const r = await feed({ pay_state: '4', recvphone: '01099998888', mul_no: '888' });
+  assert.equal(r.result, 'issued_unmatched');
+  const orphan = await appStore.get(`app:${r.appId}`, { type: 'json' });
+  assert.equal(orphan.unmatched, true);
+  assert.equal(orphan.phone, '01099998888');
+  assert.equal((await subStore.get(`sub:${r.subId}`, { type: 'json' })).name, '결제 8888');
+  // 원래 신청서는 그대로 결제 대기
+  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'pending');
+  assert.equal((await feed({ pay_state: '4', recvphone: '01099998888', mul_no: '888' })).result, 'already_issued');
+  assert.equal(subs().length, 1);
+});
+
+test('an application older than 24 hours is not matched', async () => {
+  const { app, appStore, feed } = await setup({ createdAt: NOW - 25 * 3600000 });
+  assert.equal((await feed({ pay_state: '4' })).result, 'issued_unmatched');
+  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'pending');
 });
 
 test('refund revokes the issued code', async () => {
@@ -94,22 +100,23 @@ test('refund revokes the issued code', async () => {
   const saved = await appStore.get(`app:${app.id}`, { type: 'json' });
   assert.equal(saved.status, 'refunded');
   assert.equal((await subStore.get(`sub:${saved.subId}`, { type: 'json' })).revoked, true);
+  assert.equal((await feed({ pay_state: '64', mul_no: '12345' })).result, 'unknown_payment');
 });
 
-test('rejects wrong credentials, wrong price and foreign mul_no', async () => {
+test('ignores other products and rejects wrong credentials', async () => {
   const { appStore, subStore, app, feed } = await setup();
   assert.deepEqual(await feed({ pay_state: '4', linkval: 'nope' }), { ok: false, reason: 'bad_credentials' });
-  assert.equal((await feed({ pay_state: '4', mul_no: '999' })).result, 'mul_no_mismatch');
-  assert.equal((await feed({ pay_state: '4', price: '100' })).result, 'price_mismatch');
-  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'mismatch');
+  assert.deepEqual(await feed({ pay_state: '4', userid: 'someone' }), { ok: false, reason: 'bad_credentials' });
+  assert.equal((await feed({ pay_state: '4', price: '30000' })).result, 'other_product');
+  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'pending');
   assert.equal(subStore.m.size, 0);
-  assert.equal((await feed({ pay_state: '4', var1: 'unknown' })).result, 'unknown_application');
 });
 
-test('request cancel marks a pending application canceled', async () => {
-  const { appStore, app, feed } = await setup();
-  assert.equal((await feed({ pay_state: '8' })).result, 'canceled');
-  assert.equal((await appStore.get(`app:${app.id}`, { type: 'json' })).status, 'canceled');
+test('a newer application by the same phone receives the payment', async () => {
+  const { appStore, feed } = await setup();
+  const newer = newApplication(validateApplication({ ...FORM, region: '수원시' }).data, 9900, NOW - 1000);
+  await saveApplication(newer, appStore);
+  assert.equal((await feed({ pay_state: '4' })).appId, newer.id);
 });
 
 test('expiry date is counted in KST', () => {

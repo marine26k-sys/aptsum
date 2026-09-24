@@ -2,14 +2,14 @@
 //
 //   GET                                  가격·이용 기간·결제 연동 여부(apply.html 표시용)
 //   GET  ?list=1                         신청 목록(관리자 세션 필요 — stats.html)
-//   POST {action:"create", ...신청서}     신청서 저장 + PayApp 결제창 생성 → { payurl, claim }
+//   POST {action:"create", ...신청서}     신청서 저장 → { payurl(PayApp 결제 링크), claim }
 //   POST {action:"claim", claim}         결제 결과 확인 — 결제 완료면 개인 코드를 알려주고 바로 로그인 쿠키를 준다
 //   POST {action:"delivered", id, delivered}  맞춤 선별 메일 보냄 표시(관리자)
 import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mjs";
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
 import {
-  applicationStore, applyConfig, validateApplication, newApplication, requestPayment, createClaim, readClaim,
+  applicationStore, applyConfig, validateApplication, newApplication, saveApplication, createClaim, readClaim,
 } from "../../shared/applications.mjs";
 
 export const config = { path: "/api/apply" };
@@ -21,7 +21,7 @@ function adminView(app, sub) {
   return {
     id: app.id, createdAt: app.createdAt, status: app.status, price: app.price,
     region: app.region, budget: app.budget, size: app.size, movein: app.movein, condition: app.condition,
-    phone: app.phone, email: app.email, paidAt: app.paidAt, delivered: !!app.delivered,
+    phone: app.phone, email: app.email, paidAt: app.paidAt, delivered: !!app.delivered, unmatched: !!app.unmatched,
     code: sub?.code || null, expiresAt: sub?.expiresAt || null,
   };
 }
@@ -34,7 +34,7 @@ export default async (request, context) => {
 
   if (request.method === "GET") {
     if (new URL(request.url).searchParams.get("list") !== "1") {
-      return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled });
+      return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled, payUrl: cfg.payUrl });
     }
     if (!hasValidStatsSession(request, secret)) return json({ error: "stats_auth_required" }, { status: 401 });
     const { blobs } = await store.list({ prefix: "app:" });
@@ -42,7 +42,12 @@ export default async (request, context) => {
     // 결제 안 하고 나간 신청서(7일 지난 pending)와, 보유 기간(이용 기간 + 1개월, 개인정보처리방침)이 지난 신청서는 지운다
     const now = Date.now();
     const stale = apps.filter((a) => now - a.createdAt > (a.status === "pending" ? 7 : cfg.days + 31) * 86400000);
-    await Promise.all(stale.map((a) => store.delete(`app:${a.id}`).catch(() => {})));
+    await Promise.all(stale.map(async (a) => {
+      await store.delete(`app:${a.id}`).catch(() => {});
+      if (a.mulNo) await store.delete(`mul:${a.mulNo}`).catch(() => {});
+      const idx = await store.get(`phone:${a.phone}`, { type: "json" }).catch(() => null);
+      if (idx?.id === a.id) await store.delete(`phone:${a.phone}`).catch(() => {});
+    }));
     const live = apps.filter((a) => !stale.includes(a)).sort((a, b) => b.createdAt - a.createdAt);
     const subs = await Promise.all(live.map((a) => (a.subId ? getSubscriber(a.subId) : null)));
     return json({ applications: live.map((a, i) => adminView(a, subs[i])), paymentEnabled: cfg.paymentEnabled });
@@ -57,22 +62,15 @@ export default async (request, context) => {
     if (!cfg.paymentEnabled) return json({ error: "payment_not_configured" }, { status: 503 });
     const v = validateApplication(body);
     if (v.error) return json({ error: v.error }, { status: 400 });
-    // 같은 IP에서 30분에 5건까지만(결제 요청이 PayApp 판매자 화면에 쌓이지 않도록) — 로그인 시도 제한 모듈을 재사용
+    // 같은 IP에서 30분에 5건까지만(신청서 도배 방지) — 로그인 시도 제한 모듈을 재사용
     const throttle = createLoginThrottle("apply-throttle", request, context, secret);
     const lockedFor = await throttle.lockedFor();
     if (lockedFor) return tooManyAttempts(json, lockedFor);
     await throttle.fail();
 
     const app = newApplication(v.data, cfg.price);
-    const claim = createClaim(secret, app.id);
-    const pay = await requestPayment(app, { origin: new URL(request.url).origin, claim });
-    if (pay.error) {
-      console.error("payapp payrequest failed", pay);
-      return json({ error: pay.error }, { status: 502 });
-    }
-    app.mulNo = pay.mulNo;
-    await store.setJSON(`app:${app.id}`, app);
-    return json({ payurl: pay.payurl, claim });
+    await saveApplication(app, store);
+    return json({ payurl: cfg.payUrl, claim: createClaim(secret, app.id) });
   }
 
   if (body?.action === "claim") {
@@ -80,7 +78,8 @@ export default async (request, context) => {
     if (!id) return json({ error: "invalid_claim" }, { status: 400 });
     const app = await store.get(`app:${id}`, { type: "json", consistency: "strong" });
     if (!app) return json({ error: "not_found" }, { status: 404 });
-    if (app.status !== "paid") return json({ status: app.status });
+    // 결제창에 같은 번호를 넣으라고 안내할 수 있게 가린 번호를 같이 준다(010-****-5678)
+    if (app.status !== "paid") return json({ status: app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` });
     const sub = await getSubscriber(app.subId);
     if (!isActive(sub)) return json({ status: "ended" });
     const { token, did, maxAge } = createPersonalSession(secret, sub);
