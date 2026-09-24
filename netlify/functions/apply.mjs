@@ -5,6 +5,7 @@
 //   POST {action:"create", ...신청서}     신청서 저장 → { payurl(PayApp 결제 링크), claim }
 //   POST {action:"claim", claim}         결제 결과 확인 — 결제 완료면 개인 코드를 알려주고 바로 로그인 쿠키를 준다
 //   POST {action:"delivered", id, delivered}  맞춤 선별 메일 보냄 표시(관리자)
+//   POST {action:"cancel", id}           결제 대기 신청서를 결제 취소로 정리(관리자)
 import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mjs";
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
@@ -79,7 +80,8 @@ export default async (request, context) => {
     const app = await store.get(`app:${id}`, { type: "json", consistency: "strong" });
     if (!app) return json({ error: "not_found" }, { status: 404 });
     // 결제창에 같은 번호를 넣으라고 안내할 수 있게 가린 번호를 같이 준다(010-****-5678)
-    if (app.status !== "paid") return json({ status: app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` });
+    // 결제 요청이 취소된 신청서도 같은 신청서로 다시 결제할 수 있으니 화면에는 결제 대기로 보여 준다
+    if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` });
     const sub = await getSubscriber(app.subId);
     if (!isActive(sub)) return json({ status: "ended" });
     const { token, did, maxAge } = createPersonalSession(secret, sub);
@@ -96,6 +98,17 @@ export default async (request, context) => {
     const app = await store.get(key, { type: "json", consistency: "strong" });
     if (!app) return json({ error: "not_found" }, { status: 404 });
     app.delivered = body.delivered === true;
+    await store.setJSON(key, app);
+    return json({ ok: true });
+  }
+
+  if (body?.action === "cancel") {
+    if (!hasValidStatsSession(request, secret)) return json({ error: "stats_auth_required" }, { status: 401 });
+    const key = `app:${String(body.id || "")}`;
+    const app = await store.get(key, { type: "json", consistency: "strong" });
+    if (!app) return json({ error: "not_found" }, { status: 404 });
+    if (app.status !== "pending") return json({ error: "not_pending" }, { status: 409 });
+    app.status = "canceled";
     await store.setJSON(key, app);
     return json({ ok: true });
   }
