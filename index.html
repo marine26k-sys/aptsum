@@ -387,6 +387,23 @@
         document.getElementById('visitToday').textContent = `오늘 ${d.today.toLocaleString()}`;
       }).catch(() => {});
     })();
+    // 탭별 클릭 집계(2026.09, 운영자 요청 — stats.html "탭별 클릭"). 누를 때마다 보내지 않고 이 방문에서 누른 탭을 모아 두었다가
+    // 페이지를 떠나거나 화면이 숨겨질 때 한 번에 보낸다(sendBeacon — 요청 수가 방문 1회당 1번 안팎, 페이지 이동을 막지 않음).
+    // 같은 사람이 같은 탭을 여러 번 눌러도 서버에서 하루 1회로 센다(netlify/functions/tab-clicks.mjs).
+    (function(){
+      const clicked = new Set(), sent = new Set();
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest && e.target.closest('.tabs .tab[id]');
+        if (t) clicked.add(t.id);
+      }, true);
+      const flush = () => {
+        const tabs = [...clicked].filter(t => !sent.has(t));
+        if (!tabs.length || !navigator.sendBeacon) return;
+        try { if (navigator.sendBeacon('/api/tab-clicks', JSON.stringify({ tabs }))) tabs.forEach(t => sent.add(t)); } catch (e) {}
+      };
+      addEventListener('pagehide', flush);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+    })();
   </script>
   <script>
     // ---- PWA 설치: 서비스워커 등록 + 홈 화면 추가 버튼 ----
@@ -610,7 +627,7 @@
       <div class="tab-grp-name">입지</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
-          <a class="tab" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
+          <a class="tab" id="tabSL" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
           <div class="tab" id="tabSub" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
       </div>
     </div>

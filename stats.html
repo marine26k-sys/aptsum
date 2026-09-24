@@ -153,6 +153,7 @@ async function load(){
     if(!res.ok) throw new Error("failed");
     render(await res.json());
     loadBookClicks();
+    initTabClicks();
     loadListingMeta();
     initSubscribers();
     initApplications();
@@ -199,6 +200,16 @@ function render(d){
           <div class="page-nums"><b>${p.total.toLocaleString()}</b><div>오늘 ${p.today.toLocaleString()}</div></div>
         </div>
       `).join("")}
+    </div>
+
+    <div class="card" id="tabCard">
+      <div class="card-title">탭별 클릭 <span style="font-size:10.5px;font-weight:700;color:var(--sub)">· 메인 방문자 중 그 탭을 눌러 본 사람</span></div>
+      <div id="tabPeriod" style="display:flex;gap:4px;margin-bottom:8px">
+        <button data-p="d1" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">오늘</button>
+        <button data-p="d7" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">최근 7일</button>
+        <button data-p="d30" style="flex:1;padding:5px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer">최근 30일</button>
+      </div>
+      <div id="tabBody" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
     <div class="card" id="bookCard">
@@ -447,6 +458,60 @@ function initApplications(){
     loadApplications();
   });
   loadApplications();
+}
+
+// ═══ 탭별 클릭(2026.09 신규) ═══
+// index.html이 방문 1회당 한 번 보내는 "누른 탭 목록"을 탭별·기간별로 합친 값(netlify/functions/tab-clicks.mjs).
+// 같은 사람이 같은 탭을 하루에 여러 번 눌러도 1회 — 그래서 방문자 수로 나누면 "눌러 본 사람 비율"이 된다.
+const TAB_LABELS = [
+  ["국토부 · 단지", [["tabC","단지 분석"],["tabCmp","단지 비교"]]],
+  ["국토부 · 입지", [["tabTM","급지 분석"],["tabSL","교통 호재"],["tabSub","역세권"]]],
+  ["국토부 · 랭킹", [["tabR","지역 랭킹"],["tabV","거래량 랭킹"],["tabPP","평단가"],["tabGap","전세가율"]]],
+  ["국토부 · 흐름", [["tabNH","신고가"],["tabLTR","매매 변동률"],["tabJLTR","전세 변동률"]]],
+  ["국토부 · 저평가", [["tabSU","단기 저평가"],["tabP","반기 저평가"],["tabLP","연간 저평가"],["tabINV","평형 비교 저평가"]]],
+  ["네이버 실매물", [["tabLPL","저평가 실매물"],["tabLBG","예산별 실매물"],["tabLUR","급매 선별"]]],
+  ["비공개 탭", [["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"]]],
+  ["신청", [["tabApply","전 지역 이용 신청 버튼"]]],
+];
+let tabData = null, tabPeriod = "d7";
+function renderTabClicks(){
+  const box = $("#tabBody");
+  document.querySelectorAll("#tabPeriod button").forEach(b => {
+    const on = b.dataset.p === tabPeriod;
+    b.style.background = on ? "var(--teal)" : "#fff"; b.style.color = on ? "#fff" : "var(--ink)"; b.style.borderColor = on ? "var(--teal)" : "var(--line)";
+  });
+  const c = tabData[tabPeriod] || {}, visitors = tabData.visitors?.[tabPeriod] || 0;
+  const all = TAB_LABELS.flatMap(([, list]) => list.map(([id]) => c[id] || 0));
+  const max = Math.max(...all, 1);
+  const days = tabData.since + 1; // 집계가 시작된 뒤 지난 날 수(0이면 아직 기록 없음)
+  box.innerHTML = `
+    <div style="font-size:11px;color:var(--sub);margin-bottom:6px">같은 기간 메인 방문자 <b style="color:var(--navy)">${visitors.toLocaleString()}명</b> 기준${days > 0 && days < ({d1:1,d7:7,d30:30})[tabPeriod] ? ` · 집계 시작 ${days}일째라 기간이 짧습니다` : ""}</div>
+    ${TAB_LABELS.map(([group, list]) => `
+      <div style="font-size:10.5px;font-weight:800;color:var(--teal-dark);margin:8px 0 2px">${group}</div>
+      ${list.map(([id, label]) => {
+        const n = c[id] || 0, pct = visitors ? Math.round(n / visitors * 1000) / 10 : null;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+          <div style="flex:none;width:118px;font-size:11.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="flex:1;height:7px;background:var(--slate-bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.round(n / max * 100)}%;background:var(--teal);border-radius:4px"></div></div>
+          <div style="flex:none;width:74px;text-align:right;font-size:11px"><b style="color:var(--navy)">${n.toLocaleString()}</b>${pct !== null ? ` <span style="color:var(--sub)">${pct}%</span>` : ""}</div>
+        </div>`;
+      }).join("")}`).join("")}
+    <div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">방문자가 페이지를 떠날 때 그 방문에서 누른 탭을 모아 보내므로, 몇 분 늦게 반영될 수 있습니다. 비공개 탭은 인증한 사람에게만 보여서 비율이 낮게 나옵니다.</div>`;
+}
+async function initTabClicks(){
+  const box = $("#tabBody");
+  if(!box) return;
+  $("#tabPeriod").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-p]");
+    if(!b || !tabData) return;
+    tabPeriod = b.dataset.p; renderTabClicks();
+  });
+  try{
+    const res = await fetch("/api/tab-clicks", { cache:"no-store", credentials:"same-origin" });
+    if(!res.ok) throw new Error();
+    tabData = await res.json();
+    renderTabClicks();
+  }catch(e){ box.textContent = "탭별 클릭을 불러오지 못했습니다."; }
 }
 
 // ═══ 추천 서적 클릭(2026.09 신규) ═══
