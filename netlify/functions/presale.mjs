@@ -336,7 +336,7 @@ export default async (req) => {
   } else if (req.method === "POST") {
     let body;
     try { body = await req.json(); } catch { return Response.json({ error: "잘못된 요청" }, { status: 400 }); }
-    lawd = (body.lawd || "").trim();
+    lawd = String(body?.lawd || "").trim();
     yms = Array.isArray(body.yms) ? body.yms.filter((y) => /^\d{6}$/.test(y)).slice(0, 15) : [];
   } else {
     return Response.json({ error: "GET/POST only" }, { status: 405 });

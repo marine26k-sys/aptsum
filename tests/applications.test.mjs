@@ -9,7 +9,10 @@ function fakeStore() {
   return {
     m,
     async get(key, opts) { const v = m.get(key); return v === undefined ? null : (opts?.type === 'json' ? structuredClone(v) : JSON.stringify(v)); },
-    async setJSON(key, v) { m.set(key, structuredClone(v)); },
+    async setJSON(key, v, opts) {
+      if (opts?.onlyIfNew && m.has(key)) return { modified: false };
+      m.set(key, structuredClone(v)); return { modified: true };
+    },
     async delete(key) { m.delete(key); },
     async list({ prefix }) { return { blobs: [...m.keys()].filter(k => k.startsWith(prefix)).map(key => ({ key })) }; },
   };
@@ -117,6 +120,13 @@ test('a newer application by the same phone receives the payment', async () => {
   const newer = newApplication(validateApplication({ ...FORM, region: '수원시' }).data, 9900, NOW - 1000);
   await saveApplication(newer, appStore);
   assert.equal((await feed({ pay_state: '4' })).appId, newer.id);
+});
+
+test('concurrent duplicate notifications issue only one code', async () => {
+  const { feed, subs } = await setup();
+  const results = await Promise.all([feed({ pay_state: '4' }), feed({ pay_state: '4' })]);
+  assert.deepEqual(results.map(r => r.result).sort(), ['already_issued', 'issued']);
+  assert.equal(subs().length, 1);
 });
 
 test('expiry date is counted in KST', () => {

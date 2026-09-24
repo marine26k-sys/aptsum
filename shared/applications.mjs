@@ -146,6 +146,13 @@ export async function handleFeedback(p, {
       app = newApplication({ region: "", budget: "", size: "", movein: "", condition: "", phone, email: "" }, cfg.price, now);
       app.unmatched = true;
     }
+    // 같은 결제 통보가 동시에 두 번 오면(PayApp은 같은 통보를 여러 번 보낼 수 있다) 코드가 두 개 발급될 수 있어,
+    // 결제번호 색인을 "없을 때만 쓰기"로 먼저 선점한 요청만 발급한다. 이미 색인이 있는데 여기까지 왔다면
+    // 앞선 요청이 발급 도중 실패한 경우라(위 findApplication이 subId 없는 신청서를 돌려줌) 그대로 이어서 발급한다.
+    if (mulNo && !(await getJSON(appStore, `mul:${mulNo}`))) {
+      const claimed = await appStore.setJSON(`mul:${mulNo}`, { id: app.id }, { onlyIfNew: true });
+      if (claimed && claimed.modified === false) return { ok: true, result: "already_issued" };
+    }
     const [y, m, d] = expiryDateAfter(cfg.days, now).split("-");
     const sub = await createSubscriber({
       name: `${app.unmatched ? "결제" : "신청"} ${phone.slice(-4) || mulNo}`,
