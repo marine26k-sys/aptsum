@@ -24,6 +24,11 @@ export function sameValue(left, right) {
   return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes);
 }
 
+// 구독자 세션 쿠키 헤더 — /api/subscriber(코드 로그인)와 /api/apply(결제 완료 후 자동 로그인)가 같이 쓴다.
+export function subscriberCookie(token, maxAge = MAX_AGE_SECONDS) {
+  return [`${COOKIE_NAME}=${token}`, "Path=/", `Max-Age=${maxAge}`, "HttpOnly", "Secure", "SameSite=Strict"].join("; ");
+}
+
 export function sign(payload, secret) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }

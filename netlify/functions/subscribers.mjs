@@ -7,10 +7,9 @@
 //   POST {action:"restore", id}            해지 취소
 //   POST {action:"reissue", id}            코드 새로 바꾸기 — 옛 코드·기존 로그인 기기 모두 무효(공유 의심 시)
 //   POST {action:"delete", id}             목록에서 삭제
-import { randomBytes } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import {
-  subscriberStore, getSubscriber, newCode, normalizeCode, expiryFromDate, loadDevices, clearDevices,
+  subscriberStore, getSubscriber, normalizeCode, expiryFromDate, loadDevices, clearDevices, assignCode, createSubscriber,
 } from "../../shared/subscribers.mjs";
 
 export const config = { path: "/api/subscribers" };
@@ -22,18 +21,6 @@ function view(sub, seen = []) {
     id: sub.id, name: sub.name, code: sub.code, createdAt: sub.createdAt, expiresAt: sub.expiresAt || null,
     revoked: !!sub.revoked, devices: seen.length, lastSeen: seen.length ? Math.max(...seen) : null,
   };
-}
-
-async function assignCode(store, sub) {
-  for (let i = 0; i < 5; i++) {
-    const code = newCode();
-    const key = `code:${normalizeCode(code)}`;
-    if (await store.get(key, { consistency: "strong" })) continue; // 이미 쓰는 코드면 다시 뽑기
-    await store.setJSON(key, { id: sub.id });
-    sub.code = code;
-    return;
-  }
-  throw new Error("code_generation_failed");
 }
 
 export default async (request) => {
@@ -62,9 +49,7 @@ export default async (request) => {
     if (!name) return json({ error: "name_required" }, 400);
     const expiresAt = expiryFromDate(body.expires);
     if (Number.isNaN(expiresAt)) return json({ error: "invalid_expires" }, 400);
-    const sub = { id: randomBytes(6).toString("base64url"), name, gen: 1, createdAt: Date.now(), expiresAt, revoked: false };
-    await assignCode(store, sub);
-    await store.setJSON(`sub:${sub.id}`, sub);
+    const sub = await createSubscriber({ name, expiresAt }, store);
     return json({ subscriber: view(sub) });
   }
 
