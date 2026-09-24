@@ -260,6 +260,19 @@
   img{ -webkit-user-drag:none; user-drag:none; pointer-events:auto; }
   /* 커스텀 지역 선택 — 네이티브 select 드롭다운은 행 높이를 OS가 그려서 CSS로 못 줄이므로 직접 그린다 */
   #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+  .ls-filters{margin:8px 0 2px;padding:8px 12px 4px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .ls-row{margin:2px 0 6px}
+  .ls-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--sub)}
+  .ls-hd b{color:var(--teal-dark);font-size:13px}
+  .ls-filters input[type=range]{width:100%;margin:6px 0 2px;accent-color:var(--teal)}
+  .ls-dual{position:relative;height:26px;--lo:0%;--hi:100%}
+  .ls-dual::before{content:'';position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--line)}
+  .ls-dual::after{content:'';position:absolute;left:var(--lo);right:calc(100% - var(--hi));top:12px;height:4px;border-radius:2px;background:var(--teal)}
+  .ls-dual input[type=range]{position:absolute;left:0;top:0;margin:0;height:26px;background:none;pointer-events:none;-webkit-appearance:none;appearance:none;z-index:1}
+  .ls-dual input[type=range]::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
+  .ls-dual input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
+  .ls-dual input[type=range]::-webkit-slider-runnable-track{background:none}
+  .ls-dual input[type=range]::-moz-range-track{background:none}
   .rgpick{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;
     background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;
     font-family:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
@@ -688,13 +701,22 @@
         <option value="20">20년 이내</option>
         <option value="20+">20년 초과</option>
       </select>
-      <!-- 세대수 필터 — 예산별 실매물·급매 선별 전용(2026.09 운영자 요청). 기본 조건이 300세대 이상이라 그 위 단계만 -->
-      <select id="hhMin" style="flex:1;min-width:0;display:none">
-        <option value="" selected>전체 세대</option>
-        <option value="500">500세대↑</option>
-        <option value="1000">1000세대↑</option>
-        <option value="2000">2000세대↑</option>
-      </select>
+    </div>
+    <!-- 연식·세대수 슬라이더 — 예산별 실매물·급매 선별 전용(2026.09 운영자 요청: 선택지 몇 개로는 너무 한정적이라
+         슬라이드로 자유롭게). 연식은 최소~최대 년차 범위, 세대수는 최소 세대. 손을 떼면 바로 다시 조회(엑셀 요약은
+         한 번 받으면 메모리에 캐시돼 재조회가 빠르다). -->
+    <div id="lsFilters" class="ls-filters" style="display:none">
+      <div class="ls-row">
+        <div class="ls-hd"><span>연식</span><b id="lsAgeTxt">전체</b></div>
+        <div class="ls-dual">
+          <input type="range" id="lsAgeMin" min="1" max="40" step="1" value="1" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 년차">
+          <input type="range" id="lsAgeMax" min="1" max="40" step="1" value="40" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 년차">
+        </div>
+      </div>
+      <div class="ls-row">
+        <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
+        <input type="range" id="lsHhMin" min="300" max="5000" step="100" value="300" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
+      </div>
     </div>
     <button class="go" id="btn" onclick="search()">분석</button>
   </div>
@@ -830,7 +852,7 @@ function pushView(){
     mN: document.getElementById('monthsN').value,
     fM: document.getElementById('floorMin').value,
     by: document.getElementById('buildYear').value,
-    hm: document.getElementById('hhMin').value,
+    ls: lsGet(), // 실매물 탭 연식·세대수 슬라이더
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
@@ -847,7 +869,7 @@ function buildShareURL(inp){
   const p = new URLSearchParams();
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
-  if(inp.hm) p.set('hm', inp.hm);
+  if(inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
     p.set('c', inp.cmp.filter(x=>x.name.trim()).map(x=>x.lawd+':'+x.name.trim()).join('|'));
@@ -892,7 +914,7 @@ async function initFromURL(){
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) document.getElementById('buildYear').value = p.get('by');
-  if(p.get('hm')!==null) document.getElementById('hhMin').value = p.get('hm');
+  if(p.get('ls')){ const [a0,a1,h] = p.get('ls').split('-').map(Number); lsSet({a0,a1,h}); }
   if(m==='compare'){
     const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
     document.getElementById('cmpRows').innerHTML='';
@@ -1178,7 +1200,7 @@ function restoreView(vi){
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
   document.getElementById('buildYear').value = inp.by || '';
-  document.getElementById('hhMin').value = inp.hm || '';
+  lsSet(inp.ls);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
   regionSel = (inp.regionSel || []).slice();
   saveRegionSel(); renderRegionChips();
@@ -1651,8 +1673,8 @@ function setMode(m, fromRestore){
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
-  document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='listingbudget'||m==='listingurgent') ? '' : 'none';
-  document.getElementById('hhMin').style.display = (m==='listingbudget'||m==='listingurgent') ? '' : 'none';
+  document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
+  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent') ? '' : 'none';
   document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(운영자 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
@@ -5232,6 +5254,56 @@ function listingBudgetBandOf(ask){
   return LISTING_BUDGET_BANDS.find(b => ask >= b.lo && ask < b.hi) || null;
 }
 
+// ═══ 실매물 탭 연식·세대수 슬라이더 (2026.09 운영자 요청) ═══
+// 연식은 화면 표기와 같은 "년차"(준공한 해 = 1년차) 기준 최소~최대 범위. 최대값 40은 "40년차 이상 전부",
+// 세대수 최대값 5000은 "5000세대 이상"을 뜻한다. 기본값(1~40년차, 300세대)이면 필터 없음과 같다.
+const LS_AGE_MAX = 40, LS_HH_BASE = 300;
+function lsGet(){
+  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value };
+}
+function lsSet(v){
+  v = v || {};
+  document.getElementById('lsAgeMin').value = v.a0 || 1;
+  document.getElementById('lsAgeMax').value = v.a1 || LS_AGE_MAX;
+  document.getElementById('lsHhMin').value = v.h || LS_HH_BASE;
+  lsSync();
+}
+function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || v.h > LS_HH_BASE; }
+function lsAgeText(v){
+  if(v.a0 <= 1 && v.a1 >= LS_AGE_MAX) return '전체';
+  if(v.a0 <= 1) return `${v.a1}년차 이하`;
+  if(v.a1 >= LS_AGE_MAX) return `${v.a0}년차 이상`;
+  return v.a0 === v.a1 ? `${v.a0}년차` : `${v.a0}~${v.a1}년차`;
+}
+function lsHhText(v){ return v.h <= LS_HH_BASE ? '전체' : `${v.h.toLocaleString()}세대↑`; }
+function lsLabel(v){
+  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, v.h > LS_HH_BASE ? lsHhText(v) : null].filter(Boolean).join(' · ') || null;
+}
+function lsMatch(x, v){
+  if(v.h > LS_HH_BASE && !(x.hh >= v.h)) return false;
+  if(v.a0 > 1 || v.a1 < LS_AGE_MAX){
+    const by = parseInt(x.built, 10);
+    if(!by) return false; // 준공연도 없는 매물은 연식 필터가 걸려 있을 때 제외
+    const age = new Date().getFullYear() - by + 1;
+    if(age < v.a0 || (v.a1 < LS_AGE_MAX && age > v.a1)) return false;
+  }
+  return true;
+}
+// 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
+function lsSync(el){
+  const a0 = document.getElementById('lsAgeMin'), a1 = document.getElementById('lsAgeMax');
+  if(+a0.value > +a1.value){ if(el === a0) a1.value = a0.value; else a0.value = a1.value; }
+  const v = lsGet();
+  document.getElementById('lsAgeTxt').textContent = lsAgeText(v);
+  document.getElementById('lsHhTxt').textContent = lsHhText(v);
+  const pct = n => (n - 1) / (LS_AGE_MAX - 1) * 100;
+  document.querySelector('.ls-dual').style.setProperty('--lo', pct(v.a0) + '%');
+  document.querySelector('.ls-dual').style.setProperty('--hi', pct(v.a1) + '%');
+}
+// 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
+function lsApply(){
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent') && lastData.mode === mode) search();
+}
 async function searchListingTab(myToken, lawd, tabMode){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
@@ -5257,12 +5329,10 @@ async function searchListingTab(myToken, lawd, tabMode){
       return;
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
-    // 연식·세대수 필터(2026.09 운영자 요청) — 연식은 다른 탭과 같은 buildYear 선택값을 엑셀의 준공연도(built)에 적용
-    const hhMin = +document.getElementById('hhMin').value || 0;
-    const byItems = applyBuildYearFilter(all.map(x => ({ ...x, build: x.built })));
-    const items = pyBandMultiFilter(byItems.filter(x => x.ask > 0 && (!hhMin || x.hh >= hhMin) && (tabMode !== 'listingurgent' || x.urgent)));
-    const filterLabel = [buildYearLabel(), hhMin ? `${hhMin.toLocaleString()}세대↑` : null].filter(Boolean).join(' · ') || null;
-    const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: pyBandMultiSel.length ? pyBandMultiLabel() : null, filterLabel, hhMin: Math.max(LISTING_MIN_HH, hhMin),
+    // 연식·세대수 슬라이더(2026.09 운영자 요청)
+    const ls = lsGet();
+    const items = pyBandMultiFilter(all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || x.urgent)));
+    const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: pyBandMultiSel.length ? pyBandMultiLabel() : null, filterLabel: lsLabel(ls), hhMin: Math.max(LISTING_MIN_HH, ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
