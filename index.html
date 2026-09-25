@@ -149,9 +149,12 @@
   .lst-table .nm.l2{font-size:10px}
   .lst-table .nm.l3{font-size:9px;letter-spacing:-.2px}
   .lst-table .dg{display:inline-block;white-space:nowrap;font-size:9.5px;color:var(--sub);margin-left:3px}
+  .lst-table tr:last-child td{padding-bottom:2px} /* 마지막 줄 글자 아래끝이 잘리지 않게 */
   .lst-table .sub{font-size:9.5px;line-height:1.05;color:var(--sub);margin-top:0;white-space:nowrap}
   .lst-table .lnk{display:inline-flex;align-items:center;justify-content:center;color:var(--teal-dark);margin-left:3px;vertical-align:-1px;padding:1px}
-  .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* overflow-x:auto만 주면 브라우저가 overflow-y도 auto로 바꿔서, 줄 높이를 좁힌 표(저평가 실매물)에서 글자 아래끝이
+     1~2px만 넘쳐도 PC에서 세로 스크롤바가 생겼다(2026.09 운영자 리포트) — 세로는 항상 hidden */
+  .tbl-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
   td b{font-size:12.5px;color:var(--navy)}
   .tr-r{text-align:right}
@@ -2806,7 +2809,8 @@ function analyzeInversion(all, months){
   const startDate2 = new Date(Date.now() - 210*24*3600*1000);
   return { found:true, mode:'inversion', total:all.length,
     period:`${fmtDate(startDate2)} ~ ${fmtDate(todayDate2)}`,
-    rows: results.slice(0,50) };
+    // 틀어진 폭 큰 50곳을 고른 뒤, 화면에는 저평가 평형의 최근 평균가 낮은 순(2026.09 운영자 요청 — 저평가 탭 전체 통일)
+    rows: results.slice(0,50).sort((a,b)=> a.underAvgAmt-b.underAvgAmt || b.deviationPct-a.deviationPct) };
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산
@@ -2994,6 +2998,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   });
   // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -3063,6 +3068,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   });
   // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -3137,6 +3143,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     }
   });
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   // 최근/이전 1년 라벨 자동 계산 — months[0]이 최신월(YYYYMM)이므로 그 해를 "최근", 그 전해를 "이전"으로 표시.
   // 날짜가 바뀌어도(해가 넘어가도) 수동 수정 없이 항상 현재 기준으로 자동 갱신됨.
@@ -3226,7 +3233,8 @@ function rkSep(i, len){
 // 저평가 탭(단기·반기·연간·연간 동일 권역·평형 비교·저평가 실매물) 단지 카드 구분선 — 2026.09 운영자 요청으로 통일.
 // 카드 사이는 연한 청록 점선, 카드 2개마다와 목록 맨 끝에는 로고 워터마크가 든 구분선(화면 캡처로 공유될 때 출처 표시).
 function uvBrandSep(){
-  return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal-light)"></span>${rkWatermarkHTML()}<span style="flex:1;border-top:1px dashed var(--teal-light)"></span></div>`;
+  // 일반 점선과 같은 높이(1px)를 차지하도록 워터마크는 선 위에 겹쳐 띄운다(2026.09 운영자 요청 — 로고 줄만 간격이 넓어 보였음)
+  return `<div style="position:relative;border-top:1px dashed var(--teal-light)"><span style="position:absolute;left:50%;top:0;transform:translate(-50%,-50%);background:#fff;padding:0 8px;line-height:1;white-space:nowrap">${rkWatermarkHTML().replace('class="rk-wm"', 'class="rk-wm" style="padding:0"')}</span></div>`;
 }
 function uvSep(i){
   if(!i) return '';
@@ -3989,7 +3997,10 @@ async function search(){
           if(x.hh && x.hh.hhcnt>=400) filtered.push(x);
         }
       }
-      d.divergence = filtered;
+      // 후보 선정(격차 큰 순으로 400세대 이상 50곳)은 그대로 두고, 화면에는 낮은 가격 순으로(2026.09 운영자 요청 —
+      // 저평가 탭 전체 통일). 단기 저평가는 최근 평균가, 반기·연간은 최근 최고가 기준. 동률이면 격차 큰 순.
+      const priceKey = mode === 'shortval' ? 'r3avg' : 'r3max';
+      d.divergence = filtered.sort((a,b)=> a[priceKey]-b[priceKey] || b.gapAmt-a.gapAmt);
     }
 
     // 신저가 탭: 300세대 이상 단지만 집계 — 소규모 단지는 표본이 얇아 개별 거래 하나로도
@@ -5258,8 +5269,9 @@ function analyzeListingUndervalue(all){
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
+  // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.slice(0,100);
+  return divergence.slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
@@ -5361,7 +5373,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · 입주가능 매물만 (세안고 제외) · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · 입주가능 매물만 (세안고 제외) · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
