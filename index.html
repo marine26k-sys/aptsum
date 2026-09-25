@@ -3223,6 +3223,15 @@ function rkWatermarkHTML(){
 function rkSep(i, len){
   return ((i+1)%5===0 && i<len-1) ? rkWatermarkHTML() : '';
 }
+// 저평가 탭(단기·반기·연간·연간 동일 권역·평형 비교·저평가 실매물) 단지 카드 구분선 — 2026.09 운영자 요청으로 통일.
+// 카드 사이는 연한 청록 점선, 카드 2개마다와 목록 맨 끝에는 로고 워터마크가 든 구분선(화면 캡처로 공유될 때 출처 표시).
+function uvBrandSep(){
+  return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal-light)"></span>${rkWatermarkHTML()}<span style="flex:1;border-top:1px dashed var(--teal-light)"></span></div>`;
+}
+function uvSep(i){
+  if(!i) return '';
+  return i % 2 ? '<div style="border-top:1px dashed var(--teal-light)"></div>' : uvBrandSep();
+}
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
 function hdVs(prevLabel, recentLabel){
@@ -4967,7 +4976,8 @@ function divergenceHTML(list){
   if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 400세대 이상 단지만 집계)</div>';
   const multiRegion = regionMulti(list);
   return list.map((x,i)=>`
-    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+${uvSep(i)}
+    <div style="padding:6px 0">
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
@@ -4982,7 +4992,7 @@ function divergenceHTML(list){
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.r3median.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
       </div>
-    </div>`).join('');
+    </div>`).join('') + uvBrandSep();
 }
 
 function renderLongTermRise(d){
@@ -5084,7 +5094,8 @@ function renderInversion(d){
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = d.rows.length ? d.rows.map((x,i)=>`
-    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+${uvSep(i)}
+    <div style="padding:6px 0">
       <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
       <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table inv-table" style="margin-top:10px">
@@ -5114,7 +5125,7 @@ function renderInversion(d){
         <span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:10px;border-radius:20px;padding:2px 6px;flex:none">${x.deviationPct}%</span>
       </div>
       <div class="rng" style="text-align:right;margin-top:1px">최근 1년 최고가 ${x.underYearMax.toFixed(1)}억 (상승 여력 <b style="color:var(--red)">${x.yearMaxMargin.toFixed(1)}억</b>)</div>
-    </div>`).join('')
+    </div>`).join('') + uvBrandSep()
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
   const html = `
   <div class="card">
@@ -5165,7 +5176,8 @@ function peakDivergenceHTML(list, prevLabel, recentLabel){
   if(!list.length) return '<div class="rng" style="padding:10px 0">조건 충족 데이터 없음 (전·후반기 각 2건 이상 필요, 400세대 이상 단지만 집계)</div>';
   const multiRegion = regionMulti(list);
   return list.map((x,i)=>`
-    <div style="padding:12px 0;${i? 'border-top:1px dashed var(--line)':''}">
+${uvSep(i)}
+    <div style="padding:6px 0">
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(x.apt)}</div>
@@ -5180,7 +5192,7 @@ function peakDivergenceHTML(list, prevLabel, recentLabel){
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.r3median.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
       </div>
-    </div>`).join('');
+    </div>`).join('') + uvBrandSep();
 }
 
 function renderPeak(d){
@@ -5314,12 +5326,9 @@ function renderListingUndervalue(d){
   // 단지명 바로 뒤에 동 + 링크 아이콘(한 덩어리) — 별도 줄로 두면 긴 단지명이 줄바꿈될 때 3줄이 됐다(운영자 요청)
   const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
   const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
-  // 단지 카드 2개마다(그리고 목록 맨 끝에) "—— 아파트썸 ——" 구분선 — 화면 캡처로 공유될 때 출처가 보이도록(2026.09 운영자 요청).
-  // 그 사이 구분선은 연한 청록 점선. 로고·문구는 랭킹 탭 워터마크(rkWatermarkHTML)와 같은 것.
-  const brandSep = `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal-light)"></span>${rkWatermarkHTML()}<span style="flex:1;border-top:1px dashed var(--teal-light)"></span></div>`;
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
-    : list.map((x,i)=>`${i ? (i % 2 ? '<div style="border-top:1px dashed var(--teal-light)"></div>' : brandSep) : ''}
+    : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
       <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
@@ -5331,7 +5340,7 @@ function renderListingUndervalue(d){
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
       </div>
-    </div>`).join('') + brandSep;
+    </div>`).join('') + uvBrandSep();
   // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 제목 아래 청록 배지로 표시 — 제목보다 작게(2026.09 운영자 요청)
   const html = `
   <div class="card">
