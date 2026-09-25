@@ -149,9 +149,12 @@
   .lst-table .nm.l2{font-size:10px}
   .lst-table .nm.l3{font-size:9px;letter-spacing:-.2px}
   .lst-table .dg{display:inline-block;white-space:nowrap;font-size:9.5px;color:var(--sub);margin-left:3px}
+  .lst-table tr:last-child td{padding-bottom:2px} /* 마지막 줄 글자 아래끝이 잘리지 않게 */
   .lst-table .sub{font-size:9.5px;line-height:1.05;color:var(--sub);margin-top:0;white-space:nowrap}
   .lst-table .lnk{display:inline-flex;align-items:center;justify-content:center;color:var(--teal-dark);margin-left:3px;vertical-align:-1px;padding:1px}
-  .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* overflow-x:auto만 주면 브라우저가 overflow-y도 auto로 바꿔서, 줄 높이를 좁힌 표(저평가 실매물)에서 글자 아래끝이
+     1~2px만 넘쳐도 PC에서 세로 스크롤바가 생겼다(2026.09 운영자 리포트) — 세로는 항상 hidden */
+  .tbl-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
   tr:last-child td{border-bottom:none}
   td b{font-size:12.5px;color:var(--navy)}
   .tr-r{text-align:right}
