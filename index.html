@@ -5232,6 +5232,9 @@ function analyzeListingUndervalue(all){
         && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 3년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 3년치 중 최고가(2026.09 운영자가 엑셀 추출 기간을 5년→3년으로 변경)
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
+      // 한 단지는 비교군에 한 번만 — 엑셀이 단지·전용면적 단위라 같은 단지의 비슷한 평형(예: 전용 58·59)이 따로 잡혀
+      // 비교군에 같은 단지가 두 번 들어가고 중앙값도 그 단지로 쏠리던 문제(2026.09 운영자 리포트). 최고가가 가장 가까운 평형만 남긴다.
+      .filter((o, i, arr) => arr.findIndex(q => q.nid === o.nid) === i)
       .slice(0,5);
     if(nearest.length < 2) return; // 본인 포함 3개 이상일 때만
     const askMedian = median(nearest.map(o=>o.ask));
