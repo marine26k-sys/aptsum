@@ -5314,10 +5314,13 @@ function renderListingUndervalue(d){
   // 단지명 바로 뒤에 동 + 링크 아이콘(한 덩어리) — 별도 줄로 두면 긴 단지명이 줄바꿈될 때 3줄이 됐다(운영자 요청)
   const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
   const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
+  // 단지 카드 2개마다(그리고 목록 맨 끝에) "—— 아파트썸 ——" 구분선 — 화면 캡처로 공유될 때 출처가 보이도록(2026.09 운영자 요청).
+  // 그 사이 구분선은 청록 점선.
+  const brandSep = `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal)"></span><span style="font-size:11px;font-weight:800;color:var(--teal);letter-spacing:.3px">아파트썸</span><span style="flex:1;border-top:1px dashed var(--teal)"></span></div>`;
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
-    : list.map((x,i)=>`
-    <div style="padding:6px 0;${i? 'border-top:1px dashed var(--teal)':''}">
+    : list.map((x,i)=>`${i ? (i % 2 ? '<div style="border-top:1px dashed var(--teal)"></div>' : brandSep) : ''}
+    <div style="padding:6px 0">
       <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
@@ -5328,7 +5331,7 @@ function renderListingUndervalue(d){
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
       </div>
-    </div>`).join('');
+    </div>`).join('') + brandSep;
   // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 제목 아래 청록 배지로 표시 — 제목보다 작게(2026.09 운영자 요청)
   const html = `
   <div class="card">
