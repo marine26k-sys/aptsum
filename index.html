@@ -3229,7 +3229,8 @@ function rkSep(i, len){
 // 저평가 탭(단기·반기·연간·연간 동일 권역·평형 비교·저평가 실매물) 단지 카드 구분선 — 2026.09 운영자 요청으로 통일.
 // 카드 사이는 연한 청록 점선, 카드 2개마다와 목록 맨 끝에는 로고 워터마크가 든 구분선(화면 캡처로 공유될 때 출처 표시).
 function uvBrandSep(){
-  return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal-light)"></span>${rkWatermarkHTML()}<span style="flex:1;border-top:1px dashed var(--teal-light)"></span></div>`;
+  // 일반 점선과 같은 높이(1px)를 차지하도록 워터마크는 선 위에 겹쳐 띄운다(2026.09 운영자 요청 — 로고 줄만 간격이 넓어 보였음)
+  return `<div style="position:relative;border-top:1px dashed var(--teal-light)"><span style="position:absolute;left:50%;top:0;transform:translate(-50%,-50%);background:#fff;padding:0 8px;line-height:1;white-space:nowrap">${rkWatermarkHTML().replace('class="rk-wm"', 'class="rk-wm" style="padding:0"')}</span></div>`;
 }
 function uvSep(i){
   if(!i) return '';
