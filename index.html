@@ -2809,7 +2809,8 @@ function analyzeInversion(all, months){
   const startDate2 = new Date(Date.now() - 210*24*3600*1000);
   return { found:true, mode:'inversion', total:all.length,
     period:`${fmtDate(startDate2)} ~ ${fmtDate(todayDate2)}`,
-    rows: results.slice(0,50) };
+    // 틀어진 폭 큰 50곳을 고른 뒤, 화면에는 저평가 평형의 최근 평균가 낮은 순(2026.09 운영자 요청 — 저평가 탭 전체 통일)
+    rows: results.slice(0,50).sort((a,b)=> a.underAvgAmt-b.underAvgAmt || b.deviationPct-a.deviationPct) };
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산
@@ -2997,6 +2998,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
   });
   // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   return { found:true, mode:'shortval', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -3066,6 +3068,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
   });
   // 가장 많이 벌어진 순(금액 기준, 억 단위 격차가 큰 순)으로 정렬, 동률이면 표본(n)이 더 많은 쪽을 우선(신뢰도 반영)
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   return { found:true, mode:'peak', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -3140,6 +3143,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     }
   });
   divergence.sort((a,b)=> b.gapAmt-a.gapAmt || b.n-a.n);
+  // (화면 표시 순서는 search()의 400세대 필터 뒤에서 낮은 가격 순으로 다시 정렬 — 2026.09 운영자 요청)
 
   // 최근/이전 1년 라벨 자동 계산 — months[0]이 최신월(YYYYMM)이므로 그 해를 "최근", 그 전해를 "이전"으로 표시.
   // 날짜가 바뀌어도(해가 넘어가도) 수동 수정 없이 항상 현재 기준으로 자동 갱신됨.
@@ -3993,7 +3997,10 @@ async function search(){
           if(x.hh && x.hh.hhcnt>=400) filtered.push(x);
         }
       }
-      d.divergence = filtered;
+      // 후보 선정(격차 큰 순으로 400세대 이상 50곳)은 그대로 두고, 화면에는 낮은 가격 순으로(2026.09 운영자 요청 —
+      // 저평가 탭 전체 통일). 단기 저평가는 최근 평균가, 반기·연간은 최근 최고가 기준. 동률이면 격차 큰 순.
+      const priceKey = mode === 'shortval' ? 'r3avg' : 'r3max';
+      d.divergence = filtered.sort((a,b)=> a[priceKey]-b[priceKey] || b.gapAmt-a.gapAmt);
     }
 
     // 신저가 탭: 300세대 이상 단지만 집계 — 소규모 단지는 표본이 얇아 개별 거래 하나로도
