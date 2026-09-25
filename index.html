@@ -5315,11 +5315,11 @@ function renderListingUndervalue(d){
   const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
   const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
   // 단지 카드 2개마다(그리고 목록 맨 끝에) "—— 아파트썸 ——" 구분선 — 화면 캡처로 공유될 때 출처가 보이도록(2026.09 운영자 요청).
-  // 그 사이 구분선은 청록 점선.
-  const brandSep = `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal)"></span><span style="font-size:11px;font-weight:800;color:var(--teal);letter-spacing:.3px">아파트썸</span><span style="flex:1;border-top:1px dashed var(--teal)"></span></div>`;
+  // 그 사이 구분선은 연한 청록 점선. 로고·문구는 랭킹 탭 워터마크(rkWatermarkHTML)와 같은 것.
+  const brandSep = `<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="flex:1;border-top:1px dashed var(--teal-light)"></span>${rkWatermarkHTML()}<span style="flex:1;border-top:1px dashed var(--teal-light)"></span></div>`;
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
-    : list.map((x,i)=>`${i ? (i % 2 ? '<div style="border-top:1px dashed var(--teal)"></div>' : brandSep) : ''}
+    : list.map((x,i)=>`${i ? (i % 2 ? '<div style="border-top:1px dashed var(--teal-light)"></div>' : brandSep) : ''}
     <div style="padding:6px 0">
       <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
