@@ -5570,7 +5570,9 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
       <h2>${esc(title || shortRegionLabel(d.scopeLabel||''))}</h2>
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">입주 가능 · 중층 이상</span>
-        <span style="color:rgba(255,255,255,.88);white-space:nowrap">${d.pyBand?`<b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span> `:''}${d.filterLabel?`<b style="color:#7FD4D9">${esc(d.filterLabel)}</b> <span style="opacity:.5">|</span> `:''}기준일 ${esc(d.asOf||'-')}</span>
+        ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
+        ${d.filterLabel?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.filterLabel)}</b> <span style="opacity:.5">|</span></span>`:''}
+        <span style="color:rgba(255,255,255,.88);white-space:nowrap">기준일 ${esc(d.asOf||'-')}</span>
       </div>
       ${vsPrev ? hdVs(vsPrev, vsRecent) : ''}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
