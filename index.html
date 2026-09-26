@@ -3666,7 +3666,8 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
   }catch(e){ return raw; }
 }
 
-async function search(){
+async function search(opts){
+  const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
@@ -3707,7 +3708,7 @@ async function search(){
   if(isListingMode(mode) && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
-  if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode);
+  if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
   const mN = +document.getElementById('monthsN').value;
   const fM = (mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
@@ -5506,10 +5507,11 @@ function lsSync(el){
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
+// silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent') && lastData.mode === mode) search();
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent') && lastData.mode === mode) search({silentScroll:true});
 }
-async function searchListingTab(myToken, lawd, tabMode){
+async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
   document.getElementById('loadMsg').textContent = `${targets.length}개 지역 실매물 불러오는 중…`;
@@ -5554,7 +5556,7 @@ async function searchListingTab(myToken, lawd, tabMode){
     }
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
-    window.scrollTo(0, 0);
+    if(!silentScroll) window.scrollTo(0, 0);
     pushView();
     saveLastRegionPref(lawd);
   }catch(err){
