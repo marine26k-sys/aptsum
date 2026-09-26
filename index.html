@@ -283,6 +283,17 @@
   .ls-dual input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
   .ls-dual input[type=range]::-webkit-slider-runnable-track{background:none}
   .ls-dual input[type=range]::-moz-range-track{background:none}
+  /* 세대수는 최소값 하나만 고르면 되는 단일 슬라이더라 ls-dual(두 손잡이)을 안 쓰지만, 브라우저 기본
+     range 외형(둥근 네이티브 손잡이)이 다른 세 슬라이더(연식·변동률·평형)의 커스텀 손잡이·트랙과 달라 보이던
+     문제를 수정 — 같은 트랙·손잡이 모양으로 통일(2026.09 운영자 리포트). --lo 없이 --val(0~현재값)만 채운다. */
+  .ls-single{position:relative;height:26px;--val:0%}
+  .ls-single::before{content:'';position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--line)}
+  .ls-single::after{content:'';position:absolute;left:0;right:calc(100% - var(--val));top:12px;height:4px;border-radius:2px;background:var(--teal)}
+  .ls-single input[type=range]{position:absolute;left:0;top:0;width:100%;margin:0;height:26px;background:none;-webkit-appearance:none;appearance:none}
+  .ls-single input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
+  .ls-single input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
+  .ls-single input[type=range]::-webkit-slider-runnable-track{background:none}
+  .ls-single input[type=range]::-moz-range-track{background:none}
   .rgpick{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;
     background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;
     font-family:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
@@ -793,7 +804,9 @@
       </div>
       <div class="ls-row">
         <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
-        <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
+        <div class="ls-single" id="lsHhSingle">
+          <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
+        </div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+20%)은 "그 이하/이상 전부" -->
       <div class="ls-row" id="lsRateRow">
@@ -5505,6 +5518,8 @@ function lsSync(el){
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
+  const hhEl = document.getElementById('lsHhMin'); // 세대수는 손잡이 하나(최소값)라 --lo 없이 --val(0~현재값)만 채움
+  document.getElementById('lsHhSingle').style.setProperty('--val', (v.h - +hhEl.min) / (+hhEl.max - +hhEl.min) * 100 + '%');
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
