@@ -774,6 +774,16 @@
          슬라이드로 자유롭게). 연식은 최소~최대 년차 범위, 세대수는 최소 세대. 손을 떼면 바로 다시 조회(엑셀 요약은
          한 번 받으면 메모리에 캐시돼 재조회가 빠르다). -->
     <div id="lsFilters" class="ls-filters" style="display:none">
+      <!-- 평형 슬라이더 — 예산별 실매물·급매 선별 전용(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
+           같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
+           자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
+      <div class="ls-row">
+        <div class="ls-hd"><span>평형</span><b id="lsPyTxt">전체</b></div>
+        <div class="ls-dual" id="lsPyDual">
+          <input type="range" id="lsPyMin" min="10" max="60" step="1" value="10" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 평형">
+          <input type="range" id="lsPyMax" min="10" max="60" step="1" value="60" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 평형">
+        </div>
+      </div>
       <div class="ls-row">
         <div class="ls-hd"><span>연식</span><b id="lsAgeTxt">전체</b></div>
         <div class="ls-dual" id="lsAgeDual">
@@ -945,7 +955,7 @@ function buildShareURL(inp){
   const p = new URLSearchParams();
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
-  if(inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}`);
+  if(inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
   if(inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
@@ -992,9 +1002,9 @@ async function initFromURL(){
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) document.getElementById('buildYear').value = p.get('by');
   if(p.get('ls') || p.get('lr')){
-    const [a0,a1,h] = (p.get('ls')||'').split('-').map(Number);
+    const [a0,a1,h,p0,p1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
-    lsSet({a0,a1,h,r0,r1});
+    lsSet({a0,a1,h,r0,r1,p0,p1});
   }
   if(m==='compare'){
     const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
@@ -1770,7 +1780,8 @@ function setMode(m, fromRestore){
   renderRegionChips();
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
-  document.getElementById('pyBandMultiWrap').style.display = (m==='listingurgent'||m==='listingbudget'||m==='region'||m==='volume'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
+  // 예산별 실매물·급매 선별은 2026.09부터 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)로 대체됐다.
+  document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
@@ -5403,6 +5414,8 @@ function listingBudgetBandOf(ask){
 // 연식은 화면 표기와 같은 "년차"(준공한 해 = 1년차) 기준 최소~최대 범위. 최대값 40은 "40년차 이상 전부",
 // 세대수 최대값 5000은 "5000세대 이상"을 뜻한다. 기본값(1~40년차, 300세대)이면 필터 없음과 같다.
 const LS_AGE_MAX = 40;
+// 평형 슬라이더 범위 — 10평 이하·60평 이상은 "그 이하/이상 전부"(기존 체크박스 목록의 17~51평 범위를 넉넉히 포함)
+const LS_PY_MIN = 10, LS_PY_MAX = 60;
 // 세대수 슬라이더의 왼쪽 끝(= 필터 없음) — 예산별 실매물은 100세대, 급매 선별은 300세대
 function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH; }
 // 변동률(예산별 실매물 전용, 2026.09 운영자 요청) — 전고점 대비 호가 %(화면 표기와 같은 정수 반올림) 최소~최대.
@@ -5410,7 +5423,8 @@ function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : L
 const LS_RATE_MIN = -30, LS_RATE_MAX = 20;
 function lsGet(){
   return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value,
-    r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value };
+    r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
+    p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value };
 }
 function lsSet(v){
   v = v || {};
@@ -5419,7 +5433,16 @@ function lsSet(v){
   document.getElementById('lsHhMin').value = v.h || lsHhBase();
   document.getElementById('lsRateMin').value = Number.isFinite(v.r0) ? v.r0 : LS_RATE_MIN;
   document.getElementById('lsRateMax').value = Number.isFinite(v.r1) ? v.r1 : LS_RATE_MAX;
+  document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
+  document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
   lsSync();
+}
+function lsPyActive(v){ return v.p0 > LS_PY_MIN || v.p1 < LS_PY_MAX; }
+function lsPyText(v){
+  if(!lsPyActive(v)) return '전체';
+  if(v.p0 <= LS_PY_MIN) return `${v.p1}평 이하`;
+  if(v.p1 >= LS_PY_MAX) return `${v.p0}평 이상`;
+  return v.p0 === v.p1 ? `${v.p0}평` : `${v.p0}~${v.p1}평`;
 }
 function lsRateActive(v){ return v.r0 > LS_RATE_MIN || v.r1 < LS_RATE_MAX; }
 function lsRateText(v){
@@ -5435,7 +5458,7 @@ function lsRateMatch(x, v){
   const r = Math.round((x.ask - x.peak) / x.peak * 100);
   return !((v.r0 > LS_RATE_MIN && r < v.r0) || (v.r1 < LS_RATE_MAX && r > v.r1));
 }
-function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || v.h > lsHhBase(); }
+function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || v.h > lsHhBase() || lsPyActive(v); }
 function lsAgeText(v){
   if(v.a0 <= 1 && v.a1 >= LS_AGE_MAX) return '전체';
   if(v.a0 <= 1) return `${v.a1}년차 이하`;
@@ -5455,6 +5478,10 @@ function lsMatch(x, v){
     const age = new Date().getFullYear() - by + 1;
     if(age < v.a0 || (v.a1 < LS_AGE_MAX && age > v.a1)) return false;
   }
+  if(lsPyActive(v)){
+    if(!(x.py > 0)) return false; // 평형 없는 매물은 평형 필터가 걸려 있을 때 제외
+    if(x.py < v.p0 || (v.p1 < LS_PY_MAX && x.py > v.p1)) return false;
+  }
   return true;
 }
 // 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
@@ -5463,16 +5490,20 @@ function lsSync(el){
   if(+a0.value > +a1.value){ if(el === a0) a1.value = a0.value; else a0.value = a1.value; }
   const r0 = document.getElementById('lsRateMin'), r1 = document.getElementById('lsRateMax');
   if(+r0.value > +r1.value){ if(el === r0) r1.value = r0.value; else r0.value = r1.value; }
+  const p0 = document.getElementById('lsPyMin'), p1 = document.getElementById('lsPyMax');
+  if(+p0.value > +p1.value){ if(el === p0) p1.value = p0.value; else p0.value = p1.value; }
   const v = lsGet();
   document.getElementById('lsAgeTxt').textContent = lsAgeText(v);
   document.getElementById('lsHhTxt').textContent = lsHhText(v);
   document.getElementById('lsRateTxt').textContent = lsRateText(v);
+  document.getElementById('lsPyTxt').textContent = lsPyText(v);
   const fill = (id, lo, hi, min, max) => {
     const el = document.getElementById(id), pct = n => (n - min) / (max - min) * 100;
     el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', pct(hi) + '%');
   };
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
+  fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 function lsApply(){
@@ -5503,11 +5534,11 @@ async function searchListingTab(myToken, lawd, tabMode){
       return;
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
-    // 연식·세대수 슬라이더(2026.09 운영자 요청)
+    // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
     const ls = lsGet();
     // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = pyBandMultiFilter(all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls))));
-    const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: pyBandMultiSel.length ? pyBandMultiLabel() : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
+    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
