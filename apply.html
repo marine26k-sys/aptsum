@@ -31,10 +31,13 @@
   .price{display:flex;align-items:baseline;gap:6px;margin:8px 0 10px}
   .price b{font-size:24px;font-weight:900;color:var(--navy)}
   .price span{font-size:12px;color:var(--sub);font-weight:700}
-  .inc{font-size:12.5px;line-height:1.65}
-  .inc li{list-style:none;padding-left:18px;position:relative;margin-bottom:6px}
-  .inc li::before{content:'✓';position:absolute;left:0;color:var(--teal);font-weight:900}
-  .inc small{display:block;color:var(--sub);font-size:11.5px}
+  .inc{font-size:13px}
+  .inc li{list-style:none;padding-left:24px;position:relative;margin-bottom:16px}
+  .inc li:last-child{margin-bottom:0}
+  .inc li::before{content:'✓';position:absolute;left:0;top:1px;color:var(--teal);font-weight:900;font-size:15px}
+  .inc-head{font-weight:800;color:var(--navy);font-size:14.5px;line-height:1.4}
+  .inc-sub{margin-top:5px;color:var(--ink);font-size:12.5px;line-height:1.7}
+  .inc-trial{display:inline-block;margin-top:7px;font-size:11.5px;font-weight:800;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.4);border-radius:10px;padding:3px 10px}
   .steps{display:flex;gap:4px;margin-top:10px;font-size:10.5px;font-weight:700;color:var(--gold-ink)}
   .steps div{flex:1;text-align:center;background:#fff;border:1px solid var(--gold);border-radius:8px;padding:5px 2px;line-height:1.35}
   label.q{display:block;font-size:13px;font-weight:800;color:var(--navy);margin:14px 0 2px}
@@ -50,7 +53,12 @@
   .btn:disabled{opacity:.55;cursor:default}
   .btn.ghost{background:#fff;color:var(--teal-dark);border:1.5px solid var(--teal);box-shadow:none;font-size:13.5px;padding:10px}
   .msg{min-height:18px;margin-top:8px;font-size:12.5px;color:var(--red);text-align:center}
-  .note{font-size:10.5px;color:var(--sub);text-align:center;margin-top:8px;line-height:1.6}
+  .note{margin-top:12px;padding:10px 12px;background:var(--slate-bg);border-radius:10px}
+  .note div{position:relative;padding-left:20px;font-size:12px;color:var(--ink);line-height:1.6}
+  .note div+div{margin-top:8px}
+  .note div::before{position:absolute;left:0;top:0;color:var(--teal-dark);font-weight:900}
+  .note div:nth-child(1)::before{content:'①'}
+  .note div:nth-child(2)::before{content:'②'}
   .code{font-size:26px;font-weight:900;letter-spacing:2px;color:var(--navy);text-align:center;background:var(--teal-light-soft);border:1.5px dashed var(--teal-light);border-radius:12px;padding:10px;margin:10px 0 4px}
   .center{text-align:center}
   .spin{width:28px;height:28px;border:3px solid var(--teal-soft);border-top-color:var(--teal);border-radius:50%;margin:6px auto 10px;animation:sp 1s linear infinite}
@@ -81,13 +89,14 @@
       <div class="title">실매물 분석 탭 (1개월) + 아파트썸 매물 선별 (1회)</div>
       <div class="price"><b id="priceTxt">9,900원</b><span id="daysTxt">· 30일 이용</span></div>
       <ul class="inc">
-        <li>비공개 탭 이용 권한 (1개월)
-          <small>실매물 분석(매물 링크 연동): 저평가 실매물, 급매물, 금액대별 실매물</small>
-          <small>실거래 분석: 연간 저평가(동일 권역), 신고가 속보(7일), 금액대별 변동률, 하락 거래</small>
-          <small style="color:var(--teal-dark);font-weight:700">강남구는 홈페이지에서 무료 체험할 수 있어요</small>
+        <li>
+          <div class="inc-head">실매물 탭 이용 권한 (1개월)</div>
+          <div class="inc-sub">실매물 분석 (매물 링크 연동): 저평가 실매물, 급매물, 금액대별 실매물</div>
+          <div class="inc-trial">강남구 무료 체험 가능</div>
         </li>
-        <li>개인 맞춤 매물 선별 리스트 메일 발송 (1회)
-          <small>지역, 연차, 세대수, 단지명, 공급·전용면적, 매매가, 전고점, 변동률, 평당가, 동, 층, 방향, 용적률, 건폐율, 매물 URL</small>
+        <li>
+          <div class="inc-head">개인 맞춤 매물 선별 리스트 메일 발송 (1회)</div>
+          <div class="inc-sub">지역, 연차, 세대수, 단지명, 공급·전용면적, 매매가, 전고점, 변동률, 평당가, 동, 층, 방향, 용적률, 건폐율, 매물 URL</div>
         </li>
       </ul>
       <div class="steps"><div>① 신청서<br>작성</div><div>② 결제</div><div>③ 접근 코드<br>바로 발급</div></div>
@@ -115,7 +124,7 @@
       <input type="text" id="fCond" name="condition" maxlength="100" required>
 
       <label class="q" for="fPhone"><i>*</i>휴대폰 번호</label>
-      <div class="hint">결제창에 쓰이며 입금자 확인용으로만 사용합니다</div>
+      <div class="hint">결제창에 입력하신 번호로 신청서와 결제를 자동으로 연결해 접근 코드를 바로 발급합니다 · <a href="/privacy.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">개인정보처리방침</a></div>
       <input type="tel" id="fPhone" name="phone" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000" required>
 
       <label class="q" for="fEmail"><i>*</i>선별 리스트 받을 메일 주소</label>
@@ -132,7 +141,10 @@
 
       <button type="submit" class="btn" id="payBtn">9,900원 결제하기</button>
       <div class="msg" id="applyMsg" role="alert"></div>
-      <div class="note">결제창(PayApp)이 새 창으로 열립니다. 결제창 연락처에는 <b>위와 같은 휴대폰 번호</b>를 넣어 주세요.<br>결제가 끝나면 이 화면에 접근 코드가 바로 나오고 비공개 탭이 열립니다.</div>
+      <div class="note">
+        <div>결제창(PayApp)이 새 창으로 열립니다. 결제창 연락처에는 <b style="color:var(--navy)">위와 같은 휴대폰 번호</b>를 넣어 주세요.</div>
+        <div>결제가 끝나면 이 화면에 접근 코드가 바로 나오고 비공개 탭이 열립니다.</div>
+      </div>
     </form>
   </div>
 
