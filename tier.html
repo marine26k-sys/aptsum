@@ -91,6 +91,7 @@
   .tier-disclaimer{font-size:10px;color:var(--sub);text-align:center;margin-top:16px;padding:0 10px;line-height:1.5}
   .tier-disclaimer a{color:var(--teal-dark)}
   .tier-loading-box{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px}
+  .ad-banner{margin-top:14px;text-align:center}
   .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding:12px 10px;border:1.5px dashed var(--teal);border-radius:12px;background:var(--teal-light-soft)}
   .coupang-ad-title{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:2px}
   .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
@@ -124,6 +125,19 @@ function buildAgeLabel(build){
 }
 // 쿠팡 파트너스 배너 — index.html의 couponBannerHTML()과 동일. 공정거래위원회 추천·보증 심사지침에 따라
 // 광고 배너와 고지문을 하나의 블록으로 묶어, 고지문 없이 배너만 노출되는 일이 없게 한다.
+// 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
+// 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
+function adBannerHTML(){
+  return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
+}
+// 위 adBannerHTML()로 새로 DOM에 들어간 <ins> 태그마다 한 번씩 광고를 채워달라고 요청한다 — innerHTML로 넣은
+// <ins>는 AdSense 스크립트가 자동으로 못 찾으므로, 렌더링할 때마다 직접 호출해야 한다(이미 채워진 태그는
+// data-adsbygoogle-status 속성이 붙어서 :not([data-adsbygoogle-status])로 걸러져 다시 push되지 않는다).
+function fillAds(){
+  document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => {
+    try{ (window.adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
+  });
+}
 function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
@@ -216,8 +230,10 @@ function renderList(){
       }).join("")}
     </div>
     ${list.length > shown.length ? `<button class="tier-more-btn" onclick="showMore()">${list.length - shown.length}개 더 보기</button>` : ""}
+    ${adBannerHTML()}
     ${couponBannerHTML()}
   ` : `<div class="tier-empty">조건에 맞는 단지가 없습니다.</div>`;
+  fillAds();
 }
 // 지역(구/시)별 대장주 히트맵 — 칸 색은 그 단지의 급지 등급색을 그대로 재사용.
 // "전체" 탭(시·도 미선택)에서는 서울·경기·인천·부산 구분 없이 평단가 순으로 한 데 섞어 보여준다
@@ -298,6 +314,7 @@ function dongSearchResultsHTML(){
   if(!matched.length) return `<div class="tier-empty">"${esc(q)}"에 해당하는 동이 없습니다.</div>`;
   return `
     <div class="tier-list">${matched.map(dongRowHTML).join("")}</div>
+    ${adBannerHTML()}
     ${couponBannerHTML()}
   `;
 }
@@ -327,6 +344,7 @@ function dongRankCardHTML(){
     ${shown.length ? `
       <div class="tier-list">${shown.map(dongRowHTML).join("")}</div>
       ${list.length > shown.length ? `<button class="tier-more-btn" onclick="showMoreDong()">${list.length - shown.length}개 더 보기</button>` : ""}
+      ${adBannerHTML()}
       ${couponBannerHTML()}
     ` : `<div class="tier-empty">이 등급에 해당하는 동이 없습니다.</div>`}
   `;
@@ -334,6 +352,7 @@ function dongRankCardHTML(){
 // 검색창 입력마다 이 함수만 다시 그림(#dongRankArea만 갱신) — 검색창 포커스 유지.
 function renderDongRankArea(){
   $("#dongRankArea").innerHTML = dongRankCardHTML();
+  fillAds();
 }
 // 동별 평단가 히트맵 — 구/시를 선택했을 때만 노출. 동별 대장주(그 동에서 평단가가 가장 높은 단지) 1개씩 보여줌.
 function dongHeatmapHTML(){

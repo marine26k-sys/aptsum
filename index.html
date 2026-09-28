@@ -249,6 +249,7 @@
   /* 쿠팡 파트너스 배너(2026.09, 운영자 요청) — 검색 결과 카드 안, 맨 아래(.src-note 바로 위)에 삽입.
      공정거래위원회 추천·보증 심사지침상 경제적 이해관계 고지 문구(coupangDisclosure)를 배너와 항상 함께 붙인다 —
      배너만 따로 떼어내 쓰면 안 됨(couponBannerHTML() 하나로만 만들어서 실수로 누락되는 걸 방지). */
+  .ad-banner{margin-top:14px;text-align:center}
   .coupang-ad{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding:12px 10px;border:1.5px dashed var(--teal);border-radius:12px;background:var(--teal-light-soft)}
   .coupang-ad-title{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:2px}
   .coupang-ad-row{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
@@ -829,6 +830,7 @@
   <div class="error" id="error"></div>
   <div id="result"></div>
 
+  <div id="adArea"></div>
   <div id="staticAdArea"></div>
 </div>
 
@@ -2364,6 +2366,19 @@ function buildAgeLabel(build){
 // 고지 문구가 같이 누락되는 일이 없게 한다.
 // data-book(쿠팡 링크 코드)은 클릭 집계용(assets/book-clicks.js · /api/book-clicks) — 책을 바꾸면
 // netlify/functions/book-clicks.mjs의 BOOKS 목록도 같이 바꿔야 새 코드가 집계된다(목록에 없는 코드는 거부).
+// 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
+// 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
+function adBannerHTML(){
+  return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
+}
+// 위 adBannerHTML()로 새로 DOM에 들어간 <ins> 태그마다 한 번씩 광고를 채워달라고 요청한다 — innerHTML로 넣은
+// <ins>는 AdSense 스크립트가 자동으로 못 찾으므로, 렌더링할 때마다 직접 호출해야 한다(이미 채워진 태그는
+// data-adsbygoogle-status 속성이 붙어서 :not([data-adsbygoogle-status])로 걸러져 다시 push되지 않는다).
+function fillAds(){
+  document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => {
+    try{ (window.adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
+  });
+}
 function couponBannerHTML(){
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
@@ -3411,7 +3426,9 @@ refreshFavBadges();
 // 쿠팡 배너 — "분석" 버튼과 결과 사이에 고정으로 하나만 노출(운영자 요청). 예전엔 각 결과 카드 안에도
 // 배너를 따로 넣었었는데, 이 위치의 배너와 겹쳐 중복으로 보이는 문제가 있어서 카드 내부 배너는 전부
 // 빼고 이 자리 하나로 통일했다 — 검색 전/후, 에러 상태 어느 쪽이든 항상 이 위치에 노출됨.
+document.getElementById('adArea').innerHTML = adBannerHTML();
 document.getElementById('staticAdArea').innerHTML = couponBannerHTML();
+fillAds();
 // setTimeout(0)으로 한 틱 미룸 — initFromURL()이 파일 이 지점보다 아래에서 선언되는 let/const를 참조하는
 // 경로를 타면, 스크립트가 아직 그 아래까지 실행되지 않아 TDZ(ReferenceError: Cannot access ... before
 // initialization)가 났던 버그 수정(예전엔 급지 지도가 index.html 안에 탭으로 통합돼 있어 tierData 등
