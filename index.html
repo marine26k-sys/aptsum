@@ -2375,8 +2375,20 @@ function adBannerHTML(){
 // <ins>는 AdSense 스크립트가 자동으로 못 찾으므로, 렌더링할 때마다 직접 호출해야 한다(이미 채워진 태그는
 // data-adsbygoogle-status 속성이 붙어서 :not([data-adsbygoogle-status])로 걸러져 다시 push되지 않는다).
 function fillAds(){
-  document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => {
-    try{ (window.adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
+  document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(ins => {
+    const wrap = ins.closest('.ad-banner');
+    try{ (window.adsbygoogle = window.adsbygoogle || []).push({}); }
+    catch(e){ if(wrap) wrap.style.display = 'none'; return; }
+    // 광고가 안 채워지면(data-ad-status="unfilled" — 심사 중이거나 채울 광고가 없을 때) 빈 자리가
+    // 그대로 남아 쿠팡 배너 위에 큰 여백만 보이므로, 그 자리를 접어서 감춘다(운영자 요청, 2026.09).
+    const collapse = () => { if(wrap) wrap.style.display = 'none'; };
+    const mo = new MutationObserver(() => {
+      if(ins.dataset.adStatus === 'unfilled'){ collapse(); mo.disconnect(); }
+      else if(ins.dataset.adStatus === 'filled'){ mo.disconnect(); }
+    });
+    mo.observe(ins, { attributes:true, attributeFilter:['data-ad-status'] });
+    // 몇 초 안에 상태가 안 붙으면(스크립트 로딩 실패 등) 그대로 빈 채로 두지 않고 접어둔다
+    setTimeout(() => { if(!ins.dataset.adStatus){ collapse(); mo.disconnect(); } }, 4000);
   });
 }
 function couponBannerHTML(){
