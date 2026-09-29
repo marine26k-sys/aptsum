@@ -5371,22 +5371,11 @@ async function searchListingUndervalue(myToken, lawd){
   }
 }
 
-// 매물 층 표기 — 네이버는 "중/26"(층 구분/총층)이나 "15/22"(해당층/총층)로 준다. 표에선 짧게 "중층"·"15층"만.
-function listingFloorLabel(fl){
-  const s = String(fl||'').split('/')[0];
-  return /^(저|중|고)$/.test(s) ? `${s}층` : (/^\d+$/.test(s) ? `${s}층` : s);
-}
 const peakYmLabel = ym => /^\d{6}$/.test(ym||'') ? `${ym.slice(2,4)}.${ym.slice(4)}` : '';
 
 function renderListingUndervalue(d){
   const list = d.divergence;
   const multiRegion = regionMulti(list);
-  // 표의 최저 호가 칸 — 가격 아래에 그 매물의 층·동(2026.09 운영자 요청: 표 위 별도 줄 대신
-  // 표 안에서 바로 보이게). 별도 칸으로 빼면 모바일 폭을 넘어 칸이 좁아지면서 행이 비정상적으로 길어져 한 칸 안에 넣음.
-  const listingSub = x => {
-    const info = [listingFloorLabel(x.fl), x.dong].filter(Boolean).map(esc).join(' · ');
-    return info ? `<div class="sub">${info}</div>` : '';
-  };
   // 네이버 매물 링크 — 단지명 바로 옆 작은 외부 링크 아이콘(운영자 요청: 행마다 "네이버 매물" 글자가 반복되는 것보다 간결하게)
   const listingLink = x => x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
   // 단지명 바로 뒤에 동 + 링크 아이콘(한 덩어리) — 별도 줄로 두면 긴 단지명이 줄바꿈될 때 3줄이 됐다(운영자 요청)
@@ -5400,8 +5389,8 @@ function renderListingUndervalue(d){
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b>${listingSub(x)}</td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b>${listingSub(p)}</td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -5638,8 +5627,7 @@ function regionMulti(list){
 }
 function guShort(gu, m){ return (m && m.pre && gu.startsWith(m.pre)) ? gu.slice(m.pre.length) : gu; }
 function listingInfoHTML(x, multiRegion){
-  const fl = [listingFloorLabel(x.fl), x.dong].filter(Boolean).join(' ');
-  return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${x.area||x.ex})</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${fl?` · ${esc(fl)}`:''}`;
+  return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${x.area||x.ex})</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}`;
 }
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
   return `<div class="card-hd">
