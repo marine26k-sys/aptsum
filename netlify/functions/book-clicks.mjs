@@ -16,7 +16,7 @@ export const config = { path: "/api/book-clicks" };
 const BOOKS = [
   { book: "cpwXdE", label: "왼쪽 책" },
   { book: "cpwXWl", label: "가운데 책" },
-  { book: "cpwYpC", label: "오른쪽 책" },
+  { book: "cpPWXO", label: "오른쪽 책" },
 ];
 const BOOK_IDS = new Set(BOOKS.map((b) => b.book));
 const PAGES = [
