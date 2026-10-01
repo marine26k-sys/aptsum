@@ -22,7 +22,7 @@ export const TAB_IDS = [
   "tabR", "tabV", "tabPP", "tabGap",
   "tabNH", "tabLTR", "tabJLTR",
   "tabSU", "tabP", "tabLP", "tabINV",
-  "tabLPL", "tabLBG", "tabLUR",
+  "tabLPL", "tabLBG", "tabLUR", "tabLTRD",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",
   "tabApply",
 ];

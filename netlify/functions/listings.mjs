@@ -10,6 +10,7 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 // 원본 엑셀·요약 데이터 모두 GitHub(=정적 배포 루트)에 올리지 않기 위한 구조다.
 //
 //   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
+//   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 12회 업로드의 최저 호가 이력 조회
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
@@ -33,6 +34,18 @@ function json(body, status = 200) {
 
 const str = (v, max = 200) => String(v ?? "").slice(0, max);
 const num = (v) => (Number.isFinite(+v) ? +v : null);
+const historyKey = (lawd, uploadId) => `history:${lawd}:${uploadId}`;
+const historyIndexKey = (lawd) => `history-index:${lawd}`;
+
+export async function saveSnapshot(store, lawd, data) {
+  if (!data?.uploadId || !Array.isArray(data.items)) return;
+  const indexKey = historyIndexKey(lawd);
+  const index = (await store.get(indexKey, { type: "json", consistency: "strong" })) || [];
+  if (index.some(x => x.uploadId === data.uploadId)) return;
+  await store.setJSON(historyKey(lawd, data.uploadId), data);
+  index.push({ uploadId: data.uploadId, asOf: data.asOf || "" });
+  await store.setJSON(indexKey, index);
+}
 
 // 클라이언트가 보낸 항목을 필요한 필드만 남겨 정리한다(엉뚱한 값·과대 문자열이 저장되지 않도록).
 function cleanItem(x) {
@@ -63,6 +76,17 @@ export default async (request) => {
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
+    if (q.get("history") === "1") {
+      const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
+      // 최신 12회분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
+      const recent = index.slice(-12);
+      const snapshots = await Promise.all(recent.map(async x => {
+        const data = await store.get(historyKey(lawd, x.uploadId), { type: "json", consistency: "strong" });
+        return data ? { asOf: data.asOf, uploadId: data.uploadId,
+          items: data.items.map(i => ({ nid:i.nid, ex:i.ex, ask:i.ask })) } : null;
+      }));
+      return json({ snapshots: snapshots.filter(Boolean) });
+    }
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
     return json(data || { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
   }
@@ -81,7 +105,13 @@ export default async (request) => {
       const lawd = GU_TO_LAWD.get(key);
       if (!lawd) { unknown.push(key); continue; }
       const clean = (Array.isArray(items) ? items : []).map(cleanItem).filter(Boolean);
-      await store.setJSON(`lawd:${lawd}`, { asOf, uploadId, items: clean });
+      const latestKey = `lawd:${lawd}`;
+      const previous = await store.get(latestKey, { type: "json", consistency: "strong" });
+      // 배포 전 최신본도 첫 새 업로드 때 이력으로 편입한다.
+      if (previous) await saveSnapshot(store, lawd, previous);
+      const next = { asOf, uploadId, items: clean };
+      await saveSnapshot(store, lawd, next);
+      await store.setJSON(latestKey, next);
       saved.push(lawd);
     }
     return json({ saved, unknown });
