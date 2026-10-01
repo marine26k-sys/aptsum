@@ -59,7 +59,10 @@
   .tab-divider::after{content:'';flex:1;height:1.5px;background:var(--teal-light)}
   .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
   .tab.subscriber:not(.on){color:#8A6D1F}
-  .tab.apply-cta{text-decoration:none;background:var(--navy);border-color:var(--navy);color:#fff}
+  .tab.apply-cta{max-width:100%;min-height:40px;justify-content:center;gap:8px;padding:9px 12px;text-align:center;white-space:normal;word-break:keep-all;line-height:1.35;font-size:12.5px;font-weight:800;text-decoration:none;background:var(--navy);border:2px solid #E0B84D;color:#fff;box-shadow:0 4px 12px rgba(15,43,61,.22)}
+  .tab.apply-cta svg{width:16px;height:16px}
+  .tab.apply-cta:hover,.tab.apply-cta:active{background:#123D54;color:#fff}
+  .tab.apply-cta:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
   .tab.subscriber.on{background:#E0B84D;border-color:#E0B84D;box-shadow:0 3px 10px rgba(224,184,77,.35)}
 
   /* 검색 컨트롤은 분석 탭 알약 버튼과 같은 밀도로 맞춘다. 기존 16px·10px 패딩은 모바일에서
@@ -693,7 +696,7 @@
     <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
     <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
     <!-- 비공개 탭 원스톱 신청(2026.09) — 인증 안 된 사람에게만 보인다(인증되면 aptsumSubscriberGate가 숨김) -->
-    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>전 지역 이용 신청 · 코드 입력</a>
+    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
