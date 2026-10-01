@@ -5716,9 +5716,9 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
 function renderListingTrend(d){
   const multiRegion = regionMulti(d.rows);
   const body = d.historyCount < 2
-    ? `<div class="rng" style="padding:10px 0">가격 이력이 아직 없습니다. 다음 엑셀 업로드부터 이전 최저 호가와 비교할 수 있습니다.</div>`
+    ? `<div class="rng" style="padding:10px 0">비교할 최저 호가 이력이 아직 없습니다.</div>`
     : !d.rows.length
-      ? `<div class="rng" style="padding:10px 0">직전 업로드보다 최저 호가가 내린 매물이 없습니다.</div>`
+      ? `<div class="rng" style="padding:10px 0">직전 기록보다 최저 호가가 내린 매물이 없습니다.</div>`
       : d.rows.map((x,i)=>`<div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small>
           <small>${x.points.slice(-6).map(p=>`${esc(p.date)} ${p.ask.toFixed(1)}억`).join(' → ')}</small></span>
@@ -5727,12 +5727,12 @@ function renderListingTrend(d){
   const html = `<div class="card">
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
-      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 업로드 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
+      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 기록 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
       ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락률 높은 순`)}
       ${listingLinkLegend()}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 인하를 뜻하지 않습니다. 표시된 이력은 최근 업로드 최대 12회입니다.</div>`;
+    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 인하를 뜻하지 않습니다. 최근 기록 최대 12회를 표시합니다.</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
