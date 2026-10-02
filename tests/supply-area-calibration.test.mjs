@@ -43,3 +43,20 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: actual API returns
   const data=await response.json();assert.deepEqual(data.failedMonths,[]);assert.equal(data.items.length,1);assert.equal(data.items[0].py,70);
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });
+
+for(const kind of ['analyze','presale','rent'])test(`${kind}: split district live responses use the logical district calibration`,async()=>{
+ const priorFetch=globalThis.fetch,priorKey=process.env.DATA_GO_KR_KEY;
+ try{
+  process.env.DATA_GO_KR_KEY='test-only';
+  globalThis.fetch=async url=>{
+   const u=new URL(url),path=u.pathname;
+   if(path.includes('/data/supply-area-naver/'))return Response.json(path.includes('HS-')?[{apt:'병점역아이파크캐슬',hh:2666,exclusiveArea:59.89,supplyArea:79}]:[]);
+   if(path.includes('/data/supply-area/'))return Response.json({items:{}});
+   if(u.hostname.includes('apis.data.go.kr'))return new Response('<response><header><resultCode>000</resultCode></header><body><items><item><aptNm>병점역아이파크캐슬</aptNm><umdNm>병점동</umdNm><excluUseAr>59.89</excluUseAr><dealAmount>70,000</dealAmount><dealYear>2026</dealYear><dealMonth>10</dealMonth><dealDay>1</dealDay><floor>10</floor><buildYear>2021</buildYear><deposit>70,000</deposit><monthlyRent>0</monthlyRent></item></items></body></response>');
+   return new Response('',{status:404});
+  };
+  const {default:handler}=await import(`../netlify/functions/${kind}.mjs`);
+  const response=await handler(new Request(`https://${kind}-split-calibration.example/api/${kind}?lawd=HS-%EB%B3%91%EC%A0%90%EA%B5%AC&yms=202610&v=15`));
+  assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===24));
+ }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
+});

@@ -359,7 +359,7 @@ export default async (req) => {
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
   const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
-  return new Response(JSON.stringify({ items: r.items, failedMonths: r.failedMonths }), {
+  return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
       "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
