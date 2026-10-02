@@ -10,7 +10,7 @@ import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mj
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
 import {
-  applicationStore, applyConfig, validateApplication, newApplication, saveApplication, createClaim, readClaim,
+  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim,
 } from "../../shared/applications.mjs";
 
 export const config = { path: "/api/apply" };
@@ -20,7 +20,7 @@ const json = (body, { status = 200, headers = {} } = {}) =>
 
 function adminView(app, sub) {
   return {
-    id: app.id, createdAt: app.createdAt, status: app.status, price: app.price,
+    id: app.id, createdAt: app.createdAt, status: app.status, price: app.price, product: app.product || "selection", includesMail: includesSelectionMail(app),
     region: app.region, budget: app.budget, size: app.size, movein: app.movein, condition: app.condition,
     phone: app.phone, email: app.email, paidAt: app.paidAt, delivered: !!app.delivered, unmatched: !!app.unmatched,
     code: sub?.code || null, expiresAt: sub?.expiresAt || null,
@@ -35,7 +35,7 @@ export default async (request, context) => {
 
   if (request.method === "GET") {
     if (new URL(request.url).searchParams.get("list") !== "1") {
-      return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled, payUrl: cfg.payUrl });
+      return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled, payUrl: cfg.payUrl, products: applyProducts() });
     }
     if (!hasValidStatsSession(request, secret)) return json({ error: "stats_auth_required" }, { status: 401 });
     const { blobs } = await store.list({ prefix: "app:" });
@@ -48,6 +48,9 @@ export default async (request, context) => {
       if (a.mulNo) await store.delete(`mul:${a.mulNo}`).catch(() => {});
       const idx = await store.get(`phone:${a.phone}`, { type: "json" }).catch(() => null);
       if (idx?.id === a.id) await store.delete(`phone:${a.phone}`).catch(() => {});
+      const pkey = `phone:${a.phone}:${a.product || "selection"}`;
+      const pidx = await store.get(pkey, { type: "json" }).catch(() => null);
+      if (pidx?.id === a.id) await store.delete(pkey).catch(() => {});
     }));
     const live = apps.filter((a) => !stale.includes(a)).sort((a, b) => b.createdAt - a.createdAt);
     const subs = await Promise.all(live.map((a) => (a.subId ? getSubscriber(a.subId) : null)));
@@ -60,7 +63,9 @@ export default async (request, context) => {
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, { status: 400 }); }
 
   if (body?.action === "create") {
-    if (!cfg.paymentEnabled) return json({ error: "payment_not_configured" }, { status: 503 });
+    const product = applyProducts().find(p => p.id === (body.product || "selection"));
+    if (!product) return json({ error: "invalid_product" }, { status: 400 });
+    if (!product.paymentEnabled) return json({ error: "payment_not_configured" }, { status: 503 });
     const v = validateApplication(body);
     if (v.error) return json({ error: v.error }, { status: 400 });
     // 같은 IP에서 30분에 5건까지만(신청서 도배 방지) — 로그인 시도 제한 모듈을 재사용
@@ -69,9 +74,9 @@ export default async (request, context) => {
     if (lockedFor) return tooManyAttempts(json, lockedFor);
     await throttle.fail();
 
-    const app = newApplication(v.data, cfg.price);
+    const app = newApplication(v.data, product.price);
     await saveApplication(app, store);
-    return json({ payurl: cfg.payUrl, claim: createClaim(secret, app.id) });
+    return json({ payurl: product.payUrl, claim: createClaim(secret, app.id) });
   }
 
   if (body?.action === "claim") {
@@ -81,13 +86,13 @@ export default async (request, context) => {
     if (!app) return json({ error: "not_found" }, { status: 404 });
     // 결제창에 같은 번호를 넣으라고 안내할 수 있게 가린 번호를 같이 준다(010-****-5678)
     // 결제 요청이 취소된 신청서도 같은 신청서로 다시 결제할 수 있으니 화면에는 결제 대기로 보여 준다
-    if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` });
+    if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}`, product: app.product || "selection", payUrl: applyProducts().find(p => p.id === (app.product || "selection"))?.payUrl || "" });
     const sub = await getSubscriber(app.subId);
     if (!isActive(sub)) return json({ status: "ended" });
     const { token, did, maxAge } = createPersonalSession(secret, sub);
     await touchDevice(sub.id, did, true);
     return json(
-      { status: "paid", code: sub.code, expiresAt: sub.expiresAt, email: app.email },
+      { status: "paid", code: sub.code, expiresAt: sub.expiresAt, email: app.email, includesMail: includesSelectionMail(app), product: app.product || "selection" },
       { headers: { "Set-Cookie": subscriberCookie(token, maxAge) } },
     );
   }
@@ -97,6 +102,7 @@ export default async (request, context) => {
     const key = `app:${String(body.id || "")}`;
     const app = await store.get(key, { type: "json", consistency: "strong" });
     if (!app) return json({ error: "not_found" }, { status: 404 });
+    if (!includesSelectionMail(app)) return json({ error: "mail_not_included" }, { status: 409 });
     app.delivered = body.delivered === true;
     await store.setJSON(key, app);
     return json({ ok: true });

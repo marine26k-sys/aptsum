@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, expiryDateAfter,
+  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter,
 } from '../shared/applications.mjs';
 
 function fakeStore() {
@@ -141,4 +141,42 @@ test('a canceled payment request marks the application canceled, and a later pay
 
 test('expiry date is counted in KST', () => {
   assert.equal(expiryDateAfter(30, Date.parse('2026-09-24T23:30:00+09:00')), '2026-10-24');
+});
+
+
+test('two products use their own payment links and mail requirements', () => {
+  const [basic, premium] = applyProducts(ENV);
+  assert.equal(basic.price, 4900);
+  assert.equal(basic.payUrl, 'https://www.payapp.kr/L/z4lCk5');
+  assert.equal(basic.paymentEnabled, true);
+  assert.equal(basic.includesMail, false);
+  assert.equal(premium.price, 9900);
+  assert.equal(premium.includesMail, true);
+  assert.equal(applyProducts({})[0].paymentEnabled, false);
+  const validated = validateApplication({ product: 'listings', phone: FORM.phone, agree: true });
+  assert.equal(validated.data.email, '');
+  assert.equal(validated.data.region, '');
+  assert.equal(validateApplication({ ...FORM, product: 'unknown' }).error, 'invalid_product');
+});
+
+test('same phone applications are matched by price and cancellation targets the right product', async () => {
+  const appStore = fakeStore(), subStore = fakeStore();
+  const basic = newApplication(validateApplication({ product: 'listings', phone: FORM.phone, agree: true }).data, 4900, NOW);
+  const premium = newApplication(validateApplication(FORM).data, 9900, NOW);
+  await saveApplication(basic, appStore);
+  await saveApplication(premium, appStore);
+  const feedback = extra => handleFeedback({ userid: ENV.PAYAPP_USERID, linkkey: ENV.PAYAPP_LINKKEY, linkval: ENV.PAYAPP_LINKVAL, recvphone: FORM.phone, ...extra }, { env: ENV, appStore, subStore, now: NOW });
+  await feedback({ pay_state: '8', price: '4900' });
+  assert.equal(appStore.m.get(`app:${basic.id}`).status, 'canceled');
+  assert.equal(appStore.m.get(`app:${premium.id}`).status, 'pending');
+  const result = await feedback({ pay_state: '4', price: '4900', mul_no: 'basic-payment' });
+  assert.equal(result.appId, basic.id);
+  assert.equal(appStore.m.get(`app:${basic.id}`).includesMail, false);
+  assert.equal(subStore.m.get(`sub:${result.subId}`).scope, 'listings');
+  const second = await feedback({ pay_state: '4', price: '9900', mul_no: 'premium-payment' });
+  assert.equal(second.appId, premium.id);
+  assert.equal(appStore.m.get(`app:${premium.id}`).includesMail, true);
+  await feedback({ pay_state: '9', mul_no: 'basic-payment' });
+  assert.equal(subStore.m.get(`sub:${result.subId}`).revoked, true);
+  assert.equal(subStore.m.get(`sub:${second.subId}`).revoked, false);
 });
