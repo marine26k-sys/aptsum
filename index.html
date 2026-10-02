@@ -1826,7 +1826,7 @@ const analysisSelectSliders=[];
 function syncAnalysisSelectSliders(){
   for(const entry of analysisSelectSliders){
     const {select,wrap,input,label}=entry;
-    const enabled=mode!=='region'&&select.style.display!=='none';
+    const enabled=select.style.display!=='none';
     select.classList.toggle('analysis-slider-source',enabled);
     wrap.style.display=enabled?'':'none';
     if(!enabled)continue;
@@ -1858,7 +1858,7 @@ const PY_BANDS = [
 let pyBandMultiSel = []; // 선택된 band value 문자열들("23-27" 등), 비어있으면 "전체 평형"
 function pyBandMultiLabel(){
   if(!pyBandMultiSel.length) return '전체 평형';
-  if(mode!=='region'){const [lo,hi]=pyBandMultiSel[0].split('-').map(Number);return lo===0?`${hi}평 이하`:hi===999?`${lo}평 이상`:lo===hi?`${lo}평`:`${lo}~${hi}평`;}
+  {const [lo,hi]=pyBandMultiSel[0].split('-').map(Number);return lo===0?`${hi}평 이하`:hi===999?`${lo}평 이상`:lo===hi?`${lo}평`:`${lo}~${hi}평`;}
   const idxs = pyBandMultiSel.map(v=>PY_BANDS.findIndex(b=>b.v===v)).filter(i=>i>=0).sort((a,b)=>a-b);
   // 연속 구간(23~27·28~31·32~36처럼 끊김 없이 이어짐)을 골랐으면 "23~36평"처럼 하나로 합쳐 보여준다
   // (운영자 요청, 2026.09) — 떨어진 구간을 섞어 골랐을 때만 기존 "OO 외 N개" 표기를 쓴다.
@@ -1875,11 +1875,12 @@ function analysisPySync(changed){
   const lo=document.getElementById('analysisPyMin'),hi=document.getElementById('analysisPyMax');
   if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
   pyBandMultiSel=+lo.value===10&&+hi.value===60?[]:[`${+lo.value===10?0:+lo.value}-${+hi.value===60?999:+hi.value}`];
+  if(mode==='region')savePyBandMultiPref(pyBandMultiSel);
   renderPyBandMultiBtn();
 }
 function renderPyBandMultiBtn(){
   queueMicrotask(syncAnalysisSelectSliders);
-  if(mode!=='region'){
+  {
     const ranges=pyBandMultiSel.map(v=>v.split('-').map(Number)).filter(r=>r.length===2&&r.every(Number.isFinite));
     const lo=ranges.length?Math.min(...ranges.map(r=>r[0])):0,hi=ranges.length?Math.max(...ranges.map(r=>r[1])):999;
     if(ranges.length>1)pyBandMultiSel=[`${lo}-${hi}`];
@@ -2042,8 +2043,8 @@ function setMode(m, fromRestore){
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
   // 실매물 3개 탭은 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)를 쓴다.
-  document.getElementById('pyBandMultiWrap').style.display = m==='region' ? '' : 'none';
-  document.getElementById('analysisPyFilters').style.display = ['volume','gap','newhigh','newlow','pyprice','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
+  document.getElementById('pyBandMultiWrap').style.display = 'none';
+  document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','pyprice','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
