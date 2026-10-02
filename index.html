@@ -27,6 +27,9 @@
 <script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
 <script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
 <style>
+  select.analysis-slider-source{display:none!important}
+  .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
+  #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
   html.app-native-selects #pyBandNative{display:block!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
   html.app-native-selects #pyBandMultiBtn{pointer-events:none}
   #rgPanel{max-height:94dvh}
@@ -34,9 +37,7 @@
   #rgPanel .rgitem{padding:4px 7px;font-size:11px}
   #rgPanel .rggrp{padding:5px 3px 3px}
 
-  html.native-region-document .wrap{visibility:hidden}
-  html.native-region-document #rgDim{display:none}
-  html.native-region-document #rgPanel{height:100dvh;max-height:100dvh;border-radius:0;bottom:0}
+  html.native-region-document #rgPanel{height:90dvh;max-height:90dvh}
 
   :root{
     --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
@@ -1739,6 +1740,7 @@ async function initializeAptsumPage(){
     const context=readNativeRegion(NATIVE_REGION_CONTEXT);
     if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
     await aptsumSubscriberGate.ready;
+    if(context.data){viewStack.push({data:context.data,inputs:context.inputs});restoreView(viewStack.length-1);lastData=context.data;}
     applyNativeRegionInputs(context.inputs);
     const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
     openRegionPicker(row);saveNativeRegionResult();return;
@@ -1819,6 +1821,36 @@ function savePyBandMultiPref(arr){ try{ localStorage.setItem('apc:pyBand', JSON.
 // 빼고 보고 싶은 경우 등). 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/
 // pyprice) 공통 — 예전엔 region/volume/updown/gap은 구간 하나만 고르는 단일 select였음.
 // 지역 랭킹만 마지막 선택을 기억하고, 나머지 탭은 탭을 나갔다 오면 기억하지 않음(항상 "전체 평형"로 시작).
+
+const analysisSelectSliders=[];
+function syncAnalysisSelectSliders(){
+  for(const entry of analysisSelectSliders){
+    const {select,wrap,input,label}=entry;
+    const enabled=mode!=='region'&&select.style.display!=='none';
+    select.classList.toggle('analysis-slider-source',enabled);
+    wrap.style.display=enabled?'':'none';
+    if(!enabled)continue;
+    entry.options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none');
+    input.max=Math.max(0,entry.options.length-1);
+    input.value=Math.max(0,entry.options.findIndex(o=>o.value===select.value));
+    label.textContent=select.selectedOptions[0]?.textContent||'선택';
+  }
+}
+function initializeAnalysisSelectSliders(){
+  for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['buildYear','연식'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
+    const select=document.getElementById(id),wrap=document.createElement('div');
+    wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
+    wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
+    select.after(wrap);
+    const input=wrap.querySelector('input'),label=wrap.querySelector('b'),entry={select,wrap,input,label,options:[]};analysisSelectSliders.push(entry);
+    input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;}});
+    input.addEventListener('change',()=>select.dispatchEvent(new Event('change',{bubbles:true})));
+    select.addEventListener('change',syncAnalysisSelectSliders);
+    new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style'],subtree:true});
+  }
+  syncAnalysisSelectSliders();
+}
+setTimeout(initializeAnalysisSelectSliders,0);
 const PY_BANDS = [
   {v:'17-22', l:'17~22평'}, {v:'23-27', l:'23~27평'}, {v:'28-31', l:'28~31평'},
   {v:'32-36', l:'32~36평'}, {v:'37-41', l:'37~41평'}, {v:'42-46', l:'42~46평'}, {v:'47-51', l:'47~51평'},
@@ -1846,6 +1878,7 @@ function analysisPySync(changed){
   renderPyBandMultiBtn();
 }
 function renderPyBandMultiBtn(){
+  queueMicrotask(syncAnalysisSelectSliders);
   if(mode!=='region'){
     const ranges=pyBandMultiSel.map(v=>v.split('-').map(Number)).filter(r=>r.length===2&&r.every(Number.isFinite));
     const lo=ranges.length?Math.min(...ranges.map(r=>r[0])):0,hi=ranges.length?Math.max(...ranges.map(r=>r[1])):999;
