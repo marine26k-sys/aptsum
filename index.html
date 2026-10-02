@@ -5895,12 +5895,11 @@ function renderListingGap(d){
   const multi=regionMulti(d.rows);
   const body=!d.rows.length ? '<div class="rng" style="padding:10px 0">선택한 두 평형대의 매물이 모두 있는 단지가 없습니다.</div>'
     : d.rows.map((x,i)=>{
-      const amount=Math.round(Math.abs(x.gap)*10000);
-      const price=amount<10000 ? `${amount.toLocaleString()}만원` : `${(amount/10000).toFixed(1)}억`;
-      const gapLabel=x.gap<0 ? `−${price}` : x.gap===0 ? '동일 호가' : price;
+      const price=`${Number(Math.abs(x.gap).toFixed(2))}억`;
+      const gapLabel=x.gap<0 ? `−${price}` : price;
       return `<div class="listing-gap-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
         <span class="nm"><span class="nm-title">${esc(x.apt)}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대</small></span>
-        <span class="val">${gapLabel}<small>${x.gap<0?'큰 평형이 더 저렴':'호가 차이'}</small></span></div>
+        <span class="val">${gapLabel}<small>${x.gap<0?'큰 평형이 더 저렴':x.gap===0?'동일 호가':'호가 차이'}</small></span></div>
         <div class="listing-gap-prices">${listingGapPriceHTML(x.small,false)}${listingGapPriceHTML(x.large,true)}</div></div>`;
     }).join('');
   const html=`<div class="card">${listingHeaderHTML(d,'평형 간 가격차',null,null)}<div class="sec">
