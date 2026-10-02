@@ -24,13 +24,19 @@
 <meta name="twitter:image" content="https://aptsum.kr/assets/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
 <script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
 <style>
-  html.app-native-selects #rgPick,html.app-native-selects .cmp-row .rgpick{display:none}
-  html.app-native-selects #lawd{position:static;opacity:1;pointer-events:auto;width:100%;height:auto}
-  html.app-native-selects .cmp-row select{display:block!important}
   html.app-native-selects #pyBandNative{display:block!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
   html.app-native-selects #pyBandMultiBtn{pointer-events:none}
+  #rgPanel{max-height:94dvh}
+  #rgPanel .rggrid{gap:3px;margin-bottom:4px}
+  #rgPanel .rgitem{padding:4px 7px;font-size:11px}
+  #rgPanel .rggrp{padding:5px 3px 3px}
+
+  html.native-region-document .wrap{visibility:hidden}
+  html.native-region-document #rgDim{display:none}
+  html.native-region-document #rgPanel{height:100dvh;max-height:100dvh;border-radius:0;bottom:0}
 
   :root{
     --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
@@ -747,7 +753,7 @@
 
   <div class="search-box" id="searchBox">
     <div class="row2" id="singleRow">
-      <select id="lawd" aria-label="지역 선택" style="flex:1;min-width:0"></select>
+      <select id="lawd" style="flex:1;min-width:0"></select>
       <button type="button" class="rgpick" id="rgPick" onclick="openRegionPicker()"><span id="rgPickTxt">지역 선택</span><b>▼</b></button>
       <button id="regionFavBtn" onclick="toggleFavRegion()" title="이 지역 즐겨찾기" style="flex:0 0 auto;width:38px;background:#fff;border:1.5px solid var(--line);border-radius:12px;color:#D97706;font-size:15px;cursor:pointer">☆</button>
     </div>
@@ -811,10 +817,10 @@
         <option value="60">최근 5년</option>
       </select>
       <div id="pyBandMultiWrap" style="flex:1.5;min-width:0;position:relative;display:none">
+      <select id="pyBandNative" multiple size="1" aria-label="평형 선택 · 여러 구간 선택 가능" style="display:none" onchange="nativePyBandChange(this)"></select>
         <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%;padding:11px 8px;font-size:13px">
           <span id="pyBandMultiTxt">전체 평형</span><b>▼</b>
         </button>
-        <select id="pyBandNative" multiple size="1" aria-label="평형 선택 · 여러 구간 선택 가능" style="display:none" onchange="nativePyBandChange(this)"></select>
         <div id="pyBandMultiPanel" class="pybm-panel" style="display:none"></div>
       </div>
       <select id="floorMin" style="flex:1;min-width:0">
@@ -1015,8 +1021,8 @@ let searchToken = 0;
 
 // ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
 const viewStack = [];
-function pushView(){
-  const inputs = {
+function captureViewInputs(){
+  return {
     mode, lawd: sel.value,
     q: document.getElementById('q').value,
     mN: document.getElementById('monthsN').value,
@@ -1034,6 +1040,10 @@ function pushView(){
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
+}
+function pushView(){
+  regionPickerPushed = false;
+  const inputs = captureViewInputs();
   viewStack.push({data:lastData, inputs});
   try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
 }
@@ -1431,7 +1441,19 @@ function restoreView(vi){
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 window.addEventListener('popstate', e=>{
-  if(document.getElementById('rgPanel').classList.contains('on')){
+  if(nativeRegionReturnRestored){nativeRegionReturnRestored=false;return;}
+  if(e.state?.modal==='region'){
+    regionPickerPushed = true;
+    openRegionPicker();
+    return;
+  }
+  if(e.state?.regionDismissed){
+    if(!regionPickerPushed && e.state.vi>=0) restoreView(e.state.vi);
+    regionPickerPushed = true;
+    hideRegionPickerUI();
+    return;
+  }
+  if(regionPickerPushed || document.getElementById('rgPanel').classList.contains('on')){
     // 지역 선택 패널이 열린 상태에서의 popstate는 패널을 닫기 위한 것(직접 닫든, 뒤로가기로 닫든) —
     // 결과 화면 복원 로직은 타지 않고 패널만 닫는다.
     hideRegionPickerUI();
@@ -1550,7 +1572,7 @@ function removeRegionGroup(lawds){
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
   saveRegionSel(); renderRegionChips();
 }
-function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
+function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
@@ -1653,6 +1675,7 @@ function pickRegion(v){
     else addRegion(v);
     buildRegionPicker();
     syncRegionPickBtn();
+    saveNativeRegionResult();
     return;
   }
   sel.value = v;
@@ -1663,14 +1686,84 @@ function pickRegion(v){
 // 지역 선택 패널이 열려있는 동안 뒤로가기(브라우저/제스처)를 누르면 history에 이 패널용 항목이 없어서
 // 페이지 자체를 벗어나(웹뷰가 닫히거나 화면이 꺼진 것처럼 보임) 버리던 문제(2026.09 제보) — 패널을 열 때
 // history 항목을 하나 쌓아두고, 뒤로가기로 그 항목이 소비되면 패널만 닫도록 처리.
+let nativeRegionReturnRestored = false;
+const NATIVE_REGION_CONTEXT = 'aptsum:region-document';
+const NATIVE_REGION_RESULT = 'aptsum:region-document-result';
+const nativeRegionDocument = new URLSearchParams(location.search).get('_regionPicker') === '1';
+function usesNativeRegionDocument(){ return /Instagram|Threads|Barcelona/i.test(navigator.userAgent); }
+function readNativeRegion(key){
+  try { const value=JSON.parse(sessionStorage.getItem(key)||'null');
+    return value && Date.now()-value.createdAt < 30*60*1000 ? value : null;
+  } catch(e) { return null; }
+}
+function saveNativeRegionResult(){
+  if(!nativeRegionDocument) return;
+  const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+  if(context) try { sessionStorage.setItem(NATIVE_REGION_RESULT,JSON.stringify({...context,inputs:captureViewInputs()})); }catch(e){}
+}
+function applyNativeRegionInputs(inp){
+  newHighWeekOnly=!!inp.nh7;
+  if(!setMode(inp.mode,true)) return false;
+  sel.value=inp.lawd;
+  for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
+    if(inp[key]!==undefined) document.getElementById(id).value=inp[key];
+  lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
+  document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
+  regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
+  pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
+  if(inp.mode==='compare'){
+    document.getElementById('cmpRows').innerHTML='';
+    for(const c of inp.cmp||[]){addCmpRow();const rows=document.querySelectorAll('.cmp-row'),row=rows[rows.length-1];setCmpRowLawd(row,c.lawd);row.querySelector('input').value=c.name;}
+  }
+  syncRegionPickBtn();return true;
+}
+function applyNativeRegionReturn(){
+  const result=readNativeRegion(NATIVE_REGION_RESULT);
+  if(!result || nativeRegionDocument) return false;
+  try{sessionStorage.removeItem(NATIVE_REGION_RESULT);}catch(e){}
+  if(result.data){viewStack.push({data:result.data,inputs:result.inputs});restoreView(viewStack.length-1);lastData=result.data;}
+  else applyNativeRegionInputs(result.inputs);
+  hideRegionPickerUI();
+  nativeRegionReturnRestored=true;setTimeout(()=>{nativeRegionReturnRestored=false;},0);
+  return true;
+}
+async function initializeAptsumPage(){
+  if(nativeRegionDocument){
+    const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+    if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
+    await aptsumSubscriberGate.ready;
+    applyNativeRegionInputs(context.inputs);
+    const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
+    openRegionPicker(row);saveNativeRegionResult();return;
+  }
+  if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
+  initFromURL();
+}
+window.addEventListener('pageshow', e=>{if(e.persisted) applyNativeRegionReturn();});
 let regionPickerPushed = false;
+let regionPickerBaseState = null;
+let regionPickerBaseURL = "";
 function openRegionPicker(rowSelectEl){
+  if(usesNativeRegionDocument() && !nativeRegionDocument){
+    const context={createdAt:Date.now(),inputs:captureViewInputs(),data:lastData,
+      cmpIndex:rowSelectEl ? [...document.querySelectorAll('.cmp-row select')].indexOf(rowSelectEl) : -1};
+    try{
+      sessionStorage.removeItem(NATIVE_REGION_RESULT);
+      sessionStorage.setItem(NATIVE_REGION_CONTEXT,JSON.stringify(context));
+      const url=new URL(location.href);url.searchParams.set('_regionPicker','1');
+      location.assign(url.href);return;
+    }catch(e){} // 저장소 사용 불가 시 기존 페이지 내 선택창으로 폴백
+  }
   cmpPickerRow = rowSelectEl || null; // 단지 비교 탭 행 버튼에서 호출되면 그 행의 select를 넘겨받음
   document.getElementById('rgSearch').value = '';
   buildRegionPicker();
   document.getElementById('rgDim').classList.add('on');
   document.getElementById('rgPanel').classList.add('on');
-  try{ history.pushState({modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
+  if(!nativeRegionDocument && !regionPickerPushed){
+    regionPickerBaseState = history.state;
+    regionPickerBaseURL = location.href;
+    try{ history.pushState({...history.state, modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
+  }
 }
 function hideRegionPickerUI(){
   document.getElementById('rgDim').classList.remove('on');
@@ -1679,13 +1772,13 @@ function hideRegionPickerUI(){
   cmpPickerRow = null; // 다음에 singleRow의 "지역 선택"을 열 때 cmp 모드로 잘못 남아있지 않도록 항상 리셋
 }
 function closeRegionPicker(){
-  // 완료 버튼·딤드·지역 선택 등 UI로 닫을 때는 openRegionPicker에서 쌓아둔 history 항목을 되돌려
-  // popstate 핸들러가 hideRegionPickerUI()를 호출하게 한다(뒤로가기로 닫을 때와 경로를 통일).
-  if(regionPickerPushed){
-    regionPickerPushed = false;
-    try{ history.back(); return; }catch(e){}
-  }
+  if(nativeRegionDocument){saveNativeRegionResult();history.back();return;}
+  // 선택 완료 때 history.back()을 호출하면 다음 뒤로가기가 앱 내 브라우저를 닫을 수 있다.
+  // 선택 결과를 유지하고 다음 뒤로가기를 페이지 안에서 한 번 처리할 이력을 남긴다.
   hideRegionPickerUI();
+  if(regionPickerPushed){
+    try{ history.replaceState({...regionPickerBaseState, regionDismissed:true}, '', regionPickerBaseURL); }catch(e){}
+  }
 }
 
 sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
@@ -1949,7 +2042,7 @@ function addCmpRow(){
   // 다른 탭과 동일한 "지역 선택" 버튼 + 모달 피커를 재사용(2026.08 — 예전엔 이 행만 밋밋한 <select> 드롭다운이었음).
   // 기존 코드(search()·URL 공유 복원·즐겨찾기 복원 등)가 전부 `.cmp-row select`.value를 읽으므로,
   // 그 select는 그대로 두되 화면엔 안 보이게 숨기고 버튼만 노출한다.
-  div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select aria-label="비교 단지 지역 선택" style="display:none">${regionSelectHTML()}</select>
+  div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
     <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter')search()" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
   setCmpRowLawd(div, sel.value); // 기본: 현재 선택 지역(값+버튼 라벨 함께 설정)
@@ -3547,7 +3640,7 @@ fillAds();
 // 뒤쪽 let 선언을 참조하는 ?m=tier 공유 링크가 이 문제를 겪었음 — 급지 지도는 이후 별도 페이지로 다시
 // 분리됐지만, 앞으로도 비슷한 패턴이 재발할 수 있어 이 방어 로직은 그대로 유지).
 // 한 틱 미루면 이 시점까지 스크립트 전체가 이미 다 실행된 뒤라 모든 let/const가 초기화돼 있다.
-setTimeout(initFromURL, 0);
+setTimeout(initializeAptsumPage, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
