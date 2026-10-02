@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {cleanItem} from '../netlify/functions/listings.mjs';
+import {cleanItem, dailyHistoryIndex} from '../netlify/functions/listings.mjs';
 const stats=readFileSync(new URL('../stats.html',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function summarize(rows){
@@ -29,4 +29,14 @@ test('share link keeps tenant selection and omits the default',()=>{
  const inp={mode:'listinggap',mN:'36',fM:'0',lawd:'11680',occupancy:'tenant'};
  assert.equal(new URL('https://example.com'+ctx.buildShareURL(inp)).searchParams.get('occupancy'),'tenant');
  assert.equal(new URL('https://example.com'+ctx.buildShareURL({...inp,occupancy:'available'})).searchParams.has('occupancy'),false);
+});
+
+test('same-day reuploads compare against the previous date without deleting stored history',()=>{
+ const index=[{uploadId:'a',asOf:'2026.10.01'},{uploadId:'b',asOf:'2026.10.02'},{uploadId:'c',asOf:'2026-10-02'}];
+ const daily=dailyHistoryIndex(index);
+ assert.deepEqual(daily.map(x=>x.uploadId),['a','c']);
+ assert.equal(index.length,3);
+ const prices={a:15,b:12.5,c:12.5};
+ assert.equal(prices[daily[0].uploadId]-prices[daily[1].uploadId],2.5);
+ assert.equal(dailyHistoryIndex([{uploadId:'x'},{uploadId:'y'}]).length,2);
 });

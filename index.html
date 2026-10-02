@@ -5925,7 +5925,7 @@ function renderListingTrend(d){
       ${listingLinkLegend()}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 인하를 뜻하지 않습니다. 최근 기록 최대 12회를 표시합니다.</div>`;
+    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 인하를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용하며, 직전 기준일과 비교합니다. 최근 기록 최대 12일을 표시합니다.</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
