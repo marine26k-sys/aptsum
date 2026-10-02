@@ -35,7 +35,7 @@ export default async (request, context) => {
   if (request.method === "GET") {
     const session = await getSubscriberSession(request, sessionSecret);
     if (session?.kind === "personal") await touchDevice(session.sub.id, session.did);
-    return response({ subscribed: !!session });
+    return response({ subscribed: !!session, scope: session?.sub?.scope || "all" });
   }
 
   if (request.method !== "POST") {
@@ -70,7 +70,7 @@ export default async (request, context) => {
       await throttle.success();
       const { token, did, maxAge } = createPersonalSession(sessionSecret, sub);
       await touchDevice(sub.id, did, true);
-      return response({ subscribed: true }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
+      return response({ subscribed: true, scope: sub.scope || "all" }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
     }
   }
 

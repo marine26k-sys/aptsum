@@ -536,6 +536,7 @@
     // 예전 window.aptsumSubscriberVerified처럼 전역 boolean을 true로 바꾸는 단순 우회를 막는다.
     const aptsumSubscriberGate = (() => {
       let verified = false;
+      let scope = "all";
       let deactivate = () => {};
       let resolveReady;
       const ready = new Promise(resolve => { resolveReady = resolve; });
@@ -549,8 +550,8 @@
       const applyCta = document.getElementById('tabApply');
       const reveal = () => {
         if (applyCta) applyCta.style.display = 'none';
-        subTabs.forEach(t => { t.style.display = ''; });
-        subDividers.forEach(d => { d.style.display = ''; });
+        subTabs.forEach(t => { t.style.display = scope === 'all' ? '' : 'none'; });
+        subDividers.forEach(d => { d.style.display = scope === 'all' ? '' : 'none'; });
       };
       const activate = () => {
         verified = true;
@@ -570,6 +571,7 @@
           const r = await fetch('/api/subscriber', { credentials: 'same-origin', cache: 'no-store' });
           if (!r.ok) return false;
           const body = await r.json();
+          scope = body.scope || "all";
           return body.subscribed === true;
         } catch (e) {
           return false;
@@ -604,7 +606,9 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ code }),
             });
-            if (r.ok && (await r.json()).subscribed === true) {
+            const login = r.ok ? await r.json() : null;
+            if (login?.subscribed === true) {
+              scope = login.scope || 'all';
               activate();
               // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
               setTimeout(() => { if (typeof initFromURL === 'function') initFromURL(); }, 0);
@@ -635,14 +639,15 @@
         try {
           const r = await fetch('/api/subscriber', { credentials: 'same-origin', cache: 'no-store' });
           if (!r.ok) return true;
-          if ((await r.json()).subscribed === true) return true;
+          const body = await r.json();
+          if (body.subscribed === true) { scope = body.scope || "all"; return true; }
         } catch (e) {
           return true;
         }
         deactivate();
         return false;
       };
-      return Object.freeze({ ready, isVerified: () => verified, recheck });
+      return Object.freeze({ ready, isVerified: () => verified, hasFullAccess: () => verified && scope === "all", recheck });
     })();
     // 비공개 탭 신청·코드 입력 페이지(apply.html, 2026.09 원스톱 신청) — 인증이 필요한 곳마다 이리로 안내한다.
     const SUBSCRIBER_APPLY_LINK = '<a href="./apply.html" style="color:inherit;font-weight:800;text-decoration:underline">이용 신청 · 코드 입력 →</a>';
@@ -1773,7 +1778,7 @@ function listingTrialBadgeHTML(){
 }
 const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
-  if (needsSubscriberSession(m) && !aptsumSubscriberGate.isVerified()) {
+  if (needsSubscriberSession(m) && !aptsumSubscriberGate.hasFullAccess()) {
     if (!fromRestore) askSubscriberApply();
     return false;
   }
@@ -1785,7 +1790,7 @@ function setMode(m, fromRestore){
   if (needsSubscriberSession(m)) {
     // 탭 전환은 바로 하고, 로그인 상태는 뒤에서 다시 확인 — 만료·해지됐으면 단지 분석으로 돌려보낸다
     aptsumSubscriberGate.recheck().then(ok => {
-      if (!ok && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
+      if ((!ok || !aptsumSubscriberGate.hasFullAccess()) && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
     });
   }
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
@@ -3778,7 +3783,7 @@ async function search(opts){
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
-  if(needsSubscriberSession(mode) && !(await aptsumSubscriberGate.recheck())){
+  if(needsSubscriberSession(mode) && (!(await aptsumSubscriberGate.recheck()) || !aptsumSubscriberGate.hasFullAccess())){
     setMode('complex', true);
     showError(SUBSCRIBER_ENDED_MSG);
     return;

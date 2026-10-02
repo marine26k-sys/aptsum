@@ -11,7 +11,7 @@
 //   4) 신청 페이지는 신청서 확인 토큰(claim)으로 결과를 계속 물어보고, 결제됐으면 코드를 보여주며 바로 로그인시킨다
 //
 // 결제 여부는 오직 PayApp의 서버 통보(연동 KEY/VALUE 확인 + 금액 확인)로만 판단한다.
-// 공통 통보 URL은 판매자의 모든 결제를 알려오므로, 금액이 이 상품(APPLY_PRICE)과 같은 것만 처리한다.
+// 공통 통보 URL은 판매자의 모든 결제를 알려오므로 4,900원·9,900원 상품 금액만 처리한다.
 //
 // 저장소(Netlify Blobs "applications"):
 //   app:<id>       { id, createdAt, status, price, region, budget, size, movein, condition, phone, email,
@@ -24,7 +24,8 @@
 //
 // 환경변수: PAYAPP_USERID(판매자 아이디), PAYAPP_LINKKEY(연동 KEY), PAYAPP_LINKVAL(연동 VALUE)
 //           PAYAPP_LINK_URL(결제 링크, 기본 https://www.payapp.kr/L/z4l7c4)
-//           APPLY_PRICE(기본 9900원 — 결제 링크 상품과 같은 금액), APPLY_DAYS(이용 기간, 기본 30일)
+//           PAYAPP_LISTINGS_LINK_URL(4,900원 결제 링크, 기본 https://www.payapp.kr/L/z4lCk5)
+//           APPLY_DAYS(이용 기간, 기본 30일)
 import { createHmac, randomBytes } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import { sameValue } from "./sessions.mjs";
@@ -47,6 +48,15 @@ export function applyConfig(env = process.env) {
   };
 }
 
+export function applyProducts(env = process.env) {
+  const cfg = applyConfig(env);
+  return [
+    { id: "listings", name: "네이버 실매물 이용권", price: 4900, days: cfg.days, includesMail: false, payUrl: env.PAYAPP_LISTINGS_LINK_URL || "https://www.payapp.kr/L/z4lCk5", paymentEnabled: cfg.paymentEnabled },
+    { id: "selection", name: "실매물 이용권 + 아파트썸 단지 선별 메일", price: 9900, days: cfg.days, includesMail: true, payUrl: cfg.payUrl, paymentEnabled: cfg.paymentEnabled },
+  ];
+}
+export const includesSelectionMail = app => app.includesMail ?? app.product !== "listings";
+
 // 신청서 항목 — 네이버폼 1~7번과 같다. 자유 입력이라 길이만 제한한다.
 const TEXT_FIELDS = { region: 100, budget: 60, size: 60, movein: 60, condition: 100 };
 
@@ -55,17 +65,19 @@ export function normalizePhone(phone) {
 }
 
 export function validateApplication(body) {
-  const data = {};
+  const product = body?.product || "selection";
+  if (!["listings", "selection"].includes(product)) return { error: "invalid_product" };
+  const data = { product };
   for (const [key, max] of Object.entries(TEXT_FIELDS)) {
     const v = String(body?.[key] ?? "").trim();
-    if (!v) return { error: `${key}_required` };
+    if (!v && product === "selection") return { error: `${key}_required` };
     if (v.length > max) return { error: `${key}_too_long` };
-    data[key] = v;
+    data[key] = product === "selection" ? v : "";
   }
   const phone = normalizePhone(body?.phone);
   if (!/^01[016789]\d{7,8}$/.test(phone)) return { error: "invalid_phone" };
-  const email = String(body?.email ?? "").trim();
-  if (email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "invalid_email" };
+  const email = product === "selection" ? String(body?.email ?? "").trim() : "";
+  if (email.length > 120 || ((email || product === "selection") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return { error: "invalid_email" };
   if (body?.agree !== true) return { error: "agree_required" };
   return { data: { ...data, phone, email } };
 }
@@ -85,7 +97,7 @@ export function readClaim(secret, claim) {
 
 export function newApplication(data, price, now = Date.now()) {
   return {
-    id: randomBytes(9).toString("base64url"), createdAt: now, status: "pending", price, ...data,
+    id: randomBytes(9).toString("base64url"), createdAt: now, status: "pending", ...data, price, product: data.product || "selection", includesMail: (data.product || "selection") === "selection",
     mulNo: null, subId: null, paidAt: null, delivered: false,
   };
 }
@@ -94,6 +106,7 @@ export function newApplication(data, price, now = Date.now()) {
 export async function saveApplication(app, store = applicationStore()) {
   await store.setJSON(`app:${app.id}`, app);
   await store.setJSON(`phone:${app.phone}`, { id: app.id });
+  await store.setJSON(`phone:${app.phone}:${app.product || "selection"}`, { id: app.id });
 }
 
 // "YYYY-MM-DD"(KST) — 오늘로부터 days일 뒤
@@ -106,16 +119,16 @@ async function getJSON(store, key) {
 }
 
 // 결제 통보를 받을 신청서 찾기: 이미 처리한 결제번호 → 같은 번호의 결제 대기 신청서(24시간 이내)
-async function findApplication(store, mulNo, phone, now) {
+async function findApplication(store, mulNo, phone, now, product) {
   if (mulNo) {
     const idx = await getJSON(store, `mul:${mulNo}`);
     const app = idx && await getJSON(store, `app:${idx.id}`);
     if (app) return app;
   }
   if (phone) {
-    const idx = await getJSON(store, `phone:${phone}`);
+    const idx = await getJSON(store, `phone:${phone}:${product.id}`) || await getJSON(store, `phone:${phone}`);
     const app = idx && await getJSON(store, `app:${idx.id}`);
-    if (app && (app.status === "pending" || app.status === "canceled") && now - app.createdAt <= MATCH_WINDOW_MS) return app;
+    if (app && app.price === product.price && (app.product || "selection") === product.id && (app.status === "pending" || app.status === "canceled") && now - app.createdAt <= MATCH_WINDOW_MS) return app;
   }
   return null;
 }
@@ -139,13 +152,15 @@ export async function handleFeedback(p, {
 
   if (state === "4") {
     // 공통 통보 URL은 판매자의 모든 결제를 알려오므로 이 상품 금액만 처리한다
-    if (Number(p.price) !== cfg.price) return { ok: true, result: "other_product" };
-    let app = await findApplication(appStore, mulNo, phone, now);
+    const product = applyProducts(env).find(v => v.price === Number(p.price));
+    if (!product) return { ok: true, result: "other_product" };
+    let app = await findApplication(appStore, mulNo, phone, now, product);
+    if (app && (app.price !== product.price || (app.product || "selection") !== product.id)) return { ok: false, reason: "payment_product_mismatch" };
     if (app?.subId) return { ok: true, result: "already_issued" };
     if (!app) {
       // 신청서 없이 결제 링크로 바로 결제했거나, 결제창에 신청서와 다른 번호를 넣은 경우 — 코드는 만들어 두고
       // 운영자가 stats.html에서 보고 전달한다
-      app = newApplication({ region: "", budget: "", size: "", movein: "", condition: "", phone, email: "" }, cfg.price, now);
+      app = newApplication({ region: "", budget: "", size: "", movein: "", condition: "", phone, email: "", product: product.id }, product.price, now);
       app.unmatched = true;
     }
     // 같은 결제 통보가 동시에 두 번 오면(PayApp은 같은 통보를 여러 번 보낼 수 있다) 코드가 두 개 발급될 수 있어,
@@ -159,7 +174,7 @@ export async function handleFeedback(p, {
     const sub = await createSubscriber({
       name: `${app.unmatched ? "결제" : "신청"} ${phone.slice(-4) || mulNo}`,
       expiresAt: Date.parse(`${y}-${m}-${d}T23:59:59+09:00`),
-      orderId: app.id,
+      orderId: app.id, scope: "listings", product: product.id,
     }, subStore);
     Object.assign(app, { status: "paid", subId: sub.id, paidAt: now, mulNo: mulNo || null });
     await appStore.setJSON(`app:${app.id}`, app);
@@ -185,8 +200,9 @@ export async function handleFeedback(p, {
     const idx = mulNo ? await getJSON(appStore, `mul:${mulNo}`) : null;
     let app = idx && await getJSON(appStore, `app:${idx.id}`);
     if (!app && phone) {
-      const pidx = await getJSON(appStore, `phone:${phone}`);
-      app = pidx && await getJSON(appStore, `app:${pidx.id}`);
+      const product = applyProducts(env).find(v => v.price === Number(p.price));
+      if (!product) return { ok: true, result: "ignored" };
+      app = await findApplication(appStore, "", phone, now, product);
     }
     if (!app || app.status !== "pending") return { ok: true, result: "ignored" };
     app.status = "canceled";
