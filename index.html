@@ -5370,7 +5370,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
     }));
     if(myToken!==searchToken) return;
     if(failed.length === targets.length){ showError('최저 호가 이력을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
-    rows.sort((a,b)=>b.dropPct-a.dropPct || b.drop-a.drop).splice(100);
+    rows.sort((a,b)=>b.drop-a.drop || b.dropPct-a.dropPct).splice(100);
     const d = { found:true, mode:'listingtrend', asOf, rows, historyCount, failedRegions:failed,
       pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
       scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
@@ -5767,7 +5767,7 @@ function renderListingTrend(d){
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 기록 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
-      ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락률 높은 순`)}
+      ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락 금액 큰 순`)}
       ${listingLinkLegend()}
       ${body}
     </div></div>
