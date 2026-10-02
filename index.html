@@ -26,7 +26,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
 <script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
+<script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
+  html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
+  html.analysis-page .tabs{display:none}
+  .analysis-back{display:none;position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
+  html.analysis-page .analysis-back{display:block}
+  html.analysis-page header{padding-left:50px}
+
   a.tab{text-decoration:none}
   select.analysis-slider-source{display:none!important}
   .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
@@ -672,6 +679,7 @@
     }
   </script>
   <header>
+    <a class="analysis-back" href="./index.html" aria-label="메인으로">←</a>
     <div class="logo" id="logoTapZone">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
       <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실거래 · 실매물 분석</span></div>
@@ -689,7 +697,7 @@
     <div class="tab-grp">
       <div class="tab-grp-name">단지</div>
       <div class="tab-grp-tabs">
-          <a class="tab on" id="tabC" href="./index.html?m=complex"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</a>
+          <a class="tab" id="tabC" href="./index.html?m=complex"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</a>
           <a class="tab" id="tabCmp" href="./index.html?m=compare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</a>
       </div>
     </div>
@@ -2040,6 +2048,10 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
+  const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
+  document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 분석';
+
   document.getElementById('searchBox').style.display = '';
   document.getElementById('tabC').classList.toggle('on', m==='complex');
   document.getElementById('tabCmp').classList.toggle('on', m==='compare');
