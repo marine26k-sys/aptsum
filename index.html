@@ -218,6 +218,22 @@
   .rk .val{flex:none;text-align:right;font-weight:700;font-size:12px}
   .rk .val small{display:block;font-weight:400;color:var(--sub);font-size:10px;line-height:1.3}
   .rk .nm .clickable{cursor:pointer;border-bottom:1px dotted var(--sub)}
+  .listing-trend-row{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .listing-trend-row:last-child{border-bottom:none}
+  .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
+  .listing-trend-row .val{white-space:nowrap;color:var(--blue);font-size:13px}
+  .listing-trend-row .val small{display:inline;color:inherit;font-size:10px;font-weight:700}
+  .listing-trend-change{display:flex;align-items:center;flex-wrap:wrap;gap:2px 4px;margin-top:4px;font-size:10px;font-weight:700;color:var(--ink);line-height:1.3}
+  .listing-trend-change .price{padding:2px 4px;border-radius:5px;background:var(--slate-bg)}
+  .listing-trend-change .price.now{background:#EAF2FF;color:var(--blue)}
+  .listing-trend-change .date{color:var(--sub);font-size:9px;font-weight:500}
+  .listing-trend-change .arrow{color:var(--sub)}
+  .listing-trend-history{margin:7px 0 0 30px;color:var(--sub);font-size:10px}
+  .listing-trend-history summary{cursor:pointer;width:max-content;max-width:100%;padding:2px 0;font-weight:700}
+  .listing-trend-history ol{margin:5px 0 0;padding:6px 8px;list-style:none;border-radius:8px;background:var(--slate-bg)}
+  .listing-trend-history li{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+  .listing-trend-history li+li{border-top:1px solid var(--line)}
+  .listing-trend-history li:last-child{color:var(--blue);font-weight:700}
 
   .cmp-row{display:flex;gap:6px;margin-bottom:6px}
   .cmp-row select{flex:0 0 128px}
@@ -5716,17 +5732,32 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
     </div>`;
 }
 
+function listingTrendDate(date){
+  const parts = String(date || '').split(/[.\-/]/).filter(Boolean);
+  return parts.length >= 3 ? `${parts[1].padStart(2, '0')}.${parts[2].padStart(2, '0')}` : String(date || '-');
+}
+function listingTrendHistoryHTML(points){
+  if(points.length <= 2) return '';
+  const recent = points.slice(-12);
+  return `<details class="listing-trend-history"><summary>가격 이력 ${recent.length}회 보기</summary>
+    <ol>${recent.map(p=>`<li><span>${esc(listingTrendDate(p.date))}</span><span>${p.ask.toFixed(1)}억</span></li>`).join('')}</ol></details>`;
+}
+function listingTrendRowHTML(x, i, multiRegion){
+  const prev = x.points[x.points.length-2], now = x.points[x.points.length-1];
+  return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
+    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small>
+      <span class="listing-trend-change"><span class="price"><span class="date">${esc(listingTrendDate(prev.date))}</span> ${prev.ask.toFixed(1)}억</span>
+        <span class="arrow">→</span><span class="price now"><span class="date">${esc(listingTrendDate(now.date))}</span> ${now.ask.toFixed(1)}억</span></span></span>
+    <span class="val">▼${x.drop.toFixed(1)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
+    ${listingTrendHistoryHTML(x.points)}</div>`;
+}
 function renderListingTrend(d){
   const multiRegion = regionMulti(d.rows);
   const body = d.historyCount < 2
     ? `<div class="rng" style="padding:10px 0">비교할 최저 호가 이력이 아직 없습니다.</div>`
     : !d.rows.length
       ? `<div class="rng" style="padding:10px 0">직전 기록보다 최저 호가가 내린 매물이 없습니다.</div>`
-      : d.rows.map((x,i)=>`<div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-        <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small>
-          <small>${x.points.slice(-6).map(p=>`${esc(p.date)} ${p.ask.toFixed(1)}억`).join(' → ')}</small></span>
-        <span class="val" style="color:var(--blue)">▼${x.drop.toFixed(1)}억<small>${x.prevAsk.toFixed(1)}억 → ${x.ask.toFixed(1)}억</small><small>-${x.dropPct.toFixed(1)}%</small></span>
-      </div>${rkSep(i,d.rows.length)}`).join('');
+      : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion)).join('');
   const html = `<div class="card">
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
