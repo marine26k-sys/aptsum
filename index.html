@@ -860,6 +860,11 @@
         </div>
       </div>
     </div>
+    <div id="listingOccupancyFilters" class="ls-filters" style="display:none">
+      <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">입주 조건
+        <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option></select>
+      </label>
+    </div>
     <div id="listingGapFilters" class="ls-filters" style="display:none">
       <div style="display:flex;gap:8px;margin-bottom:6px">
         <label style="flex:1;min-width:0;font-size:12px;color:var(--sub)">작은 평형
@@ -1011,6 +1016,7 @@ function pushView(){
     by: document.getElementById('buildYear').value,
     ls: lsGet(), // 실매물 탭 연식·세대수·변동률 슬라이더
     lg: listingGapBands(),
+    occupancy: listingOccupancy(),
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
@@ -1027,6 +1033,7 @@ function buildShareURL(inp){
   const p = new URLSearchParams();
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
+  if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
@@ -1079,6 +1086,7 @@ async function initFromURL(){
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
     lsSet({a0,a1,h,r0,r1,p0,p1});
   }
+  document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   if(requestedMode==='listinggap'){
     const [small,large] = (p.get('lg')||'20-30').split('-').map(Number);
     listingGapSet(small,large);
@@ -1369,6 +1377,7 @@ function restoreView(vi){
   document.getElementById('floorMin').value = inp.fM;
   document.getElementById('buildYear').value = inp.by || '';
   lsSet(inp.ls);
+  document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
   regionSel = (inp.regionSel || []).slice();
@@ -1873,6 +1882,7 @@ function setMode(m, fromRestore){
   document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
+  document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
@@ -5363,19 +5373,24 @@ function renderPeak(d){
 // 확인된 요청에만 /api/listings가 내려준다(엑셀 원본·요약 모두 GitHub에 올리지 않음).
 const listingMem = {}; // lawd → {asOf, items} (세션 내 메모리 캐시 — 구독 전용 데이터라 localStorage엔 안 남김)
 const listingHistoryMem = {}; // lawd → 업로드별 요약본. 브라우저 저장소에는 남기지 않는다.
+function listingOccupancy(){ return document.getElementById("listingOccupancy").value==='tenant' ? 'tenant' : 'available'; }
+function listingOccupancyLabel(){ return listingOccupancy()==='tenant' ? '세안고' : '입주 가능'; }
+function listingOccupancyApply(){ searchToken++; if(isListingMode(mode)) search({silentScroll:true}); }
 async function fetchListings(lawd){
-  if(listingMem[lawd]) return listingMem[lawd];
-  const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}`, { credentials:'same-origin', cache:'no-store' });
+  const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
+  if(listingMem[key]) return listingMem[key];
+  const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=${occupancy}`, { credentials:'same-origin', cache:'no-store' });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return (listingMem[lawd] = await r.json());
+  return (listingMem[key] = await r.json());
 }
 async function fetchListingHistory(lawd){
-  if(listingHistoryMem[lawd]) return listingHistoryMem[lawd];
-  const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1`, { credentials:'same-origin', cache:'no-store' });
+  const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
+  if(listingHistoryMem[key]) return listingHistoryMem[key];
+  const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&occupancy=${occupancy}`, { credentials:'same-origin', cache:'no-store' });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return (listingHistoryMem[lawd] = await r.json());
+  return (listingHistoryMem[key] = await r.json());
 }
 
 function listingGapBandLabel(band){ return band===60 ? '60평 이상' : `${band}평대`; }
@@ -5461,7 +5476,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
         const [current, history] = await Promise.all([fetchListings(t.lawd), fetchListingHistory(t.lawd)]);
         if(current.asOf && (!asOf || current.asOf > asOf)) asOf = current.asOf;
         const snapshots = history.snapshots || [];
-        historyCount = Math.max(historyCount, snapshots.length);
+        historyCount = Math.max(historyCount, snapshots.filter(s => s.items?.length).length);
         const previousUploadId = snapshots[snapshots.length-2]?.uploadId;
         const byType = new Map();
         for(const snapshot of snapshots){
@@ -5608,7 +5623,7 @@ function renderListingUndervalue(d){
       ${hdTop('저평가 실매물', true)}
       <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
-        <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">입주 가능 · 중층 이상</span>
+        <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · 중층 이상</span>
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">같은 구 비교 <span style="opacity:.5">|</span> 기준일 ${esc(d.asOf||'-')}</span>
       </div>
       ${hdVs('최근 3년 최고가', '현재 최저 실매물')}
@@ -5617,12 +5632,12 @@ function renderListingUndervalue(d){
     </div>
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가가 비슷했던 같은 구 단지보다 호가가 5% 이상 싼 단지</div>
-      ${hint(`호가 기준 · ${LISTING_MIN_HH}세대↑ · 세안고·저층 매물 제외`)}
+      ${hint(`호가 기준 · ${LISTING_MIN_HH}세대↑ · ${listingOccupancyLabel()} · 저층 매물 제외`)}
       ${listingLinkLegend()}
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · 입주가능 매물만 (세안고 제외) · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5840,7 +5855,7 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
       ${hdTop(badge, true, badgeClass)}
       <h2>${esc(title || shortRegionLabel(d.scopeLabel||''))}</h2>
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
-        <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">입주 가능 · 중층 이상</span>
+        <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · 중층 이상</span>
         ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
         ${d.filterLabel?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.filterLabel)}</b> <span style="opacity:.5">|</span></span>`:''}
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">기준일 ${esc(d.asOf||'-')}</span>
@@ -5890,7 +5905,7 @@ function renderListingGap(d){
     }).join('');
   const html=`<div class="card">${listingHeaderHTML(d,'평형 간 가격차',null,null)}<div class="sec">
     <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">같은 단지의 작은 평형과 큰 평형 최저 호가 비교</div>
-    ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 큰 평형으로 넓히는 호가 차이 적은 순`)}
+    ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 큰 평형으로 넓히는 호가 차이 적은 순`)}
     <div class="rng" style="margin:6px 0;color:#036B31">평형·가격 옆 ↗를 누르면 해당 네이버 매물로 이동합니다.</div>
     ${body}</div></div><div class="src-note">각 평형대 안에서 가장 낮은 호가를 비교합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
@@ -5906,7 +5921,7 @@ function renderListingTrend(d){
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 기록 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
-      ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락 금액 큰 순`)}
+      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락 금액 큰 순`)}
       ${listingLinkLegend()}
       ${body}
     </div></div>
@@ -5935,7 +5950,7 @@ function renderListingUrgent(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: 입주가능 (세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가 (엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가 (엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -5957,7 +5972,7 @@ function renderListingBudget(d){
   const multiRegion = regionMulti(list);
   const chips = bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
-    ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · 입주가능·중층 이상 매물)</div>`
+    ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·중층 이상 매물)</div>`
     : list.map((x,i)=>{
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
@@ -5976,7 +5991,7 @@ function renderListingBudget(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">호가: 입주가능 (세안고 제외) · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
