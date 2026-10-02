@@ -37,6 +37,18 @@ const num = (v) => (Number.isFinite(+v) ? +v : null);
 const historyKey = (lawd, uploadId) => `history:${lawd}:${uploadId}`;
 const historyIndexKey = (lawd) => `history-index:${lawd}`;
 
+// 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
+// 원본 스냅샷과 색인은 모두 보존한다.
+export function dailyHistoryIndex(index) {
+  const days = new Map();
+  for (const x of index) {
+    const date = String(x.asOf || "").replace(/[^0-9]/g, "");
+    const key = date.length === 8 ? date : `upload:${x.uploadId}`;
+    days.set(key, x);
+  }
+  return [...days.values()];
+}
+
 export async function saveSnapshot(store, lawd, data) {
   if (!data?.uploadId || !Array.isArray(data.items)) return;
   const indexKey = historyIndexKey(lawd);
@@ -82,8 +94,8 @@ export default async (request) => {
     const selectedItems = items => (items || []).filter(i => (i.occupancy || "available") === occupancy);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
-      // 최신 12회분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
-      const recent = index.slice(-12);
+      // 기준일별 마지막 업로드에서 최신 12일분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
+      const recent = dailyHistoryIndex(index).slice(-12);
       const snapshots = await Promise.all(recent.map(async x => {
         const data = await store.get(historyKey(lawd, x.uploadId), { type: "json", consistency: "strong" });
         return data ? { asOf: data.asOf, uploadId: data.uploadId,
