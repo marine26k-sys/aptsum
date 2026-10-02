@@ -803,11 +803,11 @@
         <option value="20+">20년 초과</option>
       </select>
     </div>
-    <!-- 연식·세대수 슬라이더 — 예산별 실매물·급매 선별 전용(2026.09 운영자 요청: 선택지 몇 개로는 너무 한정적이라
+    <!-- 실매물 슬라이더 — 최저 호가 하락은 평형만, 예산별 실매물·급매 선별은 평형·연식·세대수(2026.09 운영자 요청: 선택지 몇 개로는 너무 한정적이라
          슬라이드로 자유롭게). 연식은 최소~최대 년차 범위, 세대수는 최소 세대. 손을 떼면 바로 다시 조회(엑셀 요약은
          한 번 받으면 메모리에 캐시돼 재조회가 빠르다). -->
     <div id="lsFilters" class="ls-filters" style="display:none">
-      <!-- 평형 슬라이더 — 예산별 실매물·급매 선별 전용(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
+      <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
       <div class="ls-row">
@@ -817,14 +817,14 @@
           <input type="range" id="lsPyMax" min="10" max="60" step="1" value="60" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 평형">
         </div>
       </div>
-      <div class="ls-row">
+      <div class="ls-row" id="lsAgeRow">
         <div class="ls-hd"><span>연식</span><b id="lsAgeTxt">전체</b></div>
         <div class="ls-dual" id="lsAgeDual">
           <input type="range" id="lsAgeMin" min="1" max="40" step="1" value="1" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 년차">
           <input type="range" id="lsAgeMax" min="1" max="40" step="1" value="40" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 년차">
         </div>
       </div>
-      <div class="ls-row">
+      <div class="ls-row" id="lsHhRow">
         <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
         <div class="ls-single" id="lsHhSingle">
           <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
@@ -1818,16 +1818,18 @@ function setMode(m, fromRestore){
   renderRegionChips();
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
-  // 예산별 실매물·급매 선별은 2026.09부터 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)로 대체됐다.
+  // 실매물 3개 탭은 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)를 쓴다.
   document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
-  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent') ? '' : 'none';
+  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend') ? '' : 'none';
+  document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
+  document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
-  if(m==='listingbudget'||m==='listingurgent'){
+  if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
     const hh = document.getElementById('lsHhMin'), base = m==='listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH;
     const atBase = +hh.value <= +hh.min;
@@ -3772,7 +3774,7 @@ async function search(opts){
   // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
   if(isListingMode(mode) && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
-  if(mode==='listingtrend') return searchListingTrend(myToken, lawd);
+  if(mode==='listingtrend') return searchListingTrend(myToken, lawd, silentScroll);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
   if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
   const mN = +document.getElementById('monthsN').value;
@@ -5330,7 +5332,7 @@ async function fetchListingHistory(lawd){
   return (listingHistoryMem[lawd] = await r.json());
 }
 
-async function searchListingTrend(myToken, lawd){
+async function searchListingTrend(myToken, lawd, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
   document.getElementById('loadMsg').textContent = `${targets.length}개 지역 최저 호가 이력 불러오는 중…`;
@@ -5338,6 +5340,7 @@ async function searchListingTrend(myToken, lawd){
   document.getElementById('btn').disabled = true;
   try{
     const failed = [], rows = [];
+    const ls = lsGet();
     let asOf = null, historyCount = 0;
     await Promise.all(targets.map(async t=>{
       try{
@@ -5357,7 +5360,7 @@ async function searchListingTrend(myToken, lawd){
         }
         for(const item of current.items || []){
           const points = byType.get(`${item.nid}|${item.ex}`) || [];
-          if(points.length < 2 || item.hh < LISTING_MIN_HH) continue;
+          if(points.length < 2 || item.hh < LISTING_MIN_HH || !lsPyMatch(item, ls)) continue;
           const prev = points[points.length-2], now = points[points.length-1];
           if(!previousUploadId || prev.uploadId !== previousUploadId || now.uploadId !== current.uploadId || now.ask !== item.ask || now.ask >= prev.ask) continue;
           rows.push({ ...item, lawd:t.lawd, gu:t.name, prevAsk:prev.ask,
@@ -5369,10 +5372,11 @@ async function searchListingTrend(myToken, lawd){
     if(failed.length === targets.length){ showError('최저 호가 이력을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
     rows.sort((a,b)=>b.dropPct-a.dropPct || b.drop-a.drop).splice(100);
     const d = { found:true, mode:'listingtrend', asOf, rows, historyCount, failedRegions:failed,
+      pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
       scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     lastData = d;
     renderListingTrend(d);
-    window.scrollTo(0, 0);
+    if(!silentScroll) window.scrollTo(0, 0);
     pushView(); saveLastRegionPref(lawd);
   }catch(err){
     if(err.auth) aptsumSubscriberGate.recheck();
@@ -5589,6 +5593,11 @@ function lsLabel(v, withRate){
   return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, v.h > lsHhBase() ? lsHhText(v) : null,
     withRate && lsRateActive(v) ? '변동률 ' + lsRateText(v) : null].filter(Boolean).join(' · ') || null;
 }
+function lsPyMatch(x, v){
+  if(!lsPyActive(v)) return true;
+  if(!(x.py > 0)) return false;
+  return x.py >= v.p0 && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
+}
 function lsMatch(x, v){
   if(v.h > lsHhBase() && !(x.hh >= v.h)) return false;
   if(v.a0 > 1 || v.a1 < LS_AGE_MAX){
@@ -5597,11 +5606,7 @@ function lsMatch(x, v){
     const age = new Date().getFullYear() - by + 1;
     if(age < v.a0 || (v.a1 < LS_AGE_MAX && age > v.a1)) return false;
   }
-  if(lsPyActive(v)){
-    if(!(x.py > 0)) return false; // 평형 없는 매물은 평형 필터가 걸려 있을 때 제외
-    if(x.py < v.p0 || (v.p1 < LS_PY_MAX && x.py > v.p1)) return false;
-  }
-  return true;
+  return lsPyMatch(x, v); // 평형 없는 매물은 평형 필터가 걸려 있을 때 제외
 }
 // 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
 function lsSync(el){
@@ -5629,7 +5634,7 @@ function lsSync(el){
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent') && lastData.mode === mode) search({silentScroll:true});
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend') && lastData.mode === mode) search({silentScroll:true});
 }
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
