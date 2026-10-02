@@ -5476,7 +5476,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
         const [current, history] = await Promise.all([fetchListings(t.lawd), fetchListingHistory(t.lawd)]);
         if(current.asOf && (!asOf || current.asOf > asOf)) asOf = current.asOf;
         const snapshots = history.snapshots || [];
-        historyCount = Math.max(historyCount, snapshots.length);
+        historyCount = Math.max(historyCount, snapshots.filter(s => s.items?.length).length);
         const previousUploadId = snapshots[snapshots.length-2]?.uploadId;
         const byType = new Map();
         for(const snapshot of snapshots){
