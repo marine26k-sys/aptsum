@@ -1,3 +1,5 @@
+import { attachHouseholds } from "../shared/naver-name-match.mjs";
+import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 // 급지(가격 등급) 대시보드 데이터 생성 (2026.09 신규 — subuji-main 참고)
 // 목적: 이미 collect-trades.mjs가 쌓아온 data/analyze/<lawd>/<ym>.json 매매 실거래를 스캔해서,
 // 단지별 "평단가(공급면적 기준, 3.3㎡=1평당 가격)"를 뽑고 가격대별 6단계 등급(최상급지~하급지)으로
@@ -110,6 +112,8 @@ async function main() {
     const province = provinceOf(region, lawd);
     if (!ALLOWED_PROVINCES.has(province)) continue; // 인천 등 대상 외 지역 폴더는 통째로 스킵
 
+    let calibratedAreas = [];
+    try { calibratedAreas = JSON.parse(await readFile(path.join("data/supply-area-naver", `${lawd}.json`), "utf-8")); } catch {}
     for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
       let ymFiles;
       try { ymFiles = (await readdir(path.join(dir, lawd))).filter((f) => f.endsWith(".json")); }
@@ -120,7 +124,7 @@ async function main() {
         let j;
         try { j = JSON.parse(await readFile(path.join(dir, lawd, f), "utf-8")); }
         catch { continue; }
-        for (const t of j.items || []) {
+        for (const t of applyNaverSupplyAreas(j.items || [], calibratedAreas)) {
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
           totalTx++;
@@ -160,6 +164,10 @@ async function main() {
       if (!region) continue;
       const j = JSON.parse(await readFile(path.join(hhcntDir, f), "utf-8"));
       const dealMeta = dealMetaByLawd.get(lawd) || new Map();
+      try {
+        const naver = JSON.parse(await readFile(path.join("data/hhcnt-naver", `${lawd}.json`), "utf-8"));
+        attachHouseholds(dealMeta, naver.items);
+      } catch {}
       const resolved = resolveComplexNames(j.items, dealMeta);
       for (const [nameNorm, c] of resolved) {
         hhLookup.set(`${region}|${nameNorm}`, { hh: c.hhcnt ?? null, by: c.useDate ? parseInt(String(c.useDate).slice(0, 4), 10) : null });

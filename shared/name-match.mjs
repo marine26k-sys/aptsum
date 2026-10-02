@@ -11,49 +11,12 @@
 //   실거래 [에스케이북한산시티]     ↔ 대장 [SK북한산시티아파트]      — 한글/영문 혼용
 //   실거래 [매교역푸르지오SKVIEW]  ↔ 대장 [매교역푸르지오SK뷰아파트] — 뷰/VIEW 혼용
 //
-// 오매칭은 잘못된 평형을 표시하게 되므로 "못 찾는 것"보다 나쁘다. 그래서 부분 문자열 포함은
-// 허용하지 않고 접두/접미 관계만 인정하며, 후보가 2개 이상이면 법정동으로 좁히고, 그래도 좁혀지지
-// 않으면 매칭을 포기한다(보류).
+// naver의 정규화·매칭 규칙을 공통 모듈로 사용한다. 법정동을 먼저 좁히고,
+// 세대수가 확인된 경우 K-apt와 일치해야 하며, 관리단지 후보가 여러 개면 보류한다.
 
-// 한글/영문 혼용 표기 통일 — 길이가 긴 규칙을 먼저 적용해야 부분 치환으로 어긋나지 않는다.
-const ALIAS = [
-  [/에스케이뷰/g, "SKVIEW"], [/SK뷰/g, "SKVIEW"],
-  [/에스케이/g, "SK"], [/엘지/g, "LG"], [/지에스/g, "GS"],
-  [/케이씨씨/g, "KCC"], [/케이티/g, "KT"],
-  [/이편한세상/g, "E편한세상"],
-  [/써미트/g, "SUMMIT"], [/써밋/g, "SUMMIT"],
-  [/뷰/g, "VIEW"],
-];
-
+import { naverNameKey, matchNaverTradeNames, sameHouseholds } from "./naver-name-match.mjs";
 export const norm = (s) => String(s || "").replace(/\s/g, "");
-
-// 매칭 비교용 키 — 표기 차이를 최대한 지운 형태. 저장 키로는 쓰지 않는다(사람이 못 읽음).
-export function nameKey(s) {
-  let x = norm(s);
-  // "현대14차(203,204,205,206동)"·"선경2차(8동-12동)"처럼 괄호 안이 동 번호 나열뿐이면(숫자·쉼표·
-  // 물결·붙임표 + "동") 통째로 제거한다 — 압구정·잠원 등 재건축 대상 구축 단지 표기에서 흔한
-  // 패턴(2026.09, 급지 대시보드 세대수 미매칭 조사 중 발견). "(3단지)"처럼 실제 단지 구분 정보가
-  // 담긴 괄호는 "단지" 글자가 이 패턴에 안 맞아 그대로 남고, 아래에서 괄호 문자만 벗겨진다.
-  x = x.replace(/\((?:[\d,~-]*동)+[\d,~-]*\)/g, "");
-  x = x.replace(/[()（）,.\-_·・'"]/g, "");
-  x = x.replace(/(임대|분양)$/, "").replace(/아파트$/, "").replace(/아파트(?=\d)/g, "");
-  // 1기 신도시(평촌·분당·산본 등)는 "향촌마을현대4차"처럼 하위 동네명 "마을"을 이름 중간에 붙이는 관행이
-  // 있는데, 실거래·네이버 표기가 이걸 붙였다 뗐다 해서(예: 실거래 [향촌마을현대4차] ↔ 네이버 [향촌현대4차])
-  // 접두/접미 규칙으론 못 잡는다(중간 삽입이라 어느 쪽도 아님) — 아예 지우고 비교(2026.09).
-  x = x.replace(/마을/g, "");
-  // 실거래는 "우성4"처럼 "차"/"단지"를 떼고 등록되는 경우가 많은데(네이버는 "우성4차"로 등록) 접두/접미
-  // 규칙만으론 못 잡음(숫자 뒤에 글자가 "붙는" 방향이라 끝이 다름) — 숫자+차/단지 접미사를 지우고 비교.
-  // 주의: "현대6차"(178세대)와 "현대6단지"(421세대)처럼 "차"와 "단지"가 실제로는 다른 동을 가리키는 경우가
-  // 있어(2026.09 확인, 광진구·인천 영종구 등 88개 지역 중 2건), 이 규칙만으로 잘못 합쳐질 위험이 있다.
-  // 하지만 이 함수는 "비교 키"일 뿐이고, 실제 저장은 build-hhcnt-naver.mjs가 비교키 충돌 시
-  // keyIndex를 null로 막고(resolveComplexNames도 동일하게 후보 여럿이면 보류), naverLookup()의 폴백
-  // 스캔도 후보 간 세대수가 다르면 포기하도록 이미 돼 있어 — 두 형태가 공존하는 단지는 자동으로
-  // 매칭 보류(K-apt 폴백)되고, 한쪽만 있는(훨씬 흔한) 경우만 이 규칙으로 구제된다.
-  x = x.replace(/(\d+)(차|단지)$/, "$1");
-  x = x.toUpperCase();
-  for (const [re, to] of ALIAS) x = x.replace(re, to);
-  return x;
-}
+export const nameKey = naverNameKey;
 
 // hhcnt의 kaptAddr("서울특별시 송파구 가락동 479 헬리오시티아파트")에서 법정동만 뽑는다.
 export function dongOfAddr(addr) {
@@ -65,45 +28,37 @@ export function dongOfAddr(addr) {
 // dealMeta: Map(정규화 실거래명 -> { umds:Set<법정동명> })
 // 정확 일치를 먼저 전부 확정한 뒤, 남은 것만 퍼지 매칭한다(정확 일치가 항상 우선).
 export function resolveComplexNames(hhItems, dealMeta) {
-  const resolved = new Map(); // 실거래명(norm) -> hhcnt 단지
-  const claimed = new Set();  // 이미 배정된 hhcnt 단지(중복 조회 방지)
-  const items = (hhItems || []).filter((c) => c.kaptAddr && c.bjdCode);
-
+  const resolved = new Map();
+  const items = (hhItems || []).filter(c => c.kaptAddr && c.bjdCode);
+  const claims = new Map();
   for (const c of items) {
-    const n = norm(c.name);
-    if (dealMeta.has(n) && !resolved.has(n)) { resolved.set(n, c); claimed.add(c); }
+    const dong = dongOfAddr(c.kaptAddr);
+    const candidates = new Map();
+    for (const [n, meta] of dealMeta) {
+      if (!dong || !meta.umds?.has(dong)) continue;
+      if (meta.hh != null && !sameHouseholds(meta.hh, c.hhcnt)) continue;
+      const key = nameKey(n, dong);
+      if (!candidates.has(key)) candidates.set(key, []);
+      candidates.get(key).push({ name: n, meta });
+    }
+    const local = items.filter(h => dongOfAddr(h.kaptAddr) === dong);
+    const reserved = new Set(local.map(h => nameKey(h.name, dong)));
+    const owners = new Map();
+    for (const h of local) {
+      const key = nameKey(h.name, dong);
+      if (!owners.has(key)) owners.set(key, new Set());
+      owners.get(key).add(h.kaptCode || h.kaptAddr);
+    }
+    const ambiguous = new Set([...owners].filter(([, ids]) => ids.size > 1).map(([key]) => key));
+    const hits = matchNaverTradeNames(candidates, c.name, dong, { reserved, ambiguous });
+    for (const hit of hits) {
+      if (!claims.has(hit.name)) claims.set(hit.name, []);
+      claims.get(hit.name).push(c);
+    }
   }
-
-  const rest = items.filter((c) => !claimed.has(c))
-    .map((c) => ({ c, k: nameKey(c.name), dong: dongOfAddr(c.kaptAddr) }));
-
-  for (const [n, meta] of dealMeta) {
-    if (resolved.has(n)) continue;
-    const dk = nameKey(n);
-    if (dk.length < 2) continue; // 너무 짧은 이름은 오매칭 위험이 커서 아예 시도하지 않음
-    let cands = rest.filter((h) => h.k === dk);
-    if (!cands.length) {
-      // 실거래명이 "현대"·"극동"처럼 아주 짧으면 접미 관계만 인정한다 — 대장명이 "옥수극동"처럼
-      // 동네명을 앞에 붙이는 건 같은 단지지만, "신금호"→"신금호파크자이"처럼 뒤에 뭐가 더 붙는 건
-      // 대개 다른 단지다(2026.09 실데이터 표본 확인).
-      const shortName = dk.length <= 3;
-      cands = rest.filter((h) => h.k.length >= 3 && (shortName
-        ? h.k.endsWith(dk)
-        : (h.k.endsWith(dk) || dk.endsWith(h.k) || h.k.startsWith(dk) || dk.startsWith(h.k))));
-    }
-    if (cands.length > 1) {
-      // 법정동이 같은 후보만 남긴다 — "현대3차"처럼 한 구에 같은 이름이 여러 개인 경우를 가른다.
-      const narrowed = cands.filter((h) => h.dong && meta.umds.has(h.dong));
-      if (narrowed.length) cands = narrowed;
-    }
-    if (cands.length > 1) {
-      // 임대/분양 동이 따로 등록된 같은 단지(예: 신당남산타운임대 / 신당남산타운(분양))는 주소가 같다.
-      const addrs = new Set(cands.map((h) => h.c.kaptAddr));
-      if (addrs.size === 1) cands = [cands[0]];
-    }
-    if (cands.length !== 1) continue; // 0개(못 찾음) 또는 2개 이상(모호) → 보류
-    resolved.set(n, cands[0].c);
-    claimed.add(cands[0].c);
+  for (const [name, cands] of claims) {
+    const codes = new Set(cands.map(c => c.kaptCode || c.kaptAddr));
+    if (codes.size === 1) resolved.set(name, cands[0]);
   }
   return resolved;
 }

@@ -1947,7 +1947,7 @@ function addCmpRow(){
 // scripts/derive-py-anchors.mjs)로 교체. 4개 파일(analyze/presale/rent.mjs+shared/rtms-parse.mjs) 동일 반영)
 // (2026.09 11→12: PY_ANCHORS 5차 개편(미세조정) — 92~124㎡ 구간도 같은 실측 데이터로 재검증한 결과
 // 95/97/99/109/110 다섯 지점만 ±1평 오차가 있어 정확히 맞춤. 나머지 지점은 이미 실측과 일치해 그대로 둠)
-const CACHE_VER = 13;
+const CACHE_VER = 14;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -2304,7 +2304,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // 별개 단지 "동탄역롯데캐슬알바트로스"(1,416세대, 용적률 189%)에 잘못 걸려있던 것 수정)
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
-const HH_CACHE_VER = 16;
+const HH_CACHE_VER = 17;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;

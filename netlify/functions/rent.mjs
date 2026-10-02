@@ -1,3 +1,4 @@
+import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 아파트 전월세 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
 // 환경변수: DATA_GO_KR_KEY(필수, analyze.mjs/presale.mjs와 공용)
@@ -89,43 +90,7 @@ function areaToPy(area) {
 // 공용 행을 다 못 잡은 것"(수집 실패)이다 — 전체 13,680개 타입 중 23.4%가 여기 해당했고, 그중 13.7%는
 // 공용이 아예 0이었다. 아래 ±3평 가드로는 이게 안 걸러진다(예: 전용 59㎡가 22평으로 나와도 보간값
 // 25평과 3평 차이라 그대로 통과) → 잘못된 평형이 화면에 그대로 나갔음.
-const MAX_EXCLUSIVE_RATIO = 0.85;
-const SQM_PER_PY = 3.3058;
-const norm = (s) => String(s || "").replace(/\s/g, "");
-const supplyAreaCache = new Map(); // lawd -> Map(정규화단지명 -> [{exclusiveArea, supplyArea}]) | null — 컨테이너 warm 재사용 동안만 캐시
-async function loadSupplyAreaMap(origin, lawd) {
-  if (supplyAreaCache.has(lawd)) return supplyAreaCache.get(lawd);
-  let map = null;
-  try {
-    const r = await fetch(`${origin}/data/supply-area/${encodeURIComponent(lawd)}.json`);
-    if (r.ok) {
-      const j = await r.json();
-      map = new Map();
-      for (const [name, types] of Object.entries(j.items || {})) map.set(norm(name), types);
-    }
-  } catch (e) { map = null; }
-  supplyAreaCache.set(lawd, map);
-  return map;
-}
-async function hubPyOverride(items, lawd, origin) {
-  if (!origin || !lawd || !/^\d{5}$/.test(lawd)) return items;
-  const map = await loadSupplyAreaMap(origin, lawd);
-  if (!map) return items;
-  return items.map((t) => {
-    const types = map.get(norm(t.apt));
-    if (!Array.isArray(types)) return t; // 2026.09 방어 — 데이터 형식이 예상과 다르면 조용히 폴백(throw로 요청 전체가 죽는 것 방지)
-    const rounded = Math.round(t.area);
-    const match = types.find((ty) => Math.round(ty.exclusiveArea) === rounded);
-    if (!match || !Number.isFinite(match.supplyArea)) return t; // supplyArea가 없거나 숫자가 아니면 NaN평 표시 방지
-    if (!(match.supplyArea > 0) || match.exclusiveArea / match.supplyArea > MAX_EXCLUSIVE_RATIO) return t; // 공용 누락된 수집 실패분
-    const hubPy = Math.round(match.supplyArea / SQM_PER_PY);
-    // 2026.09 — 실측값이 기존 보간값(t.py)과 너무 동떨어지면 실측값을 버리고 보간값을 그대로 씀
-    // (analyze.mjs 주석 참고 — 주상복합 등 특이 케이스에서 실측값이 시장 관행 라벨과 크게 벌어지는
-    // 사례가 실제로 확인됨). 3평 이상 차이나면 신뢰하지 않음.
-    if (Math.abs(hubPy - t.py) > 3) return t;
-    return { ...t, py: hubPy };
-  });
-}
+const hubPyOverride = applySupplyAreaOverrides;
 
 function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));
