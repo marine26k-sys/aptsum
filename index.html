@@ -851,12 +851,12 @@
           <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
         </div>
       </div>
-      <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+20%)은 "그 이하/이상 전부" -->
+      <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
       <div class="ls-row" id="lsRateRow">
         <div class="ls-hd"><span>변동률 (전고점 대비)</span><b id="lsRateTxt">전체</b></div>
         <div class="ls-dual" id="lsRateDual">
-          <input type="range" id="lsRateMin" min="-30" max="20" step="1" value="-30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 변동률">
-          <input type="range" id="lsRateMax" min="-30" max="20" step="1" value="20" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 변동률">
+          <input type="range" id="lsRateMin" min="-30" max="30" step="1" value="-30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 변동률">
+          <input type="range" id="lsRateMax" min="-30" max="30" step="1" value="30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 변동률">
         </div>
       </div>
     </div>
@@ -5671,8 +5671,8 @@ const LS_PY_MIN = 10, LS_PY_MAX = 60;
 // 세대수 슬라이더의 왼쪽 끝(= 필터 없음) — 예산별 실매물은 100세대, 급매 선별은 300세대
 function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH; }
 // 변동률(예산별 실매물 전용, 2026.09 운영자 요청) — 전고점 대비 호가 %(화면 표기와 같은 정수 반올림) 최소~최대.
-// 양 끝 -30%·+20%는 "그 이하/이상 전부"(예산별 실매물은 +21% 이상 호가를 원래 빼므로 +20%가 사실상 끝).
-const LS_RATE_MIN = -30, LS_RATE_MAX = 20;
+// 양 끝 -30%·+30%는 "그 이하/이상 전부"(예산별 실매물은 +31% 이상 호가를 원래 빼므로 +30%가 사실상 끝).
+const LS_RATE_MIN = -30, LS_RATE_MAX = 30;
 function lsGet(){
   return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
@@ -5805,8 +5805,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
         .sort((a,b)=> a.ask - b.ask || a.gapPct - b.gapPct); // 낮은 가격순(운영자 요청)
       d = { ...base, rows };
     } else {
-      // 전고점보다 21% 이상 높은 호가(화면 표기 정수 % 기준)는 제외 — 비현실적 호가·입력 오류 가능성(운영자 요청, 2026.09)
-      d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 21)) };
+      // 전고점보다 31% 이상 높은 호가(화면 표기 정수 % 기준)는 제외 — 비현실적 호가·입력 오류 가능성(운영자 요청, 2026.09)
+      d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 31)) };
     }
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
@@ -5991,7 +5991,7 @@ function renderListingBudget(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 21% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
