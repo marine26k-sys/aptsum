@@ -24,7 +24,12 @@
 <meta name="twitter:image" content="https://aptsum.kr/assets/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
 <style>
+  html.native-region-document .wrap{visibility:hidden}
+  html.native-region-document #rgDim{display:none}
+  html.native-region-document #rgPanel{height:100dvh;max-height:100dvh;border-radius:0;bottom:0}
+
   :root{
     --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
     --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
@@ -1007,9 +1012,8 @@ let searchToken = 0;
 
 // ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
 const viewStack = [];
-function pushView(){
-  regionPickerPushed = false;
-  const inputs = {
+function captureViewInputs(){
+  return {
     mode, lawd: sel.value,
     q: document.getElementById('q').value,
     mN: document.getElementById('monthsN').value,
@@ -1027,6 +1031,10 @@ function pushView(){
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
+}
+function pushView(){
+  regionPickerPushed = false;
+  const inputs = captureViewInputs();
   viewStack.push({data:lastData, inputs});
   try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
 }
@@ -1424,6 +1432,7 @@ function restoreView(vi){
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 window.addEventListener('popstate', e=>{
+  if(nativeRegionReturnRestored){nativeRegionReturnRestored=false;return;}
   if(e.state?.modal==='region'){
     regionPickerPushed = true;
     openRegionPicker();
@@ -1554,7 +1563,7 @@ function removeRegionGroup(lawds){
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
   saveRegionSel(); renderRegionChips();
 }
-function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
+function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
@@ -1657,6 +1666,7 @@ function pickRegion(v){
     else addRegion(v);
     buildRegionPicker();
     syncRegionPickBtn();
+    saveNativeRegionResult();
     return;
   }
   sel.value = v;
@@ -1667,16 +1677,80 @@ function pickRegion(v){
 // 지역 선택 패널이 열려있는 동안 뒤로가기(브라우저/제스처)를 누르면 history에 이 패널용 항목이 없어서
 // 페이지 자체를 벗어나(웹뷰가 닫히거나 화면이 꺼진 것처럼 보임) 버리던 문제(2026.09 제보) — 패널을 열 때
 // history 항목을 하나 쌓아두고, 뒤로가기로 그 항목이 소비되면 패널만 닫도록 처리.
+let nativeRegionReturnRestored = false;
+const NATIVE_REGION_CONTEXT = 'aptsum:region-document';
+const NATIVE_REGION_RESULT = 'aptsum:region-document-result';
+const nativeRegionDocument = new URLSearchParams(location.search).get('_regionPicker') === '1';
+function usesNativeRegionDocument(){ return /Instagram|Threads|Barcelona/i.test(navigator.userAgent); }
+function readNativeRegion(key){
+  try { const value=JSON.parse(sessionStorage.getItem(key)||'null');
+    return value && Date.now()-value.createdAt < 30*60*1000 ? value : null;
+  } catch(e) { return null; }
+}
+function saveNativeRegionResult(){
+  if(!nativeRegionDocument) return;
+  const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+  if(context) try { sessionStorage.setItem(NATIVE_REGION_RESULT,JSON.stringify({...context,inputs:captureViewInputs()})); }catch(e){}
+}
+function applyNativeRegionInputs(inp){
+  newHighWeekOnly=!!inp.nh7;
+  if(!setMode(inp.mode,true)) return false;
+  sel.value=inp.lawd;
+  for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
+    if(inp[key]!==undefined) document.getElementById(id).value=inp[key];
+  lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
+  document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
+  regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
+  pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
+  if(inp.mode==='compare'){
+    document.getElementById('cmpRows').innerHTML='';
+    for(const c of inp.cmp||[]){addCmpRow();const rows=document.querySelectorAll('.cmp-row'),row=rows[rows.length-1];setCmpRowLawd(row,c.lawd);row.querySelector('input').value=c.name;}
+  }
+  syncRegionPickBtn();return true;
+}
+function applyNativeRegionReturn(){
+  const result=readNativeRegion(NATIVE_REGION_RESULT);
+  if(!result || nativeRegionDocument) return false;
+  try{sessionStorage.removeItem(NATIVE_REGION_RESULT);}catch(e){}
+  if(result.data){viewStack.push({data:result.data,inputs:result.inputs});restoreView(viewStack.length-1);lastData=result.data;}
+  else applyNativeRegionInputs(result.inputs);
+  hideRegionPickerUI();
+  nativeRegionReturnRestored=true;setTimeout(()=>{nativeRegionReturnRestored=false;},0);
+  return true;
+}
+async function initializeAptsumPage(){
+  if(nativeRegionDocument){
+    const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+    if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
+    await aptsumSubscriberGate.ready;
+    applyNativeRegionInputs(context.inputs);
+    const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
+    openRegionPicker(row);saveNativeRegionResult();return;
+  }
+  if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
+  initFromURL();
+}
+window.addEventListener('pageshow', e=>{if(e.persisted) applyNativeRegionReturn();});
 let regionPickerPushed = false;
 let regionPickerBaseState = null;
 let regionPickerBaseURL = "";
 function openRegionPicker(rowSelectEl){
+  if(usesNativeRegionDocument() && !nativeRegionDocument){
+    const context={createdAt:Date.now(),inputs:captureViewInputs(),data:lastData,
+      cmpIndex:rowSelectEl ? [...document.querySelectorAll('.cmp-row select')].indexOf(rowSelectEl) : -1};
+    try{
+      sessionStorage.removeItem(NATIVE_REGION_RESULT);
+      sessionStorage.setItem(NATIVE_REGION_CONTEXT,JSON.stringify(context));
+      const url=new URL(location.href);url.searchParams.set('_regionPicker','1');
+      location.assign(url.href);return;
+    }catch(e){} // 저장소 사용 불가 시 기존 페이지 내 선택창으로 폴백
+  }
   cmpPickerRow = rowSelectEl || null; // 단지 비교 탭 행 버튼에서 호출되면 그 행의 select를 넘겨받음
   document.getElementById('rgSearch').value = '';
   buildRegionPicker();
   document.getElementById('rgDim').classList.add('on');
   document.getElementById('rgPanel').classList.add('on');
-  if(!regionPickerPushed){
+  if(!nativeRegionDocument && !regionPickerPushed){
     regionPickerBaseState = history.state;
     regionPickerBaseURL = location.href;
     try{ history.pushState({...history.state, modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
@@ -1689,6 +1763,7 @@ function hideRegionPickerUI(){
   cmpPickerRow = null; // 다음에 singleRow의 "지역 선택"을 열 때 cmp 모드로 잘못 남아있지 않도록 항상 리셋
 }
 function closeRegionPicker(){
+  if(nativeRegionDocument){saveNativeRegionResult();history.back();return;}
   // 선택 완료 때 history.back()을 호출하면 다음 뒤로가기가 앱 내 브라우저를 닫을 수 있다.
   // 선택 결과를 유지하고 다음 뒤로가기를 페이지 안에서 한 번 처리할 이력을 남긴다.
   hideRegionPickerUI();
@@ -3544,7 +3619,7 @@ fillAds();
 // 뒤쪽 let 선언을 참조하는 ?m=tier 공유 링크가 이 문제를 겪었음 — 급지 지도는 이후 별도 페이지로 다시
 // 분리됐지만, 앞으로도 비슷한 패턴이 재발할 수 있어 이 방어 로직은 그대로 유지).
 // 한 틱 미루면 이 시점까지 스크립트 전체가 이미 다 실행된 뒤라 모든 let/const가 초기화돼 있다.
-setTimeout(initFromURL, 0);
+setTimeout(initializeAptsumPage, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
