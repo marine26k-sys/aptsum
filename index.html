@@ -5596,7 +5596,7 @@ function lsLabel(v, withRate){
 function lsPyMatch(x, v){
   if(!lsPyActive(v)) return true;
   if(!(x.py > 0)) return false;
-  return x.py >= v.p0 && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
+  return (v.p0 <= LS_PY_MIN || x.py >= v.p0) && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
 }
 function lsMatch(x, v){
   if(v.h > lsHhBase() && !(x.hh >= v.h)) return false;
