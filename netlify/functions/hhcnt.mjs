@@ -1,3 +1,4 @@
+import { naverNameKey, matchNaverTradeNames, findNaverComplex } from "../../shared/naver-name-match.mjs";
 // Netlify Function — 국토교통부 공동주택 단지목록/기본정보 API로 세대수 조회
 // 매매·분양권 실거래 API(analyze.mjs/presale.mjs)와는 완전히 다른 별도 API 군(둘 다 JSON 응답):
 //   1) AptListService4/getSigunguAptList4: 시군구코드 → 그 구에 등록된 단지의 kaptCode 목록
@@ -98,31 +99,6 @@ async function loadNaverHh(origin, lawd) {
   naverCache.set(lawd, data);
   return data;
 }
-// shared/name-match.mjs의 nameKey와 같은 규칙(Netlify 함수는 번들이 분리돼 import를 못 하므로 사본).
-// 규칙을 바꿀 땐 두 곳을 같이 고칠 것.
-const NV_ALIAS = [
-  [/에스케이뷰/g, "SKVIEW"], [/SK뷰/g, "SKVIEW"],
-  [/에스케이/g, "SK"], [/엘지/g, "LG"], [/지에스/g, "GS"],
-  [/케이씨씨/g, "KCC"], [/케이티/g, "KT"],
-  [/이편한세상/g, "E편한세상"],
-  [/써미트/g, "SUMMIT"], [/써밋/g, "SUMMIT"],
-  [/뷰/g, "VIEW"],
-];
-function nvKey(s) {
-  let x = String(s || "").replace(/\s/g, "").replace(/[()（）,.\-_·・'"]/g, "");
-  x = x.replace(/(임대|분양)$/, "").replace(/아파트$/, "").replace(/아파트(?=\d)/g, "");
-  // shared/name-match.mjs의 nameKey()와 동일 규칙(두 곳 다 고칠 것) — "향촌마을현대4차"(실거래) ↔
-  // "향촌현대4차"(네이버)처럼 1기 신도시 하위 동네명 "마을"이 중간에 있다 없다 하는 경우를 지우고 비교(2026.09).
-  x = x.replace(/마을/g, "");
-  // "우성4"(실거래) ↔ "우성4차"(네이버)처럼 숫자+차/단지 접미사가 있다 없다 하는 경우도 지우고 비교.
-  // "차"와 "단지"가 실제로 다른 동을 가리키는 단지도 있어(현대6차 178세대 vs 현대6단지 421세대 등) —
-  // 그런 경우는 build-hhcnt-naver.mjs가 keyIndex를 null로 막고 아래 폴백 스캔도 세대수 불일치 시
-  // 포기하도록 이미 돼 있어 자동으로 안전하게 보류된다(nameKey() 주석 참고).
-  x = x.replace(/(\d+)(차|단지)$/, "$1");
-  x = x.toUpperCase();
-  for (const [re, to] of NV_ALIAS) x = x.replace(re, to);
-  return x;
-}
 // 2026.09 — "목련아파트"(호계동, 1994년 준공)가 "아파트" 접미사 제거만으로 키가 "목련"(2자)이 되면서
 // 전혀 다른 "목련"(관양동, 48세대, 1979년 준공)에 정확 일치로 잘못 걸렸던 걸 계기로, keyIndex 정확 매칭이
 // "현대"·"삼성" 같은 흔한 2자 이름에서 얼마나 위험한지 실거래 준공년도로 전수 검증했다(같은 구 안에서
@@ -161,31 +137,8 @@ function naverLookup(nv, lawd, name) {
   if (!nv) return null;
   const n = String(name || "").replace(/\s/g, "");
   if (NAVER_DENY.has(`${lawd}|${n}`)) return null;
-  if (nv.items[n]) return nv.items[n];
-  const k = nvKey(n);
-  const viaKey = nv.keyIndex[k];
-  if (viaKey && nv.items[viaKey]) return nv.items[viaKey];
-  // 접두/접미 관계만 인정(부분 포함은 오매칭이 많아 불허) + 후보가 유일할 때만 채택.
-  // 짧은 이름(3자 이하)은 접미만 인정 — shared/name-match.mjs와 같은 규칙이다.
-  // "한신"→"도봉한신"처럼 앞에 동네명이 붙는 건 같은 단지지만, "신금호"→"신금호파크자이"처럼
-  // 뒤에 더 붙는 건 대개 다른 단지다.
-  if (k.length < 2) return null;
-  const shortName = k.length <= 3;
-  let hit = null;
-  for (const key of Object.keys(nv.items)) {
-    const kk = nvKey(key);
-    // 2026.09 버그 수정 — 후보명이 2자면(예: "목련") 그 자체가 흔한 접두어라 "목련우성5"(호계동, 683세대)
-    // 같은 전혀 다른 단지(관양동 "목련", 48세대)의 접두 관계로 잘못 걸림. shared/name-match.mjs의
-    // resolveComplexNames()는 후보 쪽에 이미 h.k.length>=3 조건을 걸어두는데 여기만 <2로 느슨했던 것 —
-    // 두 곳을 맞춰 후보명도 3자 이상만 인정.
-    if (kk.length < 3) continue;
-    const ok = shortName ? kk.endsWith(k)
-      : (kk.endsWith(k) || k.endsWith(kk) || kk.startsWith(k) || k.startsWith(kk));
-    if (!ok) continue;
-    if (hit && hit.hh !== nv.items[key].hh) return null; // 세대수가 다른 후보 둘 → 포기
-    hit = nv.items[key];
-  }
-  return hit;
+  // 구형 keyIndex는 이전 정규화 규칙으로 생성되어 공통 비교 함수로 재검증한다.
+  return findNaverComplex(nv.items, n);
 }
 function applyFallback(fallback, lawd, name, result) {
   // 국토교통부에서 이미 확정된 값은 절대 덮어쓰지 않는다.
@@ -260,44 +213,25 @@ async function fetchList(key, sgg) {
 // 후보 중 하나만 골라 반환하면 세대수가 부당하게 작게 나온다. 검색어로 시작하고 남는 꼬리가 짧으면서
 // 숫자를 포함하는("1차","2단지" 등) "형제 단지" 패턴이 여럿 감지되면 전부 합산 대상으로 반환한다(2026.08).
 function matchKapt(list, name) {
-  const qn = name.replace(/\s/g, "");
-  // v108에서 "임대 후보 배제"를 부분일치(cand) 단계에만 넣었었는데, 정확 일치(exact)가 먼저 return돼버려서
-  // 정확히 일치하는 이름이 하필 임대 동일 때(예: 두산3단지가 K-apt에 정확히 "두산"으로 등록돼 있고,
-  // 매매 대상인 1·2단지는 "두산1,2단지"처럼 다른 이름으로 등록돼 있는 경우) v108 수정이 전혀 적용되지
-  // 않는 문제가 있었다 — 정확/부분일치를 가리지 않고 후보를 다 모은 뒤 임대부터 배제하고,
-  // 그 다음에 정확 일치를 우선하도록 순서를 바꿈.
-  let cand = list.filter((a) => {
-    const an = a.kaptName.replace(/\s/g, "");
-    return an && (an === qn || an.includes(qn) || qn.includes(an));
-  });
-  if (!cand.length) return [];
-  // 디버그: 후보가 2개 이상(이름이 겹치는 단지가 여러 개)이면, 실제 K-apt 등록 이름이 어떻게 돼 있는지
-  // 매칭 로직을 또 고칠 일이 생길 때 바로 확인할 수 있게 로그로 남겨둔다(Netlify 함수 로그에서 확인 가능).
-  if (cand.length > 1) {
-    console.error(`[hhcnt] "${name}" 매칭 후보 ${cand.length}건:`, JSON.stringify(cand.map((a) => a.kaptName)));
+  const pool = list;
+  const candidates = new Map();
+  for (const item of pool) {
+    const k = naverNameKey(item.kaptName);
+    if (!candidates.has(k)) candidates.set(k, []);
+    candidates.get(k).push(item);
   }
-  // 매매 실거래(analyze.mjs)에서 나온 단지명을 세대수와 매칭하는 함수이므로, 후보 중 임대 세대만
-  // 있는 단지(예: "두산3단지"가 임대, "두산1,2단지"가 일반분양인 봉천 두산아파트처럼 같은 이름을 쓰는
-  // 임대·분양 혼재 단지)는 배제한다 — 임대 세대는 애초에 매매로 거래될 수 없어, 여기 온 이름은
-  // 사실상 항상 분양 동 쪽을 가리킨다. 단, 후보가 임대 표기뿐이면(진짜 임대 단지를 조회한 경우) 그대로 둔다.
-  const nonRental = cand.filter((a) => !a.kaptName.includes("임대"));
-  if (nonRental.length) cand = nonRental;
-  // 임대 배제 이후에도 정확히 이름이 같은 후보가 있으면 그걸 우선 채택(기존 "정확 일치 우선" 취지 유지)
-  const exact = cand.filter((a) => a.kaptName.replace(/\s/g, "") === qn);
-  if (exact.length) return [exact[0]];
-  // "형제 단지" 감지 — 후보명이 qn으로 시작하고 남는 꼬리가 짧으면서(4자 이하) 숫자를 포함하면
-  // ("두산1차","두산2단지" 등) 한 복합단지를 나눠 등록한 것으로 보고 전부 합산한다.
-  // "두산위브"처럼 꼬리에 숫자가 없는 건 별개 개발단지일 뿐이므로 제외된다.
-  const siblings = cand.filter((a) => {
-    const an = a.kaptName.replace(/\s/g, "");
-    if (!an.startsWith(qn)) return false;
-    const rest = an.slice(qn.length);
-    return rest.length > 0 && rest.length <= 4 && /[0-9]/.test(rest);
-  });
-  if (siblings.length > 1) return siblings;
-  // 여러 후보가 있으면 이름 길이가 검색어와 가장 가까운 쪽 채택
-  cand.sort((a, b) => Math.abs(a.kaptName.replace(/\s/g, "").length - qn.length) - Math.abs(b.kaptName.replace(/\s/g, "").length - qn.length));
-  return [cand[0]];
+  let hits = matchNaverTradeNames(candidates, name);
+  const nonRental = hits.filter(a => !a.kaptName.includes("임대"));
+  if (nonRental.length) hits = nonRental;
+  // 정규화로 동일해진 별개 관리단지는 자동 선택하지 않는다.
+  const byName = new Map();
+  for (const hit of hits) {
+    const k = naverNameKey(hit.kaptName);
+    if (!byName.has(k)) byName.set(k, new Set());
+    byName.get(k).add(hit.kaptCode);
+  }
+  if ([...byName.values()].some(ids => ids.size > 1)) return [];
+  return hits;
 }
 
 async function fetchBasis(key, kaptCode) {

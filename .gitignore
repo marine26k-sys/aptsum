@@ -1,0 +1,5 @@
+node_modules/
+# 업로드 원본 엑셀은 저장소에 포함하지 않는다.
+*.xlsx
+*.xls
+__pycache__/

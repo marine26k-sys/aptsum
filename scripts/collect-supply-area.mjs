@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { attachHouseholds } from "../shared/naver-name-match.mjs";
 // 건축HUB(건축물대장 전유공용면적) API로 단지별 "대표 타입"의 실제 공급면적(전유+공용)을 수집해
 // data/supply-area/<lawd>.json 에 저장한다 (areaToPy() 보간표 대신 실측값 — 2026.08 착수).
 //
@@ -387,6 +388,10 @@ async function main() {
     if (!existsSync(hhFile)) { console.log(`[supply-area] ${lawd}: data/hhcnt 없음, 스킵(먼저 collect-hhcnt 실행 필요)`); continue; }
     const hh = JSON.parse(await readFile(hhFile, "utf-8"));
     const knownAreas = await loadKnownAreasByComplex(lawd);
+    try {
+      const naver = JSON.parse(await readFile(path.join("data/hhcnt-naver", `${lawd}.json`), "utf-8"));
+      attachHouseholds(knownAreas, naver.items);
+    } catch { /* 세대수 자료가 없는 지역은 법정동·후보 충돌 검증을 유지 */ }
 
     const outFile = path.join("data/supply-area", `${lawd}.json`);
     const out = existsSync(outFile) ? JSON.parse(await readFile(outFile, "utf-8")) : { items: {} };
