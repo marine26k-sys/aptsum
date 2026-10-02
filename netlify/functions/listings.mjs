@@ -48,12 +48,13 @@ export async function saveSnapshot(store, lawd, data) {
 }
 
 // 클라이언트가 보낸 항목을 필요한 필드만 남겨 정리한다(엉뚱한 값·과대 문자열이 저장되지 않도록).
-function cleanItem(x) {
+export function cleanItem(x) {
   const peak = num(x?.peak), ask = num(x?.ask), ex = num(x?.ex);
   if (!(peak > 0) || !(ask > 0) || !(ex > 0)) return null;
   const url = str(x.url, 300);
   return {
     nid: str(x.nid, 20), apt: str(x.apt, 80), umd: str(x.umd, 30), hh: num(x.hh), built: str(x.built, 10),
+    occupancy: x.occupancy === "tenant" ? "tenant" : "available",
     ex, py: num(x.py), peak, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
     url: /^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(url) ? url : "",
@@ -76,6 +77,9 @@ export default async (request) => {
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
+    const occupancy = q.get("occupancy") || "available";
+    if (!["available", "tenant"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
+    const selectedItems = items => (items || []).filter(i => (i.occupancy || "available") === occupancy);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
       // 최신 12회분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
@@ -83,12 +87,12 @@ export default async (request) => {
       const snapshots = await Promise.all(recent.map(async x => {
         const data = await store.get(historyKey(lawd, x.uploadId), { type: "json", consistency: "strong" });
         return data ? { asOf: data.asOf, uploadId: data.uploadId,
-          items: data.items.map(i => ({ nid:i.nid, ex:i.ex, ask:i.ask })) } : null;
+          items: selectedItems(data.items).map(i => ({ nid:i.nid, ex:i.ex, ask:i.ask })) } : null;
       }));
       return json({ snapshots: snapshots.filter(Boolean) });
     }
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
-    return json(data || { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
+    return json(data ? {...data,items:selectedItems(data.items)} : { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
   }
 
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
