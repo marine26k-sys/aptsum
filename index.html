@@ -234,6 +234,15 @@
   .listing-trend-history li{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
   .listing-trend-history li+li{border-top:1px solid var(--line)}
   .listing-trend-history li:last-child{color:var(--blue);font-weight:700}
+  .listing-gap-row{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .listing-gap-row:last-child{border-bottom:none}
+  .listing-gap-row .rk{border:0;padding:0;align-items:flex-start}
+  .listing-gap-row .val{color:var(--teal-dark);font-size:13px;white-space:nowrap}
+  .listing-gap-prices{display:flex;gap:6px;margin:6px 0 0 30px}
+  .listing-gap-prices a,.listing-gap-prices .price{flex:1;min-width:0;padding:5px 7px;border-radius:7px;background:var(--slate-bg);font-size:11px;font-weight:700;color:var(--ink);text-decoration:none}
+  .listing-gap-prices .large{background:var(--teal-soft);color:var(--teal-dark)}
+  .listing-gap-prices small{display:block;margin-top:2px;font-size:9px;font-weight:400;color:var(--sub)}
+  .listing-gap-prices a:hover{text-decoration:underline}
 
   .cmp-row{display:flex;gap:6px;margin-bottom:6px}
   .cmp-row select{flex:0 0 128px}
@@ -699,6 +708,7 @@
     <div class="tab subscriber" id="tabLPL" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</div>
     <div class="tab subscriber" id="tabLUR" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</div>
     <div class="tab subscriber" id="tabLTRD" onclick="setMode('listingtrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>최저 호가 하락</div>
+    <div class="tab subscriber" id="tabLGAP" onclick="setMode('listinggap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 간 가격차</div>
     <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독
          콘텐츠라 하나로 묶었다(운영자 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
          전용이었음). 박스권은 2026.08 신설 때부터 처음부터 구독 전용으로 만듦(운영자 요청).
@@ -839,6 +849,20 @@
         </div>
       </div>
     </div>
+    <div id="listingGapFilters" class="ls-filters" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <label style="flex:1;min-width:0;font-size:12px;color:var(--sub)">작은 평형
+          <select id="listingGapSmall" style="width:100%;margin-top:4px" onchange="listingGapApply('small')">
+            <option value="10">10평대</option><option value="20" selected>20평대</option><option value="30">30평대</option><option value="40">40평대</option><option value="50">50평대</option>
+          </select>
+        </label>
+        <label style="flex:1;min-width:0;font-size:12px;color:var(--sub)">큰 평형
+          <select id="listingGapLarge" style="width:100%;margin-top:4px" onchange="listingGapApply('large')">
+            <option value="20">20평대</option><option value="30" selected>30평대</option><option value="40">40평대</option><option value="50">50평대</option><option value="60">60평 이상</option>
+          </select>
+        </label>
+      </div>
+    </div>
     <button class="go" id="btn" onclick="search()">분석</button>
   </div>
 
@@ -975,6 +999,7 @@ function pushView(){
     fM: document.getElementById('floorMin').value,
     by: document.getElementById('buildYear').value,
     ls: lsGet(), // 실매물 탭 연식·세대수·변동률 슬라이더
+    lg: listingGapBands(),
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
@@ -991,8 +1016,9 @@ function buildShareURL(inp){
   const p = new URLSearchParams();
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
-  if(inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
-  if(inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
+  if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
+  if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
+  if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
     p.set('c', inp.cmp.filter(x=>x.name.trim()).map(x=>x.lawd+':'+x.name.trim()).join('|'));
@@ -1024,7 +1050,7 @@ async function initFromURL(){
   // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평단가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
-  const URL_MODES = ['complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend',
+  const URL_MODES = ['complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listinggap',
     'newhigh','newlow','pyprice','inversion',
     'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
@@ -1041,6 +1067,10 @@ async function initFromURL(){
     const [a0,a1,h,p0,p1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
     lsSet({a0,a1,h,r0,r1,p0,p1});
+  }
+  if(requestedMode==='listinggap'){
+    const [small,large] = (p.get('lg')||'20-30').split('-').map(Number);
+    listingGapSet(small,large);
   }
   if(m==='compare'){
     const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
@@ -1060,7 +1090,7 @@ async function initFromURL(){
     if(p.get('pbp')) document.getElementById('priceBandPeriodN').value = p.get('pbp');
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
     if(p.get('pbb')==='past') document.getElementById('priceBandBasis').value = 'past';
-    if(m==='region'||m==='volume'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='gap'){ search(); }
+    if(m==='region'||m==='volume'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='gap'){ search(); }
     else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
     else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
   }
@@ -1244,7 +1274,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -1267,7 +1297,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -1278,11 +1308,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -1298,7 +1328,7 @@ function favRegionGo(code){
   updateRegionFavBtn();
   renderFavRegions();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
-  if(mode==='region'||mode==='volume'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
+  if(mode==='region'||mode==='volume'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
@@ -1328,6 +1358,7 @@ function restoreView(vi){
   document.getElementById('floorMin').value = inp.fM;
   document.getElementById('buildYear').value = inp.by || '';
   lsSet(inp.ls);
+  if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
   regionSel = (inp.regionSel || []).slice();
   saveRegionSel(); renderRegionChips();
@@ -1357,6 +1388,7 @@ function restoreView(vi){
   else if(v.data.mode==='listingurgent') renderListingUrgent(v.data);
   else if(v.data.mode==='listingbudget') renderListingBudget(v.data);
   else if(v.data.mode==='listingtrend') renderListingTrend(v.data);
+  else if(v.data.mode==='listinggap') renderListingGap(v.data);
   else if(v.data.mode==='volume') renderVolume(v.data);
   else if(v.data.mode==='newhigh') renderNewHigh(v.data);
   else if(v.data.mode==='newlow') renderNewLow(v.data);
@@ -1448,13 +1480,13 @@ const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평�
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){
   return (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
-    || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| mode==='listingtrend';
+    || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| mode==='listingtrend' || mode==='listinggap';
 }
 function regionSelMax(){
   // 경기 전체를 허용한 탭은 39개 시군구를 한 번에 담을 수 있도록 상한을 REGION_MAX(45)까지 풀어준다.
   // 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
   if(ggAllAllowed()) return REGION_MAX;
-  return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
+  return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
 }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
@@ -1495,7 +1527,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -1515,7 +1547,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
     return regionScopeLabel(regionSel);
   }
   const o = sel.options[sel.selectedIndex];
@@ -1526,7 +1558,7 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
+  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
   document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
@@ -1587,7 +1619,7 @@ function pickRegion(v){
     closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
     return;
   }
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -1632,7 +1664,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -1721,7 +1753,7 @@ function needsSubscriberSession(m){
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
 const LISTING_TRIAL_LAWD = '11680';
-function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||m==='listingtrend'; }
+function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
 // 무료 체험 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
 function listingTrialBlocked(lawd){
@@ -1775,6 +1807,7 @@ function setMode(m, fromRestore){
   document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget');
   document.getElementById('tabLUR').classList.toggle('on', m==='listingurgent');
   document.getElementById('tabLTRD').classList.toggle('on', m==='listingtrend');
+  document.getElementById('tabLGAP').classList.toggle('on', m==='listinggap');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
   document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
@@ -1790,7 +1823,7 @@ function setMode(m, fromRestore){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
+  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -1802,7 +1835,7 @@ function setMode(m, fromRestore){
   // 칩(regionSel)으로 복수 지역을 고르는 탭 전체 — useMulti/renderRegionChips/multiTargets 등이 쓰는 목록과
   // 같은 집합이어야 한다. 예전엔 6개(longpeakdong·surge·inversion·turnover·jeonseupdown·gaptrend)가 빠져 있어
   // 그 탭들만 이전 탭에서 고른 지역을 칩으로 이어받지 못했음(2026.09 수정).
-  const multiModes = ['region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
+  const multiModes = ['region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listinggap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   if(multiModes.includes(m)){
@@ -1829,6 +1862,7 @@ function setMode(m, fromRestore){
   document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
+  document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
     const hh = document.getElementById('lsHhMin'), base = m==='listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH;
@@ -1837,8 +1871,8 @@ function setMode(m, fromRestore){
     if(atBase || +hh.value < base) hh.value = base;
     lsSync();
   }
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
-  document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
+  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(운영자 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
   // 공유하는 셀렉트라 영향받지 않도록 표시만 토글.
   document.querySelectorAll('#monthsN .volOnly').forEach(o => { o.style.display = m==='volume' ? '' : 'none'; });
@@ -3775,6 +3809,7 @@ async function search(opts){
   if(isListingMode(mode) && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   if(mode==='listingtrend') return searchListingTrend(myToken, lawd, silentScroll);
+  if(mode==='listinggap') return searchListingGap(myToken, lawd, silentScroll);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
   if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
   const mN = +document.getElementById('monthsN').value;
@@ -5332,6 +5367,74 @@ async function fetchListingHistory(lawd){
   return (listingHistoryMem[lawd] = await r.json());
 }
 
+function listingGapBandLabel(band){ return band===60 ? '60평 이상' : `${band}평대`; }
+function listingGapBands(){
+  return { smallBand:+document.getElementById('listingGapSmall').value, largeBand:+document.getElementById('listingGapLarge').value };
+}
+function listingGapSet(small, large, changed){
+  small = [10,20,30,40,50].includes(+small) ? +small : 20;
+  large = [20,30,40,50,60].includes(+large) ? +large : 30;
+  if(small>=large){ if(changed==='large') small=large-10; else large=small+10; }
+  document.getElementById('listingGapSmall').value = small;
+  document.getElementById('listingGapLarge').value = large;
+}
+function listingGapApply(changed){
+  const {smallBand,largeBand} = listingGapBands();
+  listingGapSet(smallBand,largeBand,changed);
+  if(mode==='listinggap' && lastData?.mode==='listinggap') search({silentScroll:true});
+}
+function analyzeListingGap(items, smallBand, largeBand){
+  if(![10,20,30,40,50].includes(smallBand) || ![20,30,40,50,60].includes(largeBand) || smallBand>=largeBand) return [];
+  const groups = new Map();
+  for(const x of items){
+    if(!x.nid || !(x.ask>0) || !(x.ex>0) || !(x.py>0) || !(x.hh>=LISTING_MIN_HH)) continue;
+    const band = Math.floor(x.py/10)*10;
+    const side = band===smallBand ? 'small' : (band===largeBand || (largeBand===60 && band>=60)) ? 'large' : null;
+    if(!side) continue;
+    const key = `${x.lawd}|${x.nid}`;
+    const g = groups.get(key) || {};
+    if(!g[side] || x.ask<g[side].ask || (x.ask===g[side].ask && x.ex<g[side].ex)) g[side]=x;
+    groups.set(key,g);
+  }
+  return [...groups.values()].filter(g=>g.small && g.large && g.large.ex>g.small.ex && g.large.py>g.small.py)
+    .map(({small,large})=>({ ...small, small, large, gap:+(large.ask-small.ask).toFixed(4) }))
+    .sort((a,b)=>a.gap-b.gap || a.large.ask-b.large.ask || String(a.apt).localeCompare(String(b.apt),'ko')).slice(0,100);
+}
+async function searchListingGap(myToken, lawd, silentScroll){
+  const targets = regionSel.length ? regionSel.slice()
+    : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name:sel.options[sel.selectedIndex].textContent }]);
+  const bands = listingGapBands();
+  document.getElementById('loadMsg').textContent = `${targets.length}개 지역 평형 간 가격차 불러오는 중…`;
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('btn').disabled = true;
+  try{
+    const failed=[], all=[];
+    let asOf=null;
+    await Promise.all(targets.map(async t=>{
+      try{
+        const d=await fetchListings(t.lawd);
+        if(d.asOf && (!asOf || d.asOf>asOf)) asOf=d.asOf;
+        for(const x of d.items||[]) all.push({...x,lawd:t.lawd,gu:t.name});
+      }catch(e){ if(e.auth) throw e; failed.push(t.name); }
+    }));
+    if(myToken!==searchToken) return;
+    if(failed.length===targets.length){ showError('실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    const d={found:true,mode:'listinggap',asOf,failedRegions:failed,...bands,
+      rows:analyzeListingGap(all,bands.smallBand,bands.largeBand),
+      filterLabel:`${listingGapBandLabel(bands.smallBand)} → ${listingGapBandLabel(bands.largeBand)}`,
+      scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent};
+    lastData=d;
+    renderListingGap(d);
+    if(!silentScroll) window.scrollTo(0,0);
+    pushView(); saveLastRegionPref(lawd);
+  }catch(err){
+    if(err.auth) aptsumSubscriberGate.recheck();
+    if(myToken===searchToken) showError(err.auth ? (isListingTrial() ? LISTING_TRIAL_MSG : SUBSCRIBER_ENDED_MSG) : '오류: '+esc(err.message));
+  }finally{
+    if(myToken===searchToken){ document.getElementById('loading').classList.remove('on'); document.getElementById('btn').disabled=false; }
+  }
+}
+
 async function searchListingTrend(myToken, lawd, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
@@ -5755,6 +5858,31 @@ function listingTrendRowHTML(x, i, multiRegion){
         <span class="arrow">→</span><span class="price now"><span class="date">${esc(listingTrendDate(now.date))}</span> ${now.ask.toFixed(1)}억</span></span></span>
     <span class="val">▼${x.drop.toFixed(1)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     ${listingTrendHistoryHTML(x.points)}</div>`;
+}
+function listingGapPriceHTML(x, large){
+  const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
+  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
+  return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 네이버 매물 보기">${content}</a>`
+    : `<span class="price ${large?'large':''}">${content}</span>`;
+}
+function renderListingGap(d){
+  const multi=regionMulti(d.rows);
+  const body=!d.rows.length ? '<div class="rng" style="padding:10px 0">선택한 두 평형대의 매물이 모두 있는 단지가 없습니다.</div>'
+    : d.rows.map((x,i)=>{
+      const amount=Math.round(Math.abs(x.gap)*10000);
+      const price=amount<10000 ? `${amount.toLocaleString()}만원` : `${(amount/10000).toFixed(1)}억`;
+      const gapLabel=x.gap<0 ? `−${price}` : x.gap===0 ? '동일 호가' : price;
+      return `<div class="listing-gap-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
+        <span class="nm"><span class="nm-title">${esc(x.apt)}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대</small></span>
+        <span class="val">${gapLabel}<small>${x.gap<0?'큰 평형이 더 저렴':'호가 차이'}</small></span></div>
+        <div class="listing-gap-prices">${listingGapPriceHTML(x.small,false)}${listingGapPriceHTML(x.large,true)}</div></div>`;
+    }).join('');
+  const html=`<div class="card">${listingHeaderHTML(d,'평형 간 가격차',null,null)}<div class="sec">
+    <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">같은 단지의 작은 평형과 큰 평형 최저 호가 비교</div>
+    ${hint(`입주가능 · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 큰 평형으로 넓히는 호가 차이 적은 순`)}
+    <div class="rng" style="margin:6px 0;color:#036B31">평형·가격 옆 ↗를 누르면 해당 네이버 매물로 이동합니다.</div>
+    ${body}</div></div><div class="src-note">각 평형대 안에서 가장 낮은 호가를 비교합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
+  const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 function renderListingTrend(d){
   const multiRegion = regionMulti(d.rows);
