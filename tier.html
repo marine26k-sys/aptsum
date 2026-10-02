@@ -100,7 +100,7 @@
   .coupang-disclosure{font-size:12.5px;font-weight:800;color:#333;text-align:center;max-width:280px;line-height:1.45}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199" crossorigin="anonymous"></script>
+
 </head>
 <body>
 <div class="wrap">
@@ -127,9 +127,7 @@ function buildAgeLabel(build){
 // 광고 배너와 고지문을 하나의 블록으로 묶어, 고지문 없이 배너만 노출되는 일이 없게 한다.
 // 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
 // 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
-function adBannerHTML(){
-  return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
-}
+function adBannerHTML(){ return ''; }
 // 위 adBannerHTML()로 새로 DOM에 들어간 <ins> 태그마다 한 번씩 광고를 채워달라고 요청한다 — innerHTML로 넣은
 // <ins>는 AdSense 스크립트가 자동으로 못 찾으므로, 렌더링할 때마다 직접 호출해야 한다(이미 채워진 태그는
 // data-adsbygoogle-status 속성이 붙어서 :not([data-adsbygoogle-status])로 걸러져 다시 push되지 않는다).
@@ -150,23 +148,7 @@ function fillAds(){
     setTimeout(() => { if(!ins.dataset.adStatus){ collapse(); mo.disconnect(); } }, 4000);
   });
 }
-function couponBannerHTML(){
-  return `<div class="coupang-ad">
-    <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
-    <div class="coupang-ad-row">
-      <div class="coupang-ad-item">
-        <iframe src="https://coupa.ng/cpwXdE" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      </div>
-      <div class="coupang-ad-item">
-        <iframe src="https://coupa.ng/cpwXWl" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      </div>
-      <div class="coupang-ad-item">
-        <iframe src="https://coupa.ng/cpPWXO" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" loading="lazy" title="쿠팡 파트너스 광고"></iframe>
-      </div>
-    </div>
-    <p class="coupang-disclosure">이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-  </div>`;
-}
+function couponBannerHTML(){ return ''; }
 
 const $ = (sel, el=document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

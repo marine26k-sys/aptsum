@@ -321,7 +321,7 @@ export default async (req) => {
 
   const { cur, prev } = currentAndPrevYm();
   const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
-  return new Response(JSON.stringify({ items: r.items, failedMonths: r.failedMonths }), {
+  return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
       "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable

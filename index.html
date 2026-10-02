@@ -24,7 +24,29 @@
 <meta name="twitter:image" content="https://aptsum.kr/assets/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
+<script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
+<script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
+  html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
+  html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
+  .analysis-back{display:none;position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
+  html.analysis-page .analysis-back{display:block}
+  html.analysis-page header{padding-left:50px}
+
+  a.tab{text-decoration:none}
+  select.analysis-slider-source{display:none!important}
+  .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
+  #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
+  html.app-native-selects #pyBandNative{display:block!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
+  html.app-native-selects #pyBandMultiBtn{pointer-events:none}
+  #rgPanel{max-height:94dvh}
+  #rgPanel .rggrid{gap:3px;margin-bottom:4px}
+  #rgPanel .rgitem{padding:4px 7px;font-size:11px}
+  #rgPanel .rggrp{padding:5px 3px 3px}
+
+  html.native-region-document #rgPanel{height:90dvh;max-height:90dvh}
+
   :root{
     --teal:#00828A; --teal-dark:#00565C; --teal-soft:#E0F2F3; --teal-light:#A8E0E4; --teal-light-soft:#F2FBFB;
     --navy:#0F2B3D; --slate-bg:#F1F5F9; --ink:#1E293B; --sub:#64748B;
@@ -382,7 +404,7 @@
   @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199" crossorigin="anonymous"></script>
+<script>if(document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 </head>
 <body>
 <div class="wrap">
@@ -657,6 +679,7 @@
     }
   </script>
   <header>
+    <a class="analysis-back" href="./index.html" aria-label="메인으로">←</a>
     <div class="logo" id="logoTapZone">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
       <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실거래 · 실매물 분석</span></div>
@@ -674,8 +697,8 @@
     <div class="tab-grp">
       <div class="tab-grp-name">단지</div>
       <div class="tab-grp-tabs">
-          <div class="tab on" id="tabC" onclick="setMode('complex')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</div>
-          <div class="tab" id="tabCmp" onclick="setMode('compare')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</div>
+          <a class="tab" id="tabC" href="./index.html?m=complex"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</a>
+          <a class="tab" id="tabCmp" href="./index.html?m=compare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -683,43 +706,43 @@
       <div class="tab-grp-tabs">
           <a class="tab" id="tabTM" href="./tier.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>급지 분석</a>
           <a class="tab" id="tabSL" href="./subway-lines.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>교통 호재</a>
-          <div class="tab" id="tabSub" onclick="setMode('subway')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</div>
+          <a class="tab" id="tabSub" href="./index.html?m=subway"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</a>
       </div>
     </div>
     <div class="tab-grp">
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
-          <div class="tab" id="tabR" onclick="setMode('region')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역</div>
-          <div class="tab" id="tabV" onclick="setMode('volume')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량</div>
-          <div class="tab" id="tabPP" onclick="setMode('pyprice')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</div>
-          <div class="tab" id="tabGap" onclick="setMode('gap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</div>
+          <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역</a>
+          <a class="tab" id="tabV" href="./index.html?m=volume"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량</a>
+          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</a>
+          <a class="tab" id="tabGap" href="./index.html?m=gap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</a>
       </div>
     </div>
     <div class="tab-grp">
       <div class="tab-grp-name">흐름</div>
       <div class="tab-grp-tabs">
-          <div class="tab" id="tabNH" onclick="newHighWeekOnly=false;setMode('newhigh')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</div>
-          <div class="tab" id="tabLTR" onclick="setMode('longtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</div>
-          <div class="tab" id="tabJLTR" onclick="setMode('jeonselongtermrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</div>
+          <a class="tab" id="tabNH" href="./index.html?m=newhigh"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</a>
+          <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</a>
+          <a class="tab" id="tabJLTR" href="./index.html?m=jeonselongtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</a>
       </div>
     </div>
     <div class="tab-grp">
       <div class="tab-grp-name">저평가</div>
       <div class="tab-grp-tabs">
-          <div class="tab" id="tabSU" onclick="setMode('shortval')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기</div>
-          <div class="tab" id="tabP" onclick="setMode('peak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기</div>
-          <div class="tab" id="tabLP" onclick="setMode('longpeak')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간</div>
-          <div class="tab" id="tabINV" onclick="setMode('inversion')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</div>
+          <a class="tab" id="tabSU" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기</a>
+          <a class="tab" id="tabP" href="./index.html?m=peak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기</a>
+          <a class="tab" id="tabLP" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간</a>
+          <a class="tab" id="tabINV" href="./index.html?m=inversion"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</a>
       </div>
     </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
          쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
     <div class="tab-divider" id="tabListingDivider">네이버 실매물 기준</div>
-    <div class="tab subscriber" id="tabLBG" onclick="setMode('listingbudget')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별 실매물</div>
-    <div class="tab subscriber" id="tabLPL" onclick="setMode('longpeaklisting')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</div>
-    <div class="tab subscriber" id="tabLUR" onclick="setMode('listingurgent')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</div>
-    <div class="tab subscriber" id="tabLTRD" onclick="setMode('listingtrend')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>최저 호가 하락</div>
-    <div class="tab subscriber" id="tabLGAP" onclick="setMode('listinggap')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 간 가격차</div>
+    <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별 실매물</a>
+    <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</a>
+    <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</a>
+    <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>최저 호가 하락</a>
+    <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 간 가격차</a>
     <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독
          콘텐츠라 하나로 묶었다(운영자 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
          전용이었음). 박스권은 2026.08 신설 때부터 처음부터 구독 전용으로 만듦(운영자 요청).
@@ -728,10 +751,10 @@
          2026.09 — 화면 표기를 "구독 전용"→"비공개 탭"으로 변경(구독비 없음, 운영자 요청). 코드·쿠키·API의
          subscriber 명칭은 그대로 둠(표기만 변경).-->
     <div class="tab-divider" id="tabSubDivider" style="display:none">비공개 탭</div>
-    <div class="tab subscriber" id="tabNL" style="display:none" onclick="setMode('newlow')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</div>
-    <div class="tab subscriber" id="tabLPD" style="display:none" onclick="setMode('longpeakdong')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</div>
-    <div class="tab subscriber" id="tabNH7" style="display:none" onclick="openNewHigh7()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</div>
-    <div class="tab subscriber" id="tabPBR" style="display:none" onclick="setMode('pricebandrise')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</div>
+    <a class="tab subscriber" id="tabNL" style="display:none" href="./index.html?m=newlow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</a>
+    <a class="tab subscriber" id="tabLPD" style="display:none" href="./index.html?m=longpeakdong"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</a>
+    <a class="tab subscriber" id="tabNH7" style="display:none" href="./index.html?m=newhigh&amp;nh7=1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</a>
+    <a class="tab subscriber" id="tabPBR" style="display:none" href="./index.html?m=pricebandrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</a>
     <!-- 비공개 탭 원스톱 신청(2026.09) — 인증 안 된 사람에게만 보인다(인증되면 aptsumSubscriberGate가 숨김) -->
     <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
@@ -798,12 +821,13 @@
         <option value="3" class="volOnly" style="display:none">최근 3개월</option>
         <option value="6" class="volOnly" style="display:none">최근 6개월</option>
         <option value="12">최근 1년</option>
-        <option value="24" selected>최근 2년</option>
-        <option value="36">최근 3년</option>
+        <option value="24">최근 2년</option>
+        <option value="36" selected>최근 3년</option>
         <option value="48">최근 4년</option>
         <option value="60">최근 5년</option>
       </select>
       <div id="pyBandMultiWrap" style="flex:1.5;min-width:0;position:relative;display:none">
+      <select id="pyBandNative" multiple size="1" aria-label="평형 선택 · 여러 구간 선택 가능" style="display:none" onchange="nativePyBandChange(this)"></select>
         <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%;padding:11px 8px;font-size:13px">
           <span id="pyBandMultiTxt">전체 평형</span><b>▼</b>
         </button>
@@ -821,12 +845,19 @@
         <option value="10">10년 이내</option>
         <option value="15">15년 이내</option>
         <option value="20">20년 이내</option>
-        <option value="20+">20년 초과</option>
+        <option value="30">30년 이내</option>
       </select>
     </div>
     <!-- 실매물 슬라이더 — 최저 호가 하락은 평형만, 예산별 실매물·급매 선별은 평형·연식·세대수(2026.09 운영자 요청: 선택지 몇 개로는 너무 한정적이라
          슬라이드로 자유롭게). 연식은 최소~최대 년차 범위, 세대수는 최소 세대. 손을 떼면 바로 다시 조회(엑셀 요약은
          한 번 받으면 메모리에 캐시돼 재조회가 빠르다). -->
+    <div id="analysisPyFilters" class="ls-filters" style="display:none">
+      <div class="ls-row"><div class="ls-hd"><span>평형</span><b id="analysisPyTxt">전체</b></div>
+      <div class="ls-dual" id="analysisPyDual">
+        <input type="range" id="analysisPyMin" min="10" max="60" step="1" value="10" oninput="analysisPySync(this)" aria-label="최소 평형">
+        <input type="range" id="analysisPyMax" min="10" max="60" step="1" value="60" oninput="analysisPySync(this)" aria-label="최대 평형">
+      </div></div>
+    </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
@@ -847,8 +878,9 @@
       </div>
       <div class="ls-row" id="lsHhRow">
         <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
-        <div class="ls-single" id="lsHhSingle">
+        <div class="ls-dual" id="lsHhDual">
           <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
+          <input type="range" id="lsHhMax" min="100" max="5000" step="100" value="5000" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 세대수">
         </div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
@@ -1007,8 +1039,8 @@ let searchToken = 0;
 
 // ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
 const viewStack = [];
-function pushView(){
-  const inputs = {
+function captureViewInputs(){
+  return {
     mode, lawd: sel.value,
     q: document.getElementById('q').value,
     mN: document.getElementById('monthsN').value,
@@ -1026,6 +1058,10 @@ function pushView(){
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
+}
+function pushView(){
+  regionPickerPushed = false;
+  const inputs = captureViewInputs();
   viewStack.push({data:lastData, inputs});
   try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
 }
@@ -1034,7 +1070,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
-  if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
+  if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
@@ -1080,11 +1116,11 @@ async function initFromURL(){
   }
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
-  if(p.get('by')!==null) document.getElementById('buildYear').value = p.get('by');
+  if(p.get('by')!==null) setBuildYearValue(p.get('by'));
   if(p.get('ls') || p.get('lr')){
-    const [a0,a1,h,p0,p1] = (p.get('ls')||'').split('-').map(Number);
+    const [a0,a1,h,p0,p1,h1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
-    lsSet({a0,a1,h,r0,r1,p0,p1});
+    lsSet({a0,a1,h,h1,r0,r1,p0,p1});
   }
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   if(requestedMode==='listinggap'){
@@ -1375,7 +1411,7 @@ function restoreView(vi){
   document.getElementById('q').value = inp.q;
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
-  document.getElementById('buildYear').value = inp.by || '';
+  setBuildYearValue(inp.by || '');
   lsSet(inp.ls);
   document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
@@ -1423,7 +1459,19 @@ function restoreView(vi){
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 window.addEventListener('popstate', e=>{
-  if(document.getElementById('rgPanel').classList.contains('on')){
+  if(nativeRegionReturnRestored){nativeRegionReturnRestored=false;return;}
+  if(e.state?.modal==='region'){
+    regionPickerPushed = true;
+    openRegionPicker();
+    return;
+  }
+  if(e.state?.regionDismissed){
+    if(!regionPickerPushed && e.state.vi>=0) restoreView(e.state.vi);
+    regionPickerPushed = true;
+    hideRegionPickerUI();
+    return;
+  }
+  if(regionPickerPushed || document.getElementById('rgPanel').classList.contains('on')){
     // 지역 선택 패널이 열린 상태에서의 popstate는 패널을 닫기 위한 것(직접 닫든, 뒤로가기로 닫든) —
     // 결과 화면 복원 로직은 타지 않고 패널만 닫는다.
     hideRegionPickerUI();
@@ -1542,7 +1590,7 @@ function removeRegionGroup(lawds){
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
   saveRegionSel(); renderRegionChips();
 }
-function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); }
+function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
@@ -1645,6 +1693,7 @@ function pickRegion(v){
     else addRegion(v);
     buildRegionPicker();
     syncRegionPickBtn();
+    saveNativeRegionResult();
     return;
   }
   sel.value = v;
@@ -1655,14 +1704,85 @@ function pickRegion(v){
 // 지역 선택 패널이 열려있는 동안 뒤로가기(브라우저/제스처)를 누르면 history에 이 패널용 항목이 없어서
 // 페이지 자체를 벗어나(웹뷰가 닫히거나 화면이 꺼진 것처럼 보임) 버리던 문제(2026.09 제보) — 패널을 열 때
 // history 항목을 하나 쌓아두고, 뒤로가기로 그 항목이 소비되면 패널만 닫도록 처리.
+let nativeRegionReturnRestored = false;
+const NATIVE_REGION_CONTEXT = 'aptsum:region-document';
+const NATIVE_REGION_RESULT = 'aptsum:region-document-result';
+const nativeRegionDocument = new URLSearchParams(location.search).get('_regionPicker') === '1';
+function usesNativeRegionDocument(){ return /Instagram|Threads|Barcelona/i.test(navigator.userAgent); }
+function readNativeRegion(key){
+  try { const value=JSON.parse(sessionStorage.getItem(key)||'null');
+    return value && Date.now()-value.createdAt < 30*60*1000 ? value : null;
+  } catch(e) { return null; }
+}
+function saveNativeRegionResult(){
+  if(!nativeRegionDocument) return;
+  const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+  if(context) try { sessionStorage.setItem(NATIVE_REGION_RESULT,JSON.stringify({...context,inputs:captureViewInputs()})); }catch(e){}
+}
+function applyNativeRegionInputs(inp){
+  newHighWeekOnly=!!inp.nh7;
+  if(!setMode(inp.mode,true)) return false;
+  sel.value=inp.lawd;
+  for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
+    if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=inp[key];}
+  lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
+  document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
+  regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
+  pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
+  if(inp.mode==='compare'){
+    document.getElementById('cmpRows').innerHTML='';
+    for(const c of inp.cmp||[]){addCmpRow();const rows=document.querySelectorAll('.cmp-row'),row=rows[rows.length-1];setCmpRowLawd(row,c.lawd);row.querySelector('input').value=c.name;}
+  }
+  syncRegionPickBtn();return true;
+}
+function applyNativeRegionReturn(){
+  const result=readNativeRegion(NATIVE_REGION_RESULT);
+  if(!result || nativeRegionDocument) return false;
+  try{sessionStorage.removeItem(NATIVE_REGION_RESULT);}catch(e){}
+  if(result.data){viewStack.push({data:result.data,inputs:result.inputs});restoreView(viewStack.length-1);lastData=result.data;}
+  else applyNativeRegionInputs(result.inputs);
+  hideRegionPickerUI();
+  nativeRegionReturnRestored=true;setTimeout(()=>{nativeRegionReturnRestored=false;},0);
+  return true;
+}
+async function initializeAptsumPage(){
+  if(nativeRegionDocument){
+    const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+    if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
+    await aptsumSubscriberGate.ready;
+    if(context.data){viewStack.push({data:context.data,inputs:context.inputs});restoreView(viewStack.length-1);lastData=context.data;}
+    applyNativeRegionInputs(context.inputs);
+    const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
+    openRegionPicker(row);saveNativeRegionResult();return;
+  }
+  if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
+  initFromURL();
+}
+window.addEventListener('pageshow', e=>{if(e.persisted) applyNativeRegionReturn();});
 let regionPickerPushed = false;
+let regionPickerBaseState = null;
+let regionPickerBaseURL = "";
 function openRegionPicker(rowSelectEl){
+  if(usesNativeRegionDocument() && !nativeRegionDocument){
+    const context={createdAt:Date.now(),inputs:captureViewInputs(),data:lastData,
+      cmpIndex:rowSelectEl ? [...document.querySelectorAll('.cmp-row select')].indexOf(rowSelectEl) : -1};
+    try{
+      sessionStorage.removeItem(NATIVE_REGION_RESULT);
+      sessionStorage.setItem(NATIVE_REGION_CONTEXT,JSON.stringify(context));
+      const url=new URL(location.href);url.searchParams.set('_regionPicker','1');
+      location.assign(url.href);return;
+    }catch(e){} // 저장소 사용 불가 시 기존 페이지 내 선택창으로 폴백
+  }
   cmpPickerRow = rowSelectEl || null; // 단지 비교 탭 행 버튼에서 호출되면 그 행의 select를 넘겨받음
   document.getElementById('rgSearch').value = '';
   buildRegionPicker();
   document.getElementById('rgDim').classList.add('on');
   document.getElementById('rgPanel').classList.add('on');
-  try{ history.pushState({modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
+  if(!nativeRegionDocument && !regionPickerPushed){
+    regionPickerBaseState = history.state;
+    regionPickerBaseURL = location.href;
+    try{ history.pushState({...history.state, modal:'region'}, ''); regionPickerPushed = true; }catch(e){}
+  }
 }
 function hideRegionPickerUI(){
   document.getElementById('rgDim').classList.remove('on');
@@ -1671,13 +1791,13 @@ function hideRegionPickerUI(){
   cmpPickerRow = null; // 다음에 singleRow의 "지역 선택"을 열 때 cmp 모드로 잘못 남아있지 않도록 항상 리셋
 }
 function closeRegionPicker(){
-  // 완료 버튼·딤드·지역 선택 등 UI로 닫을 때는 openRegionPicker에서 쌓아둔 history 항목을 되돌려
-  // popstate 핸들러가 hideRegionPickerUI()를 호출하게 한다(뒤로가기로 닫을 때와 경로를 통일).
-  if(regionPickerPushed){
-    regionPickerPushed = false;
-    try{ history.back(); return; }catch(e){}
-  }
+  if(nativeRegionDocument){saveNativeRegionResult();history.back();return;}
+  // 선택 완료 때 history.back()을 호출하면 다음 뒤로가기가 앱 내 브라우저를 닫을 수 있다.
+  // 선택 결과를 유지하고 다음 뒤로가기를 페이지 안에서 한 번 처리할 이력을 남긴다.
   hideRegionPickerUI();
+  if(regionPickerPushed){
+    try{ history.replaceState({...regionPickerBaseState, regionDismissed:true}, '', regionPickerBaseURL); }catch(e){}
+  }
 }
 
 sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
@@ -1711,6 +1831,97 @@ function savePyBandMultiPref(arr){ try{ localStorage.setItem('apc:pyBand', JSON.
 // 빼고 보고 싶은 경우 등). 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/
 // pyprice) 공통 — 예전엔 region/volume/updown/gap은 구간 하나만 고르는 단일 select였음.
 // 지역 랭킹만 마지막 선택을 기억하고, 나머지 탭은 탭을 나갔다 오면 기억하지 않음(항상 "전체 평형"로 시작).
+
+const analysisSelectSliders=[];
+function setBuildYearValue(value){
+  const select=document.getElementById('buildYear');value=String(value||'');
+  if(value&&!Array.from(select.options).some(o=>o.value===value))select.add(new Option(value,value));
+  select.value=value;
+}
+function analysisAgeLabel(value){
+  if(!value)return '전체';
+  const [lo,hi]=value.split('-').map(Number);
+  if(!value.includes('-'))return value==='20+'?'21년 이상':`${value}년 이내`;
+  if(lo===0)return `${hi}년 이내`;
+  if(hi===40)return `${lo}년 이상`;
+  return lo===hi?`${lo}년`:`${lo}~${hi}년`;
+}
+function syncAnalysisAgeSlider(){
+  const source=document.getElementById('buildYear'),wrap=document.getElementById('analysisAgeFilters');if(!wrap)return;
+  const visible=source.style.display!=='none';source.classList.toggle('analysis-slider-source',visible);wrap.style.display=visible?'':'none';
+  const value=source.value;let lo=0,hi=40;
+  if(value==='20+')lo=21;else if(value.includes('-'))[lo,hi]=value.split('-').map(Number);else if(value)hi=+value;
+  document.getElementById('analysisAgeMin').value=lo;document.getElementById('analysisAgeMax').value=hi;
+  document.getElementById('analysisAgeTxt').textContent=analysisAgeLabel(value);
+  const dual=document.getElementById('analysisAgeDual');dual.style.setProperty('--lo',(lo/40*100)+'%');dual.style.setProperty('--hi',(hi/40*100)+'%');
+}
+function analysisAgeSync(changed){
+  const lo=document.getElementById('analysisAgeMin'),hi=document.getElementById('analysisAgeMax');
+  if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
+  setBuildYearValue(+lo.value===0&&+hi.value===40?'':`${lo.value}-${hi.value}`);syncAnalysisAgeSlider();
+}
+function syncAnalysisSelectSliders(){
+  syncAnalysisAgeSlider();
+  for(const entry of analysisSelectSliders){
+    const {select,wrap,input,label}=entry;
+    const enabled=select.style.display!=='none';
+    select.classList.toggle('analysis-slider-source',enabled);
+    wrap.style.display=enabled?'':'none';
+    if(!enabled)continue;
+    entry.options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none');
+    input.max=Math.max(0,entry.options.length-1);
+    input.value=Math.max(0,entry.options.findIndex(o=>o.value===select.value));
+    label.textContent=select.selectedOptions[0]?.textContent||'선택';
+  }
+}
+// Touch scrolling and a light tap must not change an age filter.
+function guardAgeSliderTouch(input,refresh){
+  input.style.touchAction='pan-y';
+  let gesture=null;
+  input.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,value:input.value,armed:false};
+  },true);
+  input.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const dx=Math.abs(e.clientX-gesture.x),dy=Math.abs(e.clientY-gesture.y);
+    if(dx>=12&&dx>dy*1.5)gesture.armed=true;
+  },true);
+  const protect=e=>{
+    if(gesture&&!gesture.armed){input.value=gesture.value;e.stopImmediatePropagation();refresh();}
+  };
+  input.addEventListener('input',protect,true);
+  input.addEventListener('change',protect,true);
+  const end=()=>{
+    if(!gesture)return;
+    if(!gesture.armed){input.value=gesture.value;refresh();}
+    setTimeout(()=>{gesture=null;},0);
+  };
+  input.addEventListener('pointerup',end,true);
+  input.addEventListener('pointercancel',end,true);
+}
+function initializeAnalysisSelectSliders(){
+  for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
+    const select=document.getElementById(id),wrap=document.createElement('div');
+    wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
+    wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
+    select.after(wrap);
+    const input=wrap.querySelector('input'),label=wrap.querySelector('b'),entry={select,wrap,input,label,options:[]};analysisSelectSliders.push(entry);
+    if(id==='buildYear')guardAgeSliderTouch(input,syncAnalysisSelectSliders);
+    input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;}});
+    input.addEventListener('change',()=>select.dispatchEvent(new Event('change',{bubbles:true})));
+    select.addEventListener('change',syncAnalysisSelectSliders);
+    new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style'],subtree:true});
+  }
+  const ageSource=document.getElementById('buildYear'),ageWrap=document.createElement('div');ageWrap.id='analysisAgeFilters';ageWrap.className='ls-filters analysis-select-slider';
+  ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div>';
+  ageSource.after(ageWrap);
+  for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
+  new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
+  for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
+  syncAnalysisSelectSliders();
+}
+setTimeout(initializeAnalysisSelectSliders,0);
 const PY_BANDS = [
   {v:'17-22', l:'17~22평'}, {v:'23-27', l:'23~27평'}, {v:'28-31', l:'28~31평'},
   {v:'32-36', l:'32~36평'}, {v:'37-41', l:'37~41평'}, {v:'42-46', l:'42~46평'}, {v:'47-51', l:'47~51평'},
@@ -1718,6 +1929,7 @@ const PY_BANDS = [
 let pyBandMultiSel = []; // 선택된 band value 문자열들("23-27" 등), 비어있으면 "전체 평형"
 function pyBandMultiLabel(){
   if(!pyBandMultiSel.length) return '전체 평형';
+  {const [lo,hi]=pyBandMultiSel[0].split('-').map(Number);return lo===0?`${hi}평 이하`:hi===999?`${lo}평 이상`:lo===hi?`${lo}평`:`${lo}~${hi}평`;}
   const idxs = pyBandMultiSel.map(v=>PY_BANDS.findIndex(b=>b.v===v)).filter(i=>i>=0).sort((a,b)=>a-b);
   // 연속 구간(23~27·28~31·32~36처럼 끊김 없이 이어짐)을 골랐으면 "23~36평"처럼 하나로 합쳐 보여준다
   // (운영자 요청, 2026.09) — 떨어진 구간을 섞어 골랐을 때만 기존 "OO 외 N개" 표기를 쓴다.
@@ -1730,9 +1942,39 @@ function pyBandMultiLabel(){
   const labels = idxs.map(i=>PY_BANDS[i].l);
   return labels.length<=2 ? labels.join(', ') : `${labels[0]} 외 ${labels.length-1}개`;
 }
+function analysisPySync(changed){
+  const lo=document.getElementById('analysisPyMin'),hi=document.getElementById('analysisPyMax');
+  if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
+  pyBandMultiSel=+lo.value===10&&+hi.value===60?[]:[`${+lo.value===10?0:+lo.value}-${+hi.value===60?999:+hi.value}`];
+  if(mode==='region')savePyBandMultiPref(pyBandMultiSel);
+  renderPyBandMultiBtn();
+}
 function renderPyBandMultiBtn(){
+  queueMicrotask(syncAnalysisSelectSliders);
+  {
+    const ranges=pyBandMultiSel.map(v=>v.split('-').map(Number)).filter(r=>r.length===2&&r.every(Number.isFinite));
+    const lo=ranges.length?Math.min(...ranges.map(r=>r[0])):0,hi=ranges.length?Math.max(...ranges.map(r=>r[1])):999;
+    if(ranges.length>1)pyBandMultiSel=[`${lo}-${hi}`];
+    const min=document.getElementById('analysisPyMin'),max=document.getElementById('analysisPyMax');
+    min.value=Math.max(10,Math.min(60,lo));max.value=Math.max(10,Math.min(60,hi));
+    document.getElementById('analysisPyTxt').textContent=pyBandMultiSel.length?pyBandMultiLabel():'전체';
+    const dual=document.getElementById('analysisPyDual');dual.style.setProperty('--lo',((+min.value-10)/50*100)+'%');dual.style.setProperty('--hi',((+max.value-10)/50*100)+'%');
+  }
+
   const el = document.getElementById('pyBandMultiTxt');
   if(el) el.textContent = pyBandMultiLabel();
+  const native=document.getElementById('pyBandNative');
+  if(native){
+    native.innerHTML=`<option value="__all__" ${pyBandMultiSel.length ? '' : 'selected'}>전체 평형</option>`+
+      PY_BANDS.map(b=>`<option value="${esc(b.v)}" ${pyBandMultiSel.includes(b.v)?'selected':''}>${esc(b.l)}</option>`).join('');
+  }
+}
+function nativePyBandChange(select){
+  const values=[...select.selectedOptions].map(o=>o.value);
+  const reset=values.includes('__all__') && pyBandMultiSel.length>0;
+  pyBandMultiSel=reset ? [] : values.filter(v=>PY_BANDS.some(b=>b.v===v));
+  if(mode==='region') savePyBandMultiPref(pyBandMultiSel);
+  renderPyBandMultiBtn();
 }
 function buildPyBandPanel(){
   const panel = document.getElementById('pyBandMultiPanel');
@@ -1806,6 +2048,11 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
+  document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
+  const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
+  document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 분석';
+
   document.getElementById('searchBox').style.display = '';
   document.getElementById('tabC').classList.toggle('on', m==='complex');
   document.getElementById('tabCmp').classList.toggle('on', m==='compare');
@@ -1872,7 +2119,8 @@ function setMode(m, fromRestore){
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
   // 실매물 3개 탭은 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)를 쓴다.
-  document.getElementById('pyBandMultiWrap').style.display = (m==='region'||m==='volume'||m==='gap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
+  document.getElementById('pyBandMultiWrap').style.display = 'none';
+  document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','pyprice','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 지역 랭킹만 마지막 선택을 기억(없으면 32~36평 디폴트), 나머지는 재진입 시 항상 "전체 평형"으로 시작
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
@@ -1901,7 +2149,7 @@ function setMode(m, fromRestore){
   document.getElementById('risePeriodRow').style.display = (m==='longtermrise'||m==='jeonselongtermrise') ? '' : 'none';
   document.getElementById('priceBandRow').style.display = m==='pricebandrise' ? '' : 'none';
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
-  document.getElementById('monthsN').value = (m==='region'||m==='complex'||m==='compare') ? '24' : '12';
+  document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
   document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
@@ -1968,7 +2216,8 @@ function addCmpRow(){
 // scripts/derive-py-anchors.mjs)로 교체. 4개 파일(analyze/presale/rent.mjs+shared/rtms-parse.mjs) 동일 반영)
 // (2026.09 11→12: PY_ANCHORS 5차 개편(미세조정) — 92~124㎡ 구간도 같은 실측 데이터로 재검증한 결과
 // 95/97/99/109/110 다섯 지점만 ±1평 오차가 있어 정확히 맞춤. 나머지 지점은 이미 실측과 일치해 그대로 둠)
-const CACHE_VER = 14;
+// Split district live and historical transactions now share the selected district calibration.
+const CACHE_VER = 15;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -2325,7 +2574,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // 별개 단지 "동탄역롯데캐슬알바트로스"(1,416세대, 용적률 189%)에 잘못 걸려있던 것 수정)
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
-const HH_CACHE_VER = 17;
+const HH_CACHE_VER = 18;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -2424,6 +2673,7 @@ function applyBuildYearFilter(items){
     const by = parseInt(t.build, 10);
     if(!by) return false;
     const age = nowY - by;
+    if(v.includes('-')){const [lo,hi]=v.split('-').map(Number);return age>=lo&&(hi===40||age<=hi);}
     return v==='20+' ? age>20 : age<=(+v);
   });
 }
@@ -2449,6 +2699,7 @@ function buildAgeLabel(build){
 // 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
 // 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
 function adBannerHTML(){
+  if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
 }
 // 위 adBannerHTML()로 새로 DOM에 들어간 <ins> 태그마다 한 번씩 광고를 채워달라고 요청한다 — innerHTML로 넣은
@@ -2472,6 +2723,7 @@ function fillAds(){
   });
 }
 function couponBannerHTML(){
+  if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
     <div class="coupang-ad-row">
@@ -2491,7 +2743,7 @@ function couponBannerHTML(){
 function buildYearLabel(){
   const v = document.getElementById('buildYear').value;
   if(!v) return null;
-  return v==='20+' ? '20년 초과' : `${v}년 이내`;
+  return analysisAgeLabel(v);
 }
 function markOutliers(arr, months){
   for(const t of arr){
@@ -3527,7 +3779,7 @@ fillAds();
 // 뒤쪽 let 선언을 참조하는 ?m=tier 공유 링크가 이 문제를 겪었음 — 급지 지도는 이후 별도 페이지로 다시
 // 분리됐지만, 앞으로도 비슷한 패턴이 재발할 수 있어 이 방어 로직은 그대로 유지).
 // 한 틱 미루면 이 시점까지 스크립트 전체가 이미 다 실행된 뒤라 모든 let/const가 초기화돼 있다.
-setTimeout(initFromURL, 0);
+setTimeout(initializeAptsumPage, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
@@ -5674,7 +5926,7 @@ function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : L
 // 양 끝 -30%·+30%는 "그 이하/이상 전부"(예산별 실매물은 +31% 이상 호가를 원래 빼므로 +30%가 사실상 끝).
 const LS_RATE_MIN = -30, LS_RATE_MAX = 30;
 function lsGet(){
-  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value,
+  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
     p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value };
 }
@@ -5683,6 +5935,7 @@ function lsSet(v){
   document.getElementById('lsAgeMin').value = v.a0 || 1;
   document.getElementById('lsAgeMax').value = v.a1 || LS_AGE_MAX;
   document.getElementById('lsHhMin').value = v.h || lsHhBase();
+  document.getElementById('lsHhMax').value = v.h1 || 5000;
   document.getElementById('lsRateMin').value = Number.isFinite(v.r0) ? v.r0 : LS_RATE_MIN;
   document.getElementById('lsRateMax').value = Number.isFinite(v.r1) ? v.r1 : LS_RATE_MAX;
   document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
@@ -5710,16 +5963,23 @@ function lsRateMatch(x, v){
   const r = Math.round((x.ask - x.peak) / x.peak * 100);
   return !((v.r0 > LS_RATE_MIN && r < v.r0) || (v.r1 < LS_RATE_MAX && r > v.r1));
 }
-function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || v.h > lsHhBase() || lsPyActive(v); }
+function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || lsHhActive(v) || lsPyActive(v); }
 function lsAgeText(v){
   if(v.a0 <= 1 && v.a1 >= LS_AGE_MAX) return '전체';
   if(v.a0 <= 1) return `${v.a1}년차 이하`;
   if(v.a1 >= LS_AGE_MAX) return `${v.a0}년차 이상`;
   return v.a0 === v.a1 ? `${v.a0}년차` : `${v.a0}~${v.a1}년차`;
 }
-function lsHhText(v){ return v.h <= lsHhBase() ? '전체' : `${v.h.toLocaleString()}세대↑`; }
+function lsHhActive(v){return v.h>lsHhBase()||(v.h1??5000)<5000;}
+function lsHhText(v){
+  const max=v.h1??5000,f=n=>n.toLocaleString();
+  if(!lsHhActive(v))return '전체';
+  if(v.h<=lsHhBase())return `${f(max)}세대 이하`;
+  if(max>=5000)return `${f(v.h)}세대 이상`;
+  return v.h===max?`${f(v.h)}세대`:`${f(v.h)}~${f(max)}세대`;
+}
 function lsLabel(v, withRate){
-  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, v.h > lsHhBase() ? lsHhText(v) : null,
+  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, lsHhActive(v) ? lsHhText(v) : null,
     withRate && lsRateActive(v) ? '변동률 ' + lsRateText(v) : null].filter(Boolean).join(' · ') || null;
 }
 function lsPyMatch(x, v){
@@ -5728,7 +5988,7 @@ function lsPyMatch(x, v){
   return (v.p0 <= LS_PY_MIN || x.py >= v.p0) && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
 }
 function lsMatch(x, v){
-  if(v.h > lsHhBase() && !(x.hh >= v.h)) return false;
+  if(lsHhActive(v)&&(!(x.hh>=v.h)||((v.h1??5000)<5000&&x.hh>v.h1)))return false;
   if(v.a0 > 1 || v.a1 < LS_AGE_MAX){
     const by = parseInt(x.built, 10);
     if(!by) return false; // 준공연도 없는 매물은 연식 필터가 걸려 있을 때 제외
@@ -5739,6 +5999,10 @@ function lsMatch(x, v){
 }
 // 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
 function lsSync(el){
+  const h0=document.getElementById('lsHhMin'),h1=document.getElementById('lsHhMax');
+  h1.min=h0.min;
+  if(+h0.value>+h1.value){if(el===h1)h0.value=h1.value;else h1.value=h0.value;}
+
   const a0 = document.getElementById('lsAgeMin'), a1 = document.getElementById('lsAgeMax');
   if(+a0.value > +a1.value){ if(el === a0) a1.value = a0.value; else a0.value = a1.value; }
   const r0 = document.getElementById('lsRateMin'), r1 = document.getElementById('lsRateMax');
@@ -5757,8 +6021,7 @@ function lsSync(el){
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
-  const hhEl = document.getElementById('lsHhMin'); // 세대수는 손잡이 하나(최소값)라 --lo 없이 --val(0~현재값)만 채움
-  document.getElementById('lsHhSingle').style.setProperty('--val', (v.h - +hhEl.min) / (+hhEl.max - +hhEl.min) * 100 + '%');
+  fill('lsHhDual',v.h,v.h1,+h0.min,5000);
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
