@@ -5,7 +5,7 @@
 //
 // 사용법: DATA_GO_KR_KEY=xxx node scripts/collect-hhcnt.mjs [--only=11680,HS-동탄구]
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -245,7 +245,21 @@ async function main() {
       if (basis) out.push({ name: c.kaptName, kaptCode: c.kaptCode, ...basis, ...dtl });
     });
 
-    await writeFile(path.join(DIR, `${lawd}.json`), JSON.stringify({ items: out, updatedAt: new Date().toISOString() }));
+    const outputPath=path.join(DIR, `${lawd}.json`);
+    let prior=null;
+    try{prior=JSON.parse(await readFile(outputPath,'utf8'));}catch{}
+    if(!out.length){
+      console.error(`[hhcnt] ${lawd}: 수집 결과 0건 — 기존 파일 유지`);
+      continue;
+    }
+    // A failed detail request must not erase a known station walk time or complex.
+    const priorByCode=new Map((prior?.items||[]).map(it=>[it.kaptCode,it]));
+    const merged=out.map(it=>{
+      const old=priorByCode.get(it.kaptCode);priorByCode.delete(it.kaptCode);
+      return {...old,...it,...(it.subwayWalk==null&&old?.subwayWalk?{subwayWalk:old.subwayWalk}: {})};
+    });
+    merged.push(...priorByCode.values());
+    await writeFile(outputPath, JSON.stringify({ items: merged, updatedAt: new Date().toISOString() }));
     done++;
     console.log(`[hhcnt] ${lawd}: 단지 ${complexes.length}개 중 ${out.length}개 세대수 확보 (${done}/${lawds.length})`);
 
