@@ -869,8 +869,9 @@
       </div>
       <div class="ls-row" id="lsHhRow">
         <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
-        <div class="ls-single" id="lsHhSingle">
+        <div class="ls-dual" id="lsHhDual">
           <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
+          <input type="range" id="lsHhMax" min="100" max="5000" step="100" value="5000" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 세대수">
         </div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
@@ -1060,7 +1061,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
-  if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}`);
+  if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
@@ -1108,9 +1109,9 @@ async function initFromURL(){
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
   if(p.get('ls') || p.get('lr')){
-    const [a0,a1,h,p0,p1] = (p.get('ls')||'').split('-').map(Number);
+    const [a0,a1,h,p0,p1,h1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
-    lsSet({a0,a1,h,r0,r1,p0,p1});
+    lsSet({a0,a1,h,h1,r0,r1,p0,p1});
   }
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   if(requestedMode==='listinggap'){
@@ -5909,7 +5910,7 @@ function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : L
 // 양 끝 -30%·+30%는 "그 이하/이상 전부"(예산별 실매물은 +31% 이상 호가를 원래 빼므로 +30%가 사실상 끝).
 const LS_RATE_MIN = -30, LS_RATE_MAX = 30;
 function lsGet(){
-  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value,
+  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
     p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value };
 }
@@ -5918,6 +5919,7 @@ function lsSet(v){
   document.getElementById('lsAgeMin').value = v.a0 || 1;
   document.getElementById('lsAgeMax').value = v.a1 || LS_AGE_MAX;
   document.getElementById('lsHhMin').value = v.h || lsHhBase();
+  document.getElementById('lsHhMax').value = v.h1 || 5000;
   document.getElementById('lsRateMin').value = Number.isFinite(v.r0) ? v.r0 : LS_RATE_MIN;
   document.getElementById('lsRateMax').value = Number.isFinite(v.r1) ? v.r1 : LS_RATE_MAX;
   document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
@@ -5945,16 +5947,23 @@ function lsRateMatch(x, v){
   const r = Math.round((x.ask - x.peak) / x.peak * 100);
   return !((v.r0 > LS_RATE_MIN && r < v.r0) || (v.r1 < LS_RATE_MAX && r > v.r1));
 }
-function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || v.h > lsHhBase() || lsPyActive(v); }
+function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || lsHhActive(v) || lsPyActive(v); }
 function lsAgeText(v){
   if(v.a0 <= 1 && v.a1 >= LS_AGE_MAX) return '전체';
   if(v.a0 <= 1) return `${v.a1}년차 이하`;
   if(v.a1 >= LS_AGE_MAX) return `${v.a0}년차 이상`;
   return v.a0 === v.a1 ? `${v.a0}년차` : `${v.a0}~${v.a1}년차`;
 }
-function lsHhText(v){ return v.h <= lsHhBase() ? '전체' : `${v.h.toLocaleString()}세대↑`; }
+function lsHhActive(v){return v.h>lsHhBase()||(v.h1??5000)<5000;}
+function lsHhText(v){
+  const max=v.h1??5000,f=n=>n.toLocaleString();
+  if(!lsHhActive(v))return '전체';
+  if(v.h<=lsHhBase())return `${f(max)}세대 이하`;
+  if(max>=5000)return `${f(v.h)}세대 이상`;
+  return v.h===max?`${f(v.h)}세대`:`${f(v.h)}~${f(max)}세대`;
+}
 function lsLabel(v, withRate){
-  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, v.h > lsHhBase() ? lsHhText(v) : null,
+  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, lsHhActive(v) ? lsHhText(v) : null,
     withRate && lsRateActive(v) ? '변동률 ' + lsRateText(v) : null].filter(Boolean).join(' · ') || null;
 }
 function lsPyMatch(x, v){
@@ -5963,7 +5972,7 @@ function lsPyMatch(x, v){
   return (v.p0 <= LS_PY_MIN || x.py >= v.p0) && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
 }
 function lsMatch(x, v){
-  if(v.h > lsHhBase() && !(x.hh >= v.h)) return false;
+  if(lsHhActive(v)&&(!(x.hh>=v.h)||((v.h1??5000)<5000&&x.hh>v.h1)))return false;
   if(v.a0 > 1 || v.a1 < LS_AGE_MAX){
     const by = parseInt(x.built, 10);
     if(!by) return false; // 준공연도 없는 매물은 연식 필터가 걸려 있을 때 제외
@@ -5974,6 +5983,10 @@ function lsMatch(x, v){
 }
 // 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
 function lsSync(el){
+  const h0=document.getElementById('lsHhMin'),h1=document.getElementById('lsHhMax');
+  h1.min=h0.min;
+  if(+h0.value>+h1.value){if(el===h1)h0.value=h1.value;else h1.value=h0.value;}
+
   const a0 = document.getElementById('lsAgeMin'), a1 = document.getElementById('lsAgeMax');
   if(+a0.value > +a1.value){ if(el === a0) a1.value = a0.value; else a0.value = a1.value; }
   const r0 = document.getElementById('lsRateMin'), r1 = document.getElementById('lsRateMax');
@@ -5992,8 +6005,7 @@ function lsSync(el){
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
-  const hhEl = document.getElementById('lsHhMin'); // 세대수는 손잡이 하나(최소값)라 --lo 없이 --val(0~현재값)만 채움
-  document.getElementById('lsHhSingle').style.setProperty('--val', (v.h - +hhEl.min) / (+hhEl.max - +hhEl.min) * 100 + '%');
+  fill('lsHhDual',v.h,v.h1,+h0.min,5000);
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
