@@ -1106,7 +1106,7 @@ async function initFromURL(){
   }
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
-  if(p.get('by')!==null) document.getElementById('buildYear').value = p.get('by');
+  if(p.get('by')!==null) setBuildYearValue(p.get('by'));
   if(p.get('ls') || p.get('lr')){
     const [a0,a1,h,p0,p1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
@@ -1401,7 +1401,7 @@ function restoreView(vi){
   document.getElementById('q').value = inp.q;
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
-  document.getElementById('buildYear').value = inp.by || '';
+  setBuildYearValue(inp.by || '');
   lsSet(inp.ls);
   document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
@@ -1714,7 +1714,7 @@ function applyNativeRegionInputs(inp){
   if(!setMode(inp.mode,true)) return false;
   sel.value=inp.lawd;
   for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
-    if(inp[key]!==undefined) document.getElementById(id).value=inp[key];
+    if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=inp[key];}
   lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
   regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
@@ -1823,7 +1823,35 @@ function savePyBandMultiPref(arr){ try{ localStorage.setItem('apc:pyBand', JSON.
 // 지역 랭킹만 마지막 선택을 기억하고, 나머지 탭은 탭을 나갔다 오면 기억하지 않음(항상 "전체 평형"로 시작).
 
 const analysisSelectSliders=[];
+function setBuildYearValue(value){
+  const select=document.getElementById('buildYear');value=String(value||'');
+  if(value&&!Array.from(select.options).some(o=>o.value===value))select.add(new Option(value,value));
+  select.value=value;
+}
+function analysisAgeLabel(value){
+  if(!value)return '전체';
+  const [lo,hi]=value.split('-').map(Number);
+  if(!value.includes('-'))return value==='20+'?'21년 이상':`${value}년 이내`;
+  if(lo===0)return `${hi}년 이내`;
+  if(hi===40)return `${lo}년 이상`;
+  return lo===hi?`${lo}년`:`${lo}~${hi}년`;
+}
+function syncAnalysisAgeSlider(){
+  const source=document.getElementById('buildYear'),wrap=document.getElementById('analysisAgeFilters');if(!wrap)return;
+  const visible=source.style.display!=='none';source.classList.toggle('analysis-slider-source',visible);wrap.style.display=visible?'':'none';
+  const value=source.value;let lo=0,hi=40;
+  if(value==='20+')lo=21;else if(value.includes('-'))[lo,hi]=value.split('-').map(Number);else if(value)hi=+value;
+  document.getElementById('analysisAgeMin').value=lo;document.getElementById('analysisAgeMax').value=hi;
+  document.getElementById('analysisAgeTxt').textContent=analysisAgeLabel(value);
+  const dual=document.getElementById('analysisAgeDual');dual.style.setProperty('--lo',(lo/40*100)+'%');dual.style.setProperty('--hi',(hi/40*100)+'%');
+}
+function analysisAgeSync(changed){
+  const lo=document.getElementById('analysisAgeMin'),hi=document.getElementById('analysisAgeMax');
+  if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
+  setBuildYearValue(+lo.value===0&&+hi.value===40?'':`${lo.value}-${hi.value}`);syncAnalysisAgeSlider();
+}
 function syncAnalysisSelectSliders(){
+  syncAnalysisAgeSlider();
   for(const entry of analysisSelectSliders){
     const {select,wrap,input,label}=entry;
     const enabled=select.style.display!=='none';
@@ -1836,18 +1864,51 @@ function syncAnalysisSelectSliders(){
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
   }
 }
+// Touch scrolling and a light tap must not change an age filter.
+function guardAgeSliderTouch(input,refresh){
+  input.style.touchAction='pan-y';
+  let gesture=null;
+  input.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,value:input.value,armed:false};
+  },true);
+  input.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const dx=Math.abs(e.clientX-gesture.x),dy=Math.abs(e.clientY-gesture.y);
+    if(dx>=12&&dx>dy*1.5)gesture.armed=true;
+  },true);
+  const protect=e=>{
+    if(gesture&&!gesture.armed){input.value=gesture.value;e.stopImmediatePropagation();refresh();}
+  };
+  input.addEventListener('input',protect,true);
+  input.addEventListener('change',protect,true);
+  const end=()=>{
+    if(!gesture)return;
+    if(!gesture.armed){input.value=gesture.value;refresh();}
+    setTimeout(()=>{gesture=null;},0);
+  };
+  input.addEventListener('pointerup',end,true);
+  input.addEventListener('pointercancel',end,true);
+}
 function initializeAnalysisSelectSliders(){
-  for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['buildYear','연식'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
+  for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
     wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
     select.after(wrap);
     const input=wrap.querySelector('input'),label=wrap.querySelector('b'),entry={select,wrap,input,label,options:[]};analysisSelectSliders.push(entry);
+    if(id==='buildYear')guardAgeSliderTouch(input,syncAnalysisSelectSliders);
     input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;}});
     input.addEventListener('change',()=>select.dispatchEvent(new Event('change',{bubbles:true})));
     select.addEventListener('change',syncAnalysisSelectSliders);
     new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style'],subtree:true});
   }
+  const ageSource=document.getElementById('buildYear'),ageWrap=document.createElement('div');ageWrap.id='analysisAgeFilters';ageWrap.className='ls-filters analysis-select-slider';
+  ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div>';
+  ageSource.after(ageWrap);
+  for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
+  new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
+  for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
   syncAnalysisSelectSliders();
 }
 setTimeout(initializeAnalysisSelectSliders,0);
@@ -2597,6 +2658,7 @@ function applyBuildYearFilter(items){
     const by = parseInt(t.build, 10);
     if(!by) return false;
     const age = nowY - by;
+    if(v.includes('-')){const [lo,hi]=v.split('-').map(Number);return age>=lo&&(hi===40||age<=hi);}
     return v==='20+' ? age>20 : age<=(+v);
   });
 }
@@ -2664,7 +2726,7 @@ function couponBannerHTML(){
 function buildYearLabel(){
   const v = document.getElementById('buildYear').value;
   if(!v) return null;
-  return v==='20+' ? '20년 초과' : `${v}년 이내`;
+  return analysisAgeLabel(v);
 }
 function markOutliers(arr, months){
   for(const t of arr){
