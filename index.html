@@ -5748,7 +5748,7 @@ function listingTrendRowHTML(x, i, multiRegion){
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small>
       <span class="listing-trend-change"><span class="price"><span class="date">${esc(listingTrendDate(prev.date))}</span> ${prev.ask.toFixed(1)}억</span>
         <span class="arrow">→</span><span class="price now"><span class="date">${esc(listingTrendDate(now.date))}</span> ${now.ask.toFixed(1)}억</span></span></span>
-    <span class="val">▼${x.drop.toFixed(1)}억 <small>(-${Math.round(x.dropPct)}%)</small></span></div>
+    <span class="val">▼${x.drop.toFixed(1)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     ${listingTrendHistoryHTML(x.points)}</div>`;
 }
 function renderListingTrend(d){
