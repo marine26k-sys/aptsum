@@ -29,7 +29,7 @@
 <script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
-  html.analysis-page .tabs{display:none}
+  html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
   html.analysis-page .analysis-back{display:block}
   html.analysis-page header{padding-left:50px}
@@ -404,7 +404,7 @@
   @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199" crossorigin="anonymous"></script>
+<script>if(document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 </head>
 <body>
 <div class="wrap">
@@ -2048,6 +2048,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
   document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 분석';
@@ -2698,6 +2699,7 @@ function buildAgeLabel(build){
 // 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
 // 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
 function adBannerHTML(){
+  if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
 }
 // 위 adBannerHTML()로 새로 DOM에 들어간 <ins> 태그마다 한 번씩 광고를 채워달라고 요청한다 — innerHTML로 넣은
@@ -2721,6 +2723,7 @@ function fillAds(){
   });
 }
 function couponBannerHTML(){
+  if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
     <div class="coupang-ad-row">
