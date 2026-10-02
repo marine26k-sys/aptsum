@@ -814,7 +814,7 @@
         <button type="button" id="pyBandMultiBtn" class="rgpick" onclick="togglePyBandPanel()" style="width:100%;padding:11px 8px;font-size:13px">
           <span id="pyBandMultiTxt">전체 평형</span><b>▼</b>
         </button>
-        <select id="pyBandNative" aria-label="평형 선택 · 여러 구간 선택 가능" style="display:none" onchange="nativePyBandChange(this.value)"></select>
+        <select id="pyBandNative" multiple size="1" aria-label="평형 선택 · 여러 구간 선택 가능" style="display:none" onchange="nativePyBandChange(this)"></select>
         <div id="pyBandMultiPanel" class="pybm-panel" style="display:none"></div>
       </div>
       <select id="floorMin" style="flex:1;min-width:0">
@@ -1743,13 +1743,16 @@ function renderPyBandMultiBtn(){
   if(el) el.textContent = pyBandMultiLabel();
   const native=document.getElementById('pyBandNative');
   if(native){
-    native.innerHTML=`<option value="__current__" disabled selected>${esc(pyBandMultiLabel())}</option><option value="__all__">전체 평형</option>`+
-      PY_BANDS.map(b=>`<option value="${esc(b.v)}">${pyBandMultiSel.includes(b.v)?'✓ ':''}${esc(b.l)}</option>`).join('');
+    native.innerHTML=`<option value="__all__" ${pyBandMultiSel.length ? '' : 'selected'}>전체 평형</option>`+
+      PY_BANDS.map(b=>`<option value="${esc(b.v)}" ${pyBandMultiSel.includes(b.v)?'selected':''}>${esc(b.l)}</option>`).join('');
   }
 }
-function nativePyBandChange(value){
-  if(value==='__all__') clearPyBandMulti();
-  else if(PY_BANDS.some(b=>b.v===value)) togglePyBandMulti(value);
+function nativePyBandChange(select){
+  const values=[...select.selectedOptions].map(o=>o.value);
+  const reset=values.includes('__all__') && pyBandMultiSel.length>0;
+  pyBandMultiSel=reset ? [] : values.filter(v=>PY_BANDS.some(b=>b.v===v));
+  if(mode==='region') savePyBandMultiPref(pyBandMultiSel);
+  renderPyBandMultiBtn();
 }
 function buildPyBandPanel(){
   const panel = document.getElementById('pyBandMultiPanel');
