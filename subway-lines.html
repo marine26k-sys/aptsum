@@ -295,7 +295,7 @@ function lineHTML(line){
       </div>
       <div class="line-summary">${esc(line.summary)}</div>
       <div class="line-facts"><span>${esc(line.stage)}</span><span>개통: ${esc(line.target)}</span></div>
-      <div class="line-source">검토일 ${esc(line.checkedAt)} · ${line.sourceUrl ? `<a href="${esc(line.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(line.sourceLabel)}</a>` : esc(line.sourceLabel)}</div>
+      <div class="line-source">검토일 ${esc(line.checkedAt)}${line.sourceLabel ? ' · ' : ''}${line.sourceUrl ? `<a href="${esc(line.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(line.sourceLabel)}</a>` : esc(line.sourceLabel)}</div>
       <div class="station-list">
         ${line.stations.map(st => `
           <div class="station-row">
