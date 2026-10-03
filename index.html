@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-<title>아파트썸 — 실거래·실매물 분석</title>
+<title>아파트썸 | 실거래와 실매물, 아파트 가격을 한눈에</title>
 <meta name="description" content="국토부 실거래가와 네이버 실매물을 한곳에서 분석하세요. 단지 비교, 실매물 선별, 최저 호가 하락, 평형 간 가격차를 확인할 수 있습니다.">
 <meta name="theme-color" content="#0F2B3D">
 
@@ -12,16 +12,19 @@
 <link rel="manifest" href="/manifest.json">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="아파트썸 — 실거래·실매물 분석">
-<meta property="og:title" content="아파트썸 — 실거래·실매물 분석">
+<meta property="og:site_name" content="아파트썸 | 실거래와 실매물, 아파트 가격을 한눈에">
+<meta property="og:title" content="아파트썸 | 실거래와 실매물, 아파트 가격을 한눈에">
 <meta property="og:description" content="국토부 실거래가와 네이버 실매물로 단지 시세, 최저 호가 하락, 평형 간 가격차를 비교하세요.">
-<meta property="og:image" content="https://aptsum.kr/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="아파트썸 — 국토부 실거래가와 네이버 실매물 분석">
+<meta property="og:image" content="https://aptsum.kr/assets/og-share-v2.png">
 <meta property="og:url" content="https://aptsum.kr/">
 <link rel="canonical" href="https://aptsum.kr/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="아파트썸 — 실거래·실매물 분석">
+<meta name="twitter:title" content="아파트썸 | 실거래와 실매물, 아파트 가격을 한눈에">
 <meta name="twitter:description" content="국토부 실거래가와 네이버 실매물로 단지 시세, 최저 호가 하락, 평형 간 가격차를 비교하세요.">
-<meta name="twitter:image" content="https://aptsum.kr/assets/og-image.png">
+<meta name="twitter:image" content="https://aptsum.kr/assets/og-share-v2.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
@@ -66,6 +69,7 @@
   .brand-mark{flex:none;width:27px;height:27px;color:#83D1D2}
   .brand-copy{display:flex;flex-direction:column;gap:1px}
   .brand-name{font-weight:700;font-size:21px;line-height:1.35;letter-spacing:-.8px}
+  html.analysis-menu .brand-description{font-size:11px;letter-spacing:0}
   .brand-description{font-weight:500;font-size:10.5px;line-height:1.6;letter-spacing:.3px;color:#B7CBD5}
   .header-share{position:absolute;top:50%;right:15px;transform:translateY(-50%);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.20);border-radius:10px;width:34px;height:34px;color:#D5E6EC;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
   .header-share:hover,.header-share:active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
@@ -688,7 +692,7 @@
     <a class="analysis-back" href="./index.html" aria-label="메인으로">←</a>
     <div class="logo" id="logoTapZone">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
-      <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실거래 · 실매물 분석</span></div>
+      <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실거래와 실매물, 아파트 가격을 한눈에</span></div>
     </div>
     <button class="header-share" onclick="shareCurrent()" title="공유" aria-label="현재 분석 공유">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
@@ -1186,7 +1190,7 @@ async function shareCurrent(){
   // 모바일(터치 기기)에서만 네이티브 공유 시트를 쓰고, 데스크톱은 항상 클립보드 복사로 처리한다.
   const isMobile = matchMedia('(pointer: coarse)').matches;
   try{
-    if(isMobile && navigator.share){ await navigator.share({title:'아파트썸 — 실거래·실매물 분석', url}); return; }
+    if(isMobile && navigator.share){ await navigator.share({title:'아파트썸 | 실거래와 실매물, 아파트 가격을 한눈에', url}); return; }
     await navigator.clipboard.writeText(url);
     alert('분석 링크가 복사되었습니다');
   }catch(e){}
@@ -1410,7 +1414,7 @@ function restoreMainMenu(){
   document.documentElement.classList.remove('complex-analysis');
   document.documentElement.classList.remove('analysis-page');document.documentElement.classList.add('analysis-menu');
   document.querySelectorAll('.tabs .tab.on').forEach(el=>el.classList.remove('on'));
-  document.querySelector('.brand-description').textContent='실거래 · 실매물 분석';
+  document.querySelector('.brand-description').textContent='실거래와 실매물, 아파트 가격을 한눈에';
   document.getElementById('result').replaceChildren();document.getElementById('result').classList.remove('on');
   document.getElementById('error').classList.remove('on');document.getElementById('loading').classList.remove('on');
   document.getElementById('dataWarning').hidden=true;
@@ -2088,7 +2092,7 @@ function setMode(m, fromRestore){
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
-  document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 분석';
+  document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래와 실매물, 아파트 가격을 한눈에';
 
   document.getElementById('searchBox').style.display = '';
   document.getElementById('tabC').classList.toggle('on', m==='complex');
