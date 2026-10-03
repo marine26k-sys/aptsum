@@ -28,7 +28,9 @@
   .header-share:hover,.header-share:active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
   .header-share:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
   .header-share svg{width:17px;height:17px}
-  .analysis-back{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
+  .analysis-back{display:flex;position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);align-items:center;justify-content:center}
+  .analysis-back:hover,.analysis-back:active{background:rgba(255,255,255,.22)}
+  .analysis-back:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
 
 
   .line-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:12px}
@@ -93,7 +95,7 @@
 <body>
 <div class="wrap">
   <header>
-    <a class="analysis-back" href="./index.html" aria-label="메인으로">←</a>
+    <a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기" title="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
     <div class="logo">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
       <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">교통 호재</span></div>

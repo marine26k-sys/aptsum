@@ -97,20 +97,20 @@
 
   <div id="applyArea">
     <div class="product-options" role="group" aria-label="상품 선택">
-      <label class="product-option"><span><input type="radio" name="productChoice" value="listings">실매물 탭 이용</span><strong>4,900원</strong><small>전 지역 네이버 실매물 탭 · 1개월</small><small class="product-detail">직접 매물을 조회하고 비교</small><small class="product-mail">단지 선별 메일 미포함</small><small id="basicAvailability">상품 확인 중…</small></label>
-      <label class="product-option"><span><input type="radio" name="productChoice" value="selection" checked>실매물 탭 + 선별 메일</span><strong>9,900원</strong><small>전 지역 네이버 실매물 탭 · 1개월</small><small class="product-detail">희망 지역·예산·평형에 맞춰 단지 선별</small><small class="product-mail included">개인 맞춤 선별 메일 1회 포함</small></label>
+      <label class="product-option"><span><input type="radio" name="productChoice" value="listings" checked>실매물 탭 이용</span><strong>4,900원</strong><small>전 지역 네이버 실매물 탭 · 1개월</small><small class="product-detail">직접 매물을 조회하고 비교</small><small class="product-mail">단지 선별 메일 미포함</small><small id="basicAvailability">상품 확인 중…</small></label>
+      <label class="product-option"><span><input type="radio" name="productChoice" value="selection">실매물 탭 + 선별 메일</span><strong>9,900원</strong><small>전 지역 네이버 실매물 탭 · 1개월</small><small class="product-detail">희망 지역·예산·평형에 맞춰 단지 선별</small><small class="product-mail included">개인 맞춤 선별 메일 1회 포함</small></label>
     </div>
     <p class="product-summary">두 상품의 <b>실매물 탭 이용 범위와 기간은 동일</b>합니다.<br>9,900원 상품에만 <b>개인 맞춤 단지 선별 메일 1회</b>가 추가됩니다.</p>
     <div class="card gold">
-      <div class="title" id="productTitle">실매물 이용권 + 아파트썸 단지 선별 메일</div>
-      <div class="price"><b id="priceTxt">9,900원</b><span id="daysTxt">· 30일 이용</span></div>
+      <div class="title" id="productTitle">네이버 실매물 이용권</div>
+      <div class="price"><b id="priceTxt">4,900원</b><span id="daysTxt">· 30일 이용</span></div>
       <ul class="inc">
         <li>
           <div class="inc-head">실매물 탭 이용 권한 (1개월)</div>
           <div class="inc-sub">실매물 분석 (매물 링크 연동): 저평가 실매물, 급매물, 금액대별 실매물, 최저 호가 하락, 평형 간 가격차</div>
           <div class="inc-trial">강남구 무료 체험 가능</div>
         </li>
-        <li id="mailBenefit">
+        <li id="mailBenefit" hidden>
           <div class="inc-head">아파트썸 개인 맞춤 단지 선별 메일 (1회)</div>
           <div class="inc-sub">지역, 연차, 세대수, 단지명, 공급·전용면적, 매매가, 전고점, 변동률, 평당가, 동, 층, 방향, 용적률, 건폐율, 매물 URL</div>
         </li>
@@ -119,7 +119,7 @@
     </div>
 
     <form class="card" id="applyForm" novalidate>
-      <div id="selectionFields">
+      <div id="selectionFields" hidden>
       <label class="q" for="fRegion"><i>*</i>지역 (시/구 단위)</label>
       <div class="hint">여러 곳 가능 · 예: 서울시 관악구, 서울시 구로구, 안양시, 수원시</div>
       <input type="text" id="fRegion" name="region" maxlength="100" required>
@@ -145,7 +145,7 @@
       <div class="hint">결제창에 입력하신 번호로 신청서와 결제를 자동으로 연결해 접근 코드를 바로 발급합니다 · <a href="/privacy.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">개인정보처리방침</a></div>
       <input type="tel" id="fPhone" name="phone" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000" required>
 
-      <div id="emailField">
+      <div id="emailField" hidden>
       <label class="q" for="fEmail"><i>*</i>선별 리스트 받을 메일 주소</label>
       <input type="email" id="fEmail" name="email" autocomplete="email" maxlength="120" placeholder="example@naver.com" required>
 
@@ -159,7 +159,7 @@
         <label><input type="checkbox" id="fAgree"> 동의합니다</label>
       </div>
 
-      <button type="submit" class="btn" id="payBtn">9,900원 결제하기</button>
+      <button type="submit" class="btn" id="payBtn" disabled>상품 확인 중…</button>
       <div class="msg" id="applyMsg" role="alert"></div>
       <div class="note">
         <div>결제창(PayApp)이 새 창으로 열립니다. 결제창 연락처에는 <b style="color:var(--navy)">위와 같은 휴대폰 번호</b>를 넣어 주세요.</div>
