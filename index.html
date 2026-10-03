@@ -29,6 +29,7 @@
 <script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
+  html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
   html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
   html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
@@ -1388,6 +1389,7 @@ function favRegionGo(code){
 }
 function restoreMainMenu(){
   searchToken++;lastData=null;
+  document.documentElement.classList.remove('complex-analysis');
   document.documentElement.classList.remove('analysis-page');document.documentElement.classList.add('analysis-menu');
   document.querySelectorAll('.tabs .tab.on').forEach(el=>el.classList.remove('on'));
   document.querySelector('.brand-description').textContent='실거래 · 실매물 분석';
@@ -2064,6 +2066,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
