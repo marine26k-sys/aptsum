@@ -40,6 +40,10 @@
   select.analysis-slider-source{display:none!important}
   .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
   #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
+  .price-basis{flex:0 0 100%;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
+  .price-basis button{flex:1;padding:9px 5px;border:1px solid transparent;border-radius:7px;background:transparent;color:#5F706C;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .price-basis:has(option[value="current"]:checked) [data-basis="current"],.price-basis:has(option[value="past"]:checked) [data-basis="past"]{background:var(--teal);color:white;border-color:var(--teal)}
+
   html.app-native-selects #pyBandNative{display:block!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
   html.app-native-selects #pyBandMultiBtn{pointer-events:none}
   #rgPanel{max-height:94dvh}
@@ -791,10 +795,14 @@
       </select>
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
-      <select id="priceBandBasis" style="flex:1;min-width:0" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
+      <div class="price-basis">
+      <button type="button" data-basis="current" onclick="setPriceBandBasis('current')">현재 금액대 기준</button>
+      <button type="button" data-basis="past" onclick="setPriceBandBasis('past')">과거 금액대 기준</button>
+      <select id="priceBandBasis" style="display:none" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="current" selected>현재 금액대 기준</option>
         <option value="past">과거 금액대 기준</option>
       </select>
+      </div>
       <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="" disabled>시점 선택</option>
         <option value="3">3개월 전</option>
@@ -3312,6 +3320,7 @@ function filterPriceBandRows(rows, band, basis='past'){
   const priceKey = basis==='current' ? 'recentAvg' : 'pastAvg';
   return rows.filter(row => band===30 ? row[priceKey]>=30 : (row[priceKey]>=band && row[priceKey]<band+1));
 }
+function setPriceBandBasis(value){const el=document.getElementById('priceBandBasis');el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));}
 function analyzePriceBandRise(all, months, periodM, band, basis='past'){
   const base = analyzeLongTermRise(all, months, periodM, true);
   const matchedRows = filterPriceBandRows(base.rows, band, basis);
