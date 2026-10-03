@@ -2,14 +2,9 @@ name: 실거래 데이터 배치 수집 (매매/분양권/전세)
 
 on:
   schedule:
-    # 하이브리드 모드: 과거 데이터(2개월 이전)만 채우면 되므로 매월 "마지막 날"에 1회 실행
-    # (최근 2개월은 Netlify Function이 매 요청마다 실시간 호출로 커버 — netlify/functions/analyze·presale·rent.mjs 참고)
-    # 2026.09: 격월(1일)→매월 마지막 날로 변경 — 매월 1일이 되는 순간 "전월"이던 달이 실시간 조회 창에서
-    # 벗어나 정적 파일 조회로 전환되는데, 그 시점에 정적 파일이 신고 지연분까지 다 채워진 상태여야
-    # 데이터 공백이 안 생김(실제로 이 타이밍 때문에 7월 데이터가 9월 1일에 잠깐 비어 보인 적 있음).
-    # cron은 "매월 마지막 날"을 직접 표현할 수 없어 28~31일 매일 이 시각에 실행하되, 아래 gate 스텝에서
-    # "내일이 1일"인 날에만 실제로 진행하고 나머지는 건너뛴다(28~30일짜리 달에서 중복 실행 방지).
-    - cron: "30 18 28-31 * *"
+    # 한국 시간 월말 15:30(UTC 06:30). 월 전환 전에 수집을 끝낼 여유를 확보한다.
+    # 28~31일 중 마지막 날만 gate에서 실행. 평소 최근 4개월, 분기말 최근 12개월 재조회.
+    - cron: "30 6 28-31 * *"
   workflow_dispatch:
     inputs:
       months:
@@ -54,10 +49,22 @@ jobs:
               exit 0
             fi
           fi
+          refresh="${{ github.event.inputs.refresh }}"
+          if [ -z "$refresh" ]; then
+            refresh=4
+            if [ "${{ github.event_name }}" = "schedule" ]; then
+              case "$(date -u +%m)" in
+                03|06|09|12) refresh=12 ;;
+              esac
+            fi
+          fi
+          echo "refresh=$refresh" >> "$GITHUB_OUTPUT"
           echo "run=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         if: steps.gate.outputs.run == 'true'
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
@@ -92,7 +99,7 @@ jobs:
           node scripts/collect-trades.mjs \
             --kinds=${{ github.event.inputs.kinds || 'analyze,presale,rent' }} \
             --months=${{ steps.months.outputs.months }} \
-            --refresh=${{ github.event.inputs.refresh || '4' }} \
+            --refresh=${{ steps.gate.outputs.refresh }} \
             ${{ github.event.inputs.only && format('--only={0}', github.event.inputs.only) || '' }} \
             ${{ github.event.inputs.force == 'true' && '--force' || '' }}
 
