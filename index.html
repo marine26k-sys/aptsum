@@ -4653,9 +4653,27 @@ function chartHoverEnd(e){
   if(dot) dot.style.opacity = 0;
   hideTip();
 }
+function toggleChartRange(){
+ if(!curChart)return;
+ curChart.rangeMode=!curChart.rangeMode;curChart.rangeStart=null;curChart.rangeEnd=null;curChart.pinned=-1;hideTip();
+ const btn=document.getElementById('chartRangeBtn');btn.setAttribute('aria-pressed',String(curChart.rangeMode));btn.style.background=curChart.rangeMode?'#00828A':'#fff';btn.style.color=curChart.rangeMode?'#fff':'#005B61';
+ document.getElementById('chartRangeResult').textContent=curChart.rangeMode?'그래프에서 시작 월과 끝 월을 차례로 선택하세요.':'';
+ document.getElementById('chartRangeShade').setAttribute('width',0);
+}
+function selectChartRange(idx){
+ if(curChart.rangeStart==null || curChart.rangeEnd!=null){curChart.rangeStart=idx;curChart.rangeEnd=null;document.getElementById('chartRangeResult').textContent=`${curChart.monthly[idx].ym} 선택 · 끝 월을 선택하세요.`;document.getElementById('chartRangeShade').setAttribute('width',0);return;}
+ if(idx===curChart.rangeStart)return;
+ curChart.rangeEnd=idx;
+ const a=Math.min(idx,curChart.rangeStart),b=Math.max(idx,curChart.rangeStart),first=curChart.monthly[a],last=curChart.monthly[b],diff=last.avg-first.avg,pct=first.avg>0?diff/first.avg*100:0;
+ const sign=diff>0?'+':diff<0?'−':'';
+ document.getElementById('chartRangeResult').innerHTML=`<b>${esc(first.ym)} → ${esc(last.ym)}</b> · ${first.avg.toFixed(1)}억 → ${last.avg.toFixed(1)}억<br><strong style="color:${diff<0?'#8A6B28':'#006B62'}">${sign}${Math.abs(diff).toFixed(1)}억 (${sign}${Math.abs(pct).toFixed(1)}%)</strong> · 시작·끝 월평균 비교`;
+ const shade=document.getElementById('chartRangeShade');shade.setAttribute('x',curChart.xs[a]);shade.setAttribute('width',curChart.xs[b]-curChart.xs[a]);
+ hideTip();
+}
 function chartClick(e){
   if(!curChart.monthly.length) return;
   const idx = chartNearestIdx(e);
+  if(curChart.rangeMode){selectChartRange(idx);return;}
   if(curChart.pinned === idx){
     // 같은 점을 다시 탭 → 해당 월 개별 거래 상세
     showMonthDeals(curChart.monthly[idx].ym);
@@ -4727,7 +4745,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
   curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel };
 
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
       return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>
       <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
@@ -4739,6 +4757,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
       <text x="${xs[i]}" y="${y(m.avg) + labelPos[i].dy}" text-anchor="middle" font-size="${fs}" font-weight="${i===iMax||i===iMin?'700':'500'}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#475569'}">${m.avg.toFixed(1)}</text>
       ${(i===0||i===monthly.length-1||i%Math.ceil(monthly.length/5)===0)? `<text x="${xs[i]}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${m.ym}</text>`:''}
     `).join('')}
+    <rect id="chartRangeShade" x="0" y="${P.t}" width="0" height="${H-P.b-volH-P.t}" fill="#00828A" opacity=".12" style="pointer-events:none"/>
     <line id="chartHoverLine" x1="${xs[0]}" y1="${P.t}" x2="${xs[0]}" y2="${H-P.b-volH}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <circle id="chartHoverDot" cx="${xs[0]}" cy="${y(monthly[0].avg).toFixed(1)}" r="5" fill="#fff" stroke="#00828A" stroke-width="2.5" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
@@ -5142,7 +5161,7 @@ function chartMulti(series){
   };
   const step = Math.max(1, Math.ceil(allYm.length/5));
   const xlab = allYm.map((ym,i)=> (i===0||i===allYm.length-1||i%step===0)? `<text x="${x(ym)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${ym}</text>`:'').join('');
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
     <line id="cmpHoverLine" x1="${x(allYm[0])}" y1="${P.t}" x2="${x(allYm[0])}" y2="${H-P.b}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
       onpointerdown="multiChartHoverAt(event)" onpointermove="multiChartHoverAt(event)" onpointerleave="multiChartHoverEnd(event)" onclick="multiChartClick(event)"/>
