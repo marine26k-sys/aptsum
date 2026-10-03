@@ -864,7 +864,7 @@
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
-      <div class="ls-row">
+      <div class="ls-row" id="lsPyRow">
         <div class="ls-hd"><span>평형</span><b id="lsPyTxt">전체</b></div>
         <div class="ls-dual" id="lsPyDual">
           <input type="range" id="lsPyMin" min="10" max="60" step="1" value="10" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 평형">
@@ -1079,7 +1079,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
-  if((inp.mode==='listingtrend'||inp.mode==='listingbudget') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
+  if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
@@ -2154,10 +2154,11 @@ function setMode(m, fromRestore){
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
-  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend') ? '' : 'none';
-  document.getElementById('lsAskRow').style.display = (m==='listingtrend'||m==='listingbudget') ? '' : 'none';
-  document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
-  document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
+  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend'||m==='longpeaklisting') ? '' : 'none';
+  document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
+  document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
+  document.getElementById('lsAgeRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
+  document.getElementById('lsHhRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
@@ -5792,7 +5793,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
   }
 }
 
-function analyzeListingUndervalue(all){
+function analyzeListingUndervalue(all, priceFilter){
   // 20~37평만(기존 저평가 3탭과 동일) · LISTING_MIN_HH(300)세대 이상만(네이버 실매물 탭 3종 공통 — 엑셀의 세대수 사용)
   const rows = all.filter(x=>{ const py = parseInt(x.py,10); return py>=20 && py<=37 && x.hh>=LISTING_MIN_HH && x.peak>0 && x.ask>0; });
   const median = arr => { const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1; return n%2 ? s[mid] : (s[mid-1]+s[mid])/2; };
@@ -5819,7 +5820,7 @@ function analyzeListingUndervalue(all){
   });
   // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
+  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
@@ -5846,9 +5847,11 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
+    lsAskBounds(all);
+    const priceFilter=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
-      divergence: analyzeListingUndervalue(all) };
+      divergence: analyzeListingUndervalue(all,priceFilter) };
     lastData = d;
     renderListingUndervalue(d);
     window.scrollTo(0, 0);
@@ -6068,7 +6071,7 @@ function lsSync(el){
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend') && lastData.mode === mode) search({silentScroll:true});
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend' || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
@@ -6096,10 +6099,10 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
-    if(tabMode==='listingbudget') lsAskBounds(all);
+    lsAskBounds(all);
     const ls = lsGet();
     // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode!=='listingbudget'||lsAskMatch(x,ls)) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && lsAskMatch(x,ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
     const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
