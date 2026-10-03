@@ -871,6 +871,13 @@
           <input type="range" id="lsPyMax" min="10" max="60" step="1" value="60" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 평형">
         </div>
       </div>
+      <div class="ls-row" id="lsAskRow" style="display:none">
+        <div class="ls-hd"><span>매매가</span><b id="lsAskTxt">전체</b></div>
+        <div class="ls-dual" id="lsAskDual">
+          <input type="range" id="lsAskMin" min="0" max="50" step="0.5" value="0" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 매매가(억)">
+          <input type="range" id="lsAskMax" min="0" max="50" step="0.5" value="50" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 매매가(억)">
+        </div>
+      </div>
       <div class="ls-row" id="lsAgeRow">
         <div class="ls-hd"><span>연식</span><b id="lsAgeTxt">전체</b></div>
         <div class="ls-dual" id="lsAgeDual">
@@ -1072,6 +1079,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
+  if((inp.mode==='listingtrend'||inp.mode==='listingbudget') && inp.ls && (inp.ls.q0>0 || inp.ls.q1<50)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
@@ -1119,10 +1127,11 @@ async function initFromURL(){
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
-  if(p.get('ls') || p.get('lr')){
+  if(p.get('ls') || p.get('lr') || p.get('lq')){
     const [a0,a1,h,p0,p1,h1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
-    lsSet({a0,a1,h,h1,r0,r1,p0,p1});
+    const [q0,q1] = p.has('lq') ? p.get('lq').split('~').map(Number) : [0,50];
+    lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1});
   }
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   if(requestedMode==='listinggap'){
@@ -2146,6 +2155,7 @@ function setMode(m, fromRestore){
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend') ? '' : 'none';
+  document.getElementById('lsAskRow').style.display = (m==='listingtrend'||m==='listingbudget') ? '' : 'none';
   document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
@@ -5749,7 +5759,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
         }
         for(const item of current.items || []){
           const points = byType.get(`${item.nid}|${item.ex}`) || [];
-          if(points.length < 2 || item.hh < LISTING_MIN_HH || !lsPyMatch(item, ls)) continue;
+          if(points.length < 2 || item.hh < LISTING_MIN_HH || !lsPyMatch(item, ls) || !lsAskMatch(item,ls)) continue;
           const prev = points[points.length-2], now = points[points.length-1];
           if(!previousUploadId || prev.uploadId !== previousUploadId || now.uploadId !== current.uploadId || now.ask !== item.ask || now.ask >= prev.ask) continue;
           rows.push({ ...item, lawd:t.lawd, gu:t.name, prevAsk:prev.ask,
@@ -5761,7 +5771,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
     if(failed.length === targets.length){ showError('최저 호가 이력을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
     rows.sort((a,b)=>b.drop-a.drop || b.dropPct-a.dropPct).splice(100);
     const d = { found:true, mode:'listingtrend', asOf, rows, historyCount, failedRegions:failed,
-      pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
+      askLabel:lsAskText(ls), pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
       scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     lastData = d;
     renderListingTrend(d);
@@ -5934,12 +5944,14 @@ function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : L
 // 양 끝 -30%·+30%는 "그 이하/이상 전부"(예산별 실매물은 +31% 이상 호가를 원래 빼므로 +30%가 사실상 끝).
 const LS_RATE_MIN = -30, LS_RATE_MAX = 30;
 function lsGet(){
-  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
+  return { q0:+document.getElementById('lsAskMin').value, q1:+document.getElementById('lsAskMax').value, a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
     p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value };
 }
 function lsSet(v){
   v = v || {};
+  document.getElementById('lsAskMin').value = Number.isFinite(v.q0) ? v.q0 : 0;
+  document.getElementById('lsAskMax').value = Number.isFinite(v.q1) ? v.q1 : 50;
   document.getElementById('lsAgeMin').value = v.a0 || 1;
   document.getElementById('lsAgeMax').value = v.a1 || LS_AGE_MAX;
   document.getElementById('lsHhMin').value = v.h || lsHhBase();
@@ -5950,6 +5962,8 @@ function lsSet(v){
   document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
   lsSync();
 }
+function lsAskText(v){return v.q0===0 && v.q1===50 ? '전체' : v.q1===50 ? `${v.q0.toFixed(1)}억 이상` : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
+function lsAskMatch(x,v){return x.ask>=v.q0 && (v.q1===50 || x.ask<=v.q1);}
 function lsPyActive(v){ return v.p0 > LS_PY_MIN || v.p1 < LS_PY_MAX; }
 function lsPyText(v){
   if(!lsPyActive(v)) return '전체';
@@ -6017,7 +6031,10 @@ function lsSync(el){
   if(+r0.value > +r1.value){ if(el === r0) r1.value = r0.value; else r0.value = r1.value; }
   const p0 = document.getElementById('lsPyMin'), p1 = document.getElementById('lsPyMax');
   if(+p0.value > +p1.value){ if(el === p0) p1.value = p0.value; else p0.value = p1.value; }
+  const q0=document.getElementById('lsAskMin'),q1=document.getElementById('lsAskMax');
+  if(+q0.value>+q1.value){if(el===q0)q1.value=q0.value;else q0.value=q1.value;}
   const v = lsGet();
+  document.getElementById('lsAskTxt').textContent = lsAskText(v);
   document.getElementById('lsAgeTxt').textContent = lsAgeText(v);
   document.getElementById('lsHhTxt').textContent = lsHhText(v);
   document.getElementById('lsRateTxt').textContent = lsRateText(v);
@@ -6026,6 +6043,7 @@ function lsSync(el){
     const el = document.getElementById(id), pct = n => (n - min) / (max - min) * 100;
     el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', pct(hi) + '%');
   };
+  fill('lsAskDual',v.q0,v.q1,0,50);
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
@@ -6064,7 +6082,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
     const ls = lsGet();
     // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode!=='listingbudget'||lsAskMatch(x,ls)) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
     const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
@@ -6190,7 +6208,7 @@ function renderListingTrend(d){
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 기록 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
-      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락 금액 큰 순`)}
+      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · 하락 금액 큰 순`)}
       ${listingLinkLegend()}
       ${body}
     </div></div>
