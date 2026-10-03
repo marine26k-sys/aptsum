@@ -2876,7 +2876,7 @@ function analyzeComplex(all, name, months, rawAll){
   hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
   const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
   const monthsAsc = months.slice().reverse();
-  const m3=months.slice(0,2), p3v=months.slice(2,4);
+  const m3=months.slice(0,3), p3v=months.slice(3,6);
   const periodAvg=(arr,ms)=>{ const a=arr.filter(t=>ms.includes(t.ym)); return a.length? {v:R1(avgA(a)), n:a.length} : null; };
   // 평형별 요약표: 최근 4개 "역법 분기"(달력 기준 1~3월/4~6월/7~9월/10~12월) 평균 — 롤링 기간이 아니라 실제 분기 단위
   const qKeyOf = ym => { const y=+ym.slice(0,4), mo=+ym.slice(4,6); return `${y}Q${Math.ceil(mo/3)}`; };
@@ -3216,11 +3216,11 @@ function analyzeInversion(all, months){
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산
-function buildRepRows(all, months){
+function buildRepRows(all, months, windowMonths=2){
   const eligible = all.filter(t=>parseInt(t.floor,10)>=5); // 1~4층 제외 (2026.07 저평가/peak 탭과 동일 기준으로 강화 — 4층까지만 걸러서는 저층 할인 왜곡이 통계에 새어 들어와 실제로는 시세 변동이 없는 단지가 등락 랭킹·초단기 저평가 단지에 허위로 잡히는 사례 발견)
   const byAptPy = {};
   for(const t of eligible){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
-  const r3set = new Set(months.slice(0,2)), p3set = new Set(months.slice(2,4));
+  const r3set = new Set(months.slice(0,windowMonths)), p3set = new Set(months.slice(windowMonths,windowMonths*2));
   const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
     const arr = markOutliers(arrRaw, months);
     const [apt,umd,py,gu] = k.split('|');
@@ -3368,22 +3368,22 @@ function analyzeGapRanking(saleAll, rentAll, months){
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
 // - 매매 실거래만 사용(분양권·입주권은 준공 전 시세·전매 이슈 등 매매와 무관한 요인으로 움직여서 왜곡 소지가 큼 → 완전히 제외)
 // - 20평대(20~29)끼리, 30평대(30~39)끼리 각각 따로 비교(초소형·초대형은 표본이 적고, 평대가 다르면 가격 스케일도 달라 같은 비교군으로 묶기 부적절)
-// - 20평대(20~29)·30평대(30~39) 평대 단위로만 비교군 구성(2026.08) — 단지마다 "같은 평대이면서 이전 2개월 평균가가 나와 ±2% 이내인 단지 중 가격이 가장 가까운 최대 5개"
+// - 20평대(20~29)·30평대(30~39) 평대 단위로만 비교군 구성(2026.08) — 단지마다 "같은 평대이면서 이전 3개월 평균가가 나와 ±2% 이내인 단지 중 가격이 가장 가까운 최대 5개"
 //   (고정 구간 대신 상대 비율 기준이라, 경계값 근처에서 억지로 갈리는 문제가 없음)
-// → "최근 2개월 평균가"가 그 비교군 중앙값보다 5~15% 낮은 단지를 표시 (본인 포함 그룹원 3명 이상만 비교, 2026.08 -15% 초과 격차는 표본 왜곡 소지가 커 상한 추가)
+// → "최근 3개월 평균가"가 그 비교군 중앙값보다 5~15% 낮은 단지를 표시 (본인 포함 그룹원 3명 이상만 비교, 2026.08 -15% 초과 격차는 표본 왜곡 소지가 커 상한 추가)
 function analyzeShortUndervalue(all, months, allUnfiltered){
   const tradeOnly = (allUnfiltered||all).filter(t=>{
     if(t.kind) return false;
     const py = parseInt(t.py,10);
     return py>=20 && py<=37; // 2026.08 상한 39→37평, 저평가 3탭 전부 20~37평으로 통일
   });
-  const rowsAll = buildRepRows(tradeOnly, months);
+  const rowsAll = buildRepRows(tradeOnly, months, 3);
   const median = arr => { // 표준 중앙값 (짝수 개수일 때 가운데 두 값의 평균)
     const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1;
     return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
   };
   const divergence = [];
-  const MIN_PEER_N = 2; // 비교군은 최근·이전 2개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
+  const MIN_PEER_N = 2; // 비교군은 최근·이전 3개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
   rowsAll.forEach(r=>{
     const nearest = rowsAll
       .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
@@ -3415,8 +3415,8 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
 }
 
 // ═══ 저평가 (2026.07 잠금 해제 — 공개 탭 / v130에서 "분기 저평가"→"반기 저평가"로 개명) ═══
-// 등락 랭킹의 "단기 저평가 단지"(2개월 평균 기준)와는 완전히 별개 로직.
-// 평균가 대신 최고가, 2개월 구간 대신 6개월 구간을 사용(2026.07 3개월→6개월, 탭 이름을 "반기"로 바꾸며 함께 변경) —
+// 등락 랭킹의 "단기 저평가 단지"(3개월 평균 기준)와는 완전히 별개 로직.
+// 평균가 대신 최고가, 3개월 구간 대신 6개월 구간을 사용(2026.07 3개월→6개월, 탭 이름을 "반기"로 바꾸며 함께 변경) —
 // "또래 대비 덜 오른" 단지가 아니라 "동일 시세대에서 신고가 흐름을 못 따라간" 단지를 잡아내려는 실험적 지표.
 // 등락 랭킹과 달리 분양권·입주권까지 전부 포함. 층수 제한 없음(2026.07 5층 이상 제한 삭제 — 연간 저평가와 통일) — 20평대(20~29)끼리, 30평대(30~39)끼리 각각 따로 비교(2026.08)
 function buildPeakRows(all, months){
@@ -4116,7 +4116,7 @@ async function search(opts){
   const risePeriodM = +document.getElementById('risePeriodN').value;
   const priceBandPeriodM = +document.getElementById('priceBandPeriodN').value;
   const priceBandBasis = document.getElementById('priceBandBasis').value;
-  const neededMN = mode==='shortval' ? 4 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 4 : (mode==='inversion' ? 13 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : mN))))))));
+  const neededMN = mode==='shortval' ? 6 : (mode==='peak' ? 12 : (mode==='longpeak'||mode==='longpeakdong' ? curMonthNum+12 : (mode==='newhigh'||mode==='pyprice' ? 36 : (mode==='newlow' ? 12 : (mode==='gap' ? 4 : (mode==='inversion' ? 13 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : mN))))))));
   // 저평가 계열 네 탭(단기·분기·연간 저평가, 등락 랭킹)은 실제 분석 창(neededMN)과 무관하게 API 조회 자체는 항상 24개월로 통일
   // → 같은 지역에서 이 탭들을 오가며 검토할 때 매번 다른 개월수를 새로 조회하지 않고 동일한 24개월(2×12개월 샤드) 캐시를 그대로 공유함. 분석 로직·기간 표시는 기존과 동일하게 neededMN만큼만 사용(아래 windowF로 걸러냄)
   // 나머지 모든 탭(지역·거래량·단지분석·단지비교)도 같은 이유로 최소 24개월치를 조회한다 — 디폴트든 사용자가 12개월을 직접 선택했든, 실제 API 조회는 항상 24개월 이상이라 어떤 탭으로 옮겨가도 이미 캐싱된 24개월 안에서 서로 겹쳐 재조회가 없다.
@@ -4798,13 +4798,13 @@ function trendHTML(d){
     if(!p.trend) return `<div class="trend" style="margin-bottom:8px">
       <span class="pct rng" style="font-size:13px">-</span>
       <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
-      <span class="d">전후 2개월 거래 부족으로 비교 불가</span>
+      <span class="d">전후 3개월 거래 부족으로 비교 불가</span>
     </div>`;
     const t = p.trend;
     return `<div class="trend" style="margin-bottom:8px">
       <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'▲':(t.pct<0?'▼':'')}${Math.abs(t.pct)}%</span>
       <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
-      <span class="d">이전 2개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 2개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
+      <span class="d">이전 3개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 3개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
     </div>`;
   }).join('');
   return rows || '<div class="rng">데이터 없음</div>';
@@ -4984,7 +4984,7 @@ function complexDynamicHTML(){
     </div>
     ${isSale ? `
     <div class="sec">
-      <h3>단기 추세 — 평형별 (이전 2개월 vs 최근 2개월)</h3>
+      <h3>단기 추세 — 평형별 (이전 3개월 vs 최근 3개월)</h3>
       <div id="trendBox">${trendHTML(d)}</div>
       <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
     </div>
@@ -5403,7 +5403,7 @@ ${uvSep(i)}
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
-        <tr><th>단지</th><th>평형</th><th class="tr-r">2개월 전</th><th class="tr-r">최근 평균</th></tr>
+        <tr><th>단지</th><th>평형</th><th class="tr-r">3개월 전</th><th class="tr-r">최근 평균</th></tr>
         <tr style="background:var(--teal-soft)"><td><span style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span></td><td>${x.py}평 (전용 ${x.area})</td><td class="tr-r">${x.p3avg.toFixed(1)}억</td><td class="tr-r"><b style="color:var(--teal)">${x.r3avg.toFixed(1)}억</b></td></tr>
         ${x.peers.map(p=>`<tr><td>${esc(p.apt)}</td><td>${esc(p.py)}평 (전용 ${p.area})</td><td class="tr-r">${p.p3avg.toFixed(1)}억</td><td class="tr-r">${p.r3avg.toFixed(1)}억</td></tr>`).join('')}
       </table></div>
@@ -5573,18 +5573,18 @@ function renderShortUndervalue(d){
       ${hdTop('단기 저평가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years})</div>
-      ${hdVs('이전 2개월 평균가', '최근 2개월 평균가')}
+      ${hdVs('이전 3개월 평균가', '최근 3개월 평균가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">시세가 비슷했던 단지보다 최근 2개월 5~15% 싸게 거래된 단지</div>
+      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">시세가 비슷했던 단지보다 최근 3개월 5~15% 싸게 거래된 단지</div>
       ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${divergenceHTML(d.divergence)}
     </div>
 
   </div>
-  <div class="src-note">이전 2개월 평균가 vs 최근 2개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
