@@ -3271,7 +3271,7 @@ function buildRepRows(all, months, windowMonths=2){
 // 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 운영자 요청, 2026.09
 // — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
 // longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
-function analyzeLongTermRise(all, months, periodM, includeAll=false){
+function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=30){
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
   // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
@@ -3285,7 +3285,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
   const results = [];
   for(const [k, arrRaw] of Object.entries(byAptPy)){
     const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
-    const recent = arr.filter(t=> dayDiff(t) <= 30); // 최근 1개월(최근 30일)
+    const recent = arr.filter(t=> dayDiff(t) >= 0 && dayDiff(t) <= recentDays); // 현재 가격 평균 구간
     const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
     if(recent.length < 1 || past.length < 1) continue; // 두 구간 다 표본 1건 이상(운영자 요청, 2026.09 — 기존 2건에서 완화, 표본이 너무 좁게 잡히는 문제 보완)
     const recentAvg = avgA(recent), pastAvg = avgA(past);
@@ -3306,7 +3306,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
   const todayDate = new Date();
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   const pastWindowEnd = new Date(Date.now() - ((periodM-1)*30+1)*24*3600*1000);
-  const recentWindowStart = new Date(Date.now() - 30*24*3600*1000);
+  const recentWindowStart = new Date(Date.now() - recentDays*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
     pastPeriod:`${fmtDate(startDate)} ~ ${fmtDate(pastWindowEnd)}`,
@@ -3322,7 +3322,7 @@ function filterPriceBandRows(rows, band, basis='past'){
 }
 function setPriceBandBasis(value){const el=document.getElementById('priceBandBasis');el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));}
 function analyzePriceBandRise(all, months, periodM, band, basis='past'){
-  const base = analyzeLongTermRise(all, months, periodM, true);
+  const base = analyzeLongTermRise(all, months, periodM, true, 90);
   const matchedRows = filterPriceBandRows(base.rows, band, basis);
   // 경기 전체처럼 조건 충족 단지가 많은 곳도 화면·공유 결과가 과도하게 길어지지 않도록 상승 금액 순 상위 100개만 표시한다.
   const rows = matchedRows.slice(0,100);
@@ -5494,13 +5494,13 @@ function renderPriceBandRise(d){
       <div class="price-band-vs">
         <span><b>${d.periodM}개월 전 평균</b><small>${esc(d.pastPeriod)}</small></span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H3M7 21l-4-4 4-4M3 17h18"/></svg>
-        <span><b>최근 1개월 평균</b><small>${esc(d.recentPeriod)}</small></span>
+        <span><b>최근 3개월 평균</b><small>${esc(d.recentPeriod)}</small></span>
       </div>
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
       <h3>${esc(resultLabel)} (${d.isLimited ? `${d.matchedCount}개 중 상위 ${d.rows.length}개` : `${d.rows.length}개`})</h3>
-      ${hint(basisHint, '현재가 = 최근 30일 평균')}
+      ${hint(basisHint, '현재가 = 최근 90일 평균')}
       ${rows}
     </div>
   </div>
