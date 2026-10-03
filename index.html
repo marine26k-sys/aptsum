@@ -5165,7 +5165,7 @@ function chartMulti(series){
   };
   const step = Math.max(1, Math.ceil(allYm.length/5));
   const xlab = allYm.map((ym,i)=> (i===0||i===allYm.length-1||i%step===0)? `<text x="${x(ym)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${ym}</text>`:'').join('');
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
     <line id="cmpHoverLine" x1="${x(allYm[0])}" y1="${P.t}" x2="${x(allYm[0])}" y2="${H-P.b}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
       onpointerdown="multiChartHoverAt(event)" onpointermove="multiChartHoverAt(event)" onpointerleave="multiChartHoverEnd(event)" onclick="multiChartClick(event)"/>

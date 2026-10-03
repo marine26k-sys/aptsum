@@ -49,7 +49,7 @@ for (const name of ['analyze','presale','rent']) {
   test(`${name}: actual handler propagates month failures and disables CDN caching`, async () => {
     const source = readFileSync(new URL(`../netlify/functions/${name}.mjs`, import.meta.url), 'utf8');
     const handlerSource = source.slice(source.indexOf('export default async')).replace('export default', 'handler =');
-    const ctx = vm.createContext({URL, Response, process:{env:{DATA_GO_KR_KEY:'test-only'}}, SPLIT_REGIONS:{}, currentAndPrevYm:()=>({cur:'202609',prev:'202608'}), collectMonths,
+    const ctx = vm.createContext({URL, Response, process:{env:{DATA_GO_KR_KEY:'test-only'}}, SPLIT_REGIONS:{}, hubPyOverride:async items=>items, currentAndPrevYm:()=>({cur:'202609',prev:'202608'}), collectMonths,
       fetchShard:async (_key,_lawd,[ym])=>({items:[{ym}], anyFailed:ym==='202608'})});
     vm.runInContext(handlerSource, ctx);
     const response = await ctx.handler(new Request('https://example.test/api/'+name+'?lawd=26110&yms=202609,202608'));
