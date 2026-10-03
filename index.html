@@ -3624,24 +3624,13 @@ function hdTop(badgeLabel, subscriberOnly, badgeClass){
     <span class="hd-badge${subscriberOnly?' subscriber':''}${badgeClass?' '+badgeClass:''}">${esc(badgeLabel)}</span>
   </div>`;
 }
-// 랭킹 리스트가 캡처되어 외부에 그대로 공유되는 일이 많아, 5·10·15...위 다음에
-// 출처 워터마크를 끼워넣는다(마지막 항목 뒤에는 넣지 않음).
-function rkWatermarkHTML(){
-  return `<div class="rk-wm"><svg width="10" height="10" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>아파트썸 · aptsum.kr</div>`;
-}
-function rkSep(i, len){
-  return ((i+1)%5===0 && i<len-1) ? rkWatermarkHTML() : '';
-}
-// 저평가 탭(단기·반기·연간·연간 동일 권역·평형 비교·저평가 실매물) 단지 카드 구분선 — 2026.09 운영자 요청으로 통일.
-// 카드 사이는 연한 청록 점선, 카드 2개마다와 목록 맨 끝에는 로고 워터마크가 든 구분선(화면 캡처로 공유될 때 출처 표시).
+// 결과 목록의 구분선은 브랜드 문구 없이 표시한다.
+function rkWatermarkHTML(){ return ''; }
+function rkSep(i, len){ return ''; }
 function uvBrandSep(){
-  // 일반 점선과 같은 높이(1px)를 차지하도록 워터마크는 선 위에 겹쳐 띄운다(2026.09 운영자 요청 — 로고 줄만 간격이 넓어 보였음)
-  return `<div style="position:relative;border-top:1px dashed var(--teal-light)"><span style="position:absolute;left:50%;top:0;transform:translate(-50%,-50%);background:#fff;padding:0 8px;line-height:1;white-space:nowrap">${rkWatermarkHTML().replace('class="rk-wm"', 'class="rk-wm" style="padding:0"')}</span></div>`;
+  return '<div style="border-top:1px dashed var(--teal-light)"></div>';
 }
-function uvSep(i){
-  if(!i) return '';
-  return i % 2 ? '<div style="border-top:1px dashed var(--teal-light)"></div>' : uvBrandSep();
-}
+function uvSep(i){ return i ? uvBrandSep() : ''; }
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
 function hdVs(prevLabel, recentLabel){
