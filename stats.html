@@ -164,7 +164,6 @@ async function load(){
 
 function render(d){
   const maxTrend = Math.max(...d.trend.map(t => t.count), 1);
-  const maxPage = Math.max(...d.pages.map(p => p.total), 1);
   const todayStr = d.trend[d.trend.length - 1].date;
 
   $("#app").innerHTML = `
@@ -186,20 +185,6 @@ function render(d){
       <div class="chart-labels">
         ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>`).join("")}
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">페이지별 방문</div>
-      ${d.pages.map(p => `
-        <div class="page-row">
-          <div class="page-dot"></div>
-          <div class="page-main">
-            <div class="page-name">${esc(p.label)}</div>
-            <div class="page-bar-track"><div class="page-bar-fill" style="width:${(p.total/maxPage*100).toFixed(1)}%"></div></div>
-          </div>
-          <div class="page-nums"><b>${p.total.toLocaleString()}</b><div>오늘 ${p.today.toLocaleString()}</div></div>
-        </div>
-      `).join("")}
     </div>
 
     <div class="card" id="tabCard">
@@ -529,7 +514,7 @@ const TAB_LABELS = [
   ["비공개 탭", [["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"]]],
   ["신청", [["tabApply","전 지역 이용 신청 + 개인 맞춤 단지 선별"]]],
 ];
-let tabData = null, tabPeriod = "d7";
+let tabData = null, tabPeriod = "d1";
 function renderTabClicks(){
   const box = $("#tabBody");
   document.querySelectorAll("#tabPeriod button").forEach(b => {

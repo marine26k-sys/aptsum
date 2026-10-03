@@ -40,6 +40,10 @@
   select.analysis-slider-source{display:none!important}
   .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
   #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
+  .price-basis{flex:0 0 100%;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
+  .price-basis button{flex:1;padding:9px 5px;border:1px solid transparent;border-radius:7px;background:transparent;color:#5F706C;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .price-basis:has(option[value="current"]:checked) [data-basis="current"],.price-basis:has(option[value="past"]:checked) [data-basis="past"]{background:var(--teal);color:white;border-color:var(--teal)}
+
   html.app-native-selects #pyBandNative{display:block!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
   html.app-native-selects #pyBandMultiBtn{pointer-events:none}
   #rgPanel{max-height:94dvh}
@@ -251,7 +255,7 @@
   .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
   .listing-trend-row .val{white-space:nowrap;color:var(--blue);font-size:13px}
   .listing-trend-row .val small{display:inline;color:inherit;font-size:10px;font-weight:700}
-  .listing-trend-change{display:flex;align-items:center;flex-wrap:wrap;gap:2px 4px;margin-top:4px;font-size:10px;font-weight:700;color:var(--ink);line-height:1.3}
+  .listing-trend-change{display:flex;align-items:center;flex-wrap:wrap;gap:2px 4px;margin-top:4px;font-size:11px;font-weight:700;color:var(--ink);line-height:1.3}
   .listing-trend-change .price{padding:2px 4px;border-radius:5px;background:var(--slate-bg)}
   .listing-trend-change .price.now{background:#EAF2FF;color:var(--blue)}
   .listing-trend-change .date{color:var(--sub);font-size:9px;font-weight:500}
@@ -776,9 +780,9 @@
     <div class="row2" id="subwayRow" style="display:none">
       <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
         <option value="5">도보 5분 이내</option>
-        <option value="10" selected>도보 10분 이내</option>
+        <option value="10">도보 10분 이내</option>
         <option value="15">도보 15분 이내</option>
-        <option value="20">도보 20분 이내</option>
+        <option value="20" selected>도보 20분 이내</option>
       </select>
     </div>
     <div class="row2" id="risePeriodRow" style="display:none">
@@ -791,10 +795,14 @@
       </select>
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
-      <select id="priceBandBasis" style="flex:1;min-width:0" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
+      <div class="price-basis">
+      <button type="button" data-basis="current" onclick="setPriceBandBasis('current')">현재 금액대 기준</button>
+      <button type="button" data-basis="past" onclick="setPriceBandBasis('past')">과거 금액대 기준</button>
+      <select id="priceBandBasis" style="display:none" onchange="if(sel.value&&document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="current" selected>현재 금액대 기준</option>
         <option value="past">과거 금액대 기준</option>
       </select>
+      </div>
       <select id="priceBandPeriodN" style="flex:1;min-width:0" onchange="if(sel.value&&this.value&&document.getElementById('priceBandN').value!=='')search()">
         <option value="" disabled>시점 선택</option>
         <option value="3">3개월 전</option>
@@ -820,6 +828,7 @@
     </div>
     <div class="row2" id="optRow">
       <select id="monthsN" style="flex:1.3;min-width:0">
+        <option value="1" class="volOnly" style="display:none">최근 1개월</option>
         <option value="3" class="volOnly" style="display:none">최근 3개월</option>
         <option value="6" class="volOnly" style="display:none">최근 6개월</option>
         <option value="12">최근 1년</option>
@@ -864,11 +873,18 @@
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
-      <div class="ls-row">
+      <div class="ls-row" id="lsPyRow">
         <div class="ls-hd"><span>평형</span><b id="lsPyTxt">전체</b></div>
         <div class="ls-dual" id="lsPyDual">
           <input type="range" id="lsPyMin" min="10" max="60" step="1" value="10" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 평형">
           <input type="range" id="lsPyMax" min="10" max="60" step="1" value="60" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 평형">
+        </div>
+      </div>
+      <div class="ls-row" id="lsAskRow" style="display:none">
+        <div class="ls-hd"><span>매매가</span><b id="lsAskTxt">전체</b></div>
+        <div class="ls-dual" id="lsAskDual">
+          <input type="range" id="lsAskMin" min="0" max="50" step="0.5" value="0" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 매매가(억)">
+          <input type="range" id="lsAskMax" min="0" max="50" step="0.5" value="50" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 매매가(억)">
         </div>
       </div>
       <div class="ls-row" id="lsAgeRow">
@@ -1072,6 +1088,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
+  if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
@@ -1119,10 +1136,11 @@ async function initFromURL(){
   if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
-  if(p.get('ls') || p.get('lr')){
+  if(p.get('ls') || p.get('lr') || p.get('lq')){
     const [a0,a1,h,p0,p1,h1] = (p.get('ls')||'').split('-').map(Number);
     const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
-    lsSet({a0,a1,h,h1,r0,r1,p0,p1});
+    const [q0,q1] = p.has('lq') ? p.get('lq').split('~').map(Number) : [0,50];
+    lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1});
   }
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   if(requestedMode==='listinggap'){
@@ -2145,9 +2163,11 @@ function setMode(m, fromRestore){
   pyBandMultiSel = m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : [];
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
-  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend') ? '' : 'none';
-  document.getElementById('lsAgeRow').style.display = m==='listingtrend' ? 'none' : '';
-  document.getElementById('lsHhRow').style.display = m==='listingtrend' ? 'none' : '';
+  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend'||m==='longpeaklisting') ? '' : 'none';
+  document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
+  document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
+  document.getElementById('lsAgeRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
+  document.getElementById('lsHhRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
@@ -3251,7 +3271,7 @@ function buildRepRows(all, months, windowMonths=2){
 // 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 운영자 요청, 2026.09
 // — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
 // longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
-function analyzeLongTermRise(all, months, periodM, includeAll=false){
+function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=30){
   // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
   // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
@@ -3265,7 +3285,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
   const results = [];
   for(const [k, arrRaw] of Object.entries(byAptPy)){
     const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
-    const recent = arr.filter(t=> dayDiff(t) <= 30); // 최근 1개월(최근 30일)
+    const recent = arr.filter(t=> dayDiff(t) >= 0 && dayDiff(t) <= recentDays); // 현재 가격 평균 구간
     const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
     if(recent.length < 1 || past.length < 1) continue; // 두 구간 다 표본 1건 이상(운영자 요청, 2026.09 — 기존 2건에서 완화, 표본이 너무 좁게 잡히는 문제 보완)
     const recentAvg = avgA(recent), pastAvg = avgA(past);
@@ -3286,7 +3306,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false){
   const todayDate = new Date();
   const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
   const pastWindowEnd = new Date(Date.now() - ((periodM-1)*30+1)*24*3600*1000);
-  const recentWindowStart = new Date(Date.now() - 30*24*3600*1000);
+  const recentWindowStart = new Date(Date.now() - recentDays*24*3600*1000);
   return { found:true, mode:'longtermrise', total:all.length, periodM,
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
     pastPeriod:`${fmtDate(startDate)} ~ ${fmtDate(pastWindowEnd)}`,
@@ -3300,8 +3320,9 @@ function filterPriceBandRows(rows, band, basis='past'){
   const priceKey = basis==='current' ? 'recentAvg' : 'pastAvg';
   return rows.filter(row => band===30 ? row[priceKey]>=30 : (row[priceKey]>=band && row[priceKey]<band+1));
 }
+function setPriceBandBasis(value){const el=document.getElementById('priceBandBasis');el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));}
 function analyzePriceBandRise(all, months, periodM, band, basis='past'){
-  const base = analyzeLongTermRise(all, months, periodM, true);
+  const base = analyzeLongTermRise(all, months, periodM, true, 90);
   const matchedRows = filterPriceBandRows(base.rows, band, basis);
   // 경기 전체처럼 조건 충족 단지가 많은 곳도 화면·공유 결과가 과도하게 길어지지 않도록 상승 금액 순 상위 100개만 표시한다.
   const rows = matchedRows.slice(0,100);
@@ -3624,24 +3645,13 @@ function hdTop(badgeLabel, subscriberOnly, badgeClass){
     <span class="hd-badge${subscriberOnly?' subscriber':''}${badgeClass?' '+badgeClass:''}">${esc(badgeLabel)}</span>
   </div>`;
 }
-// 랭킹 리스트가 캡처되어 외부에 그대로 공유되는 일이 많아, 5·10·15...위 다음에
-// 출처 워터마크를 끼워넣는다(마지막 항목 뒤에는 넣지 않음).
-function rkWatermarkHTML(){
-  return `<div class="rk-wm"><svg width="10" height="10" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>아파트썸 · aptsum.kr</div>`;
-}
-function rkSep(i, len){
-  return ((i+1)%5===0 && i<len-1) ? rkWatermarkHTML() : '';
-}
-// 저평가 탭(단기·반기·연간·연간 동일 권역·평형 비교·저평가 실매물) 단지 카드 구분선 — 2026.09 운영자 요청으로 통일.
-// 카드 사이는 연한 청록 점선, 카드 2개마다와 목록 맨 끝에는 로고 워터마크가 든 구분선(화면 캡처로 공유될 때 출처 표시).
+// 결과 목록의 구분선은 브랜드 문구 없이 표시한다.
+function rkWatermarkHTML(){ return ''; }
+function rkSep(i, len){ return ''; }
 function uvBrandSep(){
-  // 일반 점선과 같은 높이(1px)를 차지하도록 워터마크는 선 위에 겹쳐 띄운다(2026.09 운영자 요청 — 로고 줄만 간격이 넓어 보였음)
-  return `<div style="position:relative;border-top:1px dashed var(--teal-light)"><span style="position:absolute;left:50%;top:0;transform:translate(-50%,-50%);background:#fff;padding:0 8px;line-height:1;white-space:nowrap">${rkWatermarkHTML().replace('class="rk-wm"', 'class="rk-wm" style="padding:0"')}</span></div>`;
+  return '<div style="border-top:1px dashed var(--teal-light)"></div>';
 }
-function uvSep(i){
-  if(!i) return '';
-  return i % 2 ? '<div style="border-top:1px dashed var(--teal-light)"></div>' : uvBrandSep();
-}
+function uvSep(i){ return i ? uvBrandSep() : ''; }
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
 function hdVs(prevLabel, recentLabel){
@@ -4643,9 +4653,27 @@ function chartHoverEnd(e){
   if(dot) dot.style.opacity = 0;
   hideTip();
 }
+function toggleChartRange(){
+ if(!curChart)return;
+ curChart.rangeMode=!curChart.rangeMode;curChart.rangeStart=null;curChart.rangeEnd=null;curChart.pinned=-1;hideTip();
+ const btn=document.getElementById('chartRangeBtn');btn.setAttribute('aria-pressed',String(curChart.rangeMode));btn.style.background=curChart.rangeMode?'#00828A':'#fff';btn.style.color=curChart.rangeMode?'#fff':'#005B61';
+ document.getElementById('chartRangeResult').textContent=curChart.rangeMode?'그래프에서 시작 월과 끝 월을 차례로 선택하세요.':'';
+ document.getElementById('chartRangeShade').setAttribute('width',0);
+}
+function selectChartRange(idx){
+ if(curChart.rangeStart==null || curChart.rangeEnd!=null){curChart.rangeStart=idx;curChart.rangeEnd=null;document.getElementById('chartRangeResult').textContent=`${curChart.monthly[idx].ym} 선택 · 끝 월을 선택하세요.`;document.getElementById('chartRangeShade').setAttribute('width',0);return;}
+ if(idx===curChart.rangeStart)return;
+ curChart.rangeEnd=idx;
+ const a=Math.min(idx,curChart.rangeStart),b=Math.max(idx,curChart.rangeStart),first=curChart.monthly[a],last=curChart.monthly[b],diff=last.avg-first.avg,pct=first.avg>0?diff/first.avg*100:0;
+ const sign=diff>0?'+':diff<0?'−':'';
+ document.getElementById('chartRangeResult').innerHTML=`<b>${esc(first.ym)} → ${esc(last.ym)}</b> · ${first.avg.toFixed(1)}억 → ${last.avg.toFixed(1)}억<br><strong style="color:${diff<0?'#8A6B28':'#006B62'}">${sign}${Math.abs(diff).toFixed(1)}억 (${sign}${Math.abs(pct).toFixed(1)}%)</strong> · 시작·끝 월평균 비교`;
+ const shade=document.getElementById('chartRangeShade');shade.setAttribute('x',curChart.xs[a]);shade.setAttribute('width',curChart.xs[b]-curChart.xs[a]);
+ hideTip();
+}
 function chartClick(e){
   if(!curChart.monthly.length) return;
   const idx = chartNearestIdx(e);
+  if(curChart.rangeMode){selectChartRange(idx);return;}
   if(curChart.pinned === idx){
     // 같은 점을 다시 탭 → 해당 월 개별 거래 상세
     showMonthDeals(curChart.monthly[idx].ym);
@@ -4717,7 +4745,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
   curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel };
 
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
       return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>
       <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
@@ -4729,6 +4757,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
       <text x="${xs[i]}" y="${y(m.avg) + labelPos[i].dy}" text-anchor="middle" font-size="${fs}" font-weight="${i===iMax||i===iMin?'700':'500'}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#475569'}">${m.avg.toFixed(1)}</text>
       ${(i===0||i===monthly.length-1||i%Math.ceil(monthly.length/5)===0)? `<text x="${xs[i]}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${m.ym}</text>`:''}
     `).join('')}
+    <rect id="chartRangeShade" x="0" y="${P.t}" width="0" height="${H-P.b-volH-P.t}" fill="#00828A" opacity=".12" style="pointer-events:none"/>
     <line id="chartHoverLine" x1="${xs[0]}" y1="${P.t}" x2="${xs[0]}" y2="${H-P.b-volH}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <circle id="chartHoverDot" cx="${xs[0]}" cy="${y(monthly[0].avg).toFixed(1)}" r="5" fill="#fff" stroke="#00828A" stroke-width="2.5" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
@@ -5132,7 +5161,7 @@ function chartMulti(series){
   };
   const step = Math.max(1, Math.ceil(allYm.length/5));
   const xlab = allYm.map((ym,i)=> (i===0||i===allYm.length-1||i%step===0)? `<text x="${x(ym)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${ym}</text>`:'').join('');
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${lines}${xlab}
     <line id="cmpHoverLine" x1="${x(allYm[0])}" y1="${P.t}" x2="${x(allYm[0])}" y2="${H-P.b}" stroke="#0F2B3D" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;transition:opacity .1s"/>
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
       onpointerdown="multiChartHoverAt(event)" onpointermove="multiChartHoverAt(event)" onpointerleave="multiChartHoverEnd(event)" onclick="multiChartClick(event)"/>
@@ -5465,13 +5494,13 @@ function renderPriceBandRise(d){
       <div class="price-band-vs">
         <span><b>${d.periodM}개월 전 평균</b><small>${esc(d.pastPeriod)}</small></span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H3M7 21l-4-4 4-4M3 17h18"/></svg>
-        <span><b>최근 1개월 평균</b><small>${esc(d.recentPeriod)}</small></span>
+        <span><b>최근 3개월 평균</b><small>${esc(d.recentPeriod)}</small></span>
       </div>
       ${d.failedRegions && d.failedRegions.length?`<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
     <div class="sec">
       <h3>${esc(resultLabel)} (${d.isLimited ? `${d.matchedCount}개 중 상위 ${d.rows.length}개` : `${d.rows.length}개`})</h3>
-      ${hint(basisHint, '현재가 = 최근 30일 평균')}
+      ${hint(basisHint, '현재가 = 최근 90일 평균')}
       ${rows}
     </div>
   </div>
@@ -5739,13 +5768,14 @@ async function searchListingTrend(myToken, lawd, silentScroll){
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
-    const failed = [], rows = [];
+    const failed = [], rows = [], currentItems = [];
     const ls = lsGet();
     let asOf = null, historyCount = 0;
     await Promise.all(targets.map(async t=>{
       try{
         const [current, history] = await Promise.all([fetchListings(t.lawd), fetchListingHistory(t.lawd)]);
         if(current.asOf && (!asOf || current.asOf > asOf)) asOf = current.asOf;
+        currentItems.push(...(current.items || []));
         const snapshots = history.snapshots || [];
         historyCount = Math.max(historyCount, snapshots.filter(s => s.items?.length).length);
         const previousUploadId = snapshots[snapshots.length-2]?.uploadId;
@@ -5770,9 +5800,12 @@ async function searchListingTrend(myToken, lawd, silentScroll){
     }));
     if(myToken!==searchToken) return;
     if(failed.length === targets.length){ showError('최저 호가 이력을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    lsAskBounds(currentItems);
+    Object.assign(ls,lsGet());
+    for(let i=rows.length-1;i>=0;i--) if(!lsAskMatch(rows[i],ls)) rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop || b.dropPct-a.dropPct).splice(100);
     const d = { found:true, mode:'listingtrend', asOf, rows, historyCount, failedRegions:failed,
-      pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
+      askLabel:lsAskText(ls), pyBand:lsPyActive(ls) ? lsPyText(ls) : null,
       scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     lastData = d;
     renderListingTrend(d);
@@ -5789,7 +5822,7 @@ async function searchListingTrend(myToken, lawd, silentScroll){
   }
 }
 
-function analyzeListingUndervalue(all){
+function analyzeListingUndervalue(all, priceFilter){
   // 20~37평만(기존 저평가 3탭과 동일) · LISTING_MIN_HH(300)세대 이상만(네이버 실매물 탭 3종 공통 — 엑셀의 세대수 사용)
   const rows = all.filter(x=>{ const py = parseInt(x.py,10); return py>=20 && py<=37 && x.hh>=LISTING_MIN_HH && x.peak>0 && x.ask>0; });
   const median = arr => { const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1; return n%2 ? s[mid] : (s[mid-1]+s[mid])/2; };
@@ -5816,7 +5849,7 @@ function analyzeListingUndervalue(all){
   });
   // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
+  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
@@ -5843,9 +5876,11 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
+    lsAskBounds(all);
+    const priceFilter=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
-      divergence: analyzeListingUndervalue(all) };
+      divergence: analyzeListingUndervalue(all,priceFilter) };
     lastData = d;
     renderListingUndervalue(d);
     window.scrollTo(0, 0);
@@ -5945,12 +5980,14 @@ function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : L
 // 양 끝 -30%·+30%는 "그 이하/이상 전부"(예산별 실매물은 +31% 이상 호가를 원래 빼므로 +30%가 사실상 끝).
 const LS_RATE_MIN = -30, LS_RATE_MAX = 30;
 function lsGet(){
-  return { a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
+  return { q0:+document.getElementById('lsAskMin').value, q1:+document.getElementById('lsAskMax').value, a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
     p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value };
 }
 function lsSet(v){
   v = v || {};
+  document.getElementById('lsAskMin').value = Number.isFinite(v.q0) ? v.q0 : 0;
+  document.getElementById('lsAskMax').value = Number.isFinite(v.q1) ? v.q1 : 50;
   document.getElementById('lsAgeMin').value = v.a0 || 1;
   document.getElementById('lsAgeMax').value = v.a1 || LS_AGE_MAX;
   document.getElementById('lsHhMin').value = v.h || lsHhBase();
@@ -5961,6 +5998,20 @@ function lsSet(v){
   document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
   lsSync();
 }
+function lsAskLimits(){const el=document.getElementById('lsAskMin');return {min:+el.min,max:+el.max};}
+function lsAskBounds(items){
+ const prices=items.filter(x=>x.ask>0 && x.hh>=lsHhBase()).map(x=>x.ask);
+ if(!prices.length)return;
+ const min=Math.floor(Math.min(...prices)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...prices)*2)/2);
+ const lo=document.getElementById('lsAskMin'),hi=document.getElementById('lsAskMax');
+ const oldMin=+lo.min,oldMax=+hi.max,oldLo=+lo.value,oldHi=+hi.value;
+ lo.min=hi.min=min;lo.max=hi.max=max;
+ lo.value=oldLo<=oldMin?min:Math.max(min,Math.min(max,oldLo));
+ hi.value=oldHi>=oldMax?max:Math.max(+lo.value,Math.min(max,oldHi));
+ lsSync();
+}
+function lsAskText(v){const {min,max}=lsAskLimits();return v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
+function lsAskMatch(x,v){const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
 function lsPyActive(v){ return v.p0 > LS_PY_MIN || v.p1 < LS_PY_MAX; }
 function lsPyText(v){
   if(!lsPyActive(v)) return '전체';
@@ -6028,7 +6079,10 @@ function lsSync(el){
   if(+r0.value > +r1.value){ if(el === r0) r1.value = r0.value; else r0.value = r1.value; }
   const p0 = document.getElementById('lsPyMin'), p1 = document.getElementById('lsPyMax');
   if(+p0.value > +p1.value){ if(el === p0) p1.value = p0.value; else p0.value = p1.value; }
+  const q0=document.getElementById('lsAskMin'),q1=document.getElementById('lsAskMax');
+  if(+q0.value>+q1.value){if(el===q0)q1.value=q0.value;else q0.value=q1.value;}
   const v = lsGet();
+  document.getElementById('lsAskTxt').textContent = lsAskText(v);
   document.getElementById('lsAgeTxt').textContent = lsAgeText(v);
   document.getElementById('lsHhTxt').textContent = lsHhText(v);
   document.getElementById('lsRateTxt').textContent = lsRateText(v);
@@ -6037,6 +6091,7 @@ function lsSync(el){
     const el = document.getElementById(id), pct = n => (n - min) / (max - min) * 100;
     el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', pct(hi) + '%');
   };
+  fill('lsAskDual',v.q0,v.q1,...Object.values(lsAskLimits()));
   fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
   fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
   fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
@@ -6045,7 +6100,7 @@ function lsSync(el){
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend') && lastData.mode === mode) search({silentScroll:true});
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend' || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
@@ -6073,9 +6128,10 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
+    lsAskBounds(all);
     const ls = lsGet();
     // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && lsAskMatch(x,ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
     const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
@@ -6150,20 +6206,19 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
 
 function listingTrendDate(date){
   const parts = String(date || '').split(/[.\-/]/).filter(Boolean);
-  return parts.length >= 3 ? `${parts[1].padStart(2, '0')}.${parts[2].padStart(2, '0')}` : String(date || '-');
+  return parts.length >= 3 ? `${Number(parts[1])}/${Number(parts[2])}` : String(date || '-');
 }
 function listingTrendHistoryHTML(points){
-  if(points.length <= 2) return '';
+  if(points.length <= 3) return '';
   const recent = points.slice(-12);
   return `<details class="listing-trend-history"><summary>가격 이력 ${recent.length}회 보기</summary>
     <ol>${recent.map(p=>`<li><span>${esc(listingTrendDate(p.date))}</span><span>${p.ask.toFixed(1)}억</span></li>`).join('')}</ol></details>`;
 }
 function listingTrendRowHTML(x, i, multiRegion){
-  const prev = x.points[x.points.length-2], now = x.points[x.points.length-1];
+  const recent = x.points.slice(-3);
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small>
-      <span class="listing-trend-change"><span class="price"><span class="date">${esc(listingTrendDate(prev.date))}</span> ${prev.ask.toFixed(1)}억</span>
-        <span class="arrow">→</span><span class="price now"><span class="date">${esc(listingTrendDate(now.date))}</span> ${now.ask.toFixed(1)}억</span></span></span>
+      <span class="listing-trend-change">${recent.map((p,j)=>`${j ? '<span class="arrow">→</span>' : ''}<span class="price${j===recent.length-1?' now':''}"><span class="date">${esc(listingTrendDate(p.date))}</span> ${p.ask.toFixed(1)}억</span>`).join('')}</span></span>
     <span class="val">▼${x.drop.toFixed(1)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     ${listingTrendHistoryHTML(x.points)}</div>`;
 }
@@ -6202,7 +6257,7 @@ function renderListingTrend(d){
     ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">직전 기록 대비 단지·전용면적별 최저 호가가 내려간 매물</div>
-      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 하락 금액 큰 순`)}
+      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · 하락 금액 큰 순`)}
       ${listingLinkLegend()}
       ${body}
     </div></div>
