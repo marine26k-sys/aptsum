@@ -28,8 +28,8 @@ test('subscriber state is closure-protected and URL restore waits for session ch
 });
 
 test('build-year is restored for shared URLs and browser history', () => {
-  assert.match(html, /p\.get\('by'\)[\s\S]*?getElementById\('buildYear'\)\.value = p\.get\('by'\)/);
-  assert.match(html, /getElementById\('buildYear'\)\.value = inp\.by \|\| ''/);
+  assert.match(html, /p\.get\('by'\)[\s\S]*?setBuildYearValue\(p\.get\('by'\)\)/);
+  assert.match(html, /setBuildYearValue\(inp\.by \|\| ''\)/);
 });
 
 test('complex comparison rejects named apartments without regions', () => {
