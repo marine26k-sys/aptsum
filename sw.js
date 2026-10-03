@@ -1,4 +1,4 @@
-// 아파트썸 실거래 분석 — 최소 서비스워커
+// 아파트썸 — 최소 서비스워커
 // 목적: 안드로이드 Chrome의 PWA 설치(installability) 조건 충족.
 // 실거래 데이터는 실시간성이 중요하므로 API(/.netlify/functions/*)는 캐싱하지 않고 항상 네트워크로 통과시킴.
 //
@@ -9,7 +9,7 @@
 // → "네트워크 우선, 오프라인일 때만 캐시로 대체" 전략으로 변경. 온라인 상태에서는 항상 최신 버전을 받고,
 // 인터넷이 끊겼을 때만 예비 화면으로 캐시를 사용한다.
 
-const CACHE_VERSION = 'aptsum-shell-v2'; // v1(캐시 우선 방식)은 폐기 — activate 단계에서 자동 삭제됨
+const CACHE_VERSION = 'aptsum-shell-v3'; // 시작화면 브랜드 갱신. 이전 앱 셸 캐시는 activate에서 삭제.
 const SHELL_FILES = [
   '/',
   '/manifest.json',

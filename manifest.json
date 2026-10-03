@@ -1,12 +1,12 @@
 {
-  "name": "아파트썸 실거래·실매물 분석",
+  "name": "아파트썸",
   "short_name": "아파트썸",
   "description": "국토부 실거래가와 네이버 실매물로 단지 시세·최저 호가 하락·평형 간 가격차를 분석합니다.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F0F7F5",
-  "theme_color": "#16766C",
+  "background_color": "#0F2B3D",
+  "theme_color": "#0F2B3D",
   "lang": "ko",
   "icons": [
     {
