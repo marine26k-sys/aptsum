@@ -18,11 +18,18 @@
   body{font-family:'Noto Sans KR',sans-serif;background:var(--slate-bg);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;word-break:keep-all;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   input,textarea{-webkit-user-select:text;user-select:text}
   .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
-  header{padding:16px 14px;text-align:center;background:var(--navy);border-radius:16px;margin:10px 0 14px;box-shadow:0 2px 14px rgba(15,43,61,.18);position:relative}
-  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:#fff;letter-spacing:-.5px}
-  header p{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px}
-  .back{position:absolute;top:50%;left:14px;transform:translateY(-50%);background:rgba(255,255,255,.14);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
-  .back:active{background:rgba(255,255,255,.28)}
+  header{padding:10px 54px 10px 50px;text-align:center;background:linear-gradient(120deg,#102D3F,#17394B);border:1px solid rgba(255,255,255,.12);border-radius:17px;margin:10px 0 14px;box-shadow:0 8px 22px rgba(15,43,61,.10);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:11px;color:#fff;text-align:left}
+  .brand-mark{flex:none;width:27px;height:27px;color:#83D1D2}
+  .brand-copy{display:flex;flex-direction:column;gap:1px}
+  .brand-name{font-weight:700;font-size:21px;line-height:1.35;letter-spacing:-.8px}
+  .brand-description{font-weight:500;font-size:10.5px;line-height:1.6;letter-spacing:.3px;color:#B7CBD5}
+  .header-share{position:absolute;top:50%;right:15px;transform:translateY(-50%);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.20);border-radius:10px;width:34px;height:34px;color:#D5E6EC;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+  .header-share:hover,.header-share:active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
+  .header-share:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
+  .header-share svg{width:17px;height:17px}
+  .analysis-back{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
+
 
   .line-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
   .line-tab{flex:none;text-align:center;padding:9px 13px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -80,8 +87,14 @@
 <body>
 <div class="wrap">
   <header>
-    <a class="back" href="./index.html" aria-label="메인으로">←</a>
-    <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg><span style="color:#00C2C2">아파트썸</span>&nbsp;교통 호재</span>
+    <a class="analysis-back" href="./index.html" aria-label="메인으로">←</a>
+    <div class="logo">
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
+      <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">교통 호재</span></div>
+    </div>
+    <button class="header-share" onclick="shareHeaderPage()" title="공유" aria-label="현재 분석 공유">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+    </button>
   </header>
 
   <div id="app"><div class="loading">불러오는 중…</div></div>
@@ -335,5 +348,12 @@ fetch('/api/visits?page=subway').catch(() => {}); // 방문자 카운터(페이�
 </script>
 <script src="/assets/book-clicks.js" data-page="subway" defer></script>
 <div style="text-align:center;font-size:11px;color:#94A3B8;padding:8px 0 28px"><a href="/privacy.html" style="color:#64748B">개인정보처리방침</a></div>
+<script>
+async function shareHeaderPage(){
+ const data={title:document.title,url:location.href};
+ if(navigator.share){try{await navigator.share(data);}catch(e){if(e.name!=='AbortError')console.error(e);}return;}
+ try{await navigator.clipboard.writeText(data.url);alert('링크를 복사했습니다.');}catch{prompt('공유 링크',data.url);}
+}
+</script>
 </body>
 </html>
