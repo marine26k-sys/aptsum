@@ -29,6 +29,8 @@
 <script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
+  html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
+  html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
   html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-size:24px;width:32px;text-align:center}
   html.analysis-page .analysis-back{display:block}
@@ -408,7 +410,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px 8px">
+  <div id="mainUtilityBar" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px 8px">
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <a href="https://aptsumbiz.netlify.app" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);border-radius:7px;padding:3px 8px;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(0,130,138,.25)">📩 비즈니스 문의</a>
       <button id="pwaInstallBtn" onclick="handlePwaInstallClick()">
@@ -1385,6 +1387,17 @@ function favRegionGo(code){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(mode==='region'||mode==='volume'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
+function restoreMainMenu(){
+  searchToken++;lastData=null;
+  document.documentElement.classList.remove('complex-analysis');
+  document.documentElement.classList.remove('analysis-page');document.documentElement.classList.add('analysis-menu');
+  document.querySelectorAll('.tabs .tab.on').forEach(el=>el.classList.remove('on'));
+  document.querySelector('.brand-description').textContent='실거래 · 실매물 분석';
+  document.getElementById('result').replaceChildren();document.getElementById('result').classList.remove('on');
+  document.getElementById('error').classList.remove('on');document.getElementById('loading').classList.remove('on');
+  document.getElementById('dataWarning').hidden=true;
+  document.getElementById('adArea').innerHTML=adBannerHTML();document.getElementById('staticAdArea').innerHTML=couponBannerHTML();fillAds();
+}
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
   // 복원된 화면을 도로 덮어쓰는 것을 막기 위해 토큰을 무효화한다.
@@ -1397,7 +1410,8 @@ function restoreView(vi){
     // ⚠️ 예전엔 여기서 tabC에 .on을 "추가"만 했는데, 그러면 직전에 보던 탭(예: 신고가)의 .on이 안 지워져서
     // 단지 분석과 그 탭이 동시에 선택된 것처럼 보였음(mode 변수도 그 탭 그대로라 검색 버튼·필터 UI가
     // 어긋난 상태로 남음 — 2026.09 운영자 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
-    setMode('complex', true);
+    const initialMode=new URLSearchParams(location.search).get('m');
+    if(initialMode)setMode(initialMode,true);else restoreMainMenu();
     return;
   }
   const inp = v.inputs;
@@ -1758,7 +1772,11 @@ async function initializeAptsumPage(){
   if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
   initFromURL();
 }
-window.addEventListener('pageshow', e=>{if(e.persisted) applyNativeRegionReturn();});
+window.addEventListener('pageshow', e=>{
+  if(!e.persisted)return;
+  if(applyNativeRegionReturn())return;
+  if(!new URLSearchParams(location.search).has('m'))restoreMainMenu();
+});
 let regionPickerPushed = false;
 let regionPickerBaseState = null;
 let regionPickerBaseURL = "";
@@ -2048,6 +2066,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
