@@ -2,9 +2,9 @@ name: 급지 대시보드 데이터 생성
 
 on:
   schedule:
-    # 매월 1일 06:00 UTC(= 15:00 KST). collect-trades.yml이 "매월 마지막 날 18:30 UTC"에 돌아
-    # data/analyze를 채운 뒤라, 그 결과를 재가공하는 이 배치는 그보다 11시간 반 뒤에 실행한다
-    # (collect-trades의 timeout이 300분이라 가장 오래 걸려도 끝나고 남는 시간).
+    # 매월 1일 06:00 UTC(= 15:00 KST). collect-trades.yml이 "매월 마지막 날 06:30 UTC"에 돌아
+    # data/analyze를 채운 뒤 그 결과를 재가공한다(예정 시각 기준 23시간 30분 뒤).
+    # 실거래 배치는 한국 시간 월말 15:30에 시작한다. 월 전환 후 생성하며 최신 main을 읽는다.
     # 2026.09 추가 — 그전까지는 workflow_dispatch 전용이라, 실거래가 새로 수집돼도 여기를 수동으로
     # 눌러주기 전까진 급지 분석 화면이 옛 데이터 그대로였음(운영자 지적).
     - cron: "0 6 1 * *"
@@ -29,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
