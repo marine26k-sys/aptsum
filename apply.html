@@ -40,6 +40,18 @@
   .product-option .product-mail.included{color:var(--teal-dark)}
   .product-summary{font-size:12px;line-height:1.7;color:var(--sub);margin:0 2px 16px}
   .product-summary b{color:var(--navy)}
+  .sample-card{padding:15px;border:1.5px solid var(--teal);border-radius:14px;background:var(--teal-light-soft);margin-bottom:14px}
+  .sample-badge{display:inline-block;font-size:10px;font-weight:800;color:var(--teal-dark);background:var(--teal-soft);padding:3px 8px;border-radius:6px;margin-bottom:7px}
+  .sample-card h2{font-size:16px;font-weight:900;color:var(--navy);line-height:1.45}
+  .sample-card p{font-size:12px;color:var(--sub);line-height:1.65;margin-top:6px}
+  .sample-features{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+  .sample-features span{padding:3px 7px;border:1px solid var(--teal-light);border-radius:6px;background:#fff;font-size:10.5px;font-weight:700;color:var(--teal-dark)}
+  .sample-preview{background:#fff;border:1px solid var(--teal-light);border-radius:8px;overflow:hidden;margin-top:10px}
+  .sample-preview table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+  .sample-preview th,.sample-preview td{padding:6px;border-bottom:1px solid var(--line)}
+  .sample-preview th{background:var(--teal-soft);color:var(--teal-dark)}
+  .sample-preview tr:last-child td{border-bottom:0}
+  .sample-card .btn{font-size:13px;padding:10px;margin-top:10px}
   .price{display:flex;align-items:baseline;gap:6px;margin:8px 0 10px}
   .price b{font-size:24px;font-weight:900;color:var(--navy)}
   .price span{font-size:12px;color:var(--sub);font-weight:700}
@@ -103,6 +115,15 @@
       <label class="product-option"><span><input type="radio" name="productChoice" value="selection">실매물 탭 + 선별 메일</span><strong>9,900원</strong><small>전 지역 네이버 실매물 탭 · 1개월</small><small class="product-detail">희망 지역·예산·평형에 맞춰 단지 선별</small><small class="product-mail included">개인 맞춤 선별 메일 1회 포함</small></label>
     </div>
     <p class="product-summary">두 상품의 <b>실매물 탭 이용 범위와 기간은 동일</b>합니다.<br>9,900원 상품에만 <b>개인 맞춤 단지 선별 메일 1회</b>가 추가됩니다.</p>
+    <section class="sample-card" aria-labelledby="sampleTitle">
+      <span class="sample-badge">9,900원 상품 · 개인 맞춤 선별 메일</span>
+      <h2 id="sampleTitle">어떤 파일을 받나요?</h2>
+      <p>메일로 받는 <b>HTML 선별 파일</b>을 직접 확인해 보세요.<br>희망 조건에 맞춘 단지·매물 정보를 표로 정리해 보내드립니다.</p>
+      <div class="sample-preview"><table><thead><tr><th>단지명</th><th>평형</th><th>매매가</th></tr></thead><tbody><tr><td>강남자곡아이파크</td><td>24평</td><td>21.0억</td></tr><tr><td>강남데시앙포레</td><td>24평</td><td>22.4억</td></tr><tr><td>래미안송파파인탑</td><td>26평</td><td>22.4억</td></tr></tbody></table></div>
+      <div class="sample-features"><span>조건별 필터</span><span>가격·변동률 정렬</span><span>네이버 매물 링크</span></div>
+      <a class="btn" href="/samples/selection-sample.html" target="_blank" rel="noopener">개인 맞춤 선별 파일 샘플 보기 ↗</a>
+      <p>강남·송파·서초 20평대 샘플 · 형식 확인용<br>실제 파일은 신청 조건에 맞춰 구성하며, 결제 후 3일 이내 메일로 발송합니다.</p>
+    </section>
     <div class="card gold">
       <div class="title" id="productTitle">네이버 실매물 이용권</div>
       <div class="price"><b id="priceTxt">4,900원</b><span id="daysTxt">· 30일 이용</span></div>
