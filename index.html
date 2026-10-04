@@ -4645,7 +4645,7 @@ function chartNearestIdx(e){
   return idx;
 }
 function chartHoverAt(e){
-  if(!curChart.monthly.length) return;
+  if(curChart.rangeMode || !curChart.monthly.length) return;
   const idx = chartNearestIdx(e);
   const m = curChart.monthly[idx];
   const line = document.getElementById('chartHoverLine');
@@ -4670,26 +4670,39 @@ function chartHoverEnd(e){
   hideTip();
 }
 function toggleChartRange(){
- if(!curChart)return;
- curChart.rangeMode=!curChart.rangeMode;curChart.rangeStart=null;curChart.rangeEnd=null;curChart.pinned=-1;hideTip();
- const btn=document.getElementById('chartRangeBtn');btn.setAttribute('aria-pressed',String(curChart.rangeMode));btn.style.background=curChart.rangeMode?'#00828A':'#fff';btn.style.color=curChart.rangeMode?'#fff':'#005B61';
- document.getElementById('chartRangeResult').textContent=curChart.rangeMode?'그래프에서 시작 월과 끝 월을 차례로 선택하세요.':'';
- document.getElementById('chartRangeShade').setAttribute('width',0);
+  curChart.rangeMode=!curChart.rangeMode;
+  curChart.pinned=-1;
+  hideTip();
+  const btn=document.getElementById('chartRangeBtn');
+  btn.setAttribute('aria-pressed',String(curChart.rangeMode));
+  btn.style.background=curChart.rangeMode?'#00828A':'#fff';
+  btn.style.color=curChart.rangeMode?'#fff':'#005B61';
+  document.getElementById('chartRangeControls').hidden=!curChart.rangeMode;
+  if(curChart.rangeMode) updateChartRange();
+  else {
+    document.getElementById('chartRangeResult').textContent='';
+    document.getElementById('chartRangeShade').setAttribute('width',0);
+  }
 }
-function selectChartRange(idx){
- if(curChart.rangeStart==null || curChart.rangeEnd!=null){curChart.rangeStart=idx;curChart.rangeEnd=null;document.getElementById('chartRangeResult').textContent=`${curChart.monthly[idx].ym} 선택 · 끝 월을 선택하세요.`;document.getElementById('chartRangeShade').setAttribute('width',0);return;}
- if(idx===curChart.rangeStart)return;
- curChart.rangeEnd=idx;
- const a=Math.min(idx,curChart.rangeStart),b=Math.max(idx,curChart.rangeStart),first=curChart.monthly[a],last=curChart.monthly[b],diff=last.avg-first.avg,pct=first.avg>0?diff/first.avg*100:0;
- const sign=diff>0?'+':diff<0?'−':'';
- document.getElementById('chartRangeResult').innerHTML=`<b>${esc(first.ym)} → ${esc(last.ym)}</b> · ${first.avg.toFixed(1)}억 → ${last.avg.toFixed(1)}억<br><strong style="color:${diff<0?'#8A6B28':'#006B62'}">${sign}${Math.abs(diff).toFixed(1)}억 (${sign}${Math.abs(pct).toFixed(1)}%)</strong> · 시작·끝 월평균 비교`;
- const shade=document.getElementById('chartRangeShade');shade.setAttribute('x',curChart.xs[a]);shade.setAttribute('width',curChart.xs[b]-curChart.xs[a]);
- hideTip();
+function updateChartRange(changed){
+  const start=document.getElementById('chartRangeStart'),end=document.getElementById('chartRangeEnd');
+  let a=Number(start.value),b=Number(end.value);
+  // 시작 월은 끝 월보다 앞서도록 선택 가능한 월을 제한한다.
+  if(a>=b){if(changed==='start') b=a+1;else a=b-1;}
+  start.value=String(a);end.value=String(b);
+  Array.from(start.options).forEach(o=>{o.disabled=Number(o.value)>=b;});
+  Array.from(end.options).forEach(o=>{o.disabled=Number(o.value)<=a;});
+  curChart.rangeStart=a;curChart.rangeEnd=b;
+  const first=curChart.monthly[a],last=curChart.monthly[b],diff=last.avg-first.avg,pct=first.avg>0?diff/first.avg*100:0;
+  const sign=diff>0?'+':diff<0?'−':'';
+  document.getElementById('chartRangeResult').innerHTML=`<b>${esc(first.ym)} → ${esc(last.ym)}</b> · ${first.avg.toFixed(1)}억 → ${last.avg.toFixed(1)}억<br><strong style="color:${diff<0?'#8A6B28':'#006B62'}">${sign}${Math.abs(diff).toFixed(1)}억 (${sign}${Math.abs(pct).toFixed(1)}%)</strong> · 시작·끝 월평균 비교`;
+  const shade=document.getElementById('chartRangeShade');shade.setAttribute('x',curChart.xs[a]);shade.setAttribute('width',curChart.xs[b]-curChart.xs[a]);
+  hideTip();
 }
 function chartClick(e){
   if(!curChart.monthly.length) return;
   const idx = chartNearestIdx(e);
-  if(curChart.rangeMode){selectChartRange(idx);return;}
+  if(curChart.rangeMode)return;
   if(curChart.pinned === idx){
     // 같은 점을 다시 탭 → 해당 월 개별 거래 상세
     showMonthDeals(curChart.monthly[idx].ym);
@@ -4761,7 +4774,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
   curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel };
 
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeControls" hidden style="margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-size:12px;font-weight:700;color:#005B61">시작 월<select id="chartRangeStart" aria-label="비교 시작 월" onchange="updateChartRange('start')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label><label style="font-size:12px;font-weight:700;color:#005B61">끝 월<select id="chartRangeEnd" aria-label="비교 끝 월" onchange="updateChartRange('end')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'selected':''} ${i===0?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label></div><div style="font-size:11px;color:#64748B;margin-top:5px">시작 월과 끝 월을 선택하세요. 그래프를 터치해도 비교 구간은 바뀌지 않습니다.</div></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
       return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>
       <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
