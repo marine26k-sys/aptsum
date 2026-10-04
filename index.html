@@ -269,12 +269,12 @@
   .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
   .listing-trend-row .val{white-space:nowrap;color:var(--blue);font-size:13px}
   .listing-trend-row .val small{display:inline;color:inherit;font-size:10px;font-weight:700}
-  .listing-trend-change{margin-left:30px;max-width:calc(100% - 30px);display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-text-size-adjust:100%;text-size-adjust:100%;gap:2px 4px;margin-top:4px;font-size:11px;font-weight:700;color:var(--ink);line-height:1.3}
-  .listing-trend-change .price{flex:none;white-space:nowrap;padding:2px 4px;border-radius:5px;background:var(--slate-bg)}
-  .listing-trend-change button.price{border:0;font:inherit;line-height:inherit;cursor:pointer}
+  .listing-trend-change{margin-left:30px;max-width:calc(100% - 30px);display:flex;align-items:center;flex-wrap:nowrap;container-type:inline-size;-webkit-text-size-adjust:100%;text-size-adjust:100%;gap:2px 4px;margin-top:4px;font-size:11px;font-weight:700;color:var(--ink);line-height:1.3}
+  .listing-trend-change .price{flex:none;white-space:nowrap;font-size:clamp(8px,3.1cqw,11px);padding:2px 3px;border-radius:5px;background:var(--slate-bg)}
+  .listing-trend-change button.price{border:0;font-family:inherit;font-weight:inherit;line-height:inherit;cursor:pointer}
   .listing-trend-change button.price:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .listing-trend-change .price.now{background:#EAF2FF;color:var(--blue)}
-  .listing-trend-change .date{color:var(--sub);font-size:9px;font-weight:500}
+  .listing-trend-change .date{color:var(--sub);font-size:clamp(7px,2.6cqw,9px);font-weight:500}
   .listing-trend-change .arrow{flex:none;color:var(--sub)}
   .listing-trend-history{margin:7px 0 0 30px;color:var(--sub);font-size:10px}
   .listing-trend-history summary{cursor:pointer;width:max-content;max-width:100%;padding:2px 0;font-weight:700}
