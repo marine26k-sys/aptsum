@@ -6235,21 +6235,30 @@ function listingTrendHistoryHTML(points, id){
   if(points.length <= 3) return '';
   const recent = points.slice(-12);
   return `<div class="listing-trend-history" id="${id}" hidden>
-    <ol>${recent.map(p=>`<li><span>${esc(listingTrendDate(p.date))}</span><span>${p.ask.toFixed(1)}억</span></li>`).join('')}</ol></div>`;
+    <ol>${recent.map((p,i)=>`<li><span>${esc(listingTrendDate(p.date))}</span><span>${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억</span></li>`).join('')}</ol></div>`;
+}
+function listingTrendPriceDigits(points, i){
+  const p=points[i];
+  return [points[i-1],points[i+1]].some(other=>other && other.ask!==p.ask && other.ask.toFixed(1)===p.ask.toFixed(1)) ? 2 : 1;
+}
+function listingTrendPrecision(points){
+  return points.some((p,i)=>i>0 && p.ask!==points[i-1].ask && p.ask.toFixed(1)===points[i-1].ask.toFixed(1)) ? 2 : 1;
 }
 function listingTrendRowHTML(x, i, multiRegion){
+  const precision=listingTrendPrecision(x.points.slice(-2));
   const recent = x.points.slice(-3), historyId=`listing-history-${i}`;
   const prices=recent.map((p,j)=>{
     const latest=j===recent.length-1, expandable=latest && x.points.length>3;
-    const label=`<span class="date">${esc(listingTrendDate(p.date))}</span> ${p.ask.toFixed(1)}억`;
+    const priceDigits=listingTrendPriceDigits(recent,j);
+    const label=`<span class="date">${esc(listingTrendDate(p.date))}</span> ${p.ask.toFixed(priceDigits)}억`;
     const chip=expandable
-      ? `<button type="button" class="price now" aria-expanded="false" aria-controls="${historyId}" aria-label="${esc(x.apt)} 최근 가격 ${p.ask.toFixed(1)}억, 가격 이력 펼치기" onclick="toggleListingTrendHistory(this)">${label} <span class="history-chevron" aria-hidden="true">▾</span></button>`
+      ? `<button type="button" class="price now" aria-expanded="false" aria-controls="${historyId}" aria-label="${esc(x.apt)} 최근 가격 ${p.ask.toFixed(priceDigits)}억, 가격 이력 펼치기" onclick="toggleListingTrendHistory(this)">${label} <span class="history-chevron" aria-hidden="true">▾</span></button>`
       : `<span class="price${latest?' now':''}">${label}</span>`;
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-    <span class="val">▼${x.drop.toFixed(1)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
+    <span class="val">▼${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }
