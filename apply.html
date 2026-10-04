@@ -31,6 +31,7 @@
   .product-options{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
   .product-option{display:block;background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:13px 11px;cursor:pointer;font-size:12px;line-height:1.6}
   .product-option:has(input:checked){border-color:var(--teal);background:#F2FBFB;box-shadow:0 3px 10px rgba(0,130,138,.08)}
+  .product-option > span:first-child{display:block;min-height:3.2em}
   .product-option input{accent-color:var(--teal);margin-right:4px}
   .product-option strong{display:block;color:var(--navy);font-size:21px;margin:7px 0 2px}
   .product-option small{display:block;color:var(--sub);font-size:10.5px}
@@ -115,7 +116,7 @@
           <div class="inc-sub">지역, 연차, 세대수, 단지명, 공급·전용면적, 매매가, 전고점, 변동률, 평당가, 동, 층, 방향, 용적률, 건폐율, 매물 URL</div>
         </li>
       </ul>
-      <div class="steps"><div>① 신청서<br>작성</div><div>② 결제</div><div>③ 접근 코드<br>바로 발급</div></div>
+      <div class="steps"><div>① 신청서<br>작성</div><div>② 결제</div><div>③ 접근 코드<br>바로 발급</div><div id="mailStep" hidden>④ 메일<br>3일 이내 발송</div></div>
     </div>
 
     <form class="card" id="applyForm" novalidate>
@@ -205,6 +206,7 @@ function renderProduct(){
   $('#priceTxt').textContent=won(p.price);
   $('#daysTxt').textContent=`· ${p.days}일 이용`;
   $('#mailBenefit').hidden=!p.includesMail;
+  $('#mailStep').hidden=!p.includesMail;
   $('#selectionFields').hidden=!p.includesMail;
   $('#emailField').hidden=!p.includesMail;
   for(const k of ['region','budget','size','movein','condition','email']) { $('#applyForm').elements[k].disabled=!p.includesMail; $('#applyForm').elements[k].required=p.includesMail; }
