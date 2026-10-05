@@ -94,6 +94,12 @@ export function createPersonalSession(secret, sub) {
   return { token: `${payload}.${sign(payload, personalKey(secret))}`, did, maxAge: Math.max(0, Math.floor((expiresAt - now) / 1000)) };
 }
 
+export function restorePersonalSession(secret, session) {
+  const {sub,did,expiresAt}=session;
+  const payload=Buffer.from(JSON.stringify({version:2,sid:sub.id,gen:sub.gen,did,expiresAt})).toString('base64url');
+  return {token:`${payload}.${sign(payload,personalKey(secret))}`,maxAge:Math.max(0,Math.floor((expiresAt-Date.now())/1000))};
+}
+
 function readPersonalToken(request, secret) {
   const token = cookieValue(request, COOKIE_NAME);
   if (!token) return null;
@@ -114,7 +120,7 @@ export async function getSubscriberSession(request, secret) {
   if (!data) return null;
   const sub = await getSubscriber(data.sid);
   if (!isActive(sub) || sub.gen !== data.gen) return null;
-  return { kind: "personal", sub, did: data.did };
+  return { kind: "personal", sub, did: data.did, expiresAt: data.expiresAt };
 }
 
 // 접속 기기 기록 — 로그인할 때와, 세션 확인 때 6시간에 한 번. 실패해도 로그인에는 영향 없음.

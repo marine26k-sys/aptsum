@@ -438,6 +438,7 @@
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
 <script>if(document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
+<script src="/assets/subscriber-session.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -623,7 +624,7 @@
       };
       const checkSession = async () => {
         try {
-          const r = await fetch('/api/subscriber', { credentials: 'same-origin', cache: 'no-store' });
+          const r = await aptsumSession.check();
           if (!r.ok) return false;
           const body = await r.json();
           scope = body.scope || "all";
@@ -654,13 +655,7 @@
           const code = prompt('비공개 탭 접근 코드를 입력하세요');
           if (code === null) return;
           try {
-            const r = await fetch('/api/subscriber', {
-              method: 'POST',
-              credentials: 'same-origin',
-              cache: 'no-store',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code }),
-            });
+            const r = await aptsumSession.login(code);
             const login = r.ok ? await r.json() : null;
             if (login?.subscribed === true) {
               scope = login.scope || 'all';
@@ -692,7 +687,7 @@
       const recheck = async () => {
         if (!verified) return false;
         try {
-          const r = await fetch('/api/subscriber', { credentials: 'same-origin', cache: 'no-store' });
+          const r = await aptsumSession.check();
           if (!r.ok) return true;
           const body = await r.json();
           if (body.subscribed === true) { scope = body.scope || "all"; return true; }

@@ -93,6 +93,7 @@
   .row button{flex:none;padding:0 14px;border:0;border-radius:10px;background:var(--navy);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
   [hidden]{display:none!important}
 </style>
+<script src="/assets/subscriber-session.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -383,7 +384,7 @@ $('#codeForm').addEventListener('submit', async (ev) => {
   const code = $('#codeInput').value.trim();
   if(!code) return;
   try{
-    const r = await fetch('/api/subscriber', { method:'POST', cache:'no-store', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ code }) });
+    const r = await aptsumSession.login(code);
     const d = await r.json().catch(() => ({}));
     if(r.ok && d.subscribed === true){ location.href = './index.html'; return; }
     msg.textContent = r.status === 401 ? `접근 코드가 맞지 않습니다.${Number.isInteger(d.remaining) ? ` (남은 시도 ${d.remaining}회)` : ''}`
