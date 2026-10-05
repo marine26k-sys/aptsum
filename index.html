@@ -34,7 +34,7 @@
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
   html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
   html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
-  html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
+  html.analysis-page #contactCard,html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);align-items:center;justify-content:center}
   .analysis-back:hover,.analysis-back:active{background:rgba(255,255,255,.22)}
   .analysis-back:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
@@ -788,6 +788,13 @@
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
+
+<div id="contactCard" style="margin:0 0 14px">
+  <a href="mailto:aptsum.biz@gmail.com" aria-label="이용 문의 메일 보내기: aptsum.biz@gmail.com" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--navy);text-decoration:none">
+    <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></span>
+    <span style="min-width:0"><span style="display:block;font-size:10px;font-weight:600;color:var(--sub);margin-bottom:3px">이용 문의</span><span style="display:block;font-size:11.25px;font-weight:700;overflow-wrap:anywhere">aptsum.biz@gmail.com</span></span>
+  </a>
+</div>
 
   <div class="search-box" id="searchBox">
     <div class="row2" id="singleRow">
@@ -6582,12 +6589,7 @@ function renderLongPeak(d){
     <button type="button" class="cl" onclick="closeFavDash()">닫기</button>
   </div>
 </div>
-<div style="max-width:460px;margin:20px auto 28px;padding:0 16px">
-  <a href="mailto:aptsum.biz@gmail.com" aria-label="이용 문의 메일 보내기: aptsum.biz@gmail.com" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--navy);text-decoration:none">
-    <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></span>
-    <span style="min-width:0"><span style="display:block;font-size:9.9px;font-weight:600;color:var(--sub);margin-bottom:3px">이용 문의</span><span style="display:block;font-size:9.9px;font-weight:700;overflow-wrap:anywhere">aptsum.biz@gmail.com</span></span>
-  </a>
-</div>
+
 <script src="/assets/book-clicks.js" data-page="index" defer></script>
 </body>
 </html>
