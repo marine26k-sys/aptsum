@@ -931,6 +931,12 @@
         <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option></select>
       </label>
     </div>
+    <div id="listingBudgetFavorites" class="ls-filters" style="display:none">
+      <div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:8px">조건 즐겨찾기</div>
+      <div style="display:flex;gap:6px"><input id="listingBudgetFavoriteName" type="text" maxlength="40" placeholder="조건 이름 (예: 서울 10억 이하)" aria-label="조건 즐겨찾기 이름" style="flex:1;min-width:0;font-size:12px"><button type="button" onclick="saveListingBudgetFavorite()" style="border:0;border-radius:8px;background:var(--teal);color:#fff;padding:8px 12px;font-weight:700;white-space:nowrap">저장</button></div>
+      <div id="listingBudgetFavoriteList" style="margin-top:8px"></div>
+      <div id="listingBudgetFavoriteMsg" role="status" style="font-size:11px;color:var(--teal-dark);margin-top:5px">이 브라우저에 저장됩니다.</div>
+    </div>
     <div id="listingBudgetNewFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingBudgetNewOnly" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">새로 등장한 가격만</label>
       <div style="font-size:11px;color:var(--sub);margin-top:5px">이전 기준일에 없던 단지·평형의 최저 호가입니다. 실제 신규 등록 매물을 뜻하지 않습니다.</div>
@@ -2211,6 +2217,8 @@ function setMode(m, fromRestore){
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingTrendFilters').style.display = m==='listingtrend' ? '' : 'none';
   document.getElementById('listingBudgetNewFilters').style.display = m==='listingbudget' ? '' : 'none';
+  document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
+  if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
@@ -6180,6 +6188,41 @@ function lsSync(el){
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
   if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend' || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
+}
+function getListingBudgetFavorites(){
+  try{const items=JSON.parse(localStorage.getItem('apc:budgetConditions')||'[]');return Array.isArray(items)?items.filter(x=>x && typeof x.name==='string' && x.conditions?.ls).slice(0,20):[];}catch(e){return [];}
+}
+function renderListingBudgetFavorites(){
+  const items=getListingBudgetFavorites();
+  document.getElementById('listingBudgetFavoriteList').innerHTML=items.length?items.map((x,i)=>`<div style="display:flex;gap:5px;margin-top:5px"><button type="button" onclick="loadListingBudgetFavorite(${i})" style="flex:1;min-width:0;text-align:left;overflow-wrap:anywhere;border:1px solid var(--teal-light);background:var(--teal-light-soft);color:var(--teal-dark);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700">★ ${esc(x.name)}</button><button type="button" onclick="deleteListingBudgetFavorite(${i})" aria-label="${esc(x.name)} 삭제" style="border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:8px;padding:7px 10px">×</button></div>`).join(''):'<div style="font-size:11px;color:var(--sub)">저장한 조건이 없습니다.</div>';
+}
+function writeListingBudgetFavorites(items){
+  try{localStorage.setItem('apc:budgetConditions',JSON.stringify(items));renderListingBudgetFavorites();return true;}catch(e){document.getElementById('listingBudgetFavoriteMsg').textContent='저장하지 못했습니다. 브라우저 저장 공간 설정을 확인해 주세요.';return false;}
+}
+function saveListingBudgetFavorite(){
+  const input=document.getElementById('listingBudgetFavoriteName'),msg=document.getElementById('listingBudgetFavoriteMsg');
+  const name=input.value.trim();
+  if(!name){msg.textContent='저장할 조건 이름을 입력해 주세요.';input.focus();return;}
+  const items=getListingBudgetFavorites(),inp=captureViewInputs();
+  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel};
+  const existing=items.findIndex(x=>x.name===name);
+  if(existing<0 && items.length>=20){msg.textContent='조건은 최대 20개까지 저장할 수 있습니다.';return;}
+  if(existing>=0)items[existing]={name,conditions};else items.push({name,conditions});
+  if(writeListingBudgetFavorites(items)){msg.textContent=`‘${name}’ 조건을 저장했습니다. 같은 이름으로 저장하면 갱신됩니다.`;input.value='';}
+}
+function loadListingBudgetFavorite(index){
+  const favorite=getListingBudgetFavorites()[index];if(!favorite)return;
+  const c=favorite.conditions;
+  sel.value=c.lawd||'';regionSel=(Array.isArray(c.regionSel)?c.regionSel:[]).slice(0,REGION_MAX);
+  saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();
+  lsSet(c.ls);document.getElementById('listingOccupancy').value=c.occupancy==='tenant'?'tenant':'available';
+  document.getElementById('listingBudgetNewOnly').checked=!!c.budgetNewOnly;listingBudgetSel=c.band||null;
+  document.getElementById('listingBudgetFavoriteMsg').textContent=`‘${favorite.name}’ 조건으로 조회합니다.`;
+  search({silentScroll:true});
+}
+function deleteListingBudgetFavorite(index){
+  const items=getListingBudgetFavorites();if(!items[index])return;items.splice(index,1);
+  if(writeListingBudgetFavorites(items))document.getElementById('listingBudgetFavoriteMsg').textContent='조건을 삭제했습니다.';
 }
 function listingBudgetNewKeys(current,snapshots){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
