@@ -47,6 +47,9 @@
   .sample-features{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
   .sample-features span{padding:3px 7px;border:1px solid var(--teal-light);border-radius:6px;background:#fff;font-size:10.5px;font-weight:700;color:var(--teal-dark)}
   .sample-card .btn{font-size:13px;padding:10px;margin-top:10px}
+  .payment-notice{padding:10px 12px;margin:0 0 14px;border:1px solid var(--teal-light);border-radius:10px;background:var(--teal-light-soft);color:var(--teal-dark);font-size:12px;line-height:1.65}
+  .payment-notice strong{display:block;font-size:13px;font-weight:900;margin-bottom:2px}
+  .payment-reminder{text-align:center;font-size:11.5px;color:var(--teal-dark);font-weight:700;margin-top:7px}
   .price{display:flex;align-items:baseline;gap:6px;margin:8px 0 10px}
   .price b{font-size:24px;font-weight:900;color:var(--navy)}
   .price span{font-size:12px;color:var(--sub);font-weight:700}
@@ -113,6 +116,7 @@
     <div class="card gold">
       <div class="title" id="productTitle">네이버 실매물 이용권</div>
       <div class="price"><b id="priceTxt">4,900원</b><span id="daysTxt">· 30일 이용</span></div>
+      <div class="payment-notice"><strong>정기결제가 아닌 1회 결제입니다</strong>자동 갱신이나 추가 자동 결제가 없으니 안심하고 이용하세요.</div>
       <ul class="inc">
         <li>
           <div class="inc-head">실매물 탭 이용 권한 (1개월)</div>
@@ -128,7 +132,7 @@
       <div class="steps"><div>① 신청서<br>작성</div><div>② 결제</div><div>③ 접근 코드<br>바로 발급</div><div id="mailStep" hidden>④ 메일<br>3일 이내 발송</div></div>
     </div>
 
-    <section class="sample-card" aria-labelledby="sampleTitle">
+    <section class="sample-card" id="selectionSample" aria-labelledby="sampleTitle" hidden>
       <span class="sample-badge">9,900원 상품 · 개인 맞춤 선별 메일</span>
       <h2 id="sampleTitle">어떤 파일을 받나요?</h2>
       <p>메일로 받는 <b>HTML 선별 파일</b>을 직접 확인해 보세요.<br>희망 조건에 맞춘 단지·매물 정보를 표로 정리해 보내드립니다.</p>
@@ -179,6 +183,7 @@
       </div>
 
       <button type="submit" class="btn" id="payBtn" disabled>상품 확인 중…</button>
+      <p class="payment-reminder">1회 결제 · 정기결제 및 자동 갱신 없음</p>
       <div class="msg" id="applyMsg" role="alert"></div>
       <div class="note">
         <div>결제창(PayApp)이 새 창으로 열립니다. 결제창 연락처에는 <b style="color:var(--navy)">위와 같은 휴대폰 번호</b>를 넣어 주세요.</div>
@@ -224,6 +229,7 @@ function renderProduct(){
   $('#priceTxt').textContent=won(p.price);
   $('#daysTxt').textContent=`· ${p.days}일 이용`;
   $('#mailBenefit').hidden=!p.includesMail;
+  $('#selectionSample').hidden=!p.includesMail;
   $('#mailStep').hidden=!p.includesMail;
   $('#selectionFields').hidden=!p.includesMail;
   $('#emailField').hidden=!p.includesMail;
