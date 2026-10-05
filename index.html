@@ -1098,6 +1098,7 @@ function captureViewInputs(){
     mN: document.getElementById('monthsN').value,
     fM: document.getElementById('floorMin').value,
     by: document.getElementById('buildYear').value,
+    sliderLimits:lsSavedLimits(),
     ls: lsGet(), // 실매물 탭 연식·세대수·변동률 슬라이더
     lg: listingGapBands(),
     occupancy: listingOccupancy(),
@@ -1487,6 +1488,7 @@ function restoreView(vi){
   document.getElementById('monthsN').value = inp.mN;
   document.getElementById('floorMin').value = inp.fM;
   setBuildYearValue(inp.by || '');
+  lsRestoreLimits(inp.sliderLimits);
   lsSet(inp.ls);
   document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
   listingTrendUploadId = inp.trendUpload || '';
@@ -1803,6 +1805,7 @@ function applyNativeRegionInputs(inp){
   sel.value=inp.lawd;
   for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
     if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=inp[key];}
+  lsRestoreLimits(inp.sliderLimits);
   lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
   regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
@@ -5856,7 +5859,7 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false)
   const rows=[];
   for(const item of current.items||[]){
     const points=byType.get(`${item.nid}|${item.ex}`)||[];
-    if(points.length<2 || item.hh<LISTING_MIN_HH || !lsPyMatch(item,ls))continue;
+    if(points.length<2 || item.hh<LISTING_MIN_HH || (ls && !lsPyMatch(item,ls)))continue;
     const prev=points[points.length-2],now=points[points.length-1];
     if(prev.uploadId!==previousUploadId || now.uploadId!==current.uploadId || now.ask!==item.ask)continue;
     const older=points[points.length-3];
@@ -5894,10 +5897,10 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       currentItems.push(...(chosen.items||[]));
       const idx=snapshots.findIndex(s=>s.uploadId===selectedId);
       historyCount=Math.max(historyCount,idx+1);
-      rows.push(...listingTrendSnapshotRows(chosen,snapshots,ls,t.lawd,t.name,continuous));
+      rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous));
     }
-    lsAskBounds(rows);Object.assign(ls,lsGet());
-    for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls))rows.splice(i,1);
+    lsDataBounds(rows,['py','ask']);Object.assign(ls,lsGet());
+    for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
     const d={found:true,mode:'listingtrend',asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
@@ -5963,7 +5966,7 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
-    lsAskBounds(all);
+    lsDataBounds(all,['ask']);
     const priceFilter=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
@@ -6085,6 +6088,33 @@ function lsSet(v){
   document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
   lsSync();
 }
+const LS_FACETS={
+  py:{ids:['lsPyMin','lsPyMax'],keys:['p0','p1'],step:1,value:x=>x.py},
+  ask:{ids:['lsAskMin','lsAskMax'],keys:['q0','q1'],step:0.5,value:x=>x.ask},
+  age:{ids:['lsAgeMin','lsAgeMax'],keys:['a0','a1'],step:1,value:x=>{const year=parseInt(x.built,10);return year?new Date().getFullYear()-year+1:NaN;}},
+  hh:{ids:['lsHhMin','lsHhMax'],keys:['h','h1'],step:1,value:x=>x.hh},
+  rate:{ids:['lsRateMin','lsRateMax'],keys:['r0','r1'],step:1,value:x=>x.peak>0?Math.round((x.ask-x.peak)/x.peak*100):NaN}
+};
+function lsFacetLimits(name){const el=document.getElementById(LS_FACETS[name].ids[0]);return {min:+el.min,max:+el.max};}
+function lsFacetActive(name,v){const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
+function lsFacetMatch(name,x,v){if(!lsFacetActive(name,v))return true;const f=LS_FACETS[name],n=f.value(x);return Number.isFinite(n)&&n>=v[f.keys[0]]&&n<=v[f.keys[1]];}
+function lsDataBounds(items,names=['py','ask','age','hh','rate']){
+  const v=lsGet(),active=Object.fromEntries(names.map(name=>[name,lsFacetActive(name,v)]));
+  // 각 범위는 자신의 필터를 제외하고 계산한다. 조건 해제 시 범위를 다시 넓힐 수 있다.
+  const bounds=names.map(name=>{const f=LS_FACETS[name];const values=items.filter(x=>names.every(other=>other===name||lsFacetMatch(other,x,v))).map(f.value).filter(n=>Number.isFinite(n)&&(name==='rate'||n>0));return {name,values};});
+  for(const {name,values} of bounds){const f=LS_FACETS[name],[lo,hi]=f.ids.map(id=>document.getElementById(id));
+    if(!values.length){lo.disabled=hi.disabled=true;continue;}
+    lo.disabled=hi.disabled=false;
+    const min=Math.floor(Math.min(...values)/f.step)*f.step,max=Math.ceil(Math.max(...values)/f.step)*f.step;
+    const oldLo=v[f.keys[0]],oldHi=v[f.keys[1]],oldBounds=lsFacetLimits(name);
+    lo.min=hi.min=min;lo.max=hi.max=max;lo.step=hi.step=f.step;
+    lo.value=!active[name]||oldLo<=oldBounds.min?min:Math.max(min,Math.min(max,oldLo));
+    hi.value=!active[name]||oldHi>=oldBounds.max?max:Math.max(+lo.value,Math.min(max,oldHi));
+  }
+  lsSync();
+}
+function lsSavedLimits(){return Object.fromEntries(Object.keys(LS_FACETS).map(name=>[name,lsFacetLimits(name)]));}
+function lsRestoreLimits(limits){if(!limits)return;for(const [name,b] of Object.entries(limits)){if(!LS_FACETS[name]||!Number.isFinite(b.min)||!Number.isFinite(b.max)||b.min>b.max)continue;for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=b.min;el.max=b.max;el.step=LS_FACETS[name].step;}}}
 function lsAskLimits(){const el=document.getElementById('lsAskMin');return {min:+el.min,max:+el.max};}
 function lsAskBounds(items){
  const prices=items.filter(x=>x.ask>0 && x.hh>=lsHhBase()).map(x=>x.ask);
@@ -6099,62 +6129,19 @@ function lsAskBounds(items){
 }
 function lsAskText(v){const {min,max}=lsAskLimits();return v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
-function lsPyActive(v){ return v.p0 > LS_PY_MIN || v.p1 < LS_PY_MAX; }
-function lsPyText(v){
-  if(!lsPyActive(v)) return '전체';
-  if(v.p0 <= LS_PY_MIN) return `${v.p1}평 이하`;
-  if(v.p1 >= LS_PY_MAX) return `${v.p0}평 이상`;
-  return v.p0 === v.p1 ? `${v.p0}평` : `${v.p0}~${v.p1}평`;
-}
-function lsRateActive(v){ return v.r0 > LS_RATE_MIN || v.r1 < LS_RATE_MAX; }
-function lsRateText(v){
-  const f = n => (n > 0 ? '+' : '') + n + '%';
-  if(!lsRateActive(v)) return '전체';
-  if(v.r0 <= LS_RATE_MIN) return `${f(v.r1)} 이하`;
-  if(v.r1 >= LS_RATE_MAX) return `${f(v.r0)} 이상`;
-  return v.r0 === v.r1 ? f(v.r0) : `${f(v.r0)} ~ ${f(v.r1)}`;
-}
-function lsRateMatch(x, v){
-  if(!lsRateActive(v)) return true;
-  if(!(x.peak > 0)) return false; // 전고점 없는 매물은 변동률 필터가 걸려 있을 때 제외
-  const r = Math.round((x.ask - x.peak) / x.peak * 100);
-  return !((v.r0 > LS_RATE_MIN && r < v.r0) || (v.r1 < LS_RATE_MAX && r > v.r1));
-}
-function lsActive(v){ return v.a0 > 1 || v.a1 < LS_AGE_MAX || lsHhActive(v) || lsPyActive(v); }
-function lsAgeText(v){
-  if(v.a0 <= 1 && v.a1 >= LS_AGE_MAX) return '전체';
-  if(v.a0 <= 1) return `${v.a1}년차 이하`;
-  if(v.a1 >= LS_AGE_MAX) return `${v.a0}년차 이상`;
-  return v.a0 === v.a1 ? `${v.a0}년차` : `${v.a0}~${v.a1}년차`;
-}
-function lsHhActive(v){return v.h>lsHhBase()||(v.h1??5000)<5000;}
-function lsHhText(v){
-  const max=v.h1??5000,f=n=>n.toLocaleString();
-  if(!lsHhActive(v))return '전체';
-  if(v.h<=lsHhBase())return `${f(max)}세대 이하`;
-  if(max>=5000)return `${f(v.h)}세대 이상`;
-  return v.h===max?`${f(v.h)}세대`:`${f(v.h)}~${f(max)}세대`;
-}
-function lsLabel(v, withRate){
-  return [lsAgeText(v) !== '전체' ? lsAgeText(v) : null, lsHhActive(v) ? lsHhText(v) : null,
-    withRate && lsRateActive(v) ? '변동률 ' + lsRateText(v) : null].filter(Boolean).join(' · ') || null;
-}
-function lsPyMatch(x, v){
-  if(!lsPyActive(v)) return true;
-  if(!(x.py > 0)) return false;
-  return (v.p0 <= LS_PY_MIN || x.py >= v.p0) && (v.p1 >= LS_PY_MAX || x.py <= v.p1);
-}
-function lsMatch(x, v){
-  if(lsHhActive(v)&&(!(x.hh>=v.h)||((v.h1??5000)<5000&&x.hh>v.h1)))return false;
-  if(v.a0 > 1 || v.a1 < LS_AGE_MAX){
-    const by = parseInt(x.built, 10);
-    if(!by) return false; // 준공연도 없는 매물은 연식 필터가 걸려 있을 때 제외
-    const age = new Date().getFullYear() - by + 1;
-    if(age < v.a0 || (v.a1 < LS_AGE_MAX && age > v.a1)) return false;
-  }
-  return lsPyMatch(x, v); // 평형 없는 매물은 평형 필터가 걸려 있을 때 제외
-}
-// 슬라이더를 움직이는 동안 — 최소가 최대를 넘지 않게 맞추고 라벨·채움 막대 갱신
+function lsPyActive(v){return lsFacetActive('py',v);}
+function lsPyText(v){return !lsPyActive(v)?'전체':v.p0===v.p1?`${v.p0}평`:`${v.p0}~${v.p1}평`;}
+function lsRateActive(v){return lsFacetActive('rate',v);}
+function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
+function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
+function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
+function lsAgeText(v){return !lsFacetActive('age',v)?'전체':v.a0===v.a1?`${v.a0}년차`:`${v.a0}~${v.a1}년차`;}
+function lsHhActive(v){return lsFacetActive('hh',v);}
+function lsHhText(v){return !lsHhActive(v)?'전체':v.h===v.h1?`${v.h.toLocaleString()}세대`:`${v.h.toLocaleString()}~${v.h1.toLocaleString()}세대`;}
+function lsLabel(v,withRate){return [lsFacetActive('age',v)?lsAgeText(v):null,lsHhActive(v)?lsHhText(v):null,withRate&&lsRateActive(v)?'변동률 '+lsRateText(v):null].filter(Boolean).join(' · ')||null;}
+function lsPyMatch(x,v){return lsFacetMatch('py',x,v);}
+function lsMatch(x,v){return ['age','hh','py'].every(name=>lsFacetMatch(name,x,v));}
+// 슬라이더를 움직이는 동안 최소·최대 역전을 방지한다.
 function lsSync(el){
   const h0=document.getElementById('lsHhMin'),h1=document.getElementById('lsHhMax');
   h1.min=h0.min;
@@ -6175,14 +6162,14 @@ function lsSync(el){
   document.getElementById('lsRateTxt').textContent = lsRateText(v);
   document.getElementById('lsPyTxt').textContent = lsPyText(v);
   const fill = (id, lo, hi, min, max) => {
-    const el = document.getElementById(id), pct = n => (n - min) / (max - min) * 100;
-    el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', pct(hi) + '%');
+    const el = document.getElementById(id), pct = n => max===min ? 0 : (n - min) / (max - min) * 100;
+    el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', (max===min?100:pct(hi)) + '%');
   };
   fill('lsAskDual',v.q0,v.q1,...Object.values(lsAskLimits()));
-  fill('lsAgeDual', v.a0, v.a1, 1, LS_AGE_MAX);
-  fill('lsRateDual', v.r0, v.r1, LS_RATE_MIN, LS_RATE_MAX);
-  fill('lsPyDual', v.p0, v.p1, LS_PY_MIN, LS_PY_MAX);
-  fill('lsHhDual',v.h,v.h1,+h0.min,5000);
+  fill('lsAgeDual', v.a0, v.a1, ...Object.values(lsFacetLimits('age')));
+  fill('lsRateDual', v.r0, v.r1, ...Object.values(lsFacetLimits('rate')));
+  fill('lsPyDual', v.p0, v.p1, ...Object.values(lsFacetLimits('py')));
+  fill('lsHhDual',v.h,v.h1,...Object.values(lsFacetLimits('hh')));
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
@@ -6204,7 +6191,7 @@ function saveListingBudgetFavorite(){
   const name=input.value.trim();
   if(!name){msg.textContent='저장할 조건 이름을 입력해 주세요.';input.focus();return;}
   const items=getListingBudgetFavorites(),inp=captureViewInputs();
-  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel,askLimits:lsAskLimits()};
+  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel,askLimits:lsAskLimits(),sliderLimits:lsSavedLimits()};
   const existing=items.findIndex(x=>x.name===name);
   if(existing<0 && items.length>=20){msg.textContent='조건은 최대 20개까지 저장할 수 있습니다.';return;}
   if(existing>=0)items[existing]={name,conditions};else items.push({name,conditions});
@@ -6216,6 +6203,7 @@ function loadListingBudgetFavorite(index){
   sel.value=c.lawd||'';regionSel=(Array.isArray(c.regionSel)?c.regionSel:[]).slice(0,REGION_MAX);
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();
   if(c.askLimits){for(const id of ['lsAskMin','lsAskMax']){const el=document.getElementById(id);el.min=c.askLimits.min;el.max=c.askLimits.max;}}
+  lsRestoreLimits(c.sliderLimits);
   lsSet(c.ls);document.getElementById('listingOccupancy').value=c.occupancy==='tenant'?'tenant':'available';
   document.getElementById('listingBudgetNewOnly').checked=!!c.budgetNewOnly;listingBudgetSel=c.band||null;
   document.getElementById('listingBudgetFavoriteMsg').textContent=`‘${favorite.name}’ 조건으로 조회합니다.`;
@@ -6264,11 +6252,10 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
-    const ls = lsGet();
-    // 매매가 자체를 제외한 조회 조건부터 적용해 슬라이더 범위를 계산한다.
-    const eligible = all.filter(x => (!newOnly || x.newlyAppeared) && x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || (x.urgent && x.peak>0 && x.hh>=LISTING_MIN_HH && x.ask>=URGENT_MIN_ASK && Math.round((x.ask-x.peak)/x.peak*100)<0)) && (tabMode !== 'listingbudget' || (lsRateMatch(x, ls) && x.hh>=LISTING_BUDGET_MIN_HH && !(x.peak>0 && Math.round((x.ask-x.peak)/x.peak*100)>=31))));
-    lsAskBounds(eligible);Object.assign(ls,lsGet());
-    const items = eligible.filter(x => lsAskMatch(x,ls));
+    const ls=lsGet();
+    const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
+    lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
+    const items=cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
