@@ -6321,7 +6321,7 @@ function listingTrendRowHTML(x, i, multiRegion){
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · 최근 3년 전고점 ${x.peak.toFixed(1)}억`:""}</small></span>
+    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · 최근 3년 최고가 ${x.peak.toFixed(1)}억`:""}</small></span>
     <span class="val">▼${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
