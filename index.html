@@ -34,7 +34,7 @@
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
   html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
   html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
-  html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
+  html.analysis-page #contactCard,html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);align-items:center;justify-content:center}
   .analysis-back:hover,.analysis-back:active{background:rgba(255,255,255,.22)}
   .analysis-back:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
@@ -437,14 +437,14 @@
   @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
-<script>if(document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
+<script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 <script src="/assets/subscriber-session.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
   <div id="mainUtilityBar" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px 8px">
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-      <a href="https://aptsumbiz.netlify.app" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);border-radius:7px;padding:3px 8px;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(0,130,138,.25)">📩 비즈니스 문의</a>
+      <a href="https://aptsumbiz.netlify.app" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);border-radius:7px;padding:3px 8px;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(0,130,138,.25)">📩 비즈니스</a>
       <button id="pwaInstallBtn" onclick="handlePwaInstallClick()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
         홈 화면에 추가
@@ -789,6 +789,13 @@
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
   </div>
 
+<div id="contactCard" style="margin:0 0 14px">
+  <a href="mailto:aptsum.biz@gmail.com" aria-label="이용 문의 메일 보내기: aptsum.biz@gmail.com" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--navy);text-decoration:none">
+    <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></span>
+    <span style="min-width:0"><span style="display:block;font-size:10px;font-weight:600;color:var(--sub);margin-bottom:3px">이용 문의</span><span style="display:block;font-size:11.25px;font-weight:700;overflow-wrap:anywhere">aptsum.biz@gmail.com</span></span>
+  </a>
+</div>
+
   <div class="search-box" id="searchBox">
     <div class="row2" id="singleRow">
       <select id="lawd" style="flex:1;min-width:0"></select>
@@ -949,12 +956,13 @@
       <div style="font-size:11px;color:var(--sub);margin-top:5px">이전 기준일에 없던 단지·평형의 최저 호가입니다. 실제 신규 등록 매물을 뜻하지 않습니다.</div>
     </div>
     <div id="listingTrendFilters" class="ls-filters" style="display:none">
-      <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">조회 기록
-        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="flex:1;min-width:0" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
-      </label>
+      <details id="listingTrendHistoryPanel">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--teal-dark)">조회 기록</summary>
+        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="width:100%;min-width:0;margin-top:8px" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
       <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingTrendContinuous" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">연속 하락만</label>
       <div style="font-size:11px;color:var(--sub);margin-top:4px">최근 3개 기록에서 두 번 연속 하락한 단지·평형만 표시합니다.</div>
       <div style="font-size:11px;color:var(--sub);margin-top:6px">선택한 기준일까지 최근 3개 기록의 첫 금액과 마지막 금액을 비교합니다.</div>
+      </details>
     </div>
     <div id="listingGapFilters" class="ls-filters" style="display:none">
       <div style="display:flex;gap:8px;margin-bottom:6px">
@@ -2260,7 +2268,7 @@ function setMode(m, fromRestore){
   // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
   document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
-  document.getElementById('btn').textContent = m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
+  document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
     else document.querySelectorAll('.cmp-row').forEach(r=>{
@@ -2809,6 +2817,7 @@ function buildAgeLabel(build){
 // 구글 애드센스 디스플레이 광고 — 쿠팡 배너 바로 위에 고정(2026.09, 운영자 요청). AdSense가 승인 검토 중이거나
 // 이 슬롯에 채울 광고가 없으면 그 자리는 그냥 비어 있다(레이아웃은 안 깨짐).
 function adBannerHTML(){
+  if(!ADSENSE_ENABLED)return '';
   if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8856204814619199" data-ad-slot="4469337358" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
 }
@@ -2832,7 +2841,10 @@ function fillAds(){
     setTimeout(() => { if(!ins.dataset.adStatus){ collapse(); mo.disconnect(); } }, 4000);
   });
 }
+// 운영자 요청: 쿠팡파트너스 숨김. 숨기기 취소 시 true로 변경한다.
+const COUPANG_PARTNERS_VISIBLE = false;
 function couponBannerHTML(){
+  if(!COUPANG_PARTNERS_VISIBLE)return '';
   if(!document.documentElement.classList.contains('analysis-menu'))return '';
   return `<div class="coupang-ad">
     <div class="coupang-ad-title">아파트썸 추천 부동산 서적</div>
@@ -5867,6 +5879,7 @@ function syncListingTrendUpload(choices){
     el.insertAdjacentHTML('beforeend',`<option value="${esc(listingTrendUploadId)}">선택한 기록 · 조회 범위 밖</option>`);
   }
   el.value=listingTrendUploadId;
+
 }
 function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
@@ -6576,7 +6589,7 @@ function renderLongPeak(d){
     <button type="button" class="cl" onclick="closeFavDash()">닫기</button>
   </div>
 </div>
+
 <script src="/assets/book-clicks.js" data-page="index" defer></script>
-<div style="text-align:center;font-size:11px;color:#94A3B8;padding:8px 0 28px"><a href="/privacy.html" style="color:#64748B">개인정보처리방침</a></div>
 </body>
 </html>
