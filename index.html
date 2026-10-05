@@ -949,9 +949,10 @@
       <div style="font-size:11px;color:var(--sub);margin-top:5px">이전 기준일에 없던 단지·평형의 최저 호가입니다. 실제 신규 등록 매물을 뜻하지 않습니다.</div>
     </div>
     <div id="listingTrendFilters" class="ls-filters" style="display:none">
-      <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">조회 기록
-        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="flex:1;min-width:0" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
-      </label>
+      <details id="listingTrendHistoryPanel">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--teal-dark)">조회 기록</summary>
+        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="width:100%;min-width:0;margin-top:8px" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
+      </details>
       <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingTrendContinuous" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">연속 하락만</label>
       <div style="font-size:11px;color:var(--sub);margin-top:4px">최근 3개 기록에서 두 번 연속 하락한 단지·평형만 표시합니다.</div>
       <div style="font-size:11px;color:var(--sub);margin-top:6px">선택한 기준일까지 최근 3개 기록의 첫 금액과 마지막 금액을 비교합니다.</div>
