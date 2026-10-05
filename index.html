@@ -6435,8 +6435,8 @@ function renderListingBudget(d){
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
-  const cur = LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
-  const list = cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi).sort((a,b)=> a.ask - b.ask || b.peak - a.peak) : [];
+  const cur = d.budgetNewOnly ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const list = (d.budgetNewOnly ? d.rows.slice() : cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : []).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
   const multiRegion = regionMulti(list);
   const chips = bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
@@ -6454,7 +6454,7 @@ function renderListingBudget(d){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)${d.budgetNewOnly ? ' · 새로 등장한 가격만' : ''}</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
+      ${d.budgetNewOnly ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${body}
