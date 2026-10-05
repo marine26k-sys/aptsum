@@ -44,14 +44,19 @@ test('browser reopens without cookie and restores once for concurrent checks',as
  await client.login('PRIVATE-CODE');assert.equal([...storage.values()].includes('PRIVATE-CODE'),false);
  cookie=false;
  const rs=await Promise.all([client.check(),client.check()]);
- assert.equal(restores,1);assert.equal((await rs[0].clone().json()).subscribed,true);
+ assert.equal(restores,1);assert.equal((await rs[0].json()).subscribed,true);assert.equal((await rs[1].json()).subscribed,true);
 });
 test('browser keeps recovery during server errors and clears it when rejected',async()=>{
  let fail=true;
  const {client,storage}=browser(async(_url,options)=>options.method==='POST'?Response.json({error:'restore_expired'},{status:fail?503:401}):Response.json({subscribed:false}),'saved');
- await client.check();assert.equal(storage.size,1);fail=false;await client.check();assert.equal(storage.size,0);
+ await client.check();assert.equal(storage.size,1);fail=false;const rejected=await client.check();assert.equal(storage.size,0);assert.equal(rejected.status,200);assert.equal((await rejected.json()).subscribed,false);
 });
 test('valid existing cookie registers recovery without requiring code entry',async()=>{
  const {client,storage}=browser(async()=>Response.json({subscribed:true,recovery:'migrated'}));
  await client.check();assert.equal(storage.get('aptsum:subscriber-recovery:v1'),'migrated');
+});
+
+test('shared code login clears credentials from a previous personal account',async()=>{
+ const {client,storage}=browser(async()=>Response.json({subscribed:true}),'previous-personal');
+ await client.login('SHARED');assert.equal(storage.size,0);
 });
