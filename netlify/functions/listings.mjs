@@ -73,6 +73,13 @@ export function cleanItem(x) {
   };
 }
 
+export function snapshotForHistory(data, occupancy, details = false) {
+  if (!data) return null;
+  const items = (data.items || []).filter(i => (i.occupancy || "available") === occupancy);
+  return { asOf:data.asOf, uploadId:data.uploadId,
+    items:details ? items : items.map(i => ({nid:i.nid, ex:i.ex, ask:i.ask})) };
+}
+
 export default async (request) => {
   const secret = process.env.SUBSCRIBER_SESSION_SECRET;
   if (!secret) return json({ error: "auth_not_configured" }, 503);
@@ -96,10 +103,11 @@ export default async (request) => {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
       // 기준일별 마지막 업로드에서 최신 12일분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
       const recent = dailyHistoryIndex(index).slice(-12);
+      const recentIds = new Set(recent.map(x => x.uploadId));
+      const detailIds = new Set(index.filter(x => recentIds.has(x.uploadId)).slice(-3).map(x => x.uploadId));
       const snapshots = await Promise.all(recent.map(async x => {
         const data = await store.get(historyKey(lawd, x.uploadId), { type: "json", consistency: "strong" });
-        return data ? { asOf: data.asOf, uploadId: data.uploadId,
-          items: selectedItems(data.items).map(i => ({ nid:i.nid, ex:i.ex, ask:i.ask })) } : null;
+        return snapshotForHistory(data, occupancy, q.get("detail") === "1" && detailIds.has(x.uploadId));
       }));
       return json({ snapshots: snapshots.filter(Boolean) });
     }

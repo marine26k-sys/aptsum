@@ -8,9 +8,22 @@ test('price-band current average includes 90 days while other rise tabs keep 30 
  assert.equal(ctx.analyzePriceBandRise(rows,[],12,16,'current').rows[0].recentAvg,16);
  assert.equal(ctx.analyzeLongTermRise(rows,[],12,true).rows[0].recentAvg,10);
 });
-test('chart range selection sorts reverse endpoints and calculates amount and rate',()=>{
- const nodes={chartRangeResult:{},chartRangeShade:{setAttribute(){}}};const ctx=vm.createContext({document:{getElementById:id=>nodes[id]},curChart:{monthly:[{ym:'24.02',avg:8},{ym:'26.08',avg:10}],xs:[10,100]},esc:x=>x,hideTip(){}});
- vm.runInContext(html.slice(html.indexOf('function selectChartRange('),html.indexOf('function chartClick(')),ctx);ctx.selectChartRange(1);ctx.selectChartRange(0);assert.match(nodes.chartRangeResult.innerHTML,/\+2\.0억/);assert.match(nodes.chartRangeResult.innerHTML,/\+25\.0%/);
+test('chart month selectors calculate amount and rate and constrain endpoint order',()=>{
+ const options=Array.from({length:4},(_,i)=>({value:String(i),disabled:false}));
+ const shade={attrs:{},setAttribute(k,v){this.attrs[k]=v;}};
+ const nodes={chartRangeStart:{value:'2',options:structuredClone(options)},chartRangeEnd:{value:'3',options:structuredClone(options)},chartRangeResult:{},chartRangeShade:shade};
+ const ctx=vm.createContext({document:{getElementById:id=>nodes[id]},curChart:{monthly:[{ym:'24.02',avg:6},{ym:'24.03',avg:7},{ym:'24.04',avg:8},{ym:'24.05',avg:10}],xs:[10,40,70,100]},esc:x=>x,hideTip(){}});
+ vm.runInContext(html.slice(html.indexOf('function updateChartRange('),html.indexOf('function chartClick(')),ctx);
+ ctx.updateChartRange('start');
+ assert.match(nodes.chartRangeResult.innerHTML,/24.04 → 24.05/);
+ assert.match(nodes.chartRangeResult.innerHTML,/\+2\.0억/);
+ assert.match(nodes.chartRangeResult.innerHTML,/\+25\.0%/);
+ assert.equal(shade.attrs.x,70);assert.equal(shade.attrs.width,30);
+ assert.equal(nodes.chartRangeStart.options[3].disabled,true);
+ assert.equal(nodes.chartRangeEnd.options[2].disabled,true);
+ nodes.chartRangeEnd.value='2';ctx.updateChartRange('end');
+ assert.equal(nodes.chartRangeStart.value,'1');assert.equal(nodes.chartRangeEnd.value,'2');
+ assert.match(nodes.chartRangeResult.innerHTML,/24.03 → 24.04/);
 });
 test('price slider bounds adjust to region and include exact upper boundary',()=>{
  const nodes={lsAskMin:{min:0,max:50,value:0},lsAskMax:{min:0,max:50,value:49}};const ctx=vm.createContext({document:{getElementById:id=>nodes[id]},lsHhBase:()=>300,lsSync(){}});
