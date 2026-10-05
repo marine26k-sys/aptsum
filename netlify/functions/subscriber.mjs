@@ -1,9 +1,10 @@
+import { createRecovery, readRecovery } from "../../shared/subscriber-recovery.mjs";
 import {
   sameValue, createSession, subscriberCookie as sessionCookie,
 } from "../../shared/sessions.mjs";
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import {
-  findByCode, isActive, createPersonalSession, getSubscriberSession, touchDevice,
+  findByCode, isActive, createPersonalSession, getSubscriberSession, touchDevice, restorePersonalSession,
 } from "../../shared/subscribers.mjs";
 
 // 비공개 탭 로그인. 코드는 두 종류 — 공용 비번(SUBSCRIBER_CODE, 설정돼 있을 때만)과
@@ -35,7 +36,7 @@ export default async (request, context) => {
   if (request.method === "GET") {
     const session = await getSubscriberSession(request, sessionSecret);
     if (session?.kind === "personal") await touchDevice(session.sub.id, session.did);
-    return response({ subscribed: !!session, scope: session?.sub?.scope || "all" });
+    return response({ subscribed: !!session, scope: session?.sub?.scope || "all", recovery: createRecovery(sessionSecret, session) });
   }
 
   if (request.method !== "POST") {
@@ -50,6 +51,15 @@ export default async (request, context) => {
     payload = await request.json();
   } catch {
     return response({ error: "invalid_request" }, { status: 400 });
+  }
+
+  if (payload?.action === "restore") {
+    const session = await readRecovery(payload.recovery, sessionSecret);
+    if (!session) return response({ subscribed: false, error: "restore_expired" }, { status: 401 });
+    // 최초 로그인 만료일과 기기 ID를 유지한다. 복원으로 이용 기간을 연장하지 않는다.
+    const {token,maxAge} = restorePersonalSession(sessionSecret, session);
+    await touchDevice(session.sub.id, session.did);
+    return response({ subscribed: true, scope: session.sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
   }
 
   // 로그인 시도 제한 — 5번 틀리면 30분 잠금(shared/login-throttle.mjs)
@@ -70,7 +80,8 @@ export default async (request, context) => {
       await throttle.success();
       const { token, did, maxAge } = createPersonalSession(sessionSecret, sub);
       await touchDevice(sub.id, did, true);
-      return response({ subscribed: true, scope: sub.scope || "all" }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
+      const session = {kind:"personal",sub,did,expiresAt:JSON.parse(Buffer.from(token.split(".")[0],"base64url").toString()).expiresAt};
+      return response({ subscribed: true, scope: sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
     }
   }
 
