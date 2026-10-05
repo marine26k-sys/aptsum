@@ -45,7 +45,7 @@ def main():
     for lawd in sorted({key[0] for key in complexes}):
         grouped={};legacy={}
         for kind in ('analyze','presale','rent'):
-            loaded=matching.collect_sigungu_trades(root/'data'/kind/lawd, '202410', presale=kind=='presale', legacy_out=legacy)
+            loaded=matching.collect_sigungu_trades(root/'data'/kind/lawd, '202311', presale=kind=='presale', legacy_out=legacy)
             for key, values in loaded.items(): grouped.setdefault(key,[]).extend(values)
         for (_dong,_name),values in grouped.items():
             for value in values:raw_dongs[(lawd,value['apt'])].add(value.get('umd',''))
