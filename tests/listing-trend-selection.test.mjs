@@ -63,3 +63,13 @@ test('continuous filter requires three consecutive records with two strict decli
  const h=snapshots.map((s,i)=>i===0?{...s,items:[]}:s);
  assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',true).length,0);
 });
+
+test('newly appearing price filter compares identities rather than price changes',()=>{
+ const c=vm.createContext({Set});
+ vm.runInContext(html.slice(html.indexOf('function listingBudgetNewKeys('),html.indexOf('async function searchListingTab(')),c);
+ const previous={uploadId:'old',items:[item(4.5)]};
+ const current={uploadId:'now',items:[item(4.2),item(6,{nid:'b'}),item(7,{ex:110})]};
+ assert.deepEqual([...c.listingBudgetNewKeys(current,[previous,current])],['b|84','a|110']);
+ assert.equal(c.listingBudgetNewKeys(current,[current]),null);
+ assert.equal(c.listingBudgetNewKeys(current,[previous]),null);
+});

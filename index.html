@@ -931,6 +931,10 @@
         <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option></select>
       </label>
     </div>
+    <div id="listingBudgetNewFilters" class="ls-filters" style="display:none">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingBudgetNewOnly" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">새로 등장한 가격만</label>
+      <div style="font-size:11px;color:var(--sub);margin-top:5px">이전 기준일에 없던 단지·평형의 최저 호가입니다. 실제 신규 등록 매물을 뜻하지 않습니다.</div>
+    </div>
     <div id="listingTrendFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">조회 기록
         <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="flex:1;min-width:0" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
@@ -1093,6 +1097,7 @@ function captureViewInputs(){
     occupancy: listingOccupancy(),
     trendUpload: listingTrendUploadId,
     trendContinuous: document.getElementById('listingTrendContinuous').checked,
+    budgetNewOnly: document.getElementById('listingBudgetNewOnly').checked,
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
@@ -1115,6 +1120,7 @@ function buildShareURL(inp){
   if(inp.by) p.set('by', inp.by);
   if(inp.mode==='listingtrend' && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if(inp.mode==='listingtrend' && inp.trendContinuous) p.set('ltc','1');
+  if(inp.mode==='listingbudget' && inp.budgetNewOnly) p.set('lbn','1');
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
   if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
@@ -1173,6 +1179,7 @@ async function initFromURL(){
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   listingTrendUploadId = requestedMode==='listingtrend' ? (p.get('ltu')||'') : '';
   document.getElementById('listingTrendContinuous').checked=requestedMode==='listingtrend' && p.get('ltc')==='1';
+  document.getElementById('listingBudgetNewOnly').checked=requestedMode==='listingbudget' && p.get('lbn')==='1';
   if(requestedMode==='listinggap'){
     const [small,large] = (p.get('lg')||'20-30').split('-').map(Number);
     listingGapSet(small,large);
@@ -1478,6 +1485,7 @@ function restoreView(vi){
   document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
   listingTrendUploadId = inp.trendUpload || '';
   document.getElementById('listingTrendContinuous').checked=!!inp.trendContinuous;
+  document.getElementById('listingBudgetNewOnly').checked=!!inp.budgetNewOnly;
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
   regionSel = (inp.regionSel || []).slice();
@@ -2202,6 +2210,7 @@ function setMode(m, fromRestore){
   document.getElementById('lsHhRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingTrendFilters').style.display = m==='listingtrend' ? '' : 'none';
+  document.getElementById('listingBudgetNewFilters').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
@@ -6172,6 +6181,12 @@ function lsSync(el){
 function lsApply(){
   if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend' || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
+function listingBudgetNewKeys(current,snapshots){
+  const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
+  if(idx<1)return null;
+  const previous=new Set((snapshots[idx-1].items||[]).map(x=>`${x.nid}|${x.ex}`));
+  return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
+}
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
@@ -6179,13 +6194,20 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
-    const failed = [], all = [];
+    const failed = [], all = [], uncomparable=[];
+    const newOnly=tabMode==='listingbudget' && document.getElementById('listingBudgetNewOnly').checked;
     let asOf = null;
     await Promise.all(targets.map(async t=>{
       try{
         const d = await fetchListings(t.lawd);
         if(d.asOf && (!asOf || d.asOf > asOf)) asOf = d.asOf;
-        for(const x of d.items||[]) all.push({ ...x, lawd:t.lawd, gu:t.name });
+        let newKeys=null;
+        if(newOnly){
+          const history=await fetchListingHistory(t.lawd);
+          newKeys=listingBudgetNewKeys(d,history.snapshots||[]);
+          if(!newKeys)uncomparable.push(t.name);
+        }
+        for(const x of d.items||[]) all.push({ ...x, lawd:t.lawd, gu:t.name, newlyAppeared:!!newKeys?.has(`${x.nid}|${x.ex}`) });
       }catch(e){
         if(e.auth) throw e;
         failed.push(t.name);
@@ -6201,8 +6223,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     lsAskBounds(all);
     const ls = lsGet();
     // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = all.filter(x => x.ask > 0 && lsMatch(x, ls) && lsAskMatch(x,ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
-    const base = { found:true, mode:tabMode, asOf, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
+    const items = all.filter(x => (!newOnly || x.newlyAppeared) && x.ask > 0 && lsMatch(x, ls) && lsAskMatch(x,ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
@@ -6404,6 +6426,7 @@ function setListingBudgetBand(v){
   if(lastData && lastData.mode==='listingbudget') renderListingBudget(lastData);
 }
 function renderListingBudget(d){
+  document.getElementById('listingBudgetNewOnly').checked=!!d.budgetNewOnly;
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
   const bands = LISTING_BUDGET_BANDS.filter(b => counts[b.v]);
@@ -6429,7 +6452,8 @@ function renderListingBudget(d){
   <div class="card">
     ${listingHeaderHTML(d, '금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
+      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)${d.budgetNewOnly ? ' · 새로 등장한 가격만' : ''}</div>
+      ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
