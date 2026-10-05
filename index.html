@@ -349,6 +349,15 @@
   #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
   .ls-filters{margin:8px 0 2px;padding:8px 12px 4px;border:1px solid var(--line);border-radius:12px;background:#fff}
   .ls-row{margin:2px 0 6px}
+  #lsFilters{padding:8px 10px}
+  #lsFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
+  #lsFilters .ls-hd{flex:0 0 100px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
+  #lsFilters .ls-dual{flex:1;min-width:0}
+  #listingBudgetFavorites{padding:8px 10px}
+  #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
+  #listingBudgetFavorites[open] summary{margin-bottom:8px}
+  #listingBudgetFavoriteName{border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+  #listingOccupancyFilters,#listingBudgetNewFilters{padding:7px 10px;margin-top:6px}
   .ls-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--sub)}
   .ls-hd b{color:var(--teal-dark);font-size:13px}
   .ls-filters input[type=range]{width:100%;margin:6px 0 2px;accent-color:var(--teal)}
@@ -934,12 +943,12 @@
         <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option></select>
       </label>
     </div>
-    <div id="listingBudgetFavorites" class="ls-filters" style="display:none">
-      <div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:8px">조건 즐겨찾기</div>
+    <details id="listingBudgetFavorites" class="ls-filters" style="display:none">
+      <summary>★ 조건 즐겨찾기</summary>
       <div style="display:flex;gap:6px"><input id="listingBudgetFavoriteName" type="text" maxlength="40" placeholder="조건 이름 (예: 서울 10억 이하)" aria-label="조건 즐겨찾기 이름" style="flex:1;min-width:0;font-size:12px"><button type="button" onclick="saveListingBudgetFavorite()" style="border:0;border-radius:8px;background:var(--teal);color:#fff;padding:8px 12px;font-weight:700;white-space:nowrap">저장</button></div>
       <div id="listingBudgetFavoriteList" style="margin-top:8px"></div>
       <div id="listingBudgetFavoriteMsg" role="status" style="font-size:11px;color:var(--teal-dark);margin-top:5px">이 브라우저에 저장됩니다.</div>
-    </div>
+    </details>
     <div id="listingBudgetNewFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingBudgetNewOnly" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">새로 등장한 가격만</label>
       <div style="font-size:11px;color:var(--sub);margin-top:5px">이전 기준일에 없던 단지·평형의 최저 호가입니다. 실제 신규 등록 매물을 뜻하지 않습니다.</div>
