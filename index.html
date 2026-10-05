@@ -2331,7 +2331,7 @@ function addCmpRow(){
 // (2026.09 11→12: PY_ANCHORS 5차 개편(미세조정) — 92~124㎡ 구간도 같은 실측 데이터로 재검증한 결과
 // 95/97/99/109/110 다섯 지점만 ±1평 오차가 있어 정확히 맞춤. 나머지 지점은 이미 실측과 일치해 그대로 둠)
 // Split district live and historical transactions now share the selected district calibration.
-const CACHE_VER = 15;
+const CACHE_VER = 16;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
