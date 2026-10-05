@@ -5896,7 +5896,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       historyCount=Math.max(historyCount,idx+1);
       rows.push(...listingTrendSnapshotRows(chosen,snapshots,ls,t.lawd,t.name,continuous));
     }
-    lsAskBounds(currentItems);Object.assign(ls,lsGet());
+    lsAskBounds(rows);Object.assign(ls,lsGet());
     for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
     const d={found:true,mode:'listingtrend',asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
@@ -6204,7 +6204,7 @@ function saveListingBudgetFavorite(){
   const name=input.value.trim();
   if(!name){msg.textContent='저장할 조건 이름을 입력해 주세요.';input.focus();return;}
   const items=getListingBudgetFavorites(),inp=captureViewInputs();
-  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel};
+  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel,askLimits:lsAskLimits()};
   const existing=items.findIndex(x=>x.name===name);
   if(existing<0 && items.length>=20){msg.textContent='조건은 최대 20개까지 저장할 수 있습니다.';return;}
   if(existing>=0)items[existing]={name,conditions};else items.push({name,conditions});
@@ -6215,6 +6215,7 @@ function loadListingBudgetFavorite(index){
   const c=favorite.conditions;
   sel.value=c.lawd||'';regionSel=(Array.isArray(c.regionSel)?c.regionSel:[]).slice(0,REGION_MAX);
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();
+  if(c.askLimits){for(const id of ['lsAskMin','lsAskMax']){const el=document.getElementById(id);el.min=c.askLimits.min;el.max=c.askLimits.max;}}
   lsSet(c.ls);document.getElementById('listingOccupancy').value=c.occupancy==='tenant'?'tenant':'available';
   document.getElementById('listingBudgetNewOnly').checked=!!c.budgetNewOnly;listingBudgetSel=c.band||null;
   document.getElementById('listingBudgetFavoriteMsg').textContent=`‘${favorite.name}’ 조건으로 조회합니다.`;
@@ -6263,10 +6264,11 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     }
     // 네이버 급매(2026.09 신규)는 급매 표시가 붙은 매물만
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
-    lsAskBounds(all);
     const ls = lsGet();
-    // 변동률 슬라이더는 예산별 실매물에만 적용
-    const items = all.filter(x => (!newOnly || x.newlyAppeared) && x.ask > 0 && lsMatch(x, ls) && lsAskMatch(x,ls) && (tabMode !== 'listingurgent' || x.urgent) && (tabMode !== 'listingbudget' || lsRateMatch(x, ls)));
+    // 매매가 자체를 제외한 조회 조건부터 적용해 슬라이더 범위를 계산한다.
+    const eligible = all.filter(x => (!newOnly || x.newlyAppeared) && x.ask > 0 && lsMatch(x, ls) && (tabMode !== 'listingurgent' || (x.urgent && x.peak>0 && x.hh>=LISTING_MIN_HH && x.ask>=URGENT_MIN_ASK && Math.round((x.ask-x.peak)/x.peak*100)<0)) && (tabMode !== 'listingbudget' || (lsRateMatch(x, ls) && x.hh>=LISTING_BUDGET_MIN_HH && !(x.peak>0 && Math.round((x.ask-x.peak)/x.peak*100)>=31))));
+    lsAskBounds(eligible);Object.assign(ls,lsGet());
+    const items = eligible.filter(x => lsAskMatch(x,ls));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
