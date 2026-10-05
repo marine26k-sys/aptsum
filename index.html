@@ -888,6 +888,7 @@
       </div></div>
     </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="listingFilterReset" type="button" onclick="resetListingFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
@@ -6114,6 +6115,17 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
     hi.value=!active[name]||oldHi>=oldBounds.max?max:Math.max(+lo.value,Math.min(max,oldHi));
   }
   lsSync();
+}
+function resetListingFilters(){
+  for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
+  document.getElementById('listingOccupancy').value='available';
+  document.getElementById('listingBudgetNewOnly').checked=false;
+  document.getElementById('listingTrendContinuous').checked=false;
+  listingTrendUploadId='';listingBudgetSel=null;
+  document.getElementById('listingTrendUpload').value='';
+  lsSync();
+  document.getElementById('listingBudgetFavoriteMsg').textContent='필터를 초기화했습니다. 저장한 즐겨찾기는 유지됩니다.';
+  if(lastData?.mode===mode)search({silentScroll:true});
 }
 function lsSavedLimits(){return Object.fromEntries(Object.keys(LS_FACETS).map(name=>[name,lsFacetLimits(name)]));}
 function lsRestoreLimits(limits){if(!limits)return;for(const [name,b] of Object.entries(limits)){if(!LS_FACETS[name]||!Number.isFinite(b.min)||!Number.isFinite(b.max)||b.min>b.max)continue;for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=b.min;el.max=b.max;el.step=LS_FACETS[name].step;}}}
