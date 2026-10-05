@@ -355,6 +355,8 @@
   .ls-dual{position:relative;height:26px;--lo:0%;--hi:100%}
   .ls-dual::before{content:'';position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--line)}
   .ls-dual::after{content:'';position:absolute;left:var(--lo);right:calc(100% - var(--hi));top:12px;height:4px;border-radius:2px;background:var(--teal)}
+  .ls-single-end{display:none;position:absolute;right:0;top:3px;width:20px;height:20px;border:2px solid var(--teal);background:#fff;border-radius:50%;z-index:2;pointer-events:none}
+  .ls-dual.single .ls-single-end{display:block}
   .ls-dual input[type=range]{position:absolute;left:0;top:0;margin:0;height:26px;background:none;pointer-events:none;-webkit-appearance:none;appearance:none;z-index:1}
   .ls-dual input[type=range]::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
   .ls-dual input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--teal);cursor:pointer}
@@ -6130,14 +6132,14 @@ function lsAskBounds(items){
 function lsAskText(v){const {min,max}=lsAskLimits();return v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
 function lsPyActive(v){return lsFacetActive('py',v);}
-function lsPyText(v){return !lsPyActive(v)?'전체':v.p0===v.p1?`${v.p0}평`:`${v.p0}~${v.p1}평`;}
+function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
-function lsAgeText(v){return !lsFacetActive('age',v)?'전체':v.a0===v.a1?`${v.a0}년차`:`${v.a0}~${v.a1}년차`;}
+function lsAgeText(v){return v.a0===v.a1?`${v.a0}년차`:!lsFacetActive('age',v)?'전체':`${v.a0}~${v.a1}년차`;}
 function lsHhActive(v){return lsFacetActive('hh',v);}
-function lsHhText(v){return !lsHhActive(v)?'전체':v.h===v.h1?`${v.h.toLocaleString()}세대`:`${v.h.toLocaleString()}~${v.h1.toLocaleString()}세대`;}
+function lsHhText(v){return v.h===v.h1?`${v.h.toLocaleString()}세대`:!lsHhActive(v)?'전체':`${v.h.toLocaleString()}~${v.h1.toLocaleString()}세대`;}
 function lsLabel(v,withRate){return [lsFacetActive('age',v)?lsAgeText(v):null,lsHhActive(v)?lsHhText(v):null,withRate&&lsRateActive(v)?'변동률 '+lsRateText(v):null].filter(Boolean).join(' · ')||null;}
 function lsPyMatch(x,v){return lsFacetMatch('py',x,v);}
 function lsMatch(x,v){return ['age','hh','py'].every(name=>lsFacetMatch(name,x,v));}
@@ -6163,6 +6165,8 @@ function lsSync(el){
   document.getElementById('lsPyTxt').textContent = lsPyText(v);
   const fill = (id, lo, hi, min, max) => {
     const el = document.getElementById(id), pct = n => max===min ? 0 : (n - min) / (max - min) * 100;
+    el.classList.toggle('single',max===min);
+    if(max===min&&!el.querySelector('.ls-single-end'))el.insertAdjacentHTML('beforeend','<span class="ls-single-end" aria-hidden="true"></span>');
     el.style.setProperty('--lo', pct(lo) + '%'); el.style.setProperty('--hi', (max===min?100:pct(hi)) + '%');
   };
   fill('lsAskDual',v.q0,v.q1,...Object.values(lsAskLimits()));
