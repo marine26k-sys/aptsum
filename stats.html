@@ -461,13 +461,17 @@ async function loadApplications(){
     const apps = d.applications;
     const todo = apps.filter(a => a.status === "paid" && appHasMail(a) && !a.delivered);
     const waiting = apps.filter(a => a.status === "pending" && Date.now() - a.createdAt < 86400000);
-    const done = apps.filter(a => (a.status === "paid" && (a.delivered || !appHasMail(a))) || (a.status !== "paid" && a.status !== "pending"));
+    const done = apps.filter(a => a.status === "paid" && (a.delivered || !appHasMail(a)));
+    const refunded = apps.filter(a => a.status === "refunded");
+    const other = apps.filter(a => !["paid", "pending", "refunded"].includes(a.status));
     setCardBadge("appCard", todo.length ? `메일 보낼 건 ${todo.length}` : "");
     box.innerHTML = (d.paymentEnabled ? "" : `<div style="padding:6px 8px;margin-bottom:6px;border-radius:8px;background:#FFF4E5;color:#9A5B00;font-size:11px;line-height:1.6">PayApp 결제 연동 전입니다. Netlify 환경변수에 PAYAPP_USERID · PAYAPP_LINKKEY · PAYAPP_LINKVAL을 넣고 재배포하면 신청 페이지에서 결제가 열립니다. 그 전까지 신청 페이지는 기존 네이버폼으로 안내합니다.</div>`)
       + `<div style="font-size:12px;font-weight:800;color:${todo.length ? "#d95d5d" : "var(--teal-dark)"};margin-bottom:2px">${todo.length ? `선별 메일 보낼 건 ${todo.length}건` : "지금 처리할 건이 없습니다."}</div>`
       + todo.map(appRow).join("")
       + appGroup("waiting", "결제 대기 (최근 24시간 · 결제 안 하고 나간 신청서 포함)", waiting)
-      + appGroup("done", "완료 · 환불", done)
+      + appGroup("done", "이용권 발급 · 메일 발송 완료", done)
+      + appGroup("refunded", "환불 · 해지", refunded)
+      + appGroup("other", "결제 취소 · 확인 필요", other)
       + `<div style="font-size:10px;color:var(--sub);margin-top:8px">결제 대기는 7일, 나머지는 신청 후 약 2개월(이용 기간 + 1개월)이 지나면 자동으로 지워집니다.</div>`;
   }catch(e){ box.textContent = e.message; }
 }
