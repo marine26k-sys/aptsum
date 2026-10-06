@@ -28,6 +28,7 @@
   .card{background:#fff;border-radius:16px;padding:16px;border:1.5px solid var(--line);margin-bottom:12px}
   .card.gold{background:var(--gold-soft);border-color:var(--gold)}
   .title{font-size:15px;font-weight:900;color:var(--navy);line-height:1.45}
+  .price .inc-trial{margin-top:0;flex-shrink:0;white-space:nowrap}
   .product-options{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
   .product-option{display:block;background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:13px 11px;cursor:pointer;font-size:12px;line-height:1.6}
   .product-option:has(input:checked){border-color:var(--teal);background:#F2FBFB;box-shadow:0 3px 10px rgba(0,130,138,.08)}
@@ -46,11 +47,13 @@
   .sample-card p{font-size:12px;color:var(--sub);line-height:1.65;margin-top:6px}
   .sample-features{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
   .sample-features span{padding:3px 7px;border:1px solid var(--teal-light);border-radius:6px;background:#fff;font-size:10.5px;font-weight:700;color:var(--teal-dark)}
-  .sample-card .btn{font-size:13px;padding:10px;margin-top:10px}
+  .sample-card .btn{font-size:13px;padding:10px;margin-top:10px;background:#39FF14;color:#0B3D02;box-shadow:0 3px 12px rgba(57,255,20,.4)}
+  .sample-card .btn:hover{background:#32E811}
+  .sample-card .btn:focus-visible{outline:3px solid var(--teal-dark);outline-offset:3px}
   .payment-notice{padding:10px 12px;margin:0 0 14px;border:1px solid var(--teal-light);border-radius:10px;background:var(--teal-light-soft);color:var(--teal-dark);font-size:12px;line-height:1.65}
   .payment-notice strong{display:block;font-size:13px;font-weight:900;margin-bottom:2px}
   .payment-reminder{text-align:center;font-size:11.5px;color:var(--teal-dark);font-weight:700;margin-top:7px}
-  .price{display:flex;align-items:baseline;gap:6px;margin:8px 0 10px}
+  .price{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
   .price b{font-size:24px;font-weight:900;color:var(--navy)}
   .price span{font-size:12px;color:var(--sub);font-weight:700}
   .inc{font-size:13px}
@@ -116,14 +119,13 @@
     <p class="product-summary">두 상품의 <b>실매물 탭 이용 범위와 기간은 동일</b>합니다.<br>9,900원 상품에만 <b>개인 맞춤 단지 선별 메일 1회</b>가 추가됩니다.</p>
     <div class="card gold">
       <div class="title" id="productTitle">네이버 실매물 이용권</div>
-      <div class="price"><b id="priceTxt">4,900원</b><span id="daysTxt">· 30일 이용</span></div>
+      <div class="price"><b id="priceTxt">4,900원</b><span id="daysTxt">· 30일 이용</span><div class="inc-trial">강남구 무료 체험 가능</div></div>
       <div class="payment-notice"><strong>정기결제가 아닌 1회 결제입니다</strong>자동 갱신이나 추가 자동 결제가 없으니 안심하고 이용하세요.</div>
       <ul class="inc">
         <li>
           <div class="inc-head">실매물 탭 이용 권한 (1개월)</div>
           <div class="inc-sub">실매물 분석 (매물 링크 연동): 저평가 실매물, 급매물, 금액대별 실매물, 최저 호가 하락, 평형 간 가격차</div>
           <div class="inc-update">네이버 실매물 탭 · 주 3회 이상 업데이트</div>
-          <div class="inc-trial">강남구 무료 체험 가능</div>
         </li>
         <li id="mailBenefit" hidden>
           <div class="inc-head">아파트썸 개인 맞춤 단지 선별 메일 (1회)</div>

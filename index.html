@@ -1243,7 +1243,7 @@ async function initFromURL(){
     if(p.get('r')) sel.value = p.get('r');
     // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함
     if(p.get('rs')){
-      regionSel = p.get('rs').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
+      regionSel = p.get('rs').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name).slice(0, regionSelMax());
       saveRegionSel(); renderRegionChips();
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
@@ -1548,7 +1548,7 @@ function restoreView(vi){
   restoreListingSelectionInputs(inp);
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
-  regionSel = (inp.regionSel || []).slice();
+  regionSel = (inp.regionSel || []).slice(0, regionSelMax());
   saveRegionSel(); renderRegionChips();
   // 평형 다중 선택 상태 복원(setMode()가 새 탭 진입 시 초기화하므로 그 다음에) — 2026.08부터 평형 선택
   // 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
@@ -1672,7 +1672,7 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = Math.max(45, ...REGIONS.map(([, regions])=>regions.length)); // 서울25·경기47·인천11 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
+const REGION_MAX = Math.max(45, ...REGIONS.map(([, regions])=>regions.length)); // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
 // "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
@@ -1682,10 +1682,8 @@ function ggAllAllowed(){
     || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| mode==='listingtrend' || mode==='listinggap';
 }
 function regionSelMax(){
-  // 경기 전체를 허용한 탭은 47개 시군구를 한 번에 담을 수 있도록 상한을 REGION_MAX(47)까지 풀어준다.
-  // 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
-  if(ggAllAllowed()) return REGION_MAX;
-  return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
+  // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
+  return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
 function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
 function loadRegionSel(){
@@ -1860,7 +1858,7 @@ function applyNativeRegionInputs(inp){
   lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
   restoreListingSelectionInputs(inp);
-  regionSel=(inp.regionSel||[]).slice();saveRegionSel();renderRegionChips();
+  regionSel=(inp.regionSel||[]).slice(0, regionSelMax());saveRegionSel();renderRegionChips();
   pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
@@ -4267,6 +4265,10 @@ async function search(opts){
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
   const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
+  if(multiTargets.length > regionSelMax()){
+    showError(`국토부 실거래 분석은 최대 ${REGION_MAX_RANK}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
+    return;
+  }
   const allScope = multiTargets.length > 0;
   const effMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
