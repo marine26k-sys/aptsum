@@ -13,7 +13,7 @@ function page(search){
     sel:{value:'11680'},regionSel:[{lawd:'11680',name:'강남구'}],
     aptsumSubscriberGate:{ready:Promise.resolve()},needsSubscriberSession:()=>false,isListingMode:()=>false,
     setMode(m){ctx.mode=m;return true;}, search(){ctx.calls++;},showError(){throw Error('unexpected auth error');},
-    saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(){},listingGapSet(){},setBuildYearValue(){}
+    regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(){},listingGapSet(){},setBuildYearValue(){}
   });
   vm.runInContext(source,ctx);return {ctx,elements};
 }
@@ -28,4 +28,10 @@ test('shared result URL restores filters and performs exactly one query',async()
     if(query.includes('q='))assert.equal(elements.get('q').value,'래미안');
     if(query.includes('lbn='))assert.equal(elements.get('listingBudgetNewOnly').checked,true);
   }
+});
+
+test('legacy shared real-trade URL restores at most 25 regions',async()=>{
+  const rs=Array.from({length:47},(_,i)=>`${41000+i}:지역${i}`).join('|');
+  const {ctx}=page('?m=region&rs='+encodeURIComponent(rs));
+  await ctx.initFromURL();assert.equal(ctx.regionSel.length,25);assert.equal(ctx.calls,1);
 });
