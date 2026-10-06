@@ -2205,7 +2205,7 @@ function setMode(m, fromRestore){
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===m&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
-  document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래와 실매물, 아파트 가격을 한눈에';
+  document.querySelector('.brand-description').textContent=m==='region' ? '실거래 랭킹' : (currentTab?.textContent.trim()||'실거래와 실매물, 아파트 가격을 한눈에');
 
   document.getElementById('searchBox').style.display = '';
   document.getElementById('tabC').classList.toggle('on', m==='complex');
