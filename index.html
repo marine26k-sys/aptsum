@@ -364,9 +364,11 @@ try {
   .ls-row{margin:2px 0 6px}
   .ls-control{flex:1;min-width:0}
   .ls-numbers{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--sub)}
-  .ls-numbers input[type=number]{width:0;min-width:0;flex:1;padding:5px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font-size:16px;text-align:center;box-sizing:border-box}
+  .ls-numbers input[type=number]{width:0;min-width:0;flex:1;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font-size:13px;text-align:center;box-sizing:border-box}
+  .ls-numbers[data-source="monthsN"],.ls-numbers[data-source="floorMin"],.ls-numbers[data-source="risePeriodN"],.ls-numbers[data-source="priceBandPeriodN"]{display:none}
+  #searchBox[data-mode="complex"] .ls-numbers,#searchBox[data-mode="subway"] .ls-numbers,#searchBox[data-mode="listinggap"] .ls-numbers{display:none}
   .ls-numbers input:focus{outline:2px solid var(--teal);outline-offset:1px}
-  .ls-numbers span{font-size:11px;white-space:nowrap}
+  .ls-numbers span{font-size:10px;white-space:nowrap}
   #lsFilters{padding:8px 10px}
   #lsFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
   #lsFilters .ls-hd{flex:0 0 100px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
@@ -376,8 +378,8 @@ try {
   #listingBudgetFavorites[open] summary{margin-bottom:8px}
   #listingBudgetFavoriteName{border:1px solid var(--line);border-radius:8px;padding:7px 8px}
   #listingOccupancyFilters{padding:7px 10px;margin-top:6px}
-  .ls-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--sub)}
-  .ls-hd b{color:var(--teal-dark);font-size:13px}
+  .ls-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--sub)}
+  .ls-hd b{color:var(--teal-dark);font-size:12px}
   .ls-filters input[type=range]{width:100%;margin:6px 0 2px;accent-color:var(--teal)}
   .ls-dual{position:relative;height:26px;--lo:0%;--hi:100%}
   .ls-dual::before{content:'';position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--line)}
@@ -826,6 +828,7 @@ try {
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
+      <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
     <div class="row2" id="subwayRow" style="display:none">
       <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
         <option value="5">도보 5분 이내</option>
@@ -919,7 +922,7 @@ try {
       </div></div>
     </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="listingFilterReset" type="button" onclick="resetListingFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
+
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
            같은 슬라이드 방식으로 통일). 떨어진 구간(예: 23~27평 + 37~41평만) 동시 선택은 안 되지만, 연속 구간을
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
@@ -2071,6 +2074,7 @@ function syncAnalysisSelectSliders(){
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
     const number=document.getElementById(select.id+'Number');if(number){number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
   }
+  const reset=document.getElementById('sliderFilterResetRow');if(reset)reset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'flex':'none';
 }
 // Touch scrolling and a light tap must not change an age filter.
 function guardAgeSliderTouch(input,refresh){
@@ -2121,7 +2125,7 @@ function initializeAnalysisSelectSliders(){
     select.after(wrap);
     const number=document.createElement('input');number.type='number';number.id=id+'Number';number.step='any';number.setAttribute('aria-label',title+' 직접 입력');
     const units={monthsN:'개월',risePeriodN:'개월 전',priceBandPeriodN:'개월 전',floorMin:'층 이상',subwayWalkMax:'분 이내',priceBandN:'억대',listingGapSmall:'평대',listingGapLarge:'평대'};
-    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
+    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.dataset.source=id;numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
     number.addEventListener('change',()=>{
       const options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none'&&o.value!==''&&Number.isFinite(+o.value));
       if(number.value.trim()===''||!Number.isFinite(+number.value)||!options.length){number.value=select.value;return;}
@@ -2273,6 +2277,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  document.getElementById('searchBox').dataset.mode=m;
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
@@ -6273,6 +6278,17 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
   }
   lsSync();
 }
+function resetAllSliderFilters(){
+  if(document.getElementById('loading').classList.contains('on'))stopSearch();
+  if(isListingMode(mode)){resetListingFilters();return;}
+  resetQueriedSliderDefaults(mode);
+  pyBandMultiSel=[];
+  if(mode==='region')savePyBandMultiPref([]);
+  document.getElementById('priceBandBasis').value='current';
+  renderPyBandMultiBtn();syncAnalysisSelectSliders();
+  // 초기화한 기본 조건을 저장해 다음 진입 시 이전 조회값이 다시 나타나지 않게 한다.
+  saveQueriedSliders();
+}
 function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
@@ -6280,6 +6296,7 @@ function resetListingFilters(){
 
   document.getElementById('listingTrendContinuous').checked=false;
   listingTrendUploadId='';listingBudgetSel=null;
+  listingGapSet(20,30);syncAnalysisSelectSliders();
   document.getElementById('listingTrendUpload').value='';
   lsSync();
   document.getElementById('listingBudgetFavoriteMsg').textContent='필터를 초기화했습니다. 저장한 즐겨찾기는 유지됩니다.';
