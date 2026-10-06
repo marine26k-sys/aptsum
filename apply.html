@@ -9,8 +9,8 @@
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <!-- 비공개 탭 원스톱 신청(2026.09, 운영자 요청) — 네이버폼 + PayApp 링크 + 수동 코드 발급을 이 페이지 하나로.
-     흐름: 신청서 작성 → PayApp 결제 링크를 새 창으로 열기(이 페이지는 결제 확인을 계속 물어봄) → 결제 완료 통보가 오면
-     서버가 휴대폰 번호로 신청서를 찾아 개인 코드 자동 발급 → 이 페이지에 코드가 뜨고 바로 로그인.
+     흐름: 신청서 작성 → PayApp JS 결제창을 새 창으로 열기(이 페이지는 결제 확인을 계속 물어봄) → 결제 완료 통보가 오면
+     서버가 신청 고유번호로 신청서를 찾아 개인 코드 자동 발급 → 이 페이지에 코드가 뜨고 바로 로그인.
      서버 쪽은 netlify/functions/apply.mjs · payapp-feedback.mjs, shared/applications.mjs -->
 <style>
   :root{
@@ -165,10 +165,6 @@
       <input type="text" id="fCond" name="condition" maxlength="100" required>
 
       </div>
-      <label class="q" for="fPhone"><i>*</i>휴대폰 번호</label>
-      <div class="hint">결제창에 입력하신 번호로 신청서와 결제를 자동으로 연결해 접근 코드를 바로 발급합니다 · <a href="/privacy.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">개인정보처리방침</a></div>
-      <input type="tel" id="fPhone" name="phone" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000" required>
-
       <div id="emailField" hidden>
       <label class="q" for="fEmail"><i>*</i>선별 리스트 받을 메일 주소</label>
       <input type="email" id="fEmail" name="email" autocomplete="email" maxlength="120" placeholder="example@naver.com" required>
@@ -177,9 +173,10 @@
       <div class="agree">
         <b style="color:var(--ink)">개인정보 수집·이용 동의</b><br>
         · 수집 목적: <span id="consentPurpose">단지 선별 메일 발송, 결제 확인 및 이용권 발급</span><br>
-        · 수집 항목: <span id="consentFields">메일 주소, 휴대폰 번호, 위 희망 조건</span><br>
+        · 수집 항목: <span id="consentFields">메일 주소, 위 희망 조건, 결제 정보(결제창에서 입력한 휴대폰 번호 포함)</span><br>
         · 보유 기간: 서비스 제공 완료 후 1개월까지<br>
         · 동의하지 않으시면 신청이 제한됩니다.
+        <a href="/privacy.html" target="_blank" rel="noopener" style="display:block;margin-top:4px;color:inherit;text-decoration:underline">개인정보처리방침</a>
         <label><input type="checkbox" id="fAgree"> 동의합니다</label>
       </div>
 
@@ -187,7 +184,7 @@
       <p class="payment-reminder">1회 결제 · 정기결제 및 자동 갱신 없음</p>
       <div class="msg" id="applyMsg" role="alert"></div>
       <div class="note">
-        <div>결제창(PayApp)이 새 창으로 열립니다. 결제창 연락처에는 <b style="color:var(--navy)">위와 같은 휴대폰 번호</b>를 넣어 주세요.</div>
+        <div>결제창(PayApp)이 새 창으로 열립니다. 휴대폰 번호는 결제창에서만 입력해 주세요.</div>
         <div>결제가 끝나면 이 화면에 접근 코드가 바로 나오고 비공개 탭이 열립니다.</div>
       </div>
     </form>
@@ -236,7 +233,7 @@ function renderProduct(){
   $('#emailField').hidden=!p.includesMail;
   for(const k of ['region','budget','size','movein','condition','email']) { $('#applyForm').elements[k].disabled=!p.includesMail; $('#applyForm').elements[k].required=p.includesMail; }
   $('#consentPurpose').textContent=p.includesMail?'단지 선별 메일 발송, 결제 확인 및 이용권 발급':'결제 확인 및 이용권 발급';
-  $('#consentFields').textContent=p.includesMail?'메일 주소, 휴대폰 번호, 위 희망 조건':'휴대폰 번호';
+  $('#consentFields').textContent=p.includesMail?'메일 주소, 위 희망 조건, 결제 정보(결제창에서 입력한 휴대폰 번호 포함)':'결제 정보(결제창에서 입력한 휴대폰 번호 포함)';
   $('#payBtn').disabled=!p.paymentEnabled;
   $('#payBtn').textContent=p.paymentEnabled?`${won(p.price)} 결제하기`:(configLoaded?'결제 준비 중':'상품 확인 중…');
   $('#applyMsg').textContent='';
@@ -266,9 +263,9 @@ $('#applyForm').addEventListener('submit', async (ev) => {
   if(!paymentEnabled){ msg.textContent='이 상품은 결제 준비 중입니다.'; return; }
   const f = ev.target;
   const body = { action:'create', product:selectedProduct().id, agree: $('#fAgree').checked };
-  for(const k of ['region','budget','size','movein','condition','phone','email']) body[k] = (k==='phone' || selectedProduct().includesMail) ? f.elements[k].value.trim() : '';
-  const missing = (selectedProduct().includesMail ? ['region','budget','size','movein','condition','phone','email'] : ['phone']).find(k => !body[k]);
-  if(missing){ msg.textContent = ERR[`${missing}_required`] || (missing === 'phone' ? ERR.invalid_phone : ERR.invalid_email); f.elements[missing].focus(); return; }
+  for(const k of ['region','budget','size','movein','condition','email']) body[k] = selectedProduct().includesMail ? f.elements[k].value.trim() : '';
+  const missing = (selectedProduct().includesMail ? ['region','budget','size','movein','condition','email'] : []).find(k => !body[k]);
+  if(missing){ msg.textContent = ERR[`${missing}_required`] || ERR.invalid_email; f.elements[missing].focus(); return; }
   if(!body.agree){ msg.textContent = ERR.agree_required; return; }
   const btn = $('#payBtn');
   btn.disabled = true; btn.textContent = '결제창 여는 중…';
@@ -351,7 +348,7 @@ ${d.includesMail !== false ? `<div class="hint center" style="margin-top:6px">�
       ${d.phone ? `<div class="hint center" style="margin-top:6px">결제창 연락처에는 신청서와 같은 번호를 넣어 주세요<br><b>${esc(d.phone)}</b></div>` : ''}
       ${payUrl ? `<a class="btn" href="${esc(payUrl)}" target="_blank" rel="noopener">결제창 다시 열기</a>` : ''}
       ${slow ? `<button class="btn ghost" id="retryBtn">결제했어요 · 다시 확인</button>
-        <div class="hint center" style="margin-top:8px">결제창에 다른 번호를 넣으셨다면 운영자에게 연락해 코드 발급 여부를 확인해 주세요.</div>` : ''}
+        <div class="hint center" style="margin-top:8px">결제 후에도 확인되지 않으면 이용 문의 메일로 연락해 주세요.</div>` : ''}
       <button class="btn ghost" id="newBtn" style="margin-top:8px">신청서 다시 쓰기</button>`);
     $('#newBtn').onclick = () => { store.clear(); clearTimeout(pollTimer); waiting = false; $('#resultCard').hidden = true; $('#applyArea').hidden = false; resetPayBtn(); };
     clearTimeout(pollTimer);

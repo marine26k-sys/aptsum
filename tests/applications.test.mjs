@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter,
+  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter, createPaymentRef, readPaymentRef, createPaymentParameters,
 } from '../shared/applications.mjs';
 
 function fakeStore() {
@@ -179,4 +179,49 @@ test('same phone applications are matched by price and cancellation targets the 
   await feedback({ pay_state: '9', mul_no: 'basic-payment' });
   assert.equal(subStore.m.get(`sub:${result.subId}`).revoked, true);
   assert.equal(subStore.m.get(`sub:${second.subId}`).revoked, false);
+});
+
+
+test('phone-free applications match signed order references, preserve conditions, and support refund/retry', async()=>{
+  const appStore=fakeStore(),subStore=fakeStore();
+  const env={...ENV,SUBSCRIBER_SESSION_SECRET:'secret'};
+  const app=newApplication(validateApplication({...FORM,phone:undefined}).data,9900,NOW);
+  app.paymentMode='order';await saveApplication(app,appStore);
+  assert.equal(app.phone,'');assert.equal([...appStore.m.keys()].some(k=>k.startsWith('phone:')),false);
+  const ref=createPaymentRef('secret',app.id);
+  assert.equal(readPaymentRef('secret',ref),app.id);
+  assert.equal(readClaim('secret',ref.replace('aptsum:','')),null);
+  const feed=extra=>handleFeedback({userid:ENV.PAYAPP_USERID,linkkey:ENV.PAYAPP_LINKKEY,linkval:ENV.PAYAPP_LINKVAL,var1:ref,price:'9900',recvphone:'01099998888',mul_no:'new-payment',...extra},{env,appStore,subStore,now:NOW});
+  assert.equal((await feed({pay_state:'4',var1:ref+'x'})).reason,'invalid_payment_ref');
+  assert.equal((await feed({pay_state:'4',price:'4900'})).reason,'payment_product_mismatch');
+  assert.equal((await feed({pay_state:'4',mul_no:''})).reason,'invalid_payment_details');
+  assert.equal((await feed({pay_state:'8'})).result,'canceled');
+  const paid=await feed({pay_state:'4'});assert.equal(paid.appId,app.id);
+  const saved=appStore.m.get(`app:${app.id}`);assert.equal(saved.phone,'01099998888');assert.equal(saved.email,FORM.email);assert.equal(saved.region,FORM.region);assert.equal(saved.unmatched,undefined);
+  assert.equal((await feed({pay_state:'4'})).result,'already_issued');
+  assert.equal((await feed({pay_state:'9'})).result,'refunded');
+  assert.equal((await feed({pay_state:'9'})).result,'refunded');
+  assert.equal((await feed({pay_state:'4'})).result,'refunded');
+  assert.equal(subStore.m.get(`sub:${paid.subId}`).revoked,true);
+});
+test('same buyer phone cannot replace signed order matching for different purchases',async()=>{
+  const appStore=fakeStore(),subStore=fakeStore(),env={...ENV,SUBSCRIBER_SESSION_SECRET:'secret'};
+  const first=newApplication(validateApplication({...FORM,phone:undefined}).data,9900,NOW);
+  const second=newApplication(validateApplication({...FORM,phone:undefined,region:'부산'}).data,9900,NOW);
+  await saveApplication(first,appStore);await saveApplication(second,appStore);
+  const r=await handleFeedback({userid:ENV.PAYAPP_USERID,linkkey:ENV.PAYAPP_LINKKEY,linkval:ENV.PAYAPP_LINKVAL,price:'9900',pay_state:'4',recvphone:FORM.phone,mul_no:'order-first',var1:createPaymentRef('secret',first.id)},{env,appStore,subStore,now:NOW});
+  assert.equal(r.appId,first.id);assert.equal(appStore.m.get(`app:${second.id}`).status,'pending');
+});
+
+test('checkout parameters go directly to payment methods without a request message',()=>{
+  for(const product of ['listings','selection']){
+    const price=product==='listings'?4900:9900;
+    const app={id:'order123',product,price};
+    const env={...ENV,SUBSCRIBER_SESSION_SECRET:'secret'};
+    const p=createPaymentParameters(app,env,'https://preview.test');
+    assert.equal(p.redirectpay,'1');assert.equal(p.smsuse,'n');
+    assert.equal(p.price,price);assert.equal(readPaymentRef('secret',p.var1),app.id);
+    assert.equal(p.returnurl,'https://preview.test/apply.html');
+    assert.equal('recvphone' in p,false);assert.equal('linkkey' in p,false);assert.equal('linkval' in p,false);
+  }
 });

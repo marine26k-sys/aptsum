@@ -28,6 +28,15 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script>if(new URLSearchParams(location.search).get("_regionPicker")==="1")document.documentElement.classList.add("native-region-document");</script>
+<script>
+// 지역 선택용 페이지 이동·복귀 때 초기 기본 화면이 먼저 보이지 않도록 복원 완료까지 가린다.
+try {
+  const regionReturn=JSON.parse(sessionStorage.getItem('aptsum:region-document-result')||'null');
+  if(new URLSearchParams(location.search).get('_regionPicker')==='1' ||
+     (regionReturn && Date.now()-regionReturn.createdAt<30*60*1000))
+    document.documentElement.classList.add('region-view-loading');
+} catch(e) {}
+</script>
 <script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
 <script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
@@ -56,6 +65,7 @@
   #rgPanel .rgitem{padding:4px 7px;font-size:11px}
   #rgPanel .rggrp{padding:5px 3px 3px}
 
+  html.region-view-loading .wrap{visibility:hidden}
   html.native-region-document #rgPanel{height:90dvh;max-height:90dvh}
 
   :root{
@@ -1856,18 +1866,23 @@ function applyNativeRegionReturn(){
   return true;
 }
 async function initializeAptsumPage(){
-  if(nativeRegionDocument){
-    const context=readNativeRegion(NATIVE_REGION_CONTEXT);
-    if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
-    await aptsumSubscriberGate.ready;
-    if(context.data){viewStack.push({data:context.data,inputs:context.inputs});restoreView(viewStack.length-1);lastData=context.data;}
-    applyNativeRegionInputs(context.inputs);
-    const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
-    openRegionPicker(row);saveNativeRegionResult();return;
+  try {
+    if(nativeRegionDocument){
+      const context=readNativeRegion(NATIVE_REGION_CONTEXT);
+      if(!context){const url=new URL(location.href);url.searchParams.delete('_regionPicker');location.replace(url.href);return;}
+      await aptsumSubscriberGate.ready;
+      if(context.data){viewStack.push({data:context.data,inputs:context.inputs});restoreView(viewStack.length-1);lastData=context.data;}
+      applyNativeRegionInputs(context.inputs);
+      const row=context.cmpIndex>=0 ? document.querySelectorAll('.cmp-row')[context.cmpIndex]?.querySelector('select') : null;
+      openRegionPicker(row);saveNativeRegionResult();return;
+    }
+    if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
+    initFromURL();
+  } finally {
+    document.documentElement.classList.remove('region-view-loading');
   }
-  if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
-  initFromURL();
 }
+
 window.addEventListener('pageshow', e=>{
   if(!e.persisted)return;
   if(applyNativeRegionReturn())return;
