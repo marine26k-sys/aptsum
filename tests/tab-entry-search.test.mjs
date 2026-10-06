@@ -13,7 +13,7 @@ function page(search){
     sel:{value:'11680'},regionSel:[{lawd:'11680',name:'강남구'}],
     aptsumSubscriberGate:{ready:Promise.resolve()},needsSubscriberSession:()=>false,isListingMode:()=>false,
     setMode(m){ctx.mode=m;return true;}, search(){ctx.calls++;},showError(){throw Error('unexpected auth error');},
-    regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(){},listingGapSet(){},setBuildYearValue(){}
+    resetQueriedSliderDefaults(){},regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(){},listingGapSet(){},setBuildYearValue(){}
   });
   vm.runInContext(source,ctx);return {ctx,elements};
 }
