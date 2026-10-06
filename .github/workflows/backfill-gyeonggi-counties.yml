@@ -1,0 +1,61 @@
+name: 경기 3개 군 최초 데이터 수집
+
+on:
+  push:
+    branches: [fix/gyeonggi-three-counties]
+    paths: [shared/regions.mjs, .github/workflows/backfill-gyeonggi-counties.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aptsum-data-collect
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 수집 커밋 계정 설정
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+      - name: 매매·분양권·전세 최근 5년 수집
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: node scripts/collect-trades.mjs --only=41820,41830,41800 --months=60 --refresh=4
+      - name: 세대수 및 단지 기본정보 수집
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: node scripts/collect-hhcnt.mjs --only=41820,41830,41800
+      - name: 건축HUB 공급면적 수집
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          BLDHUB_KEY: ${{ secrets.BLDHUB_KEY }}
+        run: node scripts/collect-supply-area.mjs --only=41820,41830,41800 --limit=500 --max-minutes=180
+      - name: 수집 데이터 범위 확인
+        run: |
+          node --input-type=module <<'JS'
+          import {existsSync,readFileSync,readdirSync} from 'node:fs';
+          for(const code of ['41820','41830','41800']) {
+            for(const kind of ['analyze','presale','rent']) {
+              const dir=`data/${kind}/${code}`;
+              const files=existsSync(dir)?readdirSync(dir).filter(f=>/^\d{6}\.json$/.test(f)):[];
+              console.log(code,kind,files.length,'개월');
+              if(files.length<60)process.exitCode=1;
+            }
+            const hh=`data/hhcnt/${code}.json`;
+            if(!existsSync(hh))process.exitCode=1;
+            else console.log(code,'기본정보',JSON.parse(readFileSync(hh,'utf8')).items?.length??0,'단지');
+            const supply=`data/supply-area/${code}.json`;
+            console.log(code,'공급면적',existsSync(supply)?Object.keys(JSON.parse(readFileSync(supply,'utf8')).items||{}).length:0,'단지');
+          }
+          JS
