@@ -104,6 +104,13 @@ export function readPaymentRef(secret, value) {
   if(!id||id.length>32||!sig||extra)return null;
   return sameValue(value,createPaymentRef(secret,id))?id:null;
 }
+export function createPaymentParameters(app, env, origin) {
+  const product=applyProducts(env).find(p=>p.id===app.product);
+  return {userid:env.PAYAPP_USERID,shopname:'아파트썸',goodname:product.name,price:app.price,
+    var1:createPaymentRef(env.SUBSCRIBER_SESSION_SECRET,app.id),
+    feedbackurl:`${origin}/api/payapp-feedback`,returnurl:`${origin}/apply.html`,
+    smsuse:'n',redirectpay:'1'};
+}
 export function applicationPayUrl(app, secret, origin) {
   return app.paymentMode==='order' ? `${origin}/payment.html?order=${encodeURIComponent(createPaymentRef(secret,app.id))}` : '';
 }

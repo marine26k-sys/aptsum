@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter, createPaymentRef, readPaymentRef,
+  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter, createPaymentRef, readPaymentRef, createPaymentParameters,
 } from '../shared/applications.mjs';
 
 function fakeStore() {
@@ -211,4 +211,17 @@ test('same buyer phone cannot replace signed order matching for different purcha
   await saveApplication(first,appStore);await saveApplication(second,appStore);
   const r=await handleFeedback({userid:ENV.PAYAPP_USERID,linkkey:ENV.PAYAPP_LINKKEY,linkval:ENV.PAYAPP_LINKVAL,price:'9900',pay_state:'4',recvphone:FORM.phone,mul_no:'order-first',var1:createPaymentRef('secret',first.id)},{env,appStore,subStore,now:NOW});
   assert.equal(r.appId,first.id);assert.equal(appStore.m.get(`app:${second.id}`).status,'pending');
+});
+
+test('checkout parameters go directly to payment methods without a request message',()=>{
+  for(const product of ['listings','selection']){
+    const price=product==='listings'?4900:9900;
+    const app={id:'order123',product,price};
+    const env={...ENV,SUBSCRIBER_SESSION_SECRET:'secret'};
+    const p=createPaymentParameters(app,env,'https://preview.test');
+    assert.equal(p.redirectpay,'1');assert.equal(p.smsuse,'n');
+    assert.equal(p.price,price);assert.equal(readPaymentRef('secret',p.var1),app.id);
+    assert.equal(p.returnurl,'https://preview.test/apply.html');
+    assert.equal('recvphone' in p,false);assert.equal('linkkey' in p,false);assert.equal('linkval' in p,false);
+  }
 });

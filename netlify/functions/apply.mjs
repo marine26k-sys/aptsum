@@ -10,7 +10,7 @@ import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mj
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
 import {
-  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim, readPaymentRef, applicationPayUrl,
+  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim, readPaymentRef, applicationPayUrl, createPaymentParameters,
 } from "../../shared/applications.mjs";
 
 export const config = { path: "/api/apply" };
@@ -45,7 +45,7 @@ export default async (request, context) => {
       if(app.status==='refunded')return json({error:'payment_refunded'},{status:409});
       const product=applyProducts().find(p=>p.id===app.product);
       if(!product?.paymentEnabled)return json({error:'payment_not_configured'},{status:503});
-      return json({status:'pending',payment:{userid:process.env.PAYAPP_USERID,shopname:'아파트썸',goodname:product.name,price:app.price,var1:ref,feedbackurl:`${origin}/api/payapp-feedback`,returnurl:`${origin}/apply.html`,smsuse:'n'}});
+      return json({status:'pending',payment:createPaymentParameters(app,process.env,origin)});
     }
     if (new URL(request.url).searchParams.get("list") !== "1") {
       return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled, payUrl: cfg.payUrl, products: applyProducts() });
