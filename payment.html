@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>아파트썸 결제</title>
+<style>body{margin:0;background:#F1F5F9;color:#0F2B3D;font-family:system-ui,sans-serif}.card{max-width:420px;margin:15vh auto;padding:24px;background:#fff;border:1px solid #E2E8F0;border-radius:16px;text-align:center}h1{font-size:22px}p{font-size:14px;line-height:1.7;color:#64748B}button,a{display:block;margin:14px auto;padding:12px;border:0;border-radius:10px;background:#00828A;color:white;text-decoration:none;font-size:15px;cursor:pointer}[hidden]{display:none}</style>
+</head><body><main class="card"><h1>아파트썸 결제</h1><p id="message">결제창을 준비하고 있습니다.</p><button id="retry" hidden>결제창 다시 열기</button><a href="/apply.html">이용 신청으로 돌아가기</a></main>
+<script>
+let payment;
+function openPayment(){
+  try{PayApp.setTarget('_self');PayApp.setParam(payment);PayApp.payrequest();}
+  catch(e){document.getElementById('message').textContent='결제창을 열지 못했습니다. 다시 시도해 주세요.';document.getElementById('retry').hidden=false;}
+}
+document.getElementById('retry').onclick=openPayment;
+(async()=>{
+  try{
+    const order=new URLSearchParams(location.search).get('order');
+    if(!order)throw Error('결제 정보가 없습니다. 이용 신청부터 진행해 주세요.');
+    const r=await fetch('/api/apply?payment='+encodeURIComponent(order),{cache:'no-store'});
+    const d=await r.json();
+    if(!r.ok)throw Error('결제 정보를 확인할 수 없습니다. 이용 신청 화면으로 돌아가 주세요.');
+    if(d.status==='paid'){location.replace('/apply.html');return;}
+    payment=d.payment;
+    if(!payment)throw Error('결제 정보를 불러오지 못했습니다.');
+    await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://lite.payapp.kr/public/api/v2/payapp-lite.js';s.onload=resolve;s.onerror=()=>reject(Error('결제창을 불러오지 못했습니다. 새로고침해 주세요.'));document.head.appendChild(s);});
+    document.getElementById('message').textContent='페이앱 결제창으로 이동합니다. 휴대폰 번호는 결제창에서 입력해 주세요.';
+    openPayment();
+  }catch(e){document.getElementById('message').textContent=e.message;}
+})();
+</script></body></html>

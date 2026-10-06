@@ -10,7 +10,7 @@ import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mj
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
 import {
-  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim,
+  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim, readPaymentRef, applicationPayUrl,
 } from "../../shared/applications.mjs";
 
 export const config = { path: "/api/apply" };
@@ -32,8 +32,21 @@ export default async (request, context) => {
   if (!secret) return json({ error: "auth_not_configured" }, { status: 503 });
   const cfg = applyConfig();
   const store = applicationStore();
+  const origin=new URL(request.url).origin;
 
   if (request.method === "GET") {
+    const ref=new URL(request.url).searchParams.get('payment');
+    if(ref){
+      const id=readPaymentRef(secret,ref);
+      if(!id)return json({error:'invalid_payment_ref'},{status:400});
+      const app=await store.get(`app:${id}`,{type:'json',consistency:'strong'});
+      if(!app||app.paymentMode!=='order')return json({error:'not_found'},{status:404});
+      if(app.status==='paid')return json({status:'paid'});
+      if(app.status==='refunded')return json({error:'payment_refunded'},{status:409});
+      const product=applyProducts().find(p=>p.id===app.product);
+      if(!product?.paymentEnabled)return json({error:'payment_not_configured'},{status:503});
+      return json({status:'pending',payment:{userid:process.env.PAYAPP_USERID,shopname:'아파트썸',goodname:product.name,price:app.price,var1:ref,feedbackurl:`${origin}/api/payapp-feedback`,returnurl:`${origin}/apply.html`,smsuse:'n'}});
+    }
     if (new URL(request.url).searchParams.get("list") !== "1") {
       return json({ price: cfg.price, days: cfg.days, paymentEnabled: cfg.paymentEnabled, payUrl: cfg.payUrl, products: applyProducts() });
     }
@@ -75,8 +88,9 @@ export default async (request, context) => {
     await throttle.fail();
 
     const app = newApplication(v.data, product.price);
+    app.paymentMode="order";
     await saveApplication(app, store);
-    return json({ payurl: product.payUrl, claim: createClaim(secret, app.id) });
+    return json({ payurl: applicationPayUrl(app,secret,origin), claim: createClaim(secret, app.id) });
   }
 
   if (body?.action === "claim") {
@@ -86,7 +100,7 @@ export default async (request, context) => {
     if (!app) return json({ error: "not_found" }, { status: 404 });
     // 결제창에 같은 번호를 넣으라고 안내할 수 있게 가린 번호를 같이 준다(010-****-5678)
     // 결제 요청이 취소된 신청서도 같은 신청서로 다시 결제할 수 있으니 화면에는 결제 대기로 보여 준다
-    if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}`, product: app.product || "selection", payUrl: applyProducts().find(p => p.id === (app.product || "selection"))?.payUrl || "" });
+    if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: app.paymentMode!=="order" && app.phone ? `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` : "", product: app.product || "selection", payUrl: applicationPayUrl(app,secret,origin) || applyProducts().find(p => p.id === (app.product || "selection"))?.payUrl || "" });
     const sub = await getSubscriber(app.subId);
     if (!isActive(sub)) return json({ status: "ended" });
     const { token, did, maxAge } = createPersonalSession(secret, sub);
