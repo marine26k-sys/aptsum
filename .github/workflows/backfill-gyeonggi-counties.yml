@@ -1,9 +1,6 @@
 name: 신규 군 지역 최초 데이터 수집
 
 on:
-  push:
-    branches: [fix/gyeonggi-three-counties]
-    paths: [shared/regions.mjs, shared/name-match.mjs, .github/workflows/backfill-gyeonggi-counties.yml]
   workflow_dispatch:
 
 permissions:
@@ -31,57 +28,29 @@ jobs:
       - name: 매매·분양권·전세 최근 5년 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-        run: node scripts/collect-trades.mjs --only=41820,41830,41800,28720 --months=60 --refresh=4
+        run: node scripts/collect-trades.mjs --only=41820,41830,41800 --months=60 --refresh=4
       - name: 세대수 및 단지 기본정보 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-        run: node scripts/collect-hhcnt.mjs --only=41820,41830,41800,28720
-      - name: 옹진군 기본정보 빈 응답 검증
-        env:
-          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-        run: |
-          node --input-type=module <<'JS'
-          import {existsSync,mkdirSync,writeFileSync} from 'node:fs';
-          if(!existsSync('data/hhcnt/28720.json')) {
-            const u=new URL('https://apis.data.go.kr/1613000/AptListService4/getSigunguAptList4');
-            u.search=new URLSearchParams({serviceKey:process.env.DATA_GO_KR_KEY,sigunguCode:'28720',pageNo:'1',numOfRows:'1000',_type:'json'});
-            const r=await fetch(u,{signal:AbortSignal.timeout(30000)});
-            if(!r.ok)throw new Error(`옹진군 목록 HTTP ${r.status}`);
-            const j=await r.json(),h=j.response?.header,b=j.response?.body;
-            console.log('옹진군 목록 응답:',JSON.stringify({header:h,body:b}));
-            if(h?.resultCode!=='00')throw new Error('정상 응답으로 확인되지 않아 자료 없음으로 기록하지 않습니다.');
-            const raw=b?.items?.item??b?.item??b?.items;
-            const n=Array.isArray(raw)?raw.length:raw&&typeof raw==='object'?1:0;
-            if(n||Number(b?.totalCount)>0)throw new Error('목록에 단지가 존재하므로 세대수 수집을 다시 확인해야 합니다.');
-            mkdirSync('data/collection-status',{recursive:true});
-            writeFileSync('data/collection-status/28720.json',JSON.stringify({lawd:'28720',householdData:'empty_response',resultCode:h.resultCode,checkedAt:new Date().toISOString()}));
-          }
-          JS
-          if [ -f data/collection-status/28720.json ]; then
-            git add data/collection-status/28720.json
-            if ! git diff --cached --quiet; then
-              git commit -m 'chore: 옹진군 기본정보 API 빈 응답 확인 기록'
-              git push
-            fi
-          fi
+        run: node scripts/collect-hhcnt.mjs --only=41820,41830,41800
       - name: 건축HUB 공급면적 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           BLDHUB_KEY: ${{ secrets.BLDHUB_KEY }}
-        run: node scripts/collect-supply-area.mjs --only=41820,41830,41800,28720 --limit=500 --max-minutes=180
+        run: node scripts/collect-supply-area.mjs --only=41820,41830,41800 --limit=500 --max-minutes=180
       - name: 급지 데이터 갱신
         run: |
           node scripts/build-tier-map.mjs --months=36
           git add data/tier-map.json
           if ! git diff --cached --quiet; then
-            git commit -m 'chore: 신규4군 포함 급지 데이터 갱신'
+            git commit -m 'chore: 경기3군 포함 급지 데이터 갱신'
             git push
           fi
       - name: 수집 데이터 범위 확인
         run: |
           node --input-type=module <<'JS'
           import {existsSync,readFileSync,readdirSync} from 'node:fs';
-          for(const code of ['41820','41830','41800','28720']) {
+          for(const code of ['41820','41830','41800']) {
             for(const kind of ['analyze','presale','rent']) {
               const dir=`data/${kind}/${code}`;
               const files=existsSync(dir)?readdirSync(dir).filter(f=>/^\d{6}\.json$/.test(f)):[];
@@ -89,11 +58,7 @@ jobs:
               if(files.length<60)process.exitCode=1;
             }
             const hh=`data/hhcnt/${code}.json`;
-            if(!existsSync(hh)) {
-              const status=`data/collection-status/${code}.json`;
-              if(code==='28720'&&existsSync(status)&&JSON.parse(readFileSync(status,'utf8')).householdData==='empty_response')console.log(code,'기본정보 API 정상 응답, 목록 자료 미제공');
-              else process.exitCode=1;
-            }
+            if(!existsSync(hh))process.exitCode=1;
             else console.log(code,'기본정보',JSON.parse(readFileSync(hh,'utf8')).items?.length??0,'단지');
             const supply=`data/supply-area/${code}.json`;
             console.log(code,'공급면적',existsSync(supply)?Object.keys(JSON.parse(readFileSync(supply,'utf8')).items||{}).length:0,'단지');
