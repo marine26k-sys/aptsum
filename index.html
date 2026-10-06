@@ -139,6 +139,9 @@ try {
   .spinner{width:34px;height:34px;border:4px solid var(--teal-soft);border-top-color:var(--teal);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading div{font-size:12.5px;color:var(--sub)}
+  .loading-note{max-width:360px;margin:16px auto 0;padding:12px 16px;background:var(--teal-soft);border-radius:12px;line-height:1.7}
+  .loading-note strong{display:block;color:var(--teal-dark);font-size:12.5px}
+  .loading-note p{margin:5px 0 0;font-size:12px;color:var(--sub)}
 
   .error{display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:13px 15px;font-size:12.5px;color:var(--red);margin-top:12px;line-height:1.7}
   .error.on{display:block}
@@ -997,7 +1000,7 @@ try {
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
   <div id="dataWarning" role="status" hidden style="padding:12px;color:#8a4b00;background:#fff3cd">일부 데이터 미수신: 결과가 불완전하거나 이전 데이터일 수 있습니다. 다시 검색하면 실패한 월을 재시도합니다.</div>
-  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
+  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><div id="tradeLoadNote" class="loading-note" hidden><strong>최근 2개월 실거래 자료를 실시간으로 확인하고 있어요.</strong><p>최신 신고 내역을 확인하는 과정으로, 선택한 지역이 많으면 시간이 더 걸릴 수 있습니다.</p></div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
 
@@ -4021,6 +4024,7 @@ function resolveAptName(allNames, name){
   return cand.length===1 ? cand[0] : null;
 }
 async function searchSubway(){
+  document.getElementById('tradeLoadNote').hidden = true;
   const myToken=++searchToken;beginSearchRequests();
   const lawd = sel.value;
   if(!lawd){ showError('지역을 선택해 주세요.'); return; }
@@ -4195,6 +4199,7 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
 }
 
 async function search(opts){
+  document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
@@ -4266,6 +4271,7 @@ async function search(opts){
   const effMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
+  document.getElementById('tradeLoadNote').hidden = false;
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
