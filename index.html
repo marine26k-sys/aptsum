@@ -362,6 +362,11 @@ try {
   #lawd{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
   .ls-filters{margin:8px 0 2px;padding:8px 12px 4px;border:1px solid var(--line);border-radius:12px;background:#fff}
   .ls-row{margin:2px 0 6px}
+  .ls-control{flex:1;min-width:0}
+  .ls-numbers{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--sub)}
+  .ls-numbers input[type=number]{width:0;min-width:0;flex:1;padding:5px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font-size:16px;text-align:center;box-sizing:border-box}
+  .ls-numbers input:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .ls-numbers span{font-size:11px;white-space:nowrap}
   #lsFilters{padding:8px 10px}
   #lsFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
   #lsFilters .ls-hd{flex:0 0 100px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
@@ -920,39 +925,39 @@ try {
            자유롭게 끌어서 고를 수 있다. 양 끝(10평 이하·60평 이상)은 "그 이하/이상 전부". -->
       <div class="ls-row" id="lsPyRow">
         <div class="ls-hd"><span>평형</span><b id="lsPyTxt">전체</b></div>
-        <div class="ls-dual" id="lsPyDual">
+        <div class="ls-control"><div class="ls-dual" id="lsPyDual">
           <input type="range" id="lsPyMin" min="10" max="60" step="1" value="10" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 평형">
           <input type="range" id="lsPyMax" min="10" max="60" step="1" value="60" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 평형">
-        </div>
+        </div><div class="ls-numbers"><input type="number" id="lsPyMinNumber" aria-label="최소 평형 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsPyMaxNumber" aria-label="최대 평형 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>평</span></div></div>
       </div>
       <div class="ls-row" id="lsAskRow" style="display:none">
         <div class="ls-hd"><span>매매가</span><b id="lsAskTxt">전체</b></div>
-        <div class="ls-dual" id="lsAskDual">
+        <div class="ls-control"><div class="ls-dual" id="lsAskDual">
           <input type="range" id="lsAskMin" min="0" max="50" step="0.5" value="0" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 매매가(억)">
           <input type="range" id="lsAskMax" min="0" max="50" step="0.5" value="50" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 매매가(억)">
-        </div>
+        </div><div class="ls-numbers"><input type="number" id="lsAskMinNumber" aria-label="최소 매매가(억) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsAskMaxNumber" aria-label="최대 매매가(억) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>억</span></div></div>
       </div>
       <div class="ls-row" id="lsAgeRow">
         <div class="ls-hd"><span>연식</span><b id="lsAgeTxt">전체</b></div>
-        <div class="ls-dual" id="lsAgeDual">
+        <div class="ls-control"><div class="ls-dual" id="lsAgeDual">
           <input type="range" id="lsAgeMin" min="1" max="40" step="1" value="1" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 년차">
           <input type="range" id="lsAgeMax" min="1" max="40" step="1" value="40" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 년차">
-        </div>
+        </div><div class="ls-numbers"><input type="number" id="lsAgeMinNumber" aria-label="최소 연식(년차) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsAgeMaxNumber" aria-label="최대 연식(년차) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>년차</span></div></div>
       </div>
       <div class="ls-row" id="lsHhRow">
         <div class="ls-hd"><span>세대수</span><b id="lsHhTxt">전체</b></div>
-        <div class="ls-dual" id="lsHhDual">
+        <div class="ls-control"><div class="ls-dual" id="lsHhDual">
           <input type="range" id="lsHhMin" min="100" max="5000" step="100" value="100" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 세대수">
           <input type="range" id="lsHhMax" min="100" max="5000" step="100" value="5000" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 세대수">
-        </div>
+        </div><div class="ls-numbers"><input type="number" id="lsHhMinNumber" aria-label="최소 세대수 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsHhMaxNumber" aria-label="최대 세대수 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>세대</span></div></div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
       <div class="ls-row" id="lsRateRow">
         <div class="ls-hd"><span>변동률 (전고점 대비)</span><b id="lsRateTxt">전체</b></div>
-        <div class="ls-dual" id="lsRateDual">
+        <div class="ls-control"><div class="ls-dual" id="lsRateDual">
           <input type="range" id="lsRateMin" min="-30" max="30" step="1" value="-30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 변동률">
           <input type="range" id="lsRateMax" min="-30" max="30" step="1" value="30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 변동률">
-        </div>
+        </div><div class="ls-numbers"><input type="number" id="lsRateMinNumber" aria-label="최소 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsRateMaxNumber" aria-label="최대 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>%</span></div></div>
       </div>
     </div>
     <div id="listingOccupancyFilters" class="ls-filters" style="display:none">
@@ -2067,6 +2072,7 @@ function syncAnalysisSelectSliders(){
     input.max=Math.max(0,entry.options.length-1);
     input.value=Math.max(0,entry.options.findIndex(o=>o.value===select.value));
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
+    const number=document.getElementById(select.id+'Number');if(number)number.value=select.value;
   }
 }
 // Touch scrolling and a light tap must not change an age filter.
@@ -2101,6 +2107,12 @@ function initializeAnalysisSelectSliders(){
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
     wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
     select.after(wrap);
+    if(id.startsWith('listingGap')){
+      const number=document.createElement('input');number.type='number';number.className='listing-gap-number';number.id=id+'Number';number.min=select.options[0].value;number.max=select.options[select.options.length-1].value;number.step=10;number.value=select.value;number.setAttribute('aria-label',title+' 직접 입력');
+      number.style.cssText='width:100%;margin-top:6px;padding:5px 6px;font-size:16px';wrap.append(number);
+      number.addEventListener('change',()=>{if(number.value.trim()===''||!Number.isFinite(+number.value)){number.value=select.value;return;}const v=Math.max(+number.min,Math.min(+number.max,Math.round(+number.value/10)*10));select.value=String(v);select.dispatchEvent(new Event('change',{bubbles:true}));syncAnalysisSelectSliders();});
+      number.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();number.blur();}});
+    }
     const input=wrap.querySelector('input'),label=wrap.querySelector('b'),entry={select,wrap,input,label,options:[]};analysisSelectSliders.push(entry);
     if(id==='buildYear')guardAgeSliderTouch(input,syncAnalysisSelectSliders);
     input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;}});
@@ -5900,6 +5912,7 @@ function listingGapSet(small, large, changed){
   if(small>=large){ if(changed==='large') small=large-10; else large=small+10; }
   document.getElementById('listingGapSmall').value = small;
   document.getElementById('listingGapLarge').value = large;
+  for(const id of ['listingGapSmall','listingGapLarge']){const input=document.getElementById(id+'Number');if(input)input.value=document.getElementById(id).value;}
 }
 function listingGapApply(changed){
   const {smallBand,largeBand} = listingGapBands();
@@ -6283,6 +6296,24 @@ function lsHhText(v){return v.h===v.h1?`${v.h.toLocaleString()}세대`:!lsHhActi
 function lsLabel(v,withRate){return [lsFacetActive('age',v)?lsAgeText(v):null,lsHhActive(v)?lsHhText(v):null,withRate&&lsRateActive(v)?'변동률 '+lsRateText(v):null].filter(Boolean).join(' · ')||null;}
 function lsPyMatch(x,v){return lsFacetMatch('py',x,v);}
 function lsMatch(x,v){return ['age','hh','py'].every(name=>lsFacetMatch(name,x,v));}
+// 직접 입력은 확정(Enter/포커스 이동)할 때 적용하고 슬라이더와 같은 범위를 사용한다.
+function lsNumberApply(input){
+  const slider=document.getElementById(input.id.replace('Number',''));
+  if(!slider||slider.disabled)return;
+  const n=input.value.trim()===''?NaN:Number(input.value),min=+slider.min,max=+slider.max,step=+slider.step||1;
+  if(!Number.isFinite(n)){input.value=slider.value;lsSync();return;}
+  slider.value=Math.max(min,Math.min(max,Number((min+Math.round((n-min)/step)*step).toFixed(6))));
+  lsSync(slider);input.value=slider.value;lsApply();
+}
+function lsNumbersSync(){
+  for(const f of Object.values(LS_FACETS))for(const id of f.ids){
+    const slider=document.getElementById(id),input=document.getElementById(id+'Number');
+    if(!input)continue;
+    input.min=slider.min;input.max=slider.max;input.step=slider.step;input.disabled=slider.disabled;
+    // 입력 중인 다른 칸은 덮어쓰지 않는다.
+    if(document.activeElement!==input)input.value=slider.value;
+  }
+}
 // 슬라이더를 움직이는 동안 최소·최대 역전을 방지한다.
 function lsSync(el){
   const h0=document.getElementById('lsHhMin'),h1=document.getElementById('lsHhMax');
@@ -6314,6 +6345,7 @@ function lsSync(el){
   fill('lsRateDual', v.r0, v.r1, ...Object.values(lsFacetLimits('rate')));
   fill('lsPyDual', v.p0, v.p1, ...Object.values(lsFacetLimits('py')));
   fill('lsHhDual',v.h,v.h1,...Object.values(lsFacetLimits('hh')));
+  lsNumbersSync();
 }
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
