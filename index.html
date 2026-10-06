@@ -365,6 +365,8 @@ try {
   .ls-control{flex:1;min-width:0}
   .ls-numbers{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--sub)}
   .ls-numbers input[type=number]{width:0;min-width:0;flex:1;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font-size:13px;text-align:center;box-sizing:border-box}
+  .ls-numbers[data-source="monthsN"],.ls-numbers[data-source="floorMin"]{display:none}
+  #searchBox[data-mode="complex"] .ls-numbers,#searchBox[data-mode="subway"] .ls-numbers{display:none}
   .ls-numbers input:focus{outline:2px solid var(--teal);outline-offset:1px}
   .ls-numbers span{font-size:10px;white-space:nowrap}
   #lsFilters{padding:8px 10px}
@@ -2123,7 +2125,7 @@ function initializeAnalysisSelectSliders(){
     select.after(wrap);
     const number=document.createElement('input');number.type='number';number.id=id+'Number';number.step='any';number.setAttribute('aria-label',title+' 직접 입력');
     const units={monthsN:'개월',risePeriodN:'개월 전',priceBandPeriodN:'개월 전',floorMin:'층 이상',subwayWalkMax:'분 이내',priceBandN:'억대',listingGapSmall:'평대',listingGapLarge:'평대'};
-    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
+    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.dataset.source=id;numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
     number.addEventListener('change',()=>{
       const options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none'&&o.value!==''&&Number.isFinite(+o.value));
       if(number.value.trim()===''||!Number.isFinite(+number.value)||!options.length){number.value=select.value;return;}
@@ -2275,6 +2277,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   mode = m;
+  document.getElementById('searchBox').dataset.mode=m;
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
