@@ -109,7 +109,7 @@ export function createPaymentParameters(app, env, origin) {
   return {userid:env.PAYAPP_USERID,shopname:'아파트썸',goodname:product.name,price:app.price,
     var1:createPaymentRef(env.SUBSCRIBER_SESSION_SECRET,app.id),
     feedbackurl:`${origin}/api/payapp-feedback`,returnurl:`${origin}/apply.html`,
-    smsuse:'n',redirectpay:'1'};
+    smsuse:'n',redirectpay:'1',checkretry:'y'};
 }
 export function applicationPayUrl(app, secret, origin) {
   return app.paymentMode==='order' ? `${origin}/payment.html?order=${encodeURIComponent(createPaymentRef(secret,app.id))}` : '';
@@ -159,6 +159,21 @@ async function findApplication(store, mulNo, phone, now, product, orderId) {
   return null;
 }
 
+// 같은 결제의 통보가 겹치면 하나만 코드 발급을 수행한다. 서버 중단 시에는 만료 후 재시도한다.
+async function acquireIssuance(store,mulNo,now){
+  const key=`issue:${mulNo}`,lock={owner:randomBytes(9).toString('base64url'),expiresAt:now+60000};
+  const first=await store.setJSON(key,lock,{onlyIfNew:true});
+  if(first.modified!==false)return {key,owner:lock.owner};
+  const current=await store.getWithMetadata(key,{type:'json',consistency:'strong'});
+  if(!current||current.data.expiresAt>now)return null;
+  const changed=await store.setJSON(key,lock,{onlyIfMatch:current.etag});
+  return changed.modified===false?null:{key,owner:lock.owner};
+}
+async function releaseIssuance(store,lock){
+  const current=await store.getWithMetadata(lock.key,{type:'json',consistency:'strong'});
+  if(current?.data.owner===lock.owner)await store.setJSON(lock.key,{...current.data,expiresAt:0},{onlyIfMatch:current.etag});
+}
+
 // PayApp 통보 처리. 반환값의 ok가 false면 연동 정보가 틀린 요청(위조 가능성) — 그 외엔 PayApp에 "SUCCESS"를 돌려준다
 // (같은 통보를 여러 번 받아도 결과가 같게 처리).
 //   pay_state 4 = 결제 완료, 9·64 = 승인 취소(환불), 8·16·32 = 결제 요청 취소, 1 = 결제 요청(무시)
@@ -181,6 +196,8 @@ export async function handleFeedback(p, {
   if(orderId){
     const app=await getJSON(appStore,`app:${orderId}`);
     if(!app)return {ok:false,reason:'unknown_application'};
+    const paymentIndex=mulNo?await getJSON(appStore,`mul:${mulNo}`):null;
+    if(paymentIndex&&paymentIndex.id!==orderId)return {ok:false,reason:'payment_order_mismatch'};
     if(app.price!==Number(p.price))return {ok:false,reason:'payment_product_mismatch'};
     if(app.status==='refunded' && state==='4')return {ok:true,result:'refunded'};
   }
@@ -199,36 +216,53 @@ export async function handleFeedback(p, {
       app = newApplication({ region: "", budget: "", size: "", movein: "", condition: "", phone, email: "", product: product.id }, product.price, now);
       app.unmatched = true;
     }
-    // 같은 결제 통보가 동시에 두 번 오면(PayApp은 같은 통보를 여러 번 보낼 수 있다) 코드가 두 개 발급될 수 있어,
-    // 결제번호 색인을 "없을 때만 쓰기"로 먼저 선점한 요청만 발급한다. 이미 색인이 있는데 여기까지 왔다면
-    // 앞선 요청이 발급 도중 실패한 경우라(위 findApplication이 subId 없는 신청서를 돌려줌) 그대로 이어서 발급한다.
-    if (mulNo && !(await getJSON(appStore, `mul:${mulNo}`))) {
-      const claimed = await appStore.setJSON(`mul:${mulNo}`, { id: app.id }, { onlyIfNew: true });
-      if (claimed && claimed.modified === false) return { ok: true, result: "already_issued" };
+    const issuance=mulNo?await acquireIssuance(appStore,mulNo,now):null;
+    if(mulNo&&!issuance)return {ok:false,reason:'issuance_in_progress'};
+    try {
+      // 잠금을 기다리는 사이 다른 통보가 완료됐을 수 있으므로 저장소를 다시 확인한다.
+      const index=mulNo?await getJSON(appStore,`mul:${mulNo}`):null;
+      if(orderId&&index&&index.id!==orderId)return {ok:false,reason:'payment_order_mismatch'};
+      const latest=await getJSON(appStore,`app:${index?.id||app.id}`);
+      if(latest){app=latest;if(app.subId)return {ok:true,result:'already_issued'};}
+      // 같은 결제 통보가 동시에 두 번 오면(PayApp은 같은 통보를 여러 번 보낼 수 있다) 코드가 두 개 발급될 수 있어,
+      // 결제번호 색인을 "없을 때만 쓰기"로 먼저 선점한 요청만 발급한다. 이미 색인이 있는데 여기까지 왔다면
+      // 앞선 요청이 발급 도중 실패한 경우라(위 findApplication이 subId 없는 신청서를 돌려줌) 그대로 이어서 발급한다.
+      if (mulNo && !(await getJSON(appStore, `mul:${mulNo}`))) {
+        const claimed = await appStore.setJSON(`mul:${mulNo}`, { id: app.id }, { onlyIfNew: true });
+        if (claimed && claimed.modified === false) return { ok: true, result: "already_issued" };
+      }
+      const [y, m, d] = expiryDateAfter(cfg.days, now).split("-");
+      const sub = await createSubscriber({
+        name: `${app.unmatched ? "결제" : "신청"} ${phone.slice(-4) || mulNo}`,
+        expiresAt: Date.parse(`${y}-${m}-${d}T23:59:59+09:00`),
+        orderId: app.id, scope: "listings", product: product.id,
+      }, subStore);
+      Object.assign(app, { phone: phone || app.phone || "", status: "paid", subId: sub.id, paidAt: now, mulNo: mulNo || null });
+      await appStore.setJSON(`app:${app.id}`, app);
+      if (mulNo) await appStore.setJSON(`mul:${mulNo}`, { id: app.id });
+      return { ok: true, result: app.unmatched ? "issued_unmatched" : "issued", subId: sub.id, appId: app.id };
+    } finally {
+      if(issuance)await releaseIssuance(appStore,issuance);
     }
-    const [y, m, d] = expiryDateAfter(cfg.days, now).split("-");
-    const sub = await createSubscriber({
-      name: `${app.unmatched ? "결제" : "신청"} ${phone.slice(-4) || mulNo}`,
-      expiresAt: Date.parse(`${y}-${m}-${d}T23:59:59+09:00`),
-      orderId: app.id, scope: "listings", product: product.id,
-    }, subStore);
-    Object.assign(app, { phone: phone || app.phone || "", status: "paid", subId: sub.id, paidAt: now, mulNo: mulNo || null });
-    await appStore.setJSON(`app:${app.id}`, app);
-    if (mulNo) await appStore.setJSON(`mul:${mulNo}`, { id: app.id });
-    return { ok: true, result: app.unmatched ? "issued_unmatched" : "issued", subId: sub.id, appId: app.id };
   }
 
   if (state === "9" || state === "64") {
-    const idx = mulNo ? await getJSON(appStore, `mul:${mulNo}`) : null;
-    const app = idx && await getJSON(appStore, `app:${idx.id}`);
-    if (!app) return { ok: true, result: "unknown_payment" };
-    if (app.subId) {
-      const sub = await getSubscriber(app.subId, subStore);
-      if (sub && !sub.revoked) { sub.revoked = true; await subStore.setJSON(`sub:${sub.id}`, sub); }
+    const issuance=mulNo?await acquireIssuance(appStore,mulNo,now):null;
+    if(mulNo&&!issuance)return {ok:false,reason:'issuance_in_progress'};
+    try {
+      const idx = mulNo ? await getJSON(appStore, `mul:${mulNo}`) : null;
+      const app = idx && await getJSON(appStore, `app:${idx.id}`);
+      if (!app) return { ok: true, result: "unknown_payment" };
+      if (app.subId) {
+        const sub = await getSubscriber(app.subId, subStore);
+        if (sub && !sub.revoked) { sub.revoked = true; await subStore.setJSON(`sub:${sub.id}`, sub); }
+      }
+      app.status = "refunded";
+      await appStore.setJSON(`app:${app.id}`, app);
+      return { ok: true, result: "refunded" };
+    } finally {
+      if(issuance)await releaseIssuance(appStore,issuance);
     }
-    app.status = "refunded";
-    await appStore.setJSON(`app:${app.id}`, app);
-    return { ok: true, result: "refunded" };
   }
 
   if (state === "8" || state === "16" || state === "32") {

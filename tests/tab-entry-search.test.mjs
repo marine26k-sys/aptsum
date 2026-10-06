@@ -6,9 +6,10 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const start=html.indexOf('async function initFromURL(');
 const source=html.slice(start,html.indexOf('// 공유 링크는 접속한 주소',start));
 function page(search){
-  const elements=new Map();
+  const elements=new Map(),rows=[];
   const ctx=vm.createContext({URLSearchParams, location:{search}, calls:0, mode:null,
-    document:{getElementById(id){if(!elements.has(id))elements.set(id,{value:'',checked:false});return elements.get(id);}},
+    addCmpRow(){rows.push({});},
+    document:{querySelectorAll(){return rows;},getElementById(id){if(!elements.has(id))elements.set(id,{value:'',checked:false});return elements.get(id);}},
     sel:{value:'11680'},regionSel:[{lawd:'11680',name:'강남구'}],
     aptsumSubscriberGate:{ready:Promise.resolve()},needsSubscriberSession:()=>false,isListingMode:()=>false,
     setMode(m){ctx.mode=m;return true;}, search(){ctx.calls++;},showError(){throw Error('unexpected auth error');},
