@@ -5,13 +5,15 @@ import {
 } from '../shared/applications.mjs';
 
 function fakeStore() {
-  const m = new Map();
+  const m = new Map(),versions=new Map();let version=0;
   return {
     m,
     async get(key, opts) { const v = m.get(key); return v === undefined ? null : (opts?.type === 'json' ? structuredClone(v) : JSON.stringify(v)); },
+    async getWithMetadata(key){return m.has(key)?{data:structuredClone(m.get(key)),etag:versions.get(key)}:null;},
     async setJSON(key, v, opts) {
       if (opts?.onlyIfNew && m.has(key)) return { modified: false };
-      m.set(key, structuredClone(v)); return { modified: true };
+      if(opts?.onlyIfMatch&&opts.onlyIfMatch!==versions.get(key))return {modified:false};
+      m.set(key, structuredClone(v));versions.set(key,String(++version)); return { modified: true };
     },
     async delete(key) { m.delete(key); },
     async list({ prefix }) { return { blobs: [...m.keys()].filter(k => k.startsWith(prefix)).map(key => ({ key })) }; },
@@ -125,7 +127,9 @@ test('a newer application by the same phone receives the payment', async () => {
 test('concurrent duplicate notifications issue only one code', async () => {
   const { feed, subs } = await setup();
   const results = await Promise.all([feed({ pay_state: '4' }), feed({ pay_state: '4' })]);
-  assert.deepEqual(results.map(r => r.result).sort(), ['already_issued', 'issued']);
+  assert.equal(results.filter(r=>r.result==='issued').length,1);
+  assert.equal(results.filter(r=>r.reason==='issuance_in_progress'||r.result==='already_issued').length,1);
+  assert.equal((await feed({pay_state:'4'})).result,'already_issued');
   assert.equal(subs().length, 1);
 });
 
@@ -211,6 +215,8 @@ test('same buyer phone cannot replace signed order matching for different purcha
   await saveApplication(first,appStore);await saveApplication(second,appStore);
   const r=await handleFeedback({userid:ENV.PAYAPP_USERID,linkkey:ENV.PAYAPP_LINKKEY,linkval:ENV.PAYAPP_LINKVAL,price:'9900',pay_state:'4',recvphone:FORM.phone,mul_no:'order-first',var1:createPaymentRef('secret',first.id)},{env,appStore,subStore,now:NOW});
   assert.equal(r.appId,first.id);assert.equal(appStore.m.get(`app:${second.id}`).status,'pending');
+  const conflict=await handleFeedback({userid:ENV.PAYAPP_USERID,linkkey:ENV.PAYAPP_LINKKEY,linkval:ENV.PAYAPP_LINKVAL,price:'9900',pay_state:'4',recvphone:FORM.phone,mul_no:'order-first',var1:createPaymentRef('secret',second.id)},{env,appStore,subStore,now:NOW});
+  assert.equal(conflict.reason,'payment_order_mismatch');
 });
 
 test('checkout parameters go directly to payment methods without a request message',()=>{
@@ -224,4 +230,31 @@ test('checkout parameters go directly to payment methods without a request messa
     assert.equal(p.returnurl,'https://preview.test/apply.html');
     assert.equal('recvphone' in p,false);assert.equal('linkkey' in p,false);assert.equal('linkval' in p,false);
   }
+});
+
+test('a delayed duplicate arriving after the payment index is claimed does not issue twice',async()=>{
+  const {appStore,feed,subs}=await setup();
+  const original=appStore.setJSON;let resume,claimed;
+  const barrier=new Promise(r=>claimed=r),wait=new Promise(r=>resume=r);
+  appStore.setJSON=async(key,value,opts)=>{const result=await original(key,value,opts);if(key==='mul:777'&&opts?.onlyIfNew){claimed();await wait;}return result;};
+  const first=feed({pay_state:'4'});await barrier;
+  const second=await feed({pay_state:'4'});assert.equal(second.reason,'issuance_in_progress');
+  resume();assert.equal((await first).result,'issued');assert.equal(subs().length,1);
+  assert.equal((await feed({pay_state:'4'})).result,'already_issued');
+});
+test('expired issuance locks allow retry after an interrupted worker',async()=>{
+  const {appStore,feed,subs}=await setup();
+  await appStore.setJSON('issue:777',{owner:'interrupted',expiresAt:NOW-1});
+  assert.equal((await feed({pay_state:'4'})).result,'issued');assert.equal(subs().length,1);
+});
+
+test('refund overlapping code issuance retries and then revokes the issued code',async()=>{
+  const {appStore,subStore,feed}=await setup();const original=appStore.setJSON;let resume,claimed;
+  const barrier=new Promise(r=>claimed=r),wait=new Promise(r=>resume=r);
+  appStore.setJSON=async(key,value,opts)=>{const result=await original(key,value,opts);if(key==='mul:777'&&opts?.onlyIfNew){claimed();await wait;}return result;};
+  const paid=feed({pay_state:'4'});await barrier;
+  assert.equal((await feed({pay_state:'9'})).reason,'issuance_in_progress');
+  resume();const result=await paid;
+  assert.equal((await feed({pay_state:'9'})).result,'refunded');
+  assert.equal(subStore.m.get(`sub:${result.subId}`).revoked,true);
 });
