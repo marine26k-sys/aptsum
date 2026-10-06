@@ -20,7 +20,7 @@ export const nameKey = naverNameKey;
 
 // hhcnt의 kaptAddr("서울특별시 송파구 가락동 479 헬리오시티아파트")에서 법정동만 뽑는다.
 export function dongOfAddr(addr) {
-  const m = String(addr || "").match(/([가-힣0-9]+(?:동|가|읍|면|리))\s+\d/);
+  const m = String(addr || "").match(/((?:[가-힣0-9]+(?:읍|면)\s+)?[가-힣0-9]+(?:동|가|읍|면|리))\s+\d/);
   return m ? m[1] : "";
 }
 

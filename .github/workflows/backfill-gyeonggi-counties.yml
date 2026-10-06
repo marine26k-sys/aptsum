@@ -3,7 +3,7 @@ name: 경기 3개 군 최초 데이터 수집
 on:
   push:
     branches: [fix/gyeonggi-three-counties]
-    paths: [shared/regions.mjs, .github/workflows/backfill-gyeonggi-counties.yml]
+    paths: [shared/regions.mjs, shared/name-match.mjs, .github/workflows/backfill-gyeonggi-counties.yml]
   workflow_dispatch:
 
 permissions:
@@ -41,6 +41,14 @@ jobs:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           BLDHUB_KEY: ${{ secrets.BLDHUB_KEY }}
         run: node scripts/collect-supply-area.mjs --only=41820,41830,41800 --limit=500 --max-minutes=180
+      - name: 급지 데이터 갱신
+        run: |
+          node scripts/build-tier-map.mjs --months=36
+          git add data/tier-map.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: 경기3군 포함 급지 데이터 갱신'
+            git push
+          fi
       - name: 수집 데이터 범위 확인
         run: |
           node --input-type=module <<'JS'
