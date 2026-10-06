@@ -1,4 +1,4 @@
-name: 경기 3개 군 최초 데이터 수집
+name: 신규 군 지역 최초 데이터 수집
 
 on:
   push:
@@ -31,29 +31,29 @@ jobs:
       - name: 매매·분양권·전세 최근 5년 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-        run: node scripts/collect-trades.mjs --only=41820,41830,41800 --months=60 --refresh=4
+        run: node scripts/collect-trades.mjs --only=41820,41830,41800,28720 --months=60 --refresh=4
       - name: 세대수 및 단지 기본정보 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-        run: node scripts/collect-hhcnt.mjs --only=41820,41830,41800
+        run: node scripts/collect-hhcnt.mjs --only=41820,41830,41800,28720
       - name: 건축HUB 공급면적 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           BLDHUB_KEY: ${{ secrets.BLDHUB_KEY }}
-        run: node scripts/collect-supply-area.mjs --only=41820,41830,41800 --limit=500 --max-minutes=180
+        run: node scripts/collect-supply-area.mjs --only=41820,41830,41800,28720 --limit=500 --max-minutes=180
       - name: 급지 데이터 갱신
         run: |
           node scripts/build-tier-map.mjs --months=36
           git add data/tier-map.json
           if ! git diff --cached --quiet; then
-            git commit -m 'chore: 경기3군 포함 급지 데이터 갱신'
+            git commit -m 'chore: 신규4군 포함 급지 데이터 갱신'
             git push
           fi
       - name: 수집 데이터 범위 확인
         run: |
           node --input-type=module <<'JS'
           import {existsSync,readFileSync,readdirSync} from 'node:fs';
-          for(const code of ['41820','41830','41800']) {
+          for(const code of ['41820','41830','41800','28720']) {
             for(const kind of ['analyze','presale','rent']) {
               const dir=`data/${kind}/${code}`;
               const files=existsSync(dir)?readdirSync(dir).filter(f=>/^\d{6}\.json$/.test(f)):[];
