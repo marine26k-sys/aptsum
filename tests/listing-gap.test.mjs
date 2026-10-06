@@ -64,7 +64,7 @@ test('size selectors keep the larger band above the smaller band',()=>{
 });
 
 test('share URLs preserve both size bands without hidden slider filters',()=>{
-  const a=html.indexOf('function buildShareURL('),b=html.indexOf('// 공유 링크 진입 시 자동 검색',a);
+  const a=html.indexOf('function buildShareURL('),b=html.indexOf('async function initFromURL(',a);
   const c=vm.createContext({URLSearchParams,location:{pathname:'/'}});
   vm.runInContext(html.slice(a,b),c);
   const url=c.buildShareURL({mode:'listinggap',mN:'12',fM:'0',lawd:'11680',

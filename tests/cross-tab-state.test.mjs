@@ -7,7 +7,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('share URL preserves build-year and weekly-new-high state', () => {
   const start = html.indexOf('function buildShareURL(');
-  const end = html.indexOf('// 공유 링크 진입 시 자동 검색', start);
+  const end = html.indexOf('async function initFromURL(', start);
   const ctx = vm.createContext({ URLSearchParams, location:{ pathname:'/index.html' } });
   vm.runInContext(html.slice(start, end), ctx);
   const url = ctx.buildShareURL({
