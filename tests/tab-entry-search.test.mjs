@@ -26,7 +26,7 @@ test('shared result URL restores filters and performs exactly one query',async()
   for(const query of ['?m=region&r=11680&by=under10','?m=subway&rs=11680:강남구','?m=listingbudget&r=11680&lbn=1','?m=complex&r=11680&q=래미안']){
     const {ctx,elements}=page(query);await ctx.initFromURL();assert.equal(ctx.calls,1,query);
     if(query.includes('q='))assert.equal(elements.get('q').value,'래미안');
-    if(query.includes('lbn='))assert.equal(elements.get('listingBudgetNewOnly').checked,true);
+    if(query.includes('lbn='))assert.ok(!elements.get('listingBudgetNewOnly')?.checked);
   }
 });
 

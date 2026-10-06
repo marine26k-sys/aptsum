@@ -375,7 +375,7 @@ try {
   #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
   #listingBudgetFavorites[open] summary{margin-bottom:8px}
   #listingBudgetFavoriteName{border:1px solid var(--line);border-radius:8px;padding:7px 8px}
-  #listingOccupancyFilters,#listingBudgetNewFilters{padding:7px 10px;margin-top:6px}
+  #listingOccupancyFilters{padding:7px 10px;margin-top:6px}
   .ls-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--sub)}
   .ls-hd b{color:var(--teal-dark);font-size:13px}
   .ls-filters input[type=range]{width:100%;margin:6px 0 2px;accent-color:var(--teal)}
@@ -971,9 +971,6 @@ try {
       <div id="listingBudgetFavoriteList" style="margin-top:8px"></div>
       <div id="listingBudgetFavoriteMsg" role="status" style="font-size:11px;color:var(--teal-dark);margin-top:5px">이 브라우저에 저장됩니다.</div>
     </details>
-    <div id="listingBudgetNewFilters" class="ls-filters" style="display:none">
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingBudgetNewOnly" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">새로 등장한 가격만</label>
-    </div>
     <div id="listingTrendFilters" class="ls-filters" style="display:none">
       <details id="listingTrendHistoryPanel">
         <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--teal-dark)">조회 기록</summary>
@@ -1150,7 +1147,7 @@ function captureViewInputs(){
     trendChoices:[...document.getElementById('listingTrendUpload').options].map(o=>({value:o.value,label:o.textContent})),
     budgetBand:listingBudgetSel,
     trendContinuous: document.getElementById('listingTrendContinuous').checked,
-    budgetNewOnly: document.getElementById('listingBudgetNewOnly').checked,
+    budgetNewOnly: false,
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
     rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
@@ -1173,7 +1170,6 @@ function buildShareURL(inp){
   if(inp.by) p.set('by', inp.by);
   if(inp.mode==='listingtrend' && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if(inp.mode==='listingtrend' && inp.trendContinuous) p.set('ltc','1');
-  if(inp.mode==='listingbudget' && inp.budgetNewOnly) p.set('lbn','1');
   if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
   if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
@@ -1234,7 +1230,7 @@ async function initFromURL(){
   document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
   listingTrendUploadId = requestedMode==='listingtrend' ? (p.get('ltu')||'') : '';
   document.getElementById('listingTrendContinuous').checked=requestedMode==='listingtrend' && p.get('ltc')==='1';
-  document.getElementById('listingBudgetNewOnly').checked=requestedMode==='listingbudget' && p.get('lbn')==='1';
+
   if(requestedMode==='listinggap' && (hasSharedQuery || p.has('lg'))){
     const [small,large] = (p.get('lg')||'20-30').split('-').map(Number);
     listingGapSet(small,large);
@@ -1517,7 +1513,7 @@ function restoreListingSelectionInputs(inp){
   if(inp.trendChoices)upload.replaceChildren(...inp.trendChoices.map(o=>new Option(o.label,o.value)));
   upload.value=listingTrendUploadId;
   document.getElementById('listingTrendContinuous').checked=!!inp.trendContinuous;
-  document.getElementById('listingBudgetNewOnly').checked=!!inp.budgetNewOnly;
+
   listingBudgetSel=inp.budgetBand||null;
 }
 function restoreView(vi){
@@ -2054,6 +2050,7 @@ function syncAnalysisAgeSlider(){
   document.getElementById('analysisAgeMin').value=lo;document.getElementById('analysisAgeMax').value=hi;
   document.getElementById('analysisAgeTxt').textContent=analysisAgeLabel(value);
   const dual=document.getElementById('analysisAgeDual');dual.style.setProperty('--lo',(lo/40*100)+'%');dual.style.setProperty('--hi',(hi/40*100)+'%');
+  syncAnalysisRangeNumbers('analysisAge');
 }
 function analysisAgeSync(changed){
   const lo=document.getElementById('analysisAgeMin'),hi=document.getElementById('analysisAgeMax');
@@ -2072,7 +2069,7 @@ function syncAnalysisSelectSliders(){
     input.max=Math.max(0,entry.options.length-1);
     input.value=Math.max(0,entry.options.findIndex(o=>o.value===select.value));
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
-    const number=document.getElementById(select.id+'Number');if(number)number.value=select.value;
+    const number=document.getElementById(select.id+'Number');if(number){number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
   }
 }
 // Touch scrolling and a light tap must not change an age filter.
@@ -2101,21 +2098,40 @@ function guardAgeSliderTouch(input,refresh){
   input.addEventListener('pointerup',end,true);
   input.addEventListener('pointercancel',end,true);
 }
+function syncAnalysisRangeNumbers(prefix){
+  for(const end of ['Min','Max']){const slider=document.getElementById(prefix+end),number=document.getElementById(prefix+end+'Number');if(number){number.value=slider.value;number.min=slider.min;number.max=slider.max;number.step=slider.step;}}
+}
+function initializeAnalysisRangeNumbers(){
+  for(const [prefix,title,unit] of [['analysisPy','평형','평'],['analysisAge','연식','년']]){
+    const dual=document.getElementById(prefix+'Dual'),numbers=document.createElement('div');numbers.className='ls-numbers';
+    for(const end of ['Min','Max']){
+      if(end==='Max'){const sep=document.createElement('span');sep.textContent='~';numbers.append(sep);}
+      const number=document.createElement('input');number.type='number';number.id=prefix+end+'Number';number.setAttribute('aria-label',(end==='Min'?'최소 ':'최대 ')+title+' 직접 입력');numbers.append(number);
+      number.addEventListener('change',()=>{const slider=document.getElementById(prefix+end);if(number.value.trim()===''||!Number.isFinite(+number.value)){number.value=slider.value;return;}slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(+number.value)));if(prefix==='analysisPy')analysisPySync(slider);else analysisAgeSync(slider);syncAnalysisRangeNumbers(prefix);});
+      number.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();number.blur();}});
+    }
+    const label=document.createElement('span');label.textContent=unit;numbers.append(label);dual.after(numbers);syncAnalysisRangeNumbers(prefix);
+  }
+}
 function initializeAnalysisSelectSliders(){
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
     wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
     select.after(wrap);
-    if(id.startsWith('listingGap')){
-      const number=document.createElement('input');number.type='number';number.className='listing-gap-number';number.id=id+'Number';number.min=select.options[0].value;number.max=select.options[select.options.length-1].value;number.step=10;number.value=select.value;number.setAttribute('aria-label',title+' 직접 입력');
-      number.style.cssText='width:100%;margin-top:6px;padding:5px 6px;font-size:16px';wrap.append(number);
-      number.addEventListener('change',()=>{if(number.value.trim()===''||!Number.isFinite(+number.value)){number.value=select.value;return;}const v=Math.max(+number.min,Math.min(+number.max,Math.round(+number.value/10)*10));select.value=String(v);select.dispatchEvent(new Event('change',{bubbles:true}));syncAnalysisSelectSliders();});
-      number.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();number.blur();}});
-    }
+    const number=document.createElement('input');number.type='number';number.id=id+'Number';number.step='any';number.setAttribute('aria-label',title+' 직접 입력');
+    const units={monthsN:'개월',risePeriodN:'개월 전',priceBandPeriodN:'개월 전',floorMin:'층 이상',subwayWalkMax:'분 이내',priceBandN:'억대',listingGapSmall:'평대',listingGapLarge:'평대'};
+    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
+    number.addEventListener('change',()=>{
+      const options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none'&&o.value!==''&&Number.isFinite(+o.value));
+      if(number.value.trim()===''||!Number.isFinite(+number.value)||!options.length){number.value=select.value;return;}
+      const closest=options.reduce((a,b)=>Math.abs(+b.value-Number(number.value))<Math.abs(+a.value-Number(number.value))?b:a);
+      select.value=closest.value;select.dispatchEvent(new Event('change',{bubbles:true}));syncAnalysisSelectSliders();
+    });
+    number.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();number.blur();}});
     const input=wrap.querySelector('input'),label=wrap.querySelector('b'),entry={select,wrap,input,label,options:[]};analysisSelectSliders.push(entry);
     if(id==='buildYear')guardAgeSliderTouch(input,syncAnalysisSelectSliders);
-    input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;}});
+    input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;number.value=option.value;}});
     input.addEventListener('change',()=>select.dispatchEvent(new Event('change',{bubbles:true})));
     select.addEventListener('change',syncAnalysisSelectSliders);
     new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style'],subtree:true});
@@ -2126,6 +2142,7 @@ function initializeAnalysisSelectSliders(){
   for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
   new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
   for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
+  initializeAnalysisRangeNumbers();
   syncAnalysisSelectSliders();
 }
 setTimeout(initializeAnalysisSelectSliders,0);
@@ -2166,6 +2183,7 @@ function renderPyBandMultiBtn(){
     min.value=Math.max(10,Math.min(60,lo));max.value=Math.max(10,Math.min(60,hi));
     document.getElementById('analysisPyTxt').textContent=pyBandMultiSel.length?pyBandMultiLabel():'전체';
     const dual=document.getElementById('analysisPyDual');dual.style.setProperty('--lo',((+min.value-10)/50*100)+'%');dual.style.setProperty('--hi',((+max.value-10)/50*100)+'%');
+    syncAnalysisRangeNumbers('analysisPy');
   }
 
   const el = document.getElementById('pyBandMultiTxt');
@@ -2341,7 +2359,6 @@ function setMode(m, fromRestore){
   document.getElementById('lsHhRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingTrendFilters').style.display = m==='listingtrend' ? '' : 'none';
-  document.getElementById('listingBudgetNewFilters').style.display = m==='listingbudget' ? '' : 'none';
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -6260,7 +6277,7 @@ function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
   document.getElementById('listingOccupancy').value='available';
-  document.getElementById('listingBudgetNewOnly').checked=false;
+
   document.getElementById('listingTrendContinuous').checked=false;
   listingTrendUploadId='';listingBudgetSel=null;
   document.getElementById('listingTrendUpload').value='';
@@ -6381,7 +6398,7 @@ function loadListingBudgetFavorite(index){
   if(c.askLimits){for(const id of ['lsAskMin','lsAskMax']){const el=document.getElementById(id);el.min=c.askLimits.min;el.max=c.askLimits.max;}}
   lsRestoreLimits(c.sliderLimits);
   lsSet(c.ls);document.getElementById('listingOccupancy').value=c.occupancy==='tenant'?'tenant':'available';
-  document.getElementById('listingBudgetNewOnly').checked=!!c.budgetNewOnly;listingBudgetSel=c.band||null;
+listingBudgetSel=c.band||null;
   document.getElementById('listingBudgetFavoriteMsg').textContent=`‘${favorite.name}’ 조건으로 조회합니다.`;
   search({silentScroll:true});
 }
@@ -6403,7 +6420,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('btn').disabled = true;
   try{
     const failed = [], all = [], uncomparable=[];
-    const newOnly=tabMode==='listingbudget' && document.getElementById('listingBudgetNewOnly').checked;
+    const newOnly=false;
     let asOf = null;
     await Promise.all(targets.map(async t=>{
       try{
@@ -6634,7 +6651,7 @@ function setListingBudgetBand(v){
   if(lastData && lastData.mode==='listingbudget') renderListingBudget(lastData);
 }
 function renderListingBudget(d){
-  document.getElementById('listingBudgetNewOnly').checked=!!d.budgetNewOnly;
+
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
   const bands = LISTING_BUDGET_BANDS.filter(b => counts[b.v]);
@@ -6643,8 +6660,8 @@ function renderListingBudget(d){
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
-  const cur = d.budgetNewOnly ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
-  const list = (d.budgetNewOnly ? d.rows.slice() : cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : []).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
+  const cur = LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const list = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : []).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
   const multiRegion = regionMulti(list);
   const chips = bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
@@ -6660,9 +6677,9 @@ function renderListingBudget(d){
   <div class="card">
     ${listingHeaderHTML(d, '금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)${d.budgetNewOnly ? ' · 새로 등장한 가격만' : ''}</div>
+      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      ${d.budgetNewOnly ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${body}
