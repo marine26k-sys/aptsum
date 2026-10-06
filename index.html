@@ -139,6 +139,9 @@ try {
   .spinner{width:34px;height:34px;border:4px solid var(--teal-soft);border-top-color:var(--teal);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading div{font-size:12.5px;color:var(--sub)}
+  .loading-note{max-width:360px;margin:16px auto 0;padding:12px 16px;background:var(--teal-soft);border-radius:12px;line-height:1.7}
+  .loading-note strong{display:block;color:var(--teal-dark);font-size:12.5px}
+  .loading-note p{margin:5px 0 0;font-size:12px;color:var(--sub)}
 
   .error{display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:13px 15px;font-size:12.5px;color:var(--red);margin-top:12px;line-height:1.7}
   .error.on{display:block}
@@ -997,7 +1000,7 @@ try {
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
   <div id="dataWarning" role="status" hidden style="padding:12px;color:#8a4b00;background:#fff3cd">일부 데이터 미수신: 결과가 불완전하거나 이전 데이터일 수 있습니다. 다시 검색하면 실패한 월을 재시도합니다.</div>
-  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
+  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><div id="tradeLoadNote" class="loading-note" hidden><strong>최근 2개월 실거래 자료를 실시간으로 확인하고 있어요.</strong><p>최신 신고 내역을 확인하는 과정으로, 선택한 지역이 많으면 시간이 더 걸릴 수 있습니다.</p></div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
 
@@ -1028,7 +1031,7 @@ try {
 <script>
 const REGIONS = [
   ['서울', [['강남구','11680'],['강동구','11740'],['강북구','11305'],['강서구','11500'],['관악구','11620'],['광진구','11215'],['구로구','11530'],['금천구','11545'],['노원구','11350'],['도봉구','11320'],['동대문구','11230'],['동작구','11590'],['마포구','11440'],['서대문구','11410'],['서초구','11650'],['성동구','11200'],['성북구','11290'],['송파구','11710'],['양천구','11470'],['영등포구','11560'],['용산구','11170'],['은평구','11380'],['종로구','11110'],['중구','11140'],['중랑구','11260']]],
-  ['경기', [['부천 원미구','BC-원미구'],['부천 소사구','BC-소사구'],['부천 오정구','BC-오정구'],['고양 덕양구','41281'],['고양 일산동구','41285'],['고양 일산서구','41287'],['과천시','41290'],['광명시','41210'],['광주시','41610'],['구리시','41310'],['군포시','41410'],['김포시','41570'],['남양주시','41360'],['성남 분당구','41135'],['성남 수정구','41131'],['성남 중원구','41133'],['수원 권선구','41113'],['수원 영통구','41117'],['수원 장안구','41111'],['수원 팔달구','41115'],['시흥시','41390'],['안산 단원구','41273'],['안산 상록구','41271'],['안양 동안구','41173'],['안양 만안구','41171'],['용인 기흥구','41463'],['용인 수지구','41465'],['용인 처인구','41461'],['의왕시','41430'],['의정부시','41150'],['이천시','41500'],['파주시','41480'],['평택시','41220'],['하남시','41450'],['화성 동탄구','HS-동탄구'],['화성 병점구','HS-병점구'],['화성 만세구','HS-만세구'],['화성 효행구','HS-효행구'],['오산시','41370'],['양주시','41630'],['동두천시','41250'],['안성시','41550'],['포천시','41650'],['여주시','41670']]],
+  ['경기', [['부천 원미구','BC-원미구'],['부천 소사구','BC-소사구'],['부천 오정구','BC-오정구'],['고양 덕양구','41281'],['고양 일산동구','41285'],['고양 일산서구','41287'],['과천시','41290'],['광명시','41210'],['광주시','41610'],['구리시','41310'],['군포시','41410'],['김포시','41570'],['남양주시','41360'],['성남 분당구','41135'],['성남 수정구','41131'],['성남 중원구','41133'],['수원 권선구','41113'],['수원 영통구','41117'],['수원 장안구','41111'],['수원 팔달구','41115'],['시흥시','41390'],['안산 단원구','41273'],['안산 상록구','41271'],['안양 동안구','41173'],['안양 만안구','41171'],['용인 기흥구','41463'],['용인 수지구','41465'],['용인 처인구','41461'],['의왕시','41430'],['의정부시','41150'],['이천시','41500'],['파주시','41480'],['평택시','41220'],['하남시','41450'],['화성 동탄구','HS-동탄구'],['화성 병점구','HS-병점구'],['화성 만세구','HS-만세구'],['화성 효행구','HS-효행구'],['오산시','41370'],['양주시','41630'],['동두천시','41250'],['안성시','41550'],['포천시','41650'],['여주시','41670'],['가평군','41820'],['양평군','41830'],['연천군','41800']]],
   ['인천', [['제물포구','IC-제물포구'],['영종구','IC-영종구'],['미추홀구','28177'],['연수구','28185'],['남동구','28200'],['부평구','28237'],['계양구','28245'],['서해구','IC-서해구'],['검단구','IC-검단구'],['강화군','28710']]],
   ['부산', [['중구','26110'],['서구','26140'],['동구','26170'],['영도구','26200'],['부산진구','26230'],['동래구','26260'],['남구','26290'],['북구','26320'],['해운대구','26350'],['사하구','26380'],['금정구','26410'],['강서구','26440'],['연제구','26470'],['수영구','26500'],['사상구','26530'],['기장군','26710']]]
 ];
@@ -1040,7 +1043,7 @@ REGIONS.forEach(([, arr]) => arr.sort((a,b)=> a[0].localeCompare(b[0], 'ko')));
 const LAWD_TO_PROVINCE = {};
 REGIONS.forEach(([prov, arr]) => arr.forEach(([, lawd]) => { LAWD_TO_PROVINCE[lawd] = prov; }));
 const PROVINCE_DISPLAY = { '서울':'서울시', '경기':'경기도', '인천':'인천시', '부산':'부산시' };
-// 경기도는 시·도 전체 일괄 추가 대신(2026.09, 운영자 요청 — 39개 시군구가 한 번에 담기는 게 과함),
+// 경기도 전체 선택과 함께 구가 나뉜 시의 일괄 선택도 제공한다.
 // 같은 시에 구가 2개 이상인 시(수원·성남·안양·안산·고양·용인·부천·화성)만 "OO시 전체" 일괄 추가를 지원.
 // 라벨이 "성남 분당구"처럼 "시 이름 + 공백 + 구 이름"이라 첫 공백 앞부분을 시 이름으로 그룹핑.
 const GG_CITY_MAP = {};
@@ -1641,9 +1644,8 @@ lawdBlank.value = ''; lawdBlank.textContent = '지역을 선택하세요';
 sel.appendChild(lawdBlank);
 REGIONS.forEach(([g,arr])=>{
   const og = document.createElement('optgroup'); og.label=g;
-  // "경기 전체" 일괄 옵션은 제외(운영자 요청, 2026.09) — 서울·인천·부산은 유지, 경기는 구가 2개 이상인
-  // 시(성남·수원 등)만 "OO시 전체"로 대체 지원(아래 arr.forEach 안에서 시 단위로 삽입)
-  if(g !== '경기'){
+  // 전체 선택 옵션은 지원하는 탭에서만 노출한다. 경기도의 시 단위 전체 선택도 유지한다.
+  {
     const all = document.createElement('option');
     all.value = ALL_PREFIX+g; all.textContent = (PROVINCE_DISPLAY[g]||g)+' 전체'; all.dataset.scope='all';
     og.appendChild(all);
@@ -1670,17 +1672,17 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = 45; // 서울25·경기39·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
+const REGION_MAX = Math.max(45, ...REGIONS.map(([, regions])=>regions.length)); // 서울25·경기47·인천11 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
-// "경기 전체"(39개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
+// "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){
-  return (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
+  return mode==='region' || (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
     || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| mode==='listingtrend' || mode==='listinggap';
 }
 function regionSelMax(){
-  // 경기 전체를 허용한 탭은 39개 시군구를 한 번에 담을 수 있도록 상한을 REGION_MAX(45)까지 풀어준다.
+  // 경기 전체를 허용한 탭은 47개 시군구를 한 번에 담을 수 있도록 상한을 REGION_MAX(47)까지 풀어준다.
   // 다른 지역 랭킹·저평가 탭들은 기존 25개 상한을 유지한다.
   if(ggAllAllowed()) return REGION_MAX;
   return (mode==='region'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? REGION_MAX_RANK : REGION_MAX; // 단기/반기/연간 저평가도 2026.09부터 25개로 상향(운영자 요청) — 원래 단지별 세대수까지 조회하는 무거운 계산이라 5개로 낮게 잡았었으나(2026.07), 연간 저평가(동일 권역)를 먼저 25개로 올려본 뒤(2026.08) 문제없어 나머지 세 탭도 통일
@@ -1769,7 +1771,7 @@ function buildRegionPicker(){
     // '전체' 알약 노출 — 그동안 상한 25개인 탭에서만 노출했으나(2026.08), addRegion()이 상한 초과 시
     // 이미 안전하게 "최대 N개까지만 채우고 안내"로 처리하므로, 상한 5개(단기/반기/연간 저평가)에서도
     // 5개를 빠르게 채우는 용도로 유용하다는 운영자 피드백으로 2026.09 재추가 — sel 쪽 supportsAllScopeOption과 동일 기준.
-    // 경기는 "경기 전체" 대신(운영자 요청, 2026.09) 구가 2개 이상인 시(성남·수원 등)의 "OO시 전체" 알약만 지원.
+    // 경기는 전체 선택과 구가 나뉜 시의 전체 선택을 함께 제공한다.
     // 서울·인천·부산의 "OO 전체"도 같은 크기의 작은 알약으로 통일(운영자 요청, 2026.09) — 큰 블록 버튼 대신
     // 그 시·도의 구 알약들 맨 앞에 같은 그리드 안 인라인으로 끼워 넣는다.
     let ggPickerLastCity = null;
@@ -1777,7 +1779,7 @@ function buildRegionPicker(){
       let prefix = '';
       if(multi && !q){
         if(g==='경기'){
-          // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 39개 시군구 일괄 추가 버튼을 노출한다.
+          // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 47개 시군구 일괄 추가 버튼을 노출한다.
           if(i===0 && ggAllAllowed()){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
           }
@@ -2243,7 +2245,7 @@ function setMode(m, fromRestore){
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
   const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
-  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption; });
+  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
@@ -2473,7 +2475,7 @@ function lsSave(lawd){
 // 4로 잡아서 신고가의 4개 조각은 한 번에(1라운드), 그 이상 조각이 필요한 경우(복수 지역 조회 등)만 여러 라운드로 나눔.
 const CHUNK_CONCURRENCY = 4;
 // 청크 하나가 실패해도(국토부 API 순간 오류·타임아웃) Promise.all이 통째로 reject되어 같은 지역의
-// 나머지 멀쩡한 청크(수십 개월치)까지 다 날아가던 문제(2026.09 발견 — 경기도 39개 시군구 통합 조회처럼
+// 나머지 멀쩡한 청크(수십 개월치)까지 다 날아가던 문제(2026.09 발견 — 경기도 47개 시군구 통합 조회처럼
 // 지역 수가 많을수록 "어느 한 지역의 어느 한 달"이 실패할 확률이 누적돼, 결과적으로 지역 1개만 조회할
 // 때보다 오히려 총 결과가 더 적게 나오는 원인이었음). 청크별로 개별 catch해서 실패한 청크만 null로
 // 표시하고 나머지 성공한 청크는 그대로 살린다.
@@ -3141,7 +3143,7 @@ function analyzeNewHigh(all, months, weekOnly){
   }
   results.sort((a,b)=> b.amt - a.amt); // 가격 높은 순
   // "신고가 속보 (7일)" 탭은 여기서 가격 상위 100개로 자른 뒤 화면(renderNewHigh)에서 최근 7일 이내(fresh7)만
-  // 다시 걸러내는 순서였는데, 그러면 지역을 여러 개 묶어 조회할수록(예: 경기도 전체 39개 시군구) 비싼
+  // 다시 걸러내는 순서였는데, 그러면 지역을 여러 개 묶어 조회할수록(예: 경기도 전체 47개 시군구) 비싼
   // 지역의 오래된(8~29일 전) 신고가가 상위 100개를 채워버려서, 정작 최근 7일 안에 갱신됐지만 가격은 상대적으로
   // 낮은 다른 지역 신고가가 밀려나 통째로 안 보이는 문제가 있었음(2026.09 발견 — 구 1개만 조회할 때보다
   // 오히려 "경기도 전체"가 결과가 더 적게 나오던 원인). 7일 필터를 먼저 적용한 뒤에 100개로 잘라야 한다.
@@ -4022,6 +4024,7 @@ function resolveAptName(allNames, name){
   return cand.length===1 ? cand[0] : null;
 }
 async function searchSubway(){
+  document.getElementById('tradeLoadNote').hidden = true;
   const myToken=++searchToken;beginSearchRequests();
   const lawd = sel.value;
   if(!lawd){ showError('지역을 선택해 주세요.'); return; }
@@ -4196,6 +4199,7 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
 }
 
 async function search(opts){
+  document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
@@ -4267,6 +4271,7 @@ async function search(opts){
   const effMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
+  document.getElementById('tradeLoadNote').hidden = false;
   document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
