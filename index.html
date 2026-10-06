@@ -1177,11 +1177,12 @@ function buildShareURL(inp){
   }
   return location.pathname + '?' + p.toString();
 }
-// 공유 링크 진입 시 자동 검색
+// 탭 주소는 조건 화면만 연다. 조회 조건이 담긴 공유 링크만 자동 검색한다.
 async function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
   if(!m) return;
+  const hasSharedQuery = ['r','rs','q','c'].some(key=>Boolean(p.get(key)?.trim()));
   // 급지 지도는 2026.09에 메인 탭에서 다시 별도 페이지(tier.html)로 분리됐음 — 과거(그 사이 짧은 기간)
   // 공유된 ?m=tier 링크가 여전히 돌고 있을 수 있어, 그런 링크로 들어오면 tier.html로 리다이렉트한다.
   if(m==='tier'){ location.replace('./tier.html'); return; }
@@ -1220,7 +1221,7 @@ async function initFromURL(){
     const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
     document.getElementById('cmpRows').innerHTML='';
     items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
-    if(items.length>=2) search();
+    if(hasSharedQuery && items.length>=2) search();
   } else {
     if(p.get('r')) sel.value = p.get('r');
     // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함
@@ -1234,9 +1235,11 @@ async function initFromURL(){
     if(p.get('pbp')) document.getElementById('priceBandPeriodN').value = p.get('pbp');
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
     if(p.get('pbb')==='past') document.getElementById('priceBandBasis').value = 'past';
-    if(m==='region'||m==='volume'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise'||m==='gap'){ search(); }
-    else if(m==='subway'){ search(); } // 2026.08 추가 — 역세권 공유 링크로 진입해도 자동 조회되도록(기존엔 이 분기가 없어 단지 분석으로 열렸음)
-    else if(p.get('q')){ document.getElementById('q').value = p.get('q'); search(); }
+    if(p.get('q')) document.getElementById('q').value = p.get('q');
+    if(hasSharedQuery){
+      if(requestedMode==='complex'){ if(p.get('q')) search(); }
+      else search();
+    }
   }
 }
 // 공유 링크는 접속한 주소가 아니라 항상 대표 도메인(aptsum.kr)으로 만든다 — netlify.app 주소로 들어와

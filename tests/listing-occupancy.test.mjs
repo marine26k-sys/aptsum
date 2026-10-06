@@ -24,7 +24,7 @@ test('sanitization preserves occupancy and treats old summaries as available',()
  assert.equal(cleanItem({nid:'1',ex:84,peak:20,ask:15}).occupancy,'available');
 });
 test('share link keeps tenant selection and omits the default',()=>{
- const start=index.indexOf('function buildShareURL('),end=index.indexOf('// 공유 링크 진입 시 자동 검색',start);
+ const start=index.indexOf('function buildShareURL('),end=index.indexOf('async function initFromURL(',start);
  const ctx=vm.createContext({URLSearchParams,location:{pathname:'/'},isListingMode:()=>true});vm.runInContext(index.slice(start,end),ctx);
  const inp={mode:'listinggap',mN:'36',fM:'0',lawd:'11680',occupancy:'tenant'};
  assert.equal(new URL('https://example.com'+ctx.buildShareURL(inp)).searchParams.get('occupancy'),'tenant');
