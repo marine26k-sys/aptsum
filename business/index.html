@@ -153,8 +153,6 @@ footer{background:var(--navy);color:rgba(255,255,255,.5);padding:40px 0;font-siz
 .foot-in .logo-img{height:26px}
 footer a{color:rgba(255,255,255,.7)}
 footer a:hover{color:#fff}
-.visit-counter{margin-top:16px;text-align:center;opacity:.55}
-.visit-counter img{height:20px}
 
 :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 
@@ -408,12 +406,11 @@ footer a:hover{color:#fff}
     <span>본 채널의 콘텐츠는 정보 제공 목적이며 투자 권유가 아닙니다.</span>
     <a href="https://instagram.com/apt_sum" target="_blank" rel="noopener">@apt_sum</a>
   </div>
-  <div class="wrap visit-counter">
-    <img src="https://visitor-badge.laobi.icu/badge?page_id=aptsumbiz.netlify.app&text=visitors" alt="방문자 수" loading="lazy">
-  </div>
 </footer>
 
 <script>
+// 방문 횟수는 자체 통계에서만 표시한다. 집계 실패가 페이지 사용을 막지 않는다.
+fetch('/api/visits?page=business', { cache:'no-store', credentials:'same-origin' }).catch(()=>{});
 async function copyBusinessEmail(button){
   try{
     await navigator.clipboard.writeText('aptsum.biz@gmail.com');

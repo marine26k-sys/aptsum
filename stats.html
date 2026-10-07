@@ -59,7 +59,7 @@
   <header>
     <a class="back" href="./index.html" aria-label="메인으로">←</a>
     <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>방문자 통계</span>
-    <p>아파트썸 3개 페이지 방문 현황</p>
+    <p>아파트썸 페이지별 방문 현황</p>
   </header>
 
   <div id="app"><div class="loading">불러오는 중…</div></div>
@@ -185,6 +185,16 @@ function render(d){
       <div class="chart-labels">
         ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>`).join("")}
       </div>
+    </div>
+
+    <div class="card" id="pageVisitsCard">
+      <div class="card-title">페이지별 방문</div>
+      ${(d.pages || []).map(p => `
+        <div class="page-row">
+          <div class="page-dot"></div>
+          <div class="page-main"><div class="page-name">${esc(p.label)}</div></div>
+          <div class="page-nums"><b>누적 ${p.total.toLocaleString()}회</b><div>오늘 ${p.today.toLocaleString()}회</div></div>
+        </div>`).join("")}
     </div>
 
     <div class="card" id="tabCard">

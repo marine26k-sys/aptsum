@@ -12,6 +12,7 @@ const PAGES = [
   { page: "index", label: "메인 (실거래 분석)" },
   { page: "tier", label: "급지 분석" },
   { page: "subway", label: "교통 호재" },
+  { page: "business", label: "비즈니스" },
 ];
 const TREND_DAYS = 14;
 
