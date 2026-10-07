@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아파트썸 비즈니스 — 데이터로 보는 아파트</title>
+<meta name="description" content="수도권 아파트 시장을 데이터로 분석하는 채널, 아파트썸. 청약 분석 · 시세 카드뉴스 · 광고 제휴 안내.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0E2433;
+  --navy-2:#16344A;
+  --teal:#00828A;
+  --teal-dark:#00666D;
+  --teal-light:#E4F2F3;
+  --cream:#FBF5EA;
+  --ink:#1A2A33;
+  --gray:#6B7A84;
+  --line:#E3E9EC;
+  --white:#FFFFFF;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{font-family:'Noto Sans KR',sans-serif;color:var(--ink);background:var(--white);line-height:1.15;-webkit-font-smoothing:antialiased;word-break:keep-all}
+img{max-width:100%}
+a{text-decoration:none;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(14,36,51,.92);backdrop-filter:blur(8px)}
+.nav-in{max-width:1080px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.logo{color:#fff;font-weight:900;font-size:19px;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo .dot{width:10px;height:10px;background:var(--teal);border-radius:2px;display:inline-block}
+.logo-img{height:34px;width:auto;display:block;border-radius:4px}
+.nav-links{display:flex;gap:28px}
+.nav-links a{color:rgba(255,255,255,.75);font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover,.nav-links a:focus-visible{color:#fff}
+.nav-cta{background:var(--teal);color:#fff;font-size:14px;font-weight:800;padding:9px 18px;border-radius:99px;box-shadow:0 2px 8px rgba(0,130,138,.4);transition:background .2s,transform .15s}
+.nav-cta:hover{background:var(--teal-dark);transform:translateY(-1px)}
+.nav-cta:hover{background:var(--teal-dark)}
+@media(max-width:720px){.nav-links{display:none}}
+
+/* ---------- hero ---------- */
+header{background:var(--navy);color:#fff;padding:140px 0 0;position:relative;overflow:hidden}
+.hero-grid{display:block}
+.hero-copy{padding-bottom:72px}
+.eyebrow{color:var(--teal);font-size:13px;font-weight:700;letter-spacing:3px;margin-bottom:16px}
+h1{font-size:clamp(34px,5.5vw,58px);font-weight:900;line-height:1.25;letter-spacing:-1.5px}
+h1 .hl{color:#4FC7CE}
+.hero-sub{margin-top:20px;font-size:16px;color:rgba(255,255,255,.8);max-width:440px;font-weight:400}
+.listing-banners{display:flex;flex-direction:column;gap:8px;margin-top:18px;max-width:420px}
+.listing-banner{display:flex;align-items:center;gap:10px;background:var(--navy-2);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px 14px;transition:background .2s,border-color .2s}
+.listing-banner:hover{background:rgba(255,255,255,.06);border-color:var(--teal)}
+.lb-tag{flex:none;background:var(--teal);color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px}
+.lb-text{flex:1;font-size:13px;font-weight:700;color:#fff;line-height:1.3}
+.lb-text em{display:block;font-style:normal;font-weight:500;font-size:10.5px;color:rgba(255,255,255,.55);margin-top:1px}
+.lb-arrow{flex:none;color:var(--teal);font-weight:900;font-size:16px}
+.hero-btns{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:14px 26px;border-radius:8px;font-size:15px;font-weight:700;transition:transform .15s,background .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-teal:hover{background:var(--teal-dark)}
+.btn-ghost{border:1px solid rgba(255,255,255,.3);color:#fff}
+.btn-ghost:hover{border-color:#fff}
+
+/* ---------- section base ---------- */
+section{padding:88px 0}
+.sec-eyebrow{color:var(--teal);font-size:13px;font-weight:700;letter-spacing:3px;margin-bottom:12px}
+h2{font-size:clamp(26px,3.5vw,36px);font-weight:900;letter-spacing:-1px;line-height:1.3}
+.sec-sub{margin-top:14px;color:var(--gray);font-size:15px;max-width:560px}
+
+/* ---------- stats ---------- */
+.stats{background:var(--cream);padding:0 0 8px}
+.stats-period{padding-top:18px;padding-bottom:10px;color:var(--navy);font-size:15px;font-weight:900}
+.stats-in{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.stat{padding:22px 16px;border-right:1px solid #EDE4D3}
+.stat:last-child{border-right:none}
+.stat b{display:block;font-size:34px;font-weight:900;color:var(--teal);letter-spacing:-1px;line-height:1}
+.stat b em{font-style:normal;color:var(--teal)}
+.stat-wide{grid-column:span 2}
+.stat-wide.region{grid-column:span 3}
+.sw-title{display:block;font-size:12px;color:var(--gray);font-weight:600;margin-bottom:6px;line-height:1.1}
+.sw-row{display:flex;gap:24px;flex-wrap:wrap}
+.sw-row b{display:block;font-size:22px;font-weight:900;color:var(--teal);letter-spacing:-.5px;line-height:1}
+.sw-row em{display:block;font-style:normal;font-size:12px;color:var(--ink);font-weight:600;margin-top:0}
+.stat span{display:block;margin-top:2px;font-size:13px;line-height:1.1;color:var(--gray);font-weight:500}
+@media(max-width:720px){.stats-in{grid-template-columns:1fr}.stat{border-bottom:1px solid #EDE4D3}}
+
+/* ---------- channels banner ---------- */
+.channels{background:var(--navy-2);padding:18px 0}
+.channels-in{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.channels-label{color:rgba(255,255,255,.6);font-size:13px;font-weight:500}
+.channels-links{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:700;padding:6px 16px 6px 8px;border-radius:99px;transition:background .2s,border-color .2s}
+.chip-icon{flex:none;display:block}
+.chip:hover{background:rgba(255,255,255,.08);border-color:#fff}
+.chip-highlight{background:var(--teal);border-color:var(--teal)}
+.chip-highlight:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+
+/* ---------- content cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(14,36,51,.1)}
+.card-head{background:var(--navy);color:#fff;padding:22px 24px}
+.card-head .tag{display:inline-block;background:var(--teal);font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:10px}
+.card-head h3{font-size:19px;font-weight:900;letter-spacing:-.5px;white-space:nowrap}
+.card-body{padding:22px 24px}
+.card-body p{font-size:14px;color:var(--gray)}
+.card-body ul{list-style:none;margin-top:14px}
+.card-body li{font-size:13.5px;padding:8px 0;border-bottom:1px dashed var(--line);color:var(--ink)}
+.card-body li:last-child{border-bottom:none}
+.card-body li::before{content:"—";color:var(--teal);font-weight:700;margin-right:8px}
+@media(max-width:860px){.cards{grid-template-columns:1fr}}
+
+/* ---------- method ---------- */
+.method{background:var(--navy);color:#fff}
+.method .sec-sub{color:rgba(255,255,255,.6)}
+.formula{margin-top:40px;background:var(--navy-2);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:32px;font-size:15px}
+.formula .fx{font-weight:900;font-size:clamp(15px,2.4vw,20px);letter-spacing:-.3px;color:#fff;text-align:center}
+.formula .fx em{font-style:normal;color:#4FC7CE}
+.f-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.f-item{background:rgba(255,255,255,.05);border-radius:10px;padding:18px}
+.f-item b{display:block;color:#4FC7CE;font-size:15px;margin-bottom:6px}
+.f-item span{font-size:12.5px;color:rgba(255,255,255,.6);line-height:1.5;display:block}
+.method-note{margin-top:24px;font-size:13px;color:rgba(255,255,255,.45)}
+@media(max-width:720px){.f-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- ad ---------- */
+.ad{background:var(--cream)}
+.ad-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.ad-points{list-style:none;margin-top:16px}
+.ad-points li{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid #EDE4D3;font-size:13.5px;line-height:1.35}
+.ad-points li:last-child{border-bottom:none}
+.ad-points .n{flex:none;width:22px;height:22px;background:var(--teal);color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+.ad-points-label{margin-top:16px;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--teal-dark);text-transform:uppercase}
+.ad-points-label + .ad-points{margin-top:6px}
+.ad-box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:36px;box-shadow:0 8px 28px rgba(14,36,51,.06)}
+.ad-box h3{font-size:20px;font-weight:900;letter-spacing:-.5px}
+.dm-badge{display:inline-block;background:var(--teal-light,#E4F2F3);color:var(--teal-dark);font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;vertical-align:middle;margin-left:4px}
+.ad-box p{font-size:14px;color:var(--gray);margin-top:8px}
+.ad-box .btn{width:100%;text-align:center;margin-top:24px}
+.ad-box .small{font-size:12px;color:var(--gray);margin-top:14px;text-align:center}
+.copy-btn{font:inherit;font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-light,#E4F2F3);border:none;border-radius:5px;padding:2px 7px;margin:0 2px;cursor:pointer}
+.copy-btn:hover{background:#d8ecee}
+@media(max-width:860px){.ad-grid{grid-template-columns:1fr}}
+
+/* ---------- footer ---------- */
+footer{background:var(--navy);color:rgba(255,255,255,.5);padding:40px 0;font-size:13px}
+.foot-in{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.foot-in .logo{font-size:16px}
+.foot-in .logo-img{height:26px}
+footer a{color:rgba(255,255,255,.7)}
+footer a:hover{color:#fff}
+
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* ---------- mobile: compact, fits in a few scrolls ---------- */
+@media(max-width:720px){
+  body{line-height:1.45}
+  nav{height:52px}
+  .nav-in{height:52px}
+  .logo{font-size:16px}
+  .logo .dot{width:8px;height:8px}
+  .logo-img{height:26px}
+  .nav-cta{padding:7px 14px;font-size:12.5px}
+
+  header{padding:68px 0 0}
+  .eyebrow{font-size:10.5px;letter-spacing:2px;margin-bottom:10px}
+  h1{font-size:28px;line-height:1.25;letter-spacing:-.5px}
+  .hero-copy{padding-bottom:20px}
+  .hero-sub{font-size:14.5px;margin-top:10px;color:rgba(255,255,255,.85);line-height:1.5}
+  .listing-banners{margin-top:12px;gap:6px;max-width:100%}
+  .listing-banner{padding:9px 12px;gap:8px}
+  .lb-tag{font-size:10px;padding:2px 6px}
+  .lb-text{font-size:12px}
+  .lb-text em{font-size:9.5px}
+  .lb-arrow{font-size:14px}
+  .hero-btns{margin-top:14px;gap:8px}
+  .btn{padding:9px 16px;font-size:12.5px;border-radius:6px}
+
+  section{padding:28px 0}
+  .sec-eyebrow{font-size:10.5px;letter-spacing:2px;margin-bottom:6px}
+  h2{font-size:19px;letter-spacing:-.5px}
+  .sec-sub{font-size:12px;margin-top:6px}
+
+  .stats-period{padding-top:12px;padding-bottom:7px;font-size:13px}
+  .stats-in{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat{padding:10px 8px;text-align:left;border-right:1px solid #EDE4D3;border-bottom:1px solid #EDE4D3}
+  .stat:nth-child(2n){border-right:none}
+  .stat:nth-child(5){grid-column:1/-1;text-align:center;border-right:none}
+  .stat-wide,.stat-wide.region{grid-column:1/-1;border-right:none;padding-top:8px;padding-bottom:8px}
+  .stat:last-child{border-bottom:none}
+  .stat b{font-size:18px}
+  .sw-title{font-size:11px;margin-bottom:3px}
+  .sw-row{gap:18px}
+  .sw-row b{font-size:18px}
+  .sw-row em{font-size:11px}
+  .stat span{font-size:12px}
+
+  .channels{padding:12px 0}
+  .channels-in{gap:8px}
+  .channels-label{font-size:11px}
+  .channels-links{gap:4px;flex-wrap:nowrap;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+  .chip{font-size:10px;padding:5px 8px 5px 5px;gap:3px;white-space:nowrap;flex:none}
+  .chip-icon{width:13px;height:13px}
+
+  .cards{margin-top:18px;gap:10px}
+  .card{border-radius:10px}
+  .card-head{padding:12px 14px}
+  .card-head .tag{font-size:9.5px;padding:2px 8px;margin-bottom:6px}
+  .card-head h3{font-size:14.5px}
+  .card-body{padding:12px 14px}
+  .card-body p{font-size:12px}
+  .card-body ul{margin-top:8px}
+  .card-body li{font-size:11.5px;padding:5px 0}
+
+  .formula{margin-top:18px;padding:14px;border-radius:10px}
+  .formula .fx{font-size:12.5px}
+  .f-grid{gap:8px}
+  .f-item{padding:10px;border-radius:8px}
+  .f-item b{font-size:12px;margin-bottom:3px}
+  .f-item span{font-size:10.5px;color:rgba(255,255,255,.7)}
+  .method-note{margin-top:12px;font-size:10.5px;color:rgba(255,255,255,.55)}
+
+  .ad-points{margin-top:12px}
+  .ad-points li{padding:8px 0;gap:10px;font-size:12px}
+  .ad-points .n{width:20px;height:20px;font-size:10.5px}
+  .ad-points-label{margin-top:16px;font-size:10.5px}
+  .ad-box{padding:16px;border-radius:12px}
+  .ad-box h3{font-size:15px}
+  .ad-box p{font-size:11.5px;margin-top:5px}
+  .ad-box .btn{margin-top:14px}
+  .ad-box .small{font-size:10px;margin-top:8px}
+
+  footer{padding:18px 0;font-size:10.5px;color:rgba(255,255,255,.6);text-align:center}
+  .foot-in{justify-content:center;gap:6px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <a href="/" class="logo" aria-label="아파트썸 분석 홈으로"><span class="dot"></span>아파트썸</a>
+    <div class="nav-links">
+      <a href="#content">콘텐츠</a>
+      <a href="#method">분석 기준</a>
+      <a href="#ad">비즈니스</a>
+    </div>
+    <a href="#ad" class="nav-cta">비즈니스 제안</a>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="hero-sub">수도권 청약과 시세를 공고문·실매물 데이터 기반으로 분석합니다. 9월 기준 인스타그램 팔로워 7.4만입니다.</p>
+    </div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="wrap stats-period">9월 인스타그램 성과 · 게시물 240개</div>
+  <div class="wrap stats-in">
+    <div class="stat"><b>7.4<em>만</em></b><span>인스타그램 팔로워</span></div>
+    <div class="stat"><b>1,155<em>만</em></b><span>전체 조회수</span></div>
+    <div class="stat"><b>26%</b><span>비팔로워 조회 비중</span></div>
+    <div class="stat"><b>67<em>만</em></b><span>도달한 계정</span></div>
+    <div class="stat"><b>5<em>만</em></b><span>게시물 평균 조회수</span></div>
+    <div class="stat stat-wide region">
+      <span class="sw-title">팔로워 지역</span>
+      <div class="sw-row">
+        <div><b>40%</b><em>서울</em></div>
+        <div><b>40%</b><em>경기</em></div>
+        <div><b>10%</b><em>인천</em></div>
+      </div>
+    </div>
+    <div class="stat stat-wide">
+      <span class="sw-title">팔로워 연령대</span>
+      <div class="sw-row">
+        <div><b>46%</b><em>25~34세</em></div>
+        <div><b>43%</b><em>35~44세</em></div>
+        <div><b>9%</b><em>45~54세</em></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="channels">
+  <div class="wrap channels-in">
+    <span class="channels-label">다른 채널에서도 만나보세요</span>
+    <div class="channels-links">
+      <a class="chip" href="/">
+        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#13B8A6"/><path d="M5 18V9l7-4 7 4v9H5zm3-6h2v2H8zm6 0h2v2h-2zm-3 4h2v2h-2z" fill="#fff"/></svg>
+        aptsum.kr 실거래 분석
+      </a>
+      <a class="chip" href="https://instagram.com/apt_sum" target="_blank" rel="noopener">
+        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><defs><radialGradient id="igGrad" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#igGrad)"/><rect x="5" y="5" width="14" height="14" rx="4" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="16.6" cy="7.4" r="1" fill="#fff"/></svg>
+        인스타그램
+      </a>
+      <a class="chip" href="https://www.threads.com/@apt_sum" target="_blank" rel="noopener">
+        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#000"/><text x="12" y="16.5" font-size="13" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">@</text></svg>
+        쓰레드
+      </a>
+      <a class="chip" href="https://www.youtube.com/@apt_sum" target="_blank" rel="noopener">
+        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#FF0000"/><path d="M10 8.3l6.2 3.7-6.2 3.7z" fill="#fff"/></svg>
+        유튜브
+      </a>
+      <a class="chip" href="https://blog.naver.com/apartment_analysis" target="_blank" rel="noopener">
+        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#03C75A"/><path d="M7 6.5h3.1l3.7 5.5V6.5H17v11h-3.1l-3.7-5.5v5.5H7z" fill="#fff"/></svg>
+        블로그
+      </a>
+    </div>
+  </div>
+</div>
+
+<section class="ad" id="ad">
+  <div class="wrap ad-grid">
+    <div>
+      <div class="sec-eyebrow">PARTNERSHIP</div>
+      <h2>아파트썸과 함께할<br>파트너를 찾습니다</h2>
+      <ul class="ad-points">
+        <li><span class="n">1</span><div><b>분양 광고</b> — 모집공고 원문 팩트체크를 청약 템플릿으로 분양 정보를 정확하고 임팩트 있게 전달</div></li>
+        <li><span class="n">2</span><div><b>웹앱 배너 광고</b> — aptsum.kr 실거래 분석 서비스 내 배너 노출, 실사용 방문자에게 직접 도달</div></li>
+        <li><span class="n">3</span><div><b>브랜드 협찬 콘텐츠</b> — 프롭테크·금융 브랜드 등 상품을 주간 카드뉴스 시리즈에 삽입</div></li>
+        <li><span class="n">4</span><div><b>다른 채널 광고 연계</b> — 인스타스토리 + 쓰레드(2.8만) + 블로그 + 유튜브 무료 게시</div></li>
+      </ul>
+    </div>
+    <div class="ad-box">
+      <h3>비즈니스 문의 <span class="dm-badge">DM 가능</span></h3>
+      <p>분양 마케팅, 프롭테크, 금융 브랜드.</p>
+      <a class="btn btn-teal" href="mailto:aptsum.biz@gmail.com">이메일로 문의하기</a>
+      <div class="small">aptsum.biz@gmail.com <button type="button" class="copy-btn" onclick="copyBusinessEmail(this)">복사</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="content">
+  <div class="wrap">
+    <div class="sec-eyebrow">CONTENT</div>
+    <h2>매주 발행하는 세 가지 콘텐츠</h2>
+    <p class="sec-sub">모든 콘텐츠는 입주자모집공고 원문과 실매물 데이터를 직접 확인한 뒤 제작합니다.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-head"><span class="tag">청약</span><h3>청약 분석 카드뉴스</h3></div>
+        <div class="card-body">
+          <p>공고문 전문을 뜯어 핵심만 4장에 담습니다.</p>
+          <ul>
+            <li>타입별 분양가 · 납부 일정</li>
+            <li>자격 요건 · 규제 · 전매 제한</li>
+            <li>청약 주의사항 · FAQ</li>
+            <li>입지 분석</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="tag">시세</span><h3>지역별 매물 카드뉴스</h3></div>
+        <div class="card-body">
+          <p>가격대·평형별로 정리한 주간 시세 리포트.</p>
+          <ul>
+            <li>4억대부터 20억대까지 가격대별 구성</li>
+            <li>20 · 30평대 실매물 기준</li>
+            <li>전고점 대비 변동률 표기</li>
+            <li>자체 알고리즘 기반 단지 선별 & 추천</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="tag">인사이트</span><h3>시장 인사이트</h3></div>
+        <div class="card-body">
+          <p>교통·개발 호재를 실현 단계로 등급화해 분석합니다.</p>
+          <ul>
+            <li>호재 5등급 자체 기준표 운영</li>
+            <li>착공 · 예타 · 개통 단계별 판정</li>
+            <li>발행 전 개별 사실 검증</li>
+            <li>독자 질문 Q&A</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="method" id="method">
+  <div class="wrap">
+    <div class="sec-eyebrow">METHOD</div>
+    <h2>단지 선별, 이 공식으로 합니다</h2>
+    <p class="sec-sub">추천 단지는 네 가지 축을 가중 합산한 자체 스코어링으로 선별합니다.</p>
+    <div class="formula">
+      <div class="f-grid">
+        <div class="f-item"><b>입지 35%</b><span>거주 환경과 역세권 접근성. 도보 5분 이내 초역세권부터 단계별 점수화.</span></div>
+        <div class="f-item"><b>호재 35%</b><span>시세 견인력 × 실현 단계. 착공·예타 통과 여부까지 반영한 5등급 기준표.</span></div>
+        <div class="f-item"><b>단지가치 20%</b><span>연차와 브랜드. 구축은 용적률 기반 재건축 잠재력까지 평가.</span></div>
+        <div class="f-item"><b>변동률 10%</b><span>전고점 대비 회복 여력. 호재 없는 단순 낙폭은 감점 보정.</span></div>
+      </div>
+      <div class="method-note">※ 모든 호재 등급은 발행 전 최신 사업 진행 상황을 개별 검증합니다. 완공된 인프라는 호재에서 제외합니다.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <span class="logo"><span class="dot"></span>아파트썸</span>
+    <span>본 채널의 콘텐츠는 정보 제공 목적이며 투자 권유가 아닙니다.</span>
+    <a href="https://instagram.com/apt_sum" target="_blank" rel="noopener">@apt_sum</a>
+  </div>
+</footer>
+
+<script>
+async function copyBusinessEmail(button){
+  try{
+    await navigator.clipboard.writeText('aptsum.biz@gmail.com');
+    button.textContent='복사됨';
+  }catch{
+    button.textContent='직접 복사해주세요';
+  }
+  setTimeout(()=>button.textContent='복사',2000);
+}
+</script>
+</body>
+</html>
