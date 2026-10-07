@@ -52,6 +52,11 @@
   .sample-card .btn:focus-visible{outline:3px solid var(--teal-dark);outline-offset:3px}
   .payment-notice{padding:10px 12px;margin:0 0 14px;border:1px solid var(--teal-light);border-radius:10px;background:var(--teal-light-soft);color:var(--teal-dark);font-size:12px;line-height:1.65}
   .payment-notice strong{display:block;font-size:13px;font-weight:900;margin-bottom:2px}
+  .payment-methods{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:10px 0 0;color:var(--sub);font-size:11.5px}
+  .payment-methods .method{padding:4px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;font-weight:800;white-space:nowrap}
+  .payment-methods .naver{color:#03A94D}
+  .payment-methods .apple{color:#171717}
+  .payment-methods .payco{color:#E91B24}
   .payment-reminder{text-align:center;font-size:11.5px;color:var(--teal-dark);font-weight:700;margin-top:7px}
   .price{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
   .price b{font-size:24px;font-weight:900;color:var(--navy)}
@@ -183,6 +188,7 @@
       </div>
 
       <button type="submit" class="btn" id="payBtn" disabled>상품 확인 중…</button>
+      <div class="payment-methods" aria-label="사용 가능한 간편결제 수단"><span>간편결제 가능</span><span class="method naver">네이버페이</span><span class="method apple">Apple Pay</span><span class="method payco">PAYCO</span></div>
       <p class="payment-reminder">1회 결제 · 정기결제 및 자동 갱신 없음</p>
       <div class="msg" id="applyMsg" role="alert"></div>
       <div class="note">
