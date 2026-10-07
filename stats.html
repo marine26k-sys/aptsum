@@ -59,7 +59,7 @@
   <header>
     <a class="back" href="./index.html" aria-label="메인으로">←</a>
     <span class="logo"><svg width="14" height="14" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg>방문자 통계</span>
-    <p>아파트썸 페이지별 방문 현황</p>
+    <p>아파트썸 3개 페이지 방문 현황</p>
   </header>
 
   <div id="app"><div class="loading">불러오는 중…</div></div>
@@ -185,16 +185,6 @@ function render(d){
       <div class="chart-labels">
         ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>`).join("")}
       </div>
-    </div>
-
-    <div class="card" id="pageVisitsCard">
-      <div class="card-title">페이지별 방문</div>
-      ${(d.pages || []).map(p => `
-        <div class="page-row">
-          <div class="page-dot"></div>
-          <div class="page-main"><div class="page-name">${esc(p.label)}</div></div>
-          <div class="page-nums"><b>누적 ${p.total.toLocaleString()}회</b><div>오늘 ${p.today.toLocaleString()}회</div></div>
-        </div>`).join("")}
     </div>
 
     <div class="card" id="tabCard">
@@ -527,6 +517,7 @@ const TAB_LABELS = [
   ["네이버 실매물", [["tabLBG","금액대별 실매물"],["tabLPL","저평가 실매물"],["tabLUR","급매 선별"],["tabLTRD","최저 호가 하락"],["tabLGAP","평형 간 가격차"]]],
   ["비공개 탭", [["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"]]],
   ["신청", [["tabApply","전 지역 이용 신청 + 개인 맞춤 단지 선별"]]],
+  ["비즈니스", [["tabBusiness","비즈니스"]]],
 ];
 let tabData = null, tabPeriod = "d1";
 function renderTabClicks(){

@@ -40,5 +40,16 @@ test('concurrent visitors do not overwrite each other', async () => {
 test('every tab id in index.html is tracked', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/class="tab[^"-][^"]*" id="(tab[A-Za-z0-9]+)"|class="tab" id="(tab[A-Za-z0-9]+)"/g)].map(m => m[1] || m[2]);
-  assert.deepEqual([...new Set(ids)].sort(), [...TAB_IDS].sort());
+  const trackedLinks = [...html.matchAll(/data-track-tab="([A-Za-z0-9]+)"/g)].map(m => m[1]);
+  assert.deepEqual([...new Set([...ids, ...trackedLinks])].sort(), [...TAB_IDS].sort());
+});
+
+
+test('business clicks use the tab ledger and deduplicate with other tab clicks', async () => {
+  const s = fakeStore();
+  assert.ok(TAB_IDS.includes('tabBusiness'));
+  await recordTabs(s, '2026-10-08', 'v1', ['tabBusiness', 'tabC']);
+  assert.deepEqual(await recordTabs(s, '2026-10-08', 'v1', ['tabBusiness']), []);
+  await recordTabs(s, '2026-10-08', 'v2', ['tabBusiness']);
+  assert.deepEqual(count(s, '2026-10-08'), { tabBusiness: 2, tabC: 1 });
 });

@@ -409,8 +409,6 @@ footer a:hover{color:#fff}
 </footer>
 
 <script>
-// 방문 횟수는 자체 통계에서만 표시한다. 집계 실패가 페이지 사용을 막지 않는다.
-fetch('/api/visits?page=business', { cache:'no-store', credentials:'same-origin' }).catch(()=>{});
 async function copyBusinessEmail(button){
   try{
     await navigator.clipboard.writeText('aptsum.biz@gmail.com');

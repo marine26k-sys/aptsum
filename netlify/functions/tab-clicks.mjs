@@ -24,7 +24,7 @@ export const TAB_IDS = [
   "tabSU", "tabP", "tabLP", "tabINV",
   "tabLPL", "tabLBG", "tabLUR", "tabLTRD", "tabLGAP",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",
-  "tabApply",
+  "tabApply", "tabBusiness",
 ];
 const TAB_SET = new Set(TAB_IDS);
 const MAX_RETRIES = 8;

@@ -5,7 +5,7 @@ import { createHmac } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 
 export const config = { path: "/api/visits" };
-const KNOWN_PAGES = ["index", "tier", "subway", "business"];
+const KNOWN_PAGES = ["index", "tier", "subway"];
 const MAX_RETRIES = 8;
 const LEDGER_KEY = "v2";
 
