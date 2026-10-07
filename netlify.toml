@@ -1,5 +1,6 @@
 [build]
   publish = "."
+  command = "node scripts/prepare-share-meta.mjs"
 
 [functions]
   directory = "netlify/functions"
