@@ -4282,12 +4282,17 @@ async function search(opts){
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
-  if(needsSubscriberSession(mode) && (!(await aptsumSubscriberGate.recheck()) || !aptsumSubscriberGate.hasFullAccess())){
-    setMode('complex', true);
-    showError(SUBSCRIBER_ENDED_MSG);
-    return;
+  const requestMode=mode, myToken=++searchToken;
+  if(needsSubscriberSession(requestMode)){
+    const authorized=await aptsumSubscriberGate.recheck();
+    // 인증 대기 중 탭 전환·중지·다른 조회가 있었다면 이전 요청은 여기서 끝낸다.
+    if(myToken!==searchToken || mode!==requestMode)return;
+    if(!authorized || !aptsumSubscriberGate.hasFullAccess()){
+      setMode('complex', true);
+      showError(SUBSCRIBER_ENDED_MSG);
+      return;
+    }
   }
-  const myToken = ++searchToken;
   beginSearchRequests();
   // 입력 검증 오류(단지명·지역·금액대 미선택 등)로 아래에서 바로 return해도, 이전 탭의 결과 카드가 새 탭 아래에
   // 그대로 남아 있지 않도록 먼저 비운다(2026.09 버그 검토에서 발견 — 예: 연간 저평가 결과가 뜬 채로 금액대별
@@ -6279,7 +6284,7 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
   lsSync();
 }
 function resetAllSliderFilters(){
-  if(document.getElementById('loading').classList.contains('on'))stopSearch();
+  if(document.getElementById('loading').classList.contains('on'))stopSearch();else searchToken++;
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
   pyBandMultiSel=[];
