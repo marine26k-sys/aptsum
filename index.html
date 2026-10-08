@@ -4033,7 +4033,16 @@ async function acShow(input){
   try{ apts = await getApts(acLawdOf(input)); }
   catch(e){ ac.innerHTML = '<div class="ac-msg">'+esc(e.message)+'</div>'; return; }
   if(acInput !== input) return; // 입력창 바뀜
-  const hits = apts.filter(a=>a.name.replace(/\s/g,'').includes(q)).slice(0,12);
+  let hits = apts.filter(a=>a.name.replace(/\s/g,'').includes(q));
+  // 글자 그대로 포함하는 단지가 없으면 단지 분석과 같은 매칭(matchComplex — 표기 차이 폴백 포함)으로 다시 찾는다
+  // ("관악드림타운" → 실거래 등록명 "관악드림(삼성)"/"관악드림(동아)", 2026.10)
+  if(!hits.length){
+    const m = matchComplex(apts.map(a=>({apt:a.name, umd:a.umd})), input.value.trim());
+    const names = new Set(m.multi || (m.hits||[]).map(t=>t.apt));
+    hits = apts.filter(a=>names.has(a.name));
+  }
+  hits = (await mergeSplitSuggestions(hits, acLawdOf(input), input.value.trim())).slice(0,12);
+  if(acInput !== input) return;
   if(!hits.length){ ac.innerHTML = '<div class="ac-msg">매매·분양권 실거래 신고 내역이 없는 단지입니다. 단지명을 다시 확인해 주세요</div>'; return; }
   const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')');
   ac.innerHTML = hits.map(a=>
@@ -4041,6 +4050,30 @@ async function acShow(input){
       <span>${esc(a.name).replace(re,'<b>$1</b>')}</span>
       <small>${esc(a.umd)} · ${a.n}건${a.presaleOnly?' <span style="color:#00565C">(분양권)</span>':''}</small>
     </div>`).join('');
+}
+
+// 자동완성 후보 중 시공사별로 나뉘어 등록된 같은 단지("관악드림(삼성)"/"관악드림(동아)")는 K-apt 공식 단지명
+// ("관악드림타운") 한 줄로 묶는다 — 고르면 단지 분석이 둘을 합쳐서 보여준다(isBuilderSplit 참고)
+async function mergeSplitSuggestions(hits, lawd, query){
+  const groups = new Map(), out = [];
+  hits.forEach(a=>{
+    const parens = a.name.match(/\([^)]*\)/g) || [];
+    const base = looseAptKey(a.name.replace(/\([^)]*\)/g,''), true);
+    if(!parens.length || parens.some(p=>/\d/.test(p)) || base.length<4){ out.push(a); return; }
+    const k = a.umd+'|'+base;
+    if(!groups.has(k)){ groups.set(k, {base, list:[]}); out.push(k); }
+    groups.get(k).list.push(a);
+  });
+  const res = [];
+  for(const x of out){
+    if(typeof x!=='string'){ res.push(x); continue; }
+    const g = groups.get(x);
+    if(g.list.length===1){ res.push(g.list[0]); continue; }
+    const name = await kaptNameForSplit(lawd, g.base)
+      || (looseAptKey(query, true)===g.base ? query.replace(/\s*아파트$/,'') : g.list[0].name.replace(/\([^)]*\)/g,''));
+    res.push({ name, umd:g.list[0].umd, n:g.list.reduce((s,a)=>s+a.n,0), presaleOnly:g.list.every(a=>a.presaleOnly) });
+  }
+  return res.sort((a,b)=>b.n-a.n);
 }
 
 function acPick(name){

@@ -64,3 +64,16 @@ test('시공사별로 합친 단지는 K-apt 공식 단지명(세대수 최다)�
   c.loadSubwayData = async () => { throw new Error('x'); };
   assert.equal(await c.kaptNameForSplit('11620', base), null);
 });
+
+test('자동완성: 시공사별로 나뉜 등록명은 K-apt 공식 단지명 한 줄로 묶는다', async () => {
+  const c = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('const APT_ALIASES'), html.indexOf('function analyzeComplex(')) + '\n' +
+    html.slice(html.indexOf('async function kaptNameForSplit('), html.indexOf('async function loadSubwayData(')) + '\n' +
+    html.slice(html.indexOf('async function mergeSplitSuggestions('), html.indexOf('function acPick(')) +
+    '\nthis.mergeSplitSuggestions = mergeSplitSuggestions;', c);
+  c.loadSubwayData = async () => [{name:'관악드림타운', hhcnt:3544}];
+  const got = JSON.parse(JSON.stringify(await c.mergeSplitSuggestions([
+    {name:'관악드림(동아)', umd:'봉천동', n:90}, {name:'관악드림(삼성)', umd:'봉천동', n:67}, {name:'관악', umd:'신림동', n:11}, {name:'유승(126)', umd:'관악동', n:5},
+  ], '11620', '관악드림')));
+  assert.deepEqual(got.map(a => [a.name, a.n]), [['관악드림타운', 157], ['관악', 11], ['유승(126)', 5]]);
+});
