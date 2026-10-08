@@ -64,3 +64,13 @@ test('presale share selection is limited to budget and normalization rejects oth
  assert.equal(ctx.normalizeListingOccupancy('presale','listingbudget'),'presale');
  assert.equal(ctx.normalizeListingOccupancy('presale','listingurgent'),'available');
 });
+
+test('changing occupancy never queries and cancels the previous condition',()=>{
+ const elements={loading:{classList:{remove(){}}},btn:{disabled:true},result:{innerHTML:'old results',classList:{remove(){}}}};
+ let calls=0,aborts=0;
+ const ctx=vm.createContext({searchToken:1,lastData:{mode:'listingbudget'},searchAbortController:{abort(){aborts++;}},document:{getElementById:id=>elements[id]},search(){calls++;}});
+ vm.runInContext(index.slice(index.indexOf('function listingOccupancyApply('),index.indexOf('async function fetchListings(')),ctx);
+ ctx.listingOccupancyApply();
+ assert.equal(calls,0);assert.equal(aborts,1);assert.equal(ctx.searchToken,2);assert.equal(ctx.lastData,null);assert.equal(elements.result.innerHTML,'');assert.equal(elements.btn.disabled,false);
+ ctx.searchAbortController=null;ctx.listingOccupancyApply();assert.equal(calls,0);
+});

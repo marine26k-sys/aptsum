@@ -5918,7 +5918,15 @@ const listingHistoryMem = {}; // lawd → 업로드별 요약본. 브라우저 �
 function normalizeListingOccupancy(value,tab){ return value==='tenant' ? 'tenant' : value==='presale' && tab==='listingbudget' ? 'presale' : 'available'; }
 function listingOccupancy(){ return normalizeListingOccupancy(document.getElementById('listingOccupancy').value,mode); }
 function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세안고',presale:'분양권'}[listingOccupancy()]; }
-function listingOccupancyApply(){ searchToken++; if(isListingMode(mode)) search({silentScroll:true}); }
+function listingOccupancyApply(){
+  // 입주 조건은 조회 버튼을 눌렀을 때 적용한다. 이전 조건의 응답·더보기가 섞이지 않도록 비운다.
+  searchToken++;
+  if(searchAbortController)searchAbortController.abort();
+  document.getElementById('loading').classList.remove('on');
+  document.getElementById('btn').disabled=false;
+  const result=document.getElementById('result');result.classList.remove('on');result.innerHTML='';
+  lastData=null;
+}
 async function fetchListings(lawd){
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
   if(listingMem[key]) return listingMem[key];
