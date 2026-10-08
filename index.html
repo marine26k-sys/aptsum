@@ -3187,7 +3187,15 @@ function analyzeComplex(all, name, months, rawAll){
     return {found:false, suggest:sugg};
   }
   const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
-  const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
+  let officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
+  // 시공사별로 나뉜 등록명을 합친 경우("관악드림(삼성)"+"관악드림(동아)")엔 그중 하나가 아니라 단지 이름으로
+  // 보여준다. 우선 검색어로 두고, search()에서 K-apt 공식 단지명("관악드림타운" — 네이버·호갱노노와 같은
+  // 표기)을 찾으면 그걸로 바꾼다(kaptNameForSplit). 세대수 조회·즐겨찾기도 이 이름으로 다시 찾을 수 있다(2026.10, 운영자 요청)
+  let splitBase = null;
+  if(Object.keys(nameCnt).length>1 && isBuilderSplit(hits, Object.keys(nameCnt))){
+    officialName = name.trim().replace(/\s*아파트$/,'');
+    splitBase = looseAptKey(Object.keys(nameCnt)[0].replace(/\([^)]*\)/g,''), true);
+  }
   hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
   const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
   const monthsAsc = months.slice().reverse();
@@ -3232,7 +3240,7 @@ function analyzeComplex(all, name, months, rawAll){
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
-  return { found:true, mode:'complex', name:officialName, umd:hits[0].umd, build:hits[0].build,
+  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:hits[0].build,
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -4132,6 +4140,15 @@ const SUBWAY_LINE_FIX = {
 function applySubwayLineFix(items){
   return items.map(it => SUBWAY_LINE_FIX[it.name] ? { ...it, subwayLines: SUBWAY_LINE_FIX[it.name] } : it);
 }
+// 시공사별로 나뉘어 등록된 단지(isBuilderSplit)의 K-apt 공식 단지명 — 같은 정규화 키 중 세대수가 가장 많은 것
+// ("관악드림타운" 3544세대 vs "관악드림타운제2"). 못 찾으면 null(검색어 그대로 표시).
+async function kaptNameForSplit(lawd, base){
+  try{
+    const items = await loadSubwayData(lawd);
+    const hit = items.filter(it => it.name && looseAptKey(it.name, true)===base).sort((a,b)=>(b.hhcnt||0)-(a.hhcnt||0))[0];
+    return hit ? hit.name.trim().replace(/\s*아파트$/,'') : null;
+  }catch(e){ return null; }
+}
 async function loadSubwayData(lawd){
   if(subwayDataCache[lawd]) return subwayDataCache[lawd];
   const r = await fetch(`/data/hhcnt/${encodeURIComponent(lawd)}.json`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
@@ -4684,6 +4701,7 @@ async function search(opts){
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
         d = analyzeComplex(items, name, months, rawMerged);
+        if(d.found && d.splitBase){ const kn = await kaptNameForSplit(d.splitLawd || lawd, d.splitBase); if(kn) d.name = kn; }
         // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
         // 자체적으로 시도하므로, 매매 매칭이 실패해도(예: 표기 차이) 전세는 따로 찾힐 수 있다.
         try{

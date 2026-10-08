@@ -52,3 +52,15 @@ test('역세권 탭 이름 해석(resolveAptName)도 같은 표기 차이 폴백
   assert.equal(c.resolveAptName(all, '성내삼성', umd), '성내동삼성아파트');
   assert.equal(c.resolveAptName(all, '관악', umd), '관악');
 });
+
+test('시공사별로 합친 단지는 K-apt 공식 단지명(세대수 최다)으로 표시한다', async () => {
+  const c = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('const APT_ALIASES'), html.indexOf('function analyzeComplex(')) + '\n' +
+    html.slice(html.indexOf('async function kaptNameForSplit('), html.indexOf('async function loadSubwayData(')) +
+    '\nthis.kaptNameForSplit = kaptNameForSplit; this.looseAptKey = looseAptKey;', c);
+  c.loadSubwayData = async () => [{name:'관악드림타운제2', hhcnt:1843}, {name:'관악드림타운', hhcnt:3544}, {name:'관악', hhcnt:200}];
+  const base = c.looseAptKey('관악드림', true);
+  assert.equal(await c.kaptNameForSplit('11620', base), '관악드림타운');
+  c.loadSubwayData = async () => { throw new Error('x'); };
+  assert.equal(await c.kaptNameForSplit('11620', base), null);
+});
