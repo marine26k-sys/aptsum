@@ -7,14 +7,18 @@ import vm from 'node:vm';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ctx = vm.createContext({});
 vm.runInContext(html.slice(html.indexOf('const APT_ALIASES'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex;', ctx);
-const names = m => JSON.parse(JSON.stringify(m.multi ? m.multi.slice().sort() : [...new Set(m.hits.map(t => t.apt))]));
-const T = (apt, umd) => ({ apt, umd });
+const names = m => JSON.parse(JSON.stringify((m.multi ? m.multi.slice() : [...new Set(m.hits.map(t => t.apt))]).sort()));
+const T = (apt, umd, build) => ({ apt, umd, build });
 
-test('관악드림타운: 짧은 단지명("관악") 대신 실거래 등록명 관악드림(삼성)/(동아)를 찾는다', () => {
-  const all = [T('관악','봉천동'), T('관악드림(삼성)','봉천동'), T('관악드림(동아)','봉천동'), T('봉천동아','봉천동'), T('동아타운','봉천동')];
-  for (const q of ['관악드림타운', '관악드림타운제2', '관악 드림타운 아파트'])
+test('관악드림타운: 짧은 단지명("관악") 대신 시공사별로 나뉜 관악드림(삼성)/(동아)를 합쳐서 찾는다', () => {
+  const all = [T('관악','신림동','1982'), T('관악드림(삼성)','봉천동','2003'), T('관악드림(동아)','봉천동','2003'), T('봉천동아','봉천동','2000'), T('동아타운','봉천동','1999')];
+  for (const q of ['관악드림타운', '관악드림타운제2', '관악 드림타운 아파트', '관악드림'])
     assert.deepEqual(names(ctx.matchComplex(all, q)), ['관악드림(동아)', '관악드림(삼성)'], q);
   assert.deepEqual(names(ctx.matchComplex(all, '관악')), ['관악']);
+  // 괄호 안이 번지·단지 번호이거나 건축연도가 다르면 별개 단지 — 합치지 않고 선택지로
+  const diff = [T('유승(126)','관악동','1998'), T('유승(137-1)','관악동','1998'), T('한빛마을(삼성)','A동','1995'), T('한빛마을(현대)','A동','2001')];
+  assert.ok(ctx.matchComplex(diff, '유승').multi);
+  assert.ok(ctx.matchComplex(diff, '한빛마을').multi);
   // "타운" 접미사 제거는 마지막 단계 — 더 정확히 일치하는 단지가 있으면 그쪽만
   assert.deepEqual(names(ctx.matchComplex(all, '봉천동아제2')), ['봉천동아']);
 });
@@ -43,7 +47,8 @@ test('역세권 탭 이름 해석(resolveAptName)도 같은 표기 차이 폴백
     html.slice(html.indexOf('function resolveAptName('), html.indexOf('async function searchSubway(')) + '\nthis.resolveAptName = resolveAptName;', c);
   const all = ['관악', '관악드림(삼성)', '관악드림(동아)', '성내동삼성아파트'];
   const umd = new Map(all.map(n => [n, n.startsWith('성내') ? '성내동' : '봉천동']));
-  assert.equal(c.resolveAptName(all, '관악드림타운', umd), null); // 예전엔 "관악" 가격이 붙었다
+  // 예전엔 엉뚱한 "관악" 가격이 붙었다 — 이제 시공사별로 나뉜 관악드림 중 하나로 해석
+  assert.match(c.resolveAptName(all, '관악드림타운', umd), /^관악드림\((삼성|동아)\)$/);
   assert.equal(c.resolveAptName(all, '성내삼성', umd), '성내동삼성아파트');
   assert.equal(c.resolveAptName(all, '관악', umd), '관악');
 });

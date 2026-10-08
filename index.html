@@ -3086,6 +3086,7 @@ function matchComplex(all, name){
     if(maximal.length) names = maximal;
   }
   if(names.length===1) return {hits: cand.filter(t=>t.apt===names[0])};
+  if(isBuilderSplit(all, names)) return {hits: all.filter(t=>names.includes(t.apt))};
   if(names.length>1){
     const cnt={}; cand.forEach(t=>cnt[t.apt]=(cnt[t.apt]||0)+1);
     return {multi: names.sort((a,b)=>cnt[b]-cnt[a])};
@@ -3127,6 +3128,19 @@ function includesKey(b, a){
 function looseCandKeys(apt, dropTown){
   return [...new Set([looseAptKey(apt.replace(/[()]/g,''), dropTown), looseAptKey(apt.replace(/\([^)]*\)/g,''), dropTown)])].filter(Boolean);
 }
+// 한 단지가 실거래에 시공사(·고층/저층)별로 나뉘어 등록된 경우 — "관악드림(삼성)"/"관악드림(동아)",
+// "중산마을5(동부)"/"중산마을5(건영)". 괄호를 뗀 이름이 같고(4글자 이상), 괄호 안에 숫자가 없고(“유승(126)”처럼
+// 번지·단지 번호로 구분된 건 별개 단지), 법정동·건축연도까지 같으면 같은 단지로 보고 합쳐서 보여준다(2026.10).
+function isBuilderSplit(all, names){
+  if(names.length<2) return false;
+  const base = n => looseAptKey(n.replace(/\([^)]*\)/g,''));
+  const b0 = base(names[0]);
+  if(b0.length<4) return false;
+  const parens = n => n.match(/\([^)]*\)/g) || [];
+  if(!names.every(n => base(n)===b0 && parens(n).length && !parens(n).some(p=>/\d/.test(p)))) return false;
+  const meta = new Set(all.filter(t=>names.includes(t.apt)).map(t=>`${t.umd}|${t.build}`));
+  return meta.size===1;
+}
 function looseMatchComplex(all, qnList, stage){
   const qKeys = [...new Set(qnList.map(looseAptKey))].filter(Boolean);
   const cands = new Map(); // 단지명 → {keys, umd}
@@ -3152,7 +3166,7 @@ function looseMatchComplex(all, qnList, stage){
       names = names.filter(n => !names.some(o => o!==n && ks(o).some(ko=>ks(n).some(kn=>ko!==kn && ko.includes(kn)))));
     }
   }
-  if(names.length===1) return {hits: all.filter(t=>t.apt===names[0])};
+  if(names.length===1 || isBuilderSplit(all, names)) return {hits: all.filter(t=>names.includes(t.apt))};
   if(names.length>1){
     const cnt={}; all.forEach(t=>{ if(names.includes(t.apt)) cnt[t.apt]=(cnt[t.apt]||0)+1; });
     return {multi: names.sort((a,b)=>cnt[b]-cnt[a])};
@@ -3207,7 +3221,7 @@ function analyzeComplex(all, name, months, rawAll){
       // 층별 프리미엄은 조회 기간과 무관하게 최근 6개월 고정 — 기간이 길면 시세 상승분이 층 프리미엄에 섞여 왜곡되므로
       const recentMonths = months.slice(0,6);
       const recentSet = new Set(recentMonths);
-      const rawMatch = rawAll.filter(t=>t.apt===officialName && String(t.py)===py && recentSet.has(t.ym));
+      const rawMatch = rawAll.filter(t=>nameCnt[t.apt] && String(t.py)===py && recentSet.has(t.ym)); // 별칭·시공사별 분할 등록으로 합쳐진 이름 전부
       const rawClean = markOutliers(rawMatch, recentMonths);
       floorBand = floorBands(rawClean);
     }
