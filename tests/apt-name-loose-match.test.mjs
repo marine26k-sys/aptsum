@@ -89,3 +89,14 @@ test('네이버 단지명 매핑: 네이버 이름으로 검색되고, 같은 �
   // 지역(lawd)을 모르면 매핑표를 쓰지 않는다(다른 구의 같은 등록명과 섞이지 않게)
   assert.deepEqual(names(c.matchComplex(all, '관악드림(삼성)')), ['관악드림(삼성)']);
 });
+
+test('목록형 탭: 네이버 단지명으로 표시하고, 나뉘어 등록된 같은 네이버 단지는 한 줄로 합친다', () => {
+  const c = vm.createContext({ sel: { value: '11620' } });
+  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES = NAVER_NAMES; this.aptLabel = aptLabel; this.unifyNaverSplit = unifyNaverSplit;', c);
+  c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)': '건영3차', '관악드림(삼성)': '관악드림타운', '관악드림(동아)': '관악드림타운' };
+  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)' }), '건영3차');
+  assert.equal(c.aptLabel({ apt: '관악' }), '관악');
+  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)', lawd: '11680' }), 'LIG대학마을(건영아파트3차)'); // 다른 구 표는 안 씀
+  const got = c.unifyNaverSplit([{ apt: '관악드림(삼성)' }, { apt: '관악드림(동아)' }, { apt: 'LIG대학마을(건영아파트3차)' }], '11620');
+  assert.deepEqual(JSON.parse(JSON.stringify(got.map(t => t.apt))), ['관악드림타운', '관악드림타운', 'LIG대학마을(건영아파트3차)']);
+});
