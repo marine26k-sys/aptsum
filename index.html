@@ -6679,8 +6679,14 @@ function setListingBudgetBand(v){
   listingBudgetSel = v;
   if(lastData && lastData.mode==='listingbudget') renderListingBudget(lastData);
 }
-function renderListingBudget(d){
+function showMoreListingBudget(){
+  if(mode!=='listingbudget' || lastData?.mode!=='listingbudget')return;
+  renderListingBudget(lastData,listingBudgetVisibleCount+100);
+}
+let listingBudgetVisibleCount=100;
+function renderListingBudget(d,limit=100){
 
+  const presale=listingOccupancy()==='presale';
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
   const bands = LISTING_BUDGET_BANDS.filter(b => counts[b.v]);
@@ -6689,10 +6695,12 @@ function renderListingBudget(d){
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
-  const cur = LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
-  const list = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : []).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
-  const multiRegion = regionMulti(list);
-  const chips = bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
+  const cur = presale ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const all = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : d.rows.slice()).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
+  listingBudgetVisibleCount=Math.min(all.length,limit);
+  const list=all.slice(0,listingBudgetVisibleCount);
+  const multiRegion = regionMulti(all);
+  const chips = presale ? '' : bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·중층 이상 매물)</div>`
     : list.map((x,i)=>{
@@ -6708,10 +6716,11 @@ function renderListingBudget(d){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
+      ${presale ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${body}
+      ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
   </div>
   <div class="src-note">호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
