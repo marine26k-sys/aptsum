@@ -141,3 +141,28 @@ test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 �
   vm.runInContext(html.slice(html.indexOf('async function getApts('), html.indexOf('function acHide(')) + '\nthis.getApts = getApts;', c);
   assert.deepEqual(JSON.parse(JSON.stringify((await c.getApts('11740')).map(a=>[a.umd, a.n]))), [['천호동', 2], ['길동', 1]]);
 });
+
+test('K-apt 별도 관리단지는 역세권 순위에서 중복 제거하고 임대 거래는 일반 단지명에 합치지 않는다', () => {
+  const c = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('function collapseSubwayManagementUnits('), html.indexOf('function parseSubwayWalk(')) + '\nthis.collapseSubwayManagementUnits=collapseSubwayManagementUnits;', c);
+  const hh = JSON.parse(readFileSync(new URL('../data/hhcnt/11620.json', import.meta.url), 'utf8')).items;
+  const kept = c.collapseSubwayManagementUnits(hh);
+  const codes = new Set(kept.map(x=>x.kaptCode));
+  for (const code of ['A15105301', 'A15105503', 'A15192202', 'A15105602', 'A15178203']) assert.equal(codes.has(code), false, code);
+  for (const code of ['A15105302', 'A15180705', 'A15176202', 'A15105603', 'A15106901']) assert.equal(codes.has(code), true, code);
+  const unrelated = { ...hh.find(x=>x.kaptCode==='A15105301'), kaptCode:'unrelated', kaptAddr:'서울특별시 관악구 봉천동 9999-1 관악푸르지오제2단지' };
+  assert.equal(c.collapseSubwayManagementUnits([...hh, unrelated]).includes(unrelated), true);
+  const names = JSON.parse(readFileSync(new URL('../data/naver-names/11620.json', import.meta.url), 'utf8'));
+  assert.equal(names['관악푸르지오(임대)|봉천동'], undefined);
+  assert.equal(names['봉천동아|봉천동'], '성현동아');
+  assert.equal(names['봉천우성|봉천동'], '관악우성');
+  assert.equal(names['두산|봉천동'], '두산');
+  const c2 = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
+    html.slice(html.indexOf('function resolveAptName('), html.indexOf('async function searchSubway(')) +
+    '\nthis.NAVER_NAMES=NAVER_NAMES;this.resolveSubwayTradeName=resolveSubwayTradeName;', c2);
+  c2.NAVER_NAMES['11620'] = names;
+  assert.equal(c2.resolveSubwayTradeName('11620', ['봉천동아'], '성현동아', new Map([['봉천동아','봉천동']])), '봉천동아');
+  assert.equal(c2.resolveSubwayTradeName('11620', ['봉천우성'], '관악우성아파트', new Map([['봉천우성','봉천동']])), '봉천우성');
+  assert.equal(c2.resolveSubwayTradeName('11620', ['두산'], '봉천두산1,2단지', new Map([['두산','봉천동']])), '두산');
+});

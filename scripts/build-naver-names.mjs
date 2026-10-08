@@ -48,6 +48,12 @@ for (const r of rows) {
 
 const yearOf = (s) => { const m = String(s || "").match(/(19|20)\d\d/); return m ? +m[0] : null; };
 const yearOk = (a, b) => a == null || b == null || Math.abs(a - b) <= 1;
+const isRentalUnit = (name) => /\((?:공공)?임대(?:[,)]|$)|임대\([^)]*동\)/.test(name);
+const confirmedNaverNames = {
+  '11620|봉천동아|봉천동': ['성현동아', 1261, 2000],
+  '11620|봉천우성|봉천동': ['관악우성', 1597, 2000],
+  '11620|두산|봉천동': ['두산', 2001, 2000],
+};
 
 // 실거래(매매·분양권·전세) 단지명별 법정동·건축년도
 async function tradeMeta(lawd) {
@@ -102,7 +108,16 @@ for (const [lawd, naver] of naverByLawd) {
       // 같은 실거래명이 다른 법정동에도 있으면 K-apt 세대수 매칭 결과가 어느 동 것인지 확정할 수 없다.
       const kHh = m.umds.size === 1 ? kapt.get(apt)?.hhcnt || null : null;
       const hits = new Map();
-      const local = naver.filter((n) => n.umd === umd);
+      const local = naver.filter((n) => n.umd === umd && (!isRentalUnit(apt) || isRentalUnit(n.name)));
+      // 매매 단지와 별도로 등록된 임대 세대는 같은 이름의 일반 단지로 돌려보내지 않는다.
+      // 예: 관악푸르지오(임대) ↔ 관악푸르지오 2,104세대는 별개 관리단위.
+      if (isRentalUnit(apt) && !local.length) { summary.none++; continue; }
+      // 확인된 K-apt 별도 관리단지 때문에 세대수가 작은 후보로 잘못 잡히는 이름을 고정한다.
+      const confirmed = confirmedNaverNames[`${lawd}|${apt}|${umd}`];
+      if (confirmed) {
+        const parent = local.find((n) => n.name === confirmed[0] && n.hh === confirmed[1] && yearOk(yearOf(n.built), confirmed[2]));
+        if (parent) { map[`${apt}|${umd}`] = parent.name; summary.byName++; continue; }
+      }
       if (local.length) {
         const items = Object.fromEntries(local.map((n, i) => [i, n]));
         for (const v of nameVariants(apt)) {
