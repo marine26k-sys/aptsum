@@ -1355,7 +1355,8 @@ async function renderFavDash(){
       let itemsP = [];
       try{ itemsP = await ensureMonthsP(f.lawd, 12); }catch(e){} // 매매 실거래가 없는 분양권 전용 즐겨찾기 단지도 요약에 반영
       const merged = mergeTradeAndPresaleForRanking(items, itemsP);
-      const m = matchComplex(merged, f.name);
+      await ensureNaverNames(f.lawd);
+      const m = matchComplex(merged, f.name, f.lawd);
       if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
       const rows = buildRepRows(m.hits, months);
       if(!rows.length){
@@ -1420,9 +1421,10 @@ async function favTradeCount(lawd, name){
   const items = await ensureMonths(lawd, 12); // 층수 필터와 무관하게 표준 12개월 기준으로 비교
   let itemsP = [];
   try{ itemsP = await ensureMonthsP(lawd, 12); }catch(e){} // 분양권 전용(매매 실거래 없는) 단지도 신규 거래 배지 대상에 포함
-  const m = matchComplex(items, name);
-  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, name).hits || []).length;
-  const mp = matchComplex(itemsP, name);
+  await ensureNaverNames(lawd);
+  const m = matchComplex(items, name, lawd);
+  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, name, lawd).hits || []).length;
+  const mp = matchComplex(itemsP, name, lawd);
   return mp.hits ? mp.hits.length : 0;
 }
 // 재방문 시(앱 로드 시) 즐겨찾기별로 마지막 확인 이후 늘어난 거래건수를 조회해 배지 표시
@@ -3034,6 +3036,26 @@ function floorBands(arr){
 // 2026.08: 개명이 아니라 K-apt 등록명과 국토부 실거래 등록명이 서로 다른 경우도 이 메커니즘으로 함께 대응
 // (인덕원삼성 — K-apt엔 "인덕원삼성", 실거래엔 "인덕원마을삼성"으로 등록돼 있어 역세권 탭에서 클릭해도
 // 단지 분석에서 못 찾던 문제)
+// 네이버 단지명 매핑표(scripts/build-naver-names.mjs가 운영자 제공 네이버 단지 매핑표로 생성 — 법정동·세대수·
+// 단지명 기준, 2026.10) — 구별로 { 실거래 등록명: 네이버 단지명 }. 실거래명과 네이버명이 같은 단지는 표에 없다.
+// 화면에는 네이버 단지명("건영3차", "관악드림타운")을 보여주고, 네이버 단지명으로 검색해도 실거래가 찾히게 한다.
+const NAVER_NAMES = {}; // lawd -> { 실거래명: 네이버명 } (불러오기 실패/파일 없음 = {})
+const naverNamesLoading = {};
+function ensureNaverNames(lawd){
+  if(!lawd || NAVER_NAMES[lawd]) return Promise.resolve(NAVER_NAMES[lawd] || {});
+  return naverNamesLoading[lawd] ||= fetch(`/data/naver-names/${encodeURIComponent(lawd)}.json`)
+    .then(r=>r.ok ? r.json() : {}).catch(()=>({}))
+    .then(j=>{ NAVER_NAMES[lawd] = (j && typeof j==='object') ? j : {}; delete naverNamesLoading[lawd]; return NAVER_NAMES[lawd]; });
+}
+const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
+function naverNameOf(lawd, apt){ const m = lawd && NAVER_NAMES[lawd]; return (m && m[apt]) || null; }
+// 같은 네이버 단지에 속하는 실거래 등록명들(“관악드림(삼성)”·“관악드림(동아)” → 관악드림타운)
+function naverGroupNames(all, lawd, apt){
+  const nv = naverNameOf(lawd, apt);
+  if(!nv) return [apt];
+  return [...new Set(all.map(t=>t.apt).filter(a=>a===apt || naverNameOf(lawd, a)===nv))];
+}
+
 const APT_ALIASES = {
   '흑석자이': ['흑석리버파크자이'],
   '인덕원마을삼성': ['인덕원삼성'],
@@ -3060,7 +3082,7 @@ function aptNameVariants(qn){
   }
   return variants;
 }
-function matchComplex(all, name){
+function matchComplex(all, name, lawd){
   const qn = name.replace(/\s/g,'');
   // 역세권 탭 등 K-apt 데이터 기반 화면은 이름 표기가 RTMS 실거래 등록명과 다른 경우가 있어(예: "아파트"
   // 접미사, "N단지" vs "F{N}BL") exact 매칭이 실패하고 substring fallback으로 떨어짐 — 그러면 "롯데"/
@@ -3069,7 +3091,17 @@ function matchComplex(all, name){
   // 단계까지 가기 전에 먼저 해결한다.
   const qnList = [...new Set(aptNameVariants(qn).flatMap(aliasesFor))]; // 검색어 본인(+이형 표기) + 알려진 개명 이력 별칭까지 함께 매칭
   const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
-  if(exact.length) return {hits:exact};
+  if(exact.length){
+    // 실거래 등록명으로 찾았어도 같은 네이버 단지로 묶이는 다른 등록명이 있으면 함께(관악드림(삼성) → +관악드림(동아))
+    const names = new Set(exact.map(t=>t.apt).flatMap(a=>naverGroupNames(all, lawd, a)));
+    return {hits: names.size>new Set(exact.map(t=>t.apt)).size ? all.filter(t=>names.has(t.apt)) : exact};
+  }
+  // 네이버 단지명으로 검색한 경우("건영3차" → 실거래 "LIG대학마을(건영아파트3차)")
+  if(lawd && NAVER_NAMES[lawd]){
+    const qk = naverKey(name);
+    const byNaver = all.filter(t=>{ const nv = naverNameOf(lawd, t.apt); return nv && naverKey(nv)===qk; });
+    if(byNaver.length) return {hits: byNaver};
+  }
   // 표기만 다른 같은 단지("관악드림타운" ↔ "관악드림(삼성)")를 부분 일치보다 먼저 찾는다 — 부분 일치를 먼저
   // 하면 검색어 안에 우연히 들어 있는 짧은 단지명("관악")이 대신 걸려 엉뚱한 단지가 나온다(2026.10)
   const loose = looseMatchComplex(all, qnList, 'exact');
@@ -3174,9 +3206,9 @@ function looseMatchComplex(all, qnList, stage){
   return null;
 }
 
-function analyzeComplex(all, name, months, rawAll){
+function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
-  const m = matchComplex(all, name);
+  const m = matchComplex(all, name, lawd);
   if(m.multi) return {found:false, multi:true, suggest:m.multi.slice(0,8)};
   const hits = m.hits;
   if(!hits.length){
@@ -3192,7 +3224,10 @@ function analyzeComplex(all, name, months, rawAll){
   // 보여준다. 우선 검색어로 두고, search()에서 K-apt 공식 단지명("관악드림타운" — 네이버·호갱노노와 같은
   // 표기)을 찾으면 그걸로 바꾼다(kaptNameForSplit). 세대수 조회·즐겨찾기도 이 이름으로 다시 찾을 수 있다(2026.10, 운영자 요청)
   let splitBase = null;
-  if(Object.keys(nameCnt).length>1 && isBuilderSplit(hits, Object.keys(nameCnt))){
+  // 네이버 단지명이 있으면 그 이름으로 보여준다(합쳐진 등록명이 모두 같은 네이버 단지일 때만)
+  const naverNames = new Set(Object.keys(nameCnt).map(a=>naverNameOf(lawd, a) || a));
+  if(naverNames.size===1 && [...naverNames][0]!==officialName) officialName = [...naverNames][0];
+  else if(Object.keys(nameCnt).length>1 && isBuilderSplit(hits, Object.keys(nameCnt))){
     officialName = name.trim().replace(/\s*아파트$/,'');
     splitBase = looseAptKey(Object.keys(nameCnt)[0].replace(/\([^)]*\)/g,''), true);
   }
@@ -3891,7 +3926,7 @@ function analyzeCompare(itemsByLawd, targets, months){
   const complexes=[], missing=[];
   for(const tg of targets){
     const all = itemsByLawd[tg.lawd] || [];
-    const m = matchComplex(all, tg.name);
+    const m = matchComplex(all, tg.name, tg.lawd);
     if(m.multi){ missing.push(`${tg.name} (여러 단지 일치 — 정확한 단지명 입력)`); continue; }
     const hits = m.hits || [];
     if(!hits.length){ missing.push(tg.name); continue; }
@@ -4032,14 +4067,25 @@ async function acShow(input){
   let apts;
   try{ apts = await getApts(acLawdOf(input)); }
   catch(e){ ac.innerHTML = '<div class="ac-msg">'+esc(e.message)+'</div>'; return; }
+  const lw = acLawdOf(input);
+  await ensureNaverNames(lw);
   if(acInput !== input) return; // 입력창 바뀜
-  let hits = apts.filter(a=>a.name.replace(/\s/g,'').includes(q));
+  // 네이버 단지명이 있는 단지는 그 이름으로 보여주고, 같은 네이버 단지로 묶이는 실거래 등록명은 한 줄로 합친다
+  const disp = new Map();
+  apts.forEach(a=>{
+    const nm = naverNameOf(lw, a.name) || a.name;
+    if(!disp.has(nm)) disp.set(nm, { name:nm, umd:a.umd, n:0, presaleOnly:true, rtms:[] });
+    const g = disp.get(nm); g.n += a.n; g.presaleOnly = g.presaleOnly && a.presaleOnly; g.rtms.push(a.name);
+  });
+  const dispList = [...disp.values()].sort((a,b)=>b.n-a.n);
+  const has = s => s.replace(/\s/g,'').includes(q);
+  let hits = dispList.filter(a=>has(a.name) || a.rtms.some(has));
   // 글자 그대로 포함하는 단지가 없으면 단지 분석과 같은 매칭(matchComplex — 표기 차이 폴백 포함)으로 다시 찾는다
   // ("관악드림타운" → 실거래 등록명 "관악드림(삼성)"/"관악드림(동아)", 2026.10)
   if(!hits.length){
-    const m = matchComplex(apts.map(a=>({apt:a.name, umd:a.umd})), input.value.trim());
+    const m = matchComplex(apts.map(a=>({apt:a.name, umd:a.umd})), input.value.trim(), lw);
     const names = new Set(m.multi || (m.hits||[]).map(t=>t.apt));
-    hits = apts.filter(a=>names.has(a.name));
+    hits = dispList.filter(a=>a.rtms.some(r=>names.has(r)));
   }
   hits = (await mergeSplitSuggestions(hits, acLawdOf(input), input.value.trim())).slice(0,12);
   if(acInput !== input) return;
@@ -4631,6 +4677,7 @@ async function search(opts){
         const merged = mergeTradeAndPresaleForRanking(fetched[i], fetchedP[i]);
         byLawd[ld]=floorF(windowF(merged));
       });
+      await Promise.all(cmpItems.map(x=>ensureNaverNames(x.lawd)));
       d = analyzeCompare(byLawd, cmpItems, months);
     } else {
       // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
@@ -4733,13 +4780,14 @@ async function search(opts){
         d = analyzeGapRanking(items, rentItems, months);
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
-        d = analyzeComplex(items, name, months, rawMerged);
+        await ensureNaverNames(lawd);
+        d = analyzeComplex(items, name, months, rawMerged, lawd);
         if(d.found && d.splitBase){ const kn = await kaptNameForSplit(d.splitLawd || lawd, d.splitBase); if(kn) d.name = kn; }
         // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
         // 자체적으로 시도하므로, 매매 매칭이 실패해도(예: 표기 차이) 전세는 따로 찾힐 수 있다.
         try{
           const itemsJ = windowF(floorF(rawJ));
-          const dJ = analyzeComplex(itemsJ, name, months);
+          const dJ = analyzeComplex(itemsJ, name, months, undefined, lawd);
           d.jeonse = dJ.found ? dJ : null;
         }catch(e){ d.jeonse = null; }
       }
