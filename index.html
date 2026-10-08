@@ -291,10 +291,11 @@ try {
   .listing-trend-change .arrow{flex:none;color:var(--sub)}
   .listing-trend-history{margin:7px 0 0 30px;color:var(--sub);font-size:10px}
   .listing-trend-history summary{cursor:pointer;width:max-content;max-width:100%;padding:2px 0;font-weight:700}
-  .listing-trend-history ol{margin:5px 0 0;padding:6px 8px;list-style:none;border-radius:8px;background:var(--slate-bg)}
-  .listing-trend-history li{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
-  .listing-trend-history li+li{border-top:1px solid var(--line)}
-  .listing-trend-history li:last-child{color:var(--blue);font-weight:700}
+  .listing-history-chart{padding:10px 8px 6px;border-radius:10px;background:var(--slate-bg)}
+  .listing-history-chart svg{display:block;width:100%;height:auto;overflow:visible}
+  .listing-history-chart text{font-family:inherit;fill:var(--sub);font-size:12px}
+  .listing-history-chart .price-label{fill:var(--blue);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--slate-bg);stroke-width:4px;stroke-linejoin:round}
+  .listing-history-chart .chart-note{font-size:10px;line-height:1.5;margin:0 4px;color:var(--sub)}
   .listing-gap-row{padding:10px 0;border-bottom:1px dashed var(--line)}
   .listing-gap-row:last-child{border-bottom:none}
   .listing-gap-row .rk{border:0;padding:0;align-items:flex-start}
@@ -6580,9 +6581,27 @@ function toggleListingTrendHistory(button){
 }
 function listingTrendHistoryHTML(points, id){
   if(points.length <= 3) return '';
-  const recent = points.slice(-12);
-  return `<div class="listing-trend-history" id="${id}" hidden>
-    <ol>${recent.map((p,i)=>`<li><span>${esc(listingTrendDate(p.date))}</span><span>${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억</span></li>`).join('')}</ol></div>`;
+  const recent=points.slice(-12).filter(p=>Number.isFinite(p.ask)&&p.ask>0);
+  if(!recent.length)return '';
+  const values=recent.map(p=>p.ask),min=Math.min(...values),max=Math.max(...values);
+  const padding=Math.max((max-min)*0.15,max*0.005,0.05),lo=Math.max(0,min-padding),hi=max+padding;
+  const dates=recent.map(p=>Date.parse(String(p.date).replace(/[.]/g,'-')));
+  const timed=dates.every(Number.isFinite)&&dates.at(-1)>dates[0]&&dates.every((t,i)=>!i||t>=dates[i-1]);
+  const x=(p,i)=>52+282*(timed?(dates[i]-dates[0])/(dates.at(-1)-dates[0]):recent.length===1?0.5:i/(recent.length-1));
+  const y=p=>142-110*(p.ask-lo)/(hi-lo);
+  const coords=recent.map((p,i)=>`${x(p,i).toFixed(2)},${y(p).toFixed(2)}`).join(' ');
+  const digits=listingTrendPrecision(recent);
+  const description=recent.map((p,i)=>`${listingTrendDate(p.date)} ${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억`).join(', ');
+  const grid=[0,1,2].map(i=>{const value=hi-(hi-lo)*i/2,cy=32+55*i;return `<line x1="52" x2="334" y1="${cy}" y2="${cy}" stroke="var(--line)"/><text x="44" y="${cy+4}" text-anchor="end">${value.toFixed(digits)}</text>`;}).join('');
+  const markers=recent.map((p,i)=>`<circle cx="${x(p,i).toFixed(2)}" cy="${y(p).toFixed(2)}" r="${i===recent.length-1?4.5:3}" fill="var(--blue)" stroke="#fff" stroke-width="1.5"><title>${esc(p.date)} · ${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억</title></circle>`).join('');
+  const labels=recent.map((p,i)=>i===0||i===recent.length-1||(i%Math.ceil(recent.length/5)===0 && x(recent.at(-1),recent.length-1)-x(p,i)>50)?`<text x="${x(p,i).toFixed(2)}" y="166" text-anchor="${i===0?'start':i===recent.length-1?'end':'middle'}">${esc(listingTrendDate(p.date))}</text>`:'').join('');
+  const ends=recent.flatMap((p,i)=>{if(i===recent.length-1 && i>0 && p.ask===recent[i-1].ask && recent.some((q,j)=>j<i && (j===0||q.ask!==recent[j-1].ask) && q.ask===p.ask && x(p,i)-x(q,j)<48))return [];if(i!==0 && i!==recent.length-1 && p.ask===recent[i-1].ask)return [];return `<text class="price-label" x="${x(p,i).toFixed(2)}" y="${y(p)-12}" text-anchor="${i===0?'start':'end'}">${p.ask.toFixed(listingTrendPriceDigits(recent,i))}</text>`;}).join('');
+  return `<div class="listing-trend-history" id="${id}" hidden><div class="listing-history-chart">
+    <svg viewBox="0 0 360 182" role="img" aria-label="${esc('최저 호가 변화: '+description)}">
+      <text x="8" y="15">단위: 억원</text>${grid}
+      <polyline points="${coords}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${markers}${ends}${labels}
+    </svg><p class="chart-note">기준일별 최저 호가 · 최근 ${recent.length}개 기록</p></div></div>`;
 }
 function listingTrendPriceDigits(points, i, baselineAsk){
   const p=points[i];
