@@ -15,7 +15,7 @@ function page(search){
     setMode(m){ctx.mode=m;return true;}, search(){ctx.calls++;},showError(){throw Error('unexpected auth error');},
     resetQueriedSliderDefaults(){},regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(){},listingGapSet(){},setBuildYearValue(){}
   });
-  vm.runInContext(source,ctx);return {ctx,elements};
+  vm.runInContext(html.slice(html.indexOf('function normalizeListingOccupancy('),html.indexOf('function listingOccupancy(){'))+source,ctx);return {ctx,elements};
 }
 test('all tab entry URLs remain idle even with a remembered region',async()=>{
   const links=[...html.matchAll(/class="tab[^"\n]*"[^\n]*href="([^\"]+\?m=[^\"]+)"/g)].map(x=>x[1]);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {cleanItem, dailyHistoryIndex} from '../netlify/functions/listings.mjs';
+import {cleanItem, dailyHistoryIndex, snapshotForHistory} from '../netlify/functions/listings.mjs';
 const stats=readFileSync(new URL('../stats.html',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function summarize(rows){
@@ -39,4 +39,28 @@ test('same-day reuploads compare against the previous date without deleting stor
  const prices={a:15,b:12.5,c:12.5};
  assert.equal(prices[daily[0].uploadId]-prices[daily[1].uploadId],2.5);
  assert.equal(dailyHistoryIndex([{uploadId:'x'},{uploadId:'y'}]).length,2);
+});
+
+
+test('presale upload keeps no-peak offers separate and excludes low floors',()=>{
+ const rows=[{...base,'입주구분':'분양권','실거래최고가(억)':null,'매매가(억)':9},
+ {...base,'입주구분':'분양권','실거래최고가(억)':null,'매매가(억)':10},
+ {...base,'입주구분':'분양권','실거래최고가(억)':null,'층구분':'저층','매매가(억)':8},
+ {...base,'입주구분':'입주가능','실거래최고가(억)':null}];
+ const items=summarize(rows).regions['서울시|강남구'];
+ assert.equal(items.length,1);assert.equal(items[0].occupancy,'presale');assert.equal(items[0].ask,9);assert.equal(items[0].n,2);
+ const cleaned=cleanItem(items[0]);assert.equal(cleaned.peak,0);assert.equal(cleaned.occupancy,'presale');
+ assert.equal(cleanItem({...cleaned,occupancy:'available'}),null);assert.equal(cleanItem({...cleaned,ask:0}),null);
+ assert.equal(snapshotForHistory({items:[cleaned,cleanItem({nid:'2',ex:84,peak:20,ask:12,occupancy:'tenant'})]},'presale',true).items.length,1);
+});
+test('presale share selection is limited to budget and normalization rejects other tabs',()=>{
+ const start=index.indexOf('function buildShareURL('),end=index.indexOf('async function initFromURL(',start);
+ const ctx=vm.createContext({URLSearchParams,location:{pathname:'/'},isListingMode:()=>true});
+ vm.runInContext(index.slice(start,end),ctx);
+ const inp={mode:'listingbudget',mN:'12',fM:'0',lawd:'11680',occupancy:'presale'};
+ assert.equal(new URL('https://example.com'+ctx.buildShareURL(inp)).searchParams.get('occupancy'),'presale');
+ assert.equal(new URL('https://example.com'+ctx.buildShareURL({...inp,mode:'listingurgent'})).searchParams.has('occupancy'),false);
+ vm.runInContext(index.slice(index.indexOf('function normalizeListingOccupancy('),index.indexOf('function listingOccupancy(){')),ctx);
+ assert.equal(ctx.normalizeListingOccupancy('presale','listingbudget'),'presale');
+ assert.equal(ctx.normalizeListingOccupancy('presale','listingurgent'),'available');
 });
