@@ -81,7 +81,7 @@ test('자동완성: 시공사별로 나뉜 등록명은 K-apt 공식 단지명 �
 test('네이버 단지명 매핑: 네이버 이름으로 검색되고, 같은 네이버 단지의 실거래 등록명은 함께 묶는다', () => {
   const c = vm.createContext({});
   vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex; this.NAVER_NAMES = NAVER_NAMES;', c);
-  c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)': '건영3차', '관악드림(삼성)': '관악드림타운', '관악드림(동아)': '관악드림타운' };
+  c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)|신림동': '건영3차', '관악드림(삼성)|봉천동': '관악드림타운', '관악드림(동아)|봉천동': '관악드림타운' };
   const all = [T('LIG대학마을(건영아파트3차)','신림동'), T('관악드림(삼성)','봉천동'), T('관악드림(동아)','봉천동'), T('건영4차','신림동')];
   assert.deepEqual(names(c.matchComplex(all, '건영3차', '11620')), ['LIG대학마을(건영아파트3차)']);
   assert.deepEqual(names(c.matchComplex(all, '건영3차 아파트', '11620')), ['LIG대학마을(건영아파트3차)']);
@@ -93,10 +93,51 @@ test('네이버 단지명 매핑: 네이버 이름으로 검색되고, 같은 �
 test('목록형 탭: 네이버 단지명으로 표시하고, 나뉘어 등록된 같은 네이버 단지는 한 줄로 합친다', () => {
   const c = vm.createContext({ sel: { value: '11620' } });
   vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES = NAVER_NAMES; this.aptLabel = aptLabel; this.unifyNaverSplit = unifyNaverSplit;', c);
-  c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)': '건영3차', '관악드림(삼성)': '관악드림타운', '관악드림(동아)': '관악드림타운' };
-  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)' }), '건영3차');
+  c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)|신림동': '건영3차', '관악드림(삼성)|봉천동': '관악드림타운', '관악드림(동아)|봉천동': '관악드림타운' };
+  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)', umd:'신림동' }), '건영3차');
   assert.equal(c.aptLabel({ apt: '관악' }), '관악');
-  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)', lawd: '11680' }), 'LIG대학마을(건영아파트3차)'); // 다른 구 표는 안 씀
-  const got = c.unifyNaverSplit([{ apt: '관악드림(삼성)' }, { apt: '관악드림(동아)' }, { apt: 'LIG대학마을(건영아파트3차)' }], '11620');
+  assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)', umd:'신림동', lawd: '11680' }), 'LIG대학마을(건영아파트3차)'); // 다른 구 표는 안 씀
+  const got = c.unifyNaverSplit([{ apt: '관악드림(삼성)', umd:'봉천동' }, { apt: '관악드림(동아)', umd:'봉천동' }, { apt: 'LIG대학마을(건영아파트3차)', umd:'신림동' }], '11620');
   assert.deepEqual(JSON.parse(JSON.stringify(got.map(t => t.apt))), ['관악드림타운', '관악드림타운', 'LIG대학마을(건영아파트3차)']);
+});
+
+test('같은 네이버 이름이라도 법정동이 다르면 거래를 합치지 않고 선택지를 준다', () => {
+  const c = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
+    '\nthis.matchComplex = matchComplex; this.unifyNaverSplit = unifyNaverSplit; this.NAVER_NAMES = NAVER_NAMES;', c);
+  c.NAVER_NAMES['11680'] = { '현대3차(61~64동)|압구정동':'현대3차', '현대아파트3|개포동':'현대3차' };
+  const all = [T('현대3차(61~64동)', '압구정동', '1976'), T('현대아파트3', '개포동', '1986')];
+  assert.deepEqual(names(c.matchComplex(all, '현대3차(61~64동)', '11680')), ['현대3차(61~64동)']);
+  assert.deepEqual(names(c.matchComplex(all, '현대3차', '11680')), ['현대3차(61~64동) [압구정동]', '현대아파트3 [개포동]']);
+  assert.ok(c.matchComplex(all, '현대3차', '11680').multi);
+  assert.deepEqual(names(c.matchComplex(all, '현대3차(61~64동) [압구정동]', '11680')), ['현대3차(61~64동)']);
+  assert.deepEqual(JSON.parse(JSON.stringify(c.unifyNaverSplit(all, '11680').map(t=>t.apt))), ['현대3차(61~64동)', '현대아파트3']);
+  const sameDong = [T('관악드림(삼성)', '봉천동', '2003'), T('관악드림(동아)', '봉천동', '2003')];
+  c.NAVER_NAMES['11620'] = { '관악드림(삼성)|봉천동':'관악드림타운', '관악드림(동아)|봉천동':'관악드림타운' };
+  assert.deepEqual(JSON.parse(JSON.stringify(c.unifyNaverSplit(sameDong, '11620').map(t=>t.apt))), ['관악드림타운', '관악드림타운']);
+  const sameRaw = [T('동양파라곤', '논현동', '2004'), T('동양파라곤', '청담동', '2004')];
+  assert.deepEqual(names(c.matchComplex(sameRaw, '동양파라곤', '11680')), ['동양파라곤 [논현동]', '동양파라곤 [청담동]']);
+  assert.deepEqual(JSON.parse(JSON.stringify(c.matchComplex(sameRaw, '동양파라곤 [청담동]', '11680').hits.map(t=>t.umd))), ['청담동']);
+});
+
+test('같은 실거래명도 법정동별로 다른 네이버 이름을 표시한다', () => {
+  const map = JSON.parse(readFileSync(new URL('../data/naver-names/11740.json', import.meta.url), 'utf8'));
+  assert.equal(map['우성'], undefined);
+  assert.equal(map['우성|천호동'], '천호우성');
+  const c = vm.createContext({sel:{value:'11680'}});
+  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES=NAVER_NAMES;this.aptLabel=aptLabel;', c);
+  c.NAVER_NAMES['11680'] = JSON.parse(readFileSync(new URL('../data/naver-names/11680.json', import.meta.url), 'utf8'));
+  assert.equal(c.aptLabel({apt:'동양파라곤', umd:'논현동'}), '논현동양파라곤');
+  assert.equal(c.aptLabel({apt:'동양파라곤', umd:'청담동'}), '청담동양파라곤');
+});
+
+test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 분리한다', async () => {
+  const c = vm.createContext({
+    aptMem: {},
+    canonNorm: s => s,
+    ensureMonths: async () => [T('우성', '길동'), T('우성', '천호동'), T('우성', '천호동')],
+    ensureMonthsP: async () => [],
+  });
+  vm.runInContext(html.slice(html.indexOf('async function getApts('), html.indexOf('function acHide(')) + '\nthis.getApts = getApts;', c);
+  assert.deepEqual(JSON.parse(JSON.stringify((await c.getApts('11740')).map(a=>[a.umd, a.n]))), [['천호동', 2], ['길동', 1]]);
 });

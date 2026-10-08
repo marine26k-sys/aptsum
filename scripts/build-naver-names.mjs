@@ -51,7 +51,7 @@ const yearOk = (a, b) => a == null || b == null || Math.abs(a - b) <= 1;
 
 // 실거래(매매·분양권·전세) 단지명별 법정동·건축년도
 async function tradeMeta(lawd) {
-  const meta = new Map(); // 실거래명 -> {umds:Set, builds:Map(year->count)}
+  const meta = new Map(); // 실거래명 -> {umds:Set, buildsByUmd:Map(법정동 -> Map(year->count))}
   for (const kind of ["analyze", "presale", "rent"]) {
     const dir = path.join("data", kind, lawd);
     if (!existsSync(dir)) continue;
@@ -60,11 +60,14 @@ async function tradeMeta(lawd) {
       const j = JSON.parse(await readFile(path.join(dir, f), "utf-8"));
       for (const t of j.items || []) {
         if (!t.apt) continue;
-        if (!meta.has(t.apt)) meta.set(t.apt, { umds: new Set(), builds: new Map() });
+        if (!meta.has(t.apt)) meta.set(t.apt, { umds: new Set(), buildsByUmd: new Map() });
         const m = meta.get(t.apt);
-        if (t.umd) m.umds.add(t.umd);
+        if (!t.umd) continue;
+        m.umds.add(t.umd);
+        if (!m.buildsByUmd.has(t.umd)) m.buildsByUmd.set(t.umd, new Map());
         const y = yearOf(t.build);
-        if (y) m.builds.set(y, (m.builds.get(y) || 0) + 1);
+        const builds = m.buildsByUmd.get(t.umd);
+        if (y) builds.set(y, (builds.get(y) || 0) + 1);
       }
     }
   }
@@ -93,34 +96,36 @@ for (const [lawd, naver] of naverByLawd) {
   }
   const map = {};
   for (const [apt, m] of meta) {
-    summary.total++;
-    const build = [...m.builds].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const kHh = kapt.get(apt)?.hhcnt || null;
-    const hits = new Map();
     for (const umd of m.umds) {
+      summary.total++;
+      const build = [...m.buildsByUmd.get(umd)].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      // 같은 실거래명이 다른 법정동에도 있으면 K-apt 세대수 매칭 결과가 어느 동 것인지 확정할 수 없다.
+      const kHh = m.umds.size === 1 ? kapt.get(apt)?.hhcnt || null : null;
+      const hits = new Map();
       const local = naver.filter((n) => n.umd === umd);
-      if (!local.length) continue;
-      const items = Object.fromEntries(local.map((n, i) => [i, n]));
-      for (const v of nameVariants(apt)) {
-        const hit = findNaverComplex(items, v, { dong: umd, expectedHouseholds: kHh });
-        if (!hit || !yearOk(yearOf(hit.built), build)) continue;
-        const exactName = sameKey(naverNameKey(v, umd), naverNameKey(hit.name, umd));
-        if (!exactName && !(kHh && sameHouseholds(hit.hh, kHh))) { summary.suspectDropped++; continue; }
-        hits.set(`${hit.umd}|${hit.name}`, hit);
+      if (local.length) {
+        const items = Object.fromEntries(local.map((n, i) => [i, n]));
+        for (const v of nameVariants(apt)) {
+          const hit = findNaverComplex(items, v, { dong: umd, expectedHouseholds: kHh });
+          if (!hit || !yearOk(yearOf(hit.built), build)) continue;
+          const exactName = sameKey(naverNameKey(v, umd), naverNameKey(hit.name, umd));
+          if (!exactName && !(kHh && sameHouseholds(hit.hh, kHh))) { summary.suspectDropped++; continue; }
+          hits.set(hit.name, hit);
+        }
       }
+      let how = "byName";
+      if (!hits.size && kHh && build) {
+        // 이름으로 못 찾음 → 같은 법정동에서 세대수·준공연도가 모두 같은 네이버 단지가 하나뿐이면 채택
+        const same = local.filter((n) => sameHouseholds(n.hh, kHh) && yearOf(n.built) === build);
+        if (same.length === 1) { hits.set(same[0].name, same[0]); how = "byHh"; }
+      }
+      if (hits.size === 1) {
+        const hit = [...hits.values()][0];
+        if (hit.name !== apt) map[`${apt}|${umd}`] = hit.name;
+        summary[how]++;
+      } else if (hits.size > 1) summary.ambiguous++;
+      else summary.none++;
     }
-    let how = "byName";
-    if (!hits.size && kHh && build) {
-      // 이름으로 못 찾음 → 같은 법정동에서 세대수·준공연도가 모두 같은 네이버 단지가 하나뿐이면 채택
-      const same = naver.filter((n) => m.umds.has(n.umd) && sameHouseholds(n.hh, kHh) && yearOf(n.built) === build);
-      if (same.length === 1) { hits.set(`${same[0].umd}|${same[0].name}`, same[0]); how = "byHh"; }
-    }
-    if (hits.size === 1) {
-      const hit = [...hits.values()][0];
-      if (hit.name !== apt) map[apt] = hit.name;
-      summary[how]++;
-    } else if (hits.size > 1) summary.ambiguous++;
-    else summary.none++;
   }
   await writeFile(path.join("data", "naver-names", `${lawd}.json`), JSON.stringify(map));
 }
