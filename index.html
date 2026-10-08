@@ -968,7 +968,7 @@ try {
     </div>
     <div id="listingOccupancyFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">입주 조건
-        <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option></select>
+        <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option><option id="listingPresaleOption" value="presale" hidden disabled>분양권</option></select>
       </label>
     </div>
     <details id="listingBudgetFavorites" class="ls-filters" style="display:none">
@@ -1176,7 +1176,7 @@ function buildShareURL(inp){
   if(inp.by) p.set('by', inp.by);
   if(inp.mode==='listingtrend' && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if(inp.mode==='listingtrend' && inp.trendContinuous) p.set('ltc','1');
-  if(inp.occupancy==='tenant' && isListingMode(inp.mode)) p.set('occupancy','tenant');
+  if((inp.occupancy==='tenant' || (inp.mode==='listingbudget' && inp.occupancy==='presale')) && isListingMode(inp.mode)) p.set('occupancy',inp.occupancy);
   if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
@@ -1233,7 +1233,7 @@ async function initFromURL(){
     const [q0,q1] = p.has('lq') ? p.get('lq').split('~').map(Number) : [0,50];
     lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1});
   }
-  document.getElementById('listingOccupancy').value = p.get('occupancy')==='tenant' ? 'tenant' : 'available';
+  document.getElementById('listingOccupancy').value = normalizeListingOccupancy(p.get('occupancy'),requestedMode);
   listingTrendUploadId = requestedMode==='listingtrend' ? (p.get('ltu')||'') : '';
   document.getElementById('listingTrendContinuous').checked=requestedMode==='listingtrend' && p.get('ltc')==='1';
 
@@ -1552,7 +1552,7 @@ function restoreView(vi){
   setBuildYearValue(inp.by || '');
   lsRestoreLimits(inp.sliderLimits);
   lsSet(inp.ls);
-  document.getElementById('listingOccupancy').value = inp.occupancy==='tenant' ? 'tenant' : 'available';
+  document.getElementById('listingOccupancy').value = normalizeListingOccupancy(inp.occupancy,inp.mode);
   restoreListingSelectionInputs(inp);
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함(2026.07)
@@ -1864,7 +1864,7 @@ function applyNativeRegionInputs(inp){
     if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=inp[key];}
   lsRestoreLimits(inp.sliderLimits);
   lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
-  document.getElementById('listingOccupancy').value=inp.occupancy==='tenant'?'tenant':'available';
+  document.getElementById('listingOccupancy').value=normalizeListingOccupancy(inp.occupancy,inp.mode);
   restoreListingSelectionInputs(inp);
   regionSel=(inp.regionSel||[]).slice(0, regionSelMax());saveRegionSel();renderRegionChips();
   pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
@@ -2370,6 +2370,9 @@ function setMode(m, fromRestore){
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
+  const presaleOption=document.getElementById('listingPresaleOption');
+  presaleOption.hidden=presaleOption.disabled=m!=='listingbudget';
+  document.getElementById('listingOccupancy').value=normalizeListingOccupancy(document.getElementById('listingOccupancy').value,m);
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
@@ -5912,9 +5915,18 @@ function renderPeak(d){
 const listingMem = {}; // lawd → {asOf, items} (세션 내 메모리 캐시 — 구독 전용 데이터라 localStorage엔 안 남김)
 let listingTrendUploadId = "";
 const listingHistoryMem = {}; // lawd → 업로드별 요약본. 브라우저 저장소에는 남기지 않는다.
-function listingOccupancy(){ return document.getElementById("listingOccupancy").value==='tenant' ? 'tenant' : 'available'; }
-function listingOccupancyLabel(){ return listingOccupancy()==='tenant' ? '세안고' : '입주 가능'; }
-function listingOccupancyApply(){ searchToken++; if(isListingMode(mode)) search({silentScroll:true}); }
+function normalizeListingOccupancy(value,tab){ return value==='tenant' ? 'tenant' : value==='presale' && tab==='listingbudget' ? 'presale' : 'available'; }
+function listingOccupancy(){ return normalizeListingOccupancy(document.getElementById('listingOccupancy').value,mode); }
+function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세안고',presale:'분양권'}[listingOccupancy()]; }
+function listingOccupancyApply(){
+  // 입주 조건은 조회 버튼을 눌렀을 때 적용한다. 이전 조건의 응답·더보기가 섞이지 않도록 비운다.
+  searchToken++;
+  if(searchAbortController)searchAbortController.abort();
+  document.getElementById('loading').classList.remove('on');
+  document.getElementById('btn').disabled=false;
+  const result=document.getElementById('result');result.classList.remove('on');result.innerHTML='';
+  lastData=null;
+}
 async function fetchListings(lawd){
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
   if(listingMem[key]) return listingMem[key];
@@ -6422,7 +6434,7 @@ function loadListingBudgetFavorite(index){
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();
   if(c.askLimits){for(const id of ['lsAskMin','lsAskMax']){const el=document.getElementById(id);el.min=c.askLimits.min;el.max=c.askLimits.max;}}
   lsRestoreLimits(c.sliderLimits);
-  lsSet(c.ls);document.getElementById('listingOccupancy').value=c.occupancy==='tenant'?'tenant':'available';
+  lsSet(c.ls);document.getElementById('listingOccupancy').value=normalizeListingOccupancy(c.occupancy,'listingbudget');
 listingBudgetSel=c.band||null;
   document.getElementById('listingBudgetFavoriteMsg').textContent=`‘${favorite.name}’ 조건으로 조회합니다.`;
   search({silentScroll:true});
@@ -6675,8 +6687,14 @@ function setListingBudgetBand(v){
   listingBudgetSel = v;
   if(lastData && lastData.mode==='listingbudget') renderListingBudget(lastData);
 }
-function renderListingBudget(d){
+function showMoreListingBudget(){
+  if(mode!=='listingbudget' || lastData?.mode!=='listingbudget')return;
+  renderListingBudget(lastData,listingBudgetVisibleCount+100);
+}
+let listingBudgetVisibleCount=100;
+function renderListingBudget(d,limit=100){
 
+  const presale=listingOccupancy()==='presale';
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
   const bands = LISTING_BUDGET_BANDS.filter(b => counts[b.v]);
@@ -6685,10 +6703,12 @@ function renderListingBudget(d){
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
-  const cur = LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
-  const list = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : []).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
-  const multiRegion = regionMulti(list);
-  const chips = bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
+  const cur = presale ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const all = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : d.rows.slice()).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
+  listingBudgetVisibleCount=Math.min(all.length,limit);
+  const list=all.slice(0,listingBudgetVisibleCount);
+  const multiRegion = regionMulti(all);
+  const chips = presale ? '' : bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·중층 이상 매물)</div>`
     : list.map((x,i)=>{
@@ -6696,7 +6716,7 @@ function renderListingBudget(d){
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${drop===null?'':chgHTML(x.ask - x.peak, drop)}</small></span>
+        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${drop===null ? '<small>실거래 전고점 없음</small>' : `<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${chgHTML(x.ask - x.peak, drop)}</small>`}</span>
       </div>${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
@@ -6704,10 +6724,11 @@ function renderListingBudget(d){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>
+      ${presale ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${body}
+      ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
   </div>
   <div class="src-note">호가: ${listingOccupancyLabel()} · 중층·고층 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;

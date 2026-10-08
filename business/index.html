@@ -72,21 +72,21 @@ h2{font-size:clamp(26px,3.5vw,36px);font-weight:900;letter-spacing:-1px;line-hei
 .sec-sub{margin-top:14px;color:var(--gray);font-size:15px;max-width:560px}
 
 /* ---------- stats ---------- */
-.stats{background:var(--cream);padding:0 0 8px}
-.stats-period{padding-top:18px;padding-bottom:10px;color:var(--navy);font-size:15px;font-weight:900}
-.stats-in{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-left:1px solid var(--line);border-right:1px solid var(--line)}
-.stat{padding:22px 16px;border-right:1px solid #EDE4D3}
-.stat:last-child{border-right:none}
-.stat b{display:block;font-size:34px;font-weight:900;color:var(--teal);letter-spacing:-1px;line-height:1}
-.stat b em{font-style:normal;color:var(--teal)}
-.stat-wide{grid-column:span 2}
-.stat-wide.region{grid-column:span 3}
-.sw-title{display:block;font-size:12px;color:var(--gray);font-weight:600;margin-bottom:6px;line-height:1.1}
-.sw-row{display:flex;gap:24px;flex-wrap:wrap}
-.sw-row b{display:block;font-size:22px;font-weight:900;color:var(--teal);letter-spacing:-.5px;line-height:1}
-.sw-row em{display:block;font-style:normal;font-size:12px;color:var(--ink);font-weight:600;margin-top:0}
-.stat span{display:block;margin-top:2px;font-size:13px;line-height:1.1;color:var(--gray);font-weight:500}
-@media(max-width:720px){.stats-in{grid-template-columns:1fr}.stat{border-bottom:1px solid #EDE4D3}}
+.stats{background:var(--cream);padding:24px 0 28px}
+.stats-period{padding-bottom:18px;color:var(--navy);font-size:15px;font-weight:900;line-height:1.6}
+.stats-in{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.stat{padding:24px;background:#fff;border:1px solid #EDE4D3;border-radius:14px}
+.stat b{display:block;font-size:40px;font-weight:900;color:var(--teal);letter-spacing:-1px;line-height:1.2}
+.stat b em{font-style:normal}
+.stat span{display:block;margin-top:7px;font-size:14px;color:var(--ink);font-weight:700}
+.audience{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.audience-card{padding:18px 22px;border:1px solid #EDE4D3;border-radius:12px;background:rgba(255,255,255,.6)}
+.audience-label{display:block;font-size:12px;font-weight:700;color:var(--gray);margin-bottom:7px}
+.audience-card strong{display:block;font-size:20px;line-height:1.4;color:var(--navy)}
+.audience-card strong b{color:var(--teal)}
+.audience-card p{font-size:13px;color:var(--gray);margin-top:7px;line-height:1.5}
+.stats-secondary{margin-top:14px;font-size:12px;color:var(--gray);line-height:1.5}
+.stats-secondary strong{color:var(--navy)}
 
 /* ---------- channels banner ---------- */
 .channels{background:var(--navy-2);padding:18px 0}
@@ -185,20 +185,6 @@ footer a:hover{color:#fff}
   h2{font-size:19px;letter-spacing:-.5px}
   .sec-sub{font-size:12px;margin-top:6px}
 
-  .stats-period{padding-top:12px;padding-bottom:7px;font-size:13px}
-  .stats-in{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .stat{padding:10px 8px;text-align:left;border-right:1px solid #EDE4D3;border-bottom:1px solid #EDE4D3}
-  .stat:nth-child(2n){border-right:none}
-  .stat:nth-child(5){grid-column:1/-1;text-align:center;border-right:none}
-  .stat-wide,.stat-wide.region{grid-column:1/-1;border-right:none;padding-top:8px;padding-bottom:8px}
-  .stat:last-child{border-bottom:none}
-  .stat b{font-size:18px}
-  .sw-title{font-size:11px;margin-bottom:3px}
-  .sw-row{gap:18px}
-  .sw-row b{font-size:18px}
-  .sw-row em{font-size:11px}
-  .stat span{font-size:12px}
-
   .channels{padding:12px 0}
   .channels-in{gap:8px}
   .channels-label{font-size:11px}
@@ -237,6 +223,70 @@ footer a:hover{color:#fff}
   footer{padding:18px 0;font-size:10.5px;color:rgba(255,255,255,.6);text-align:center}
   .foot-in{justify-content:center;gap:6px}
 }
+/* Business proposal hierarchy */
+header{padding:112px 0 0}
+.hero-copy{padding-bottom:48px}
+.eyebrow{color:#69D4D9}
+.hero-sub{max-width:640px;line-height:1.75}
+.hero-btns{margin-top:26px}
+section{padding:64px 0}
+.sec-sub{line-height:1.7}
+.ad-grid{grid-template-columns:1fr;gap:28px}
+.partner-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:26px}
+.partner-card{background:#fff;border:1px solid #EDE4D3;border-radius:14px;padding:24px}
+.partner-number{display:block;font-size:12px;font-weight:900;color:var(--teal);margin-bottom:12px}
+.partner-card h3{font-size:21px;color:var(--navy);line-height:1.4}
+.partner-card p{font-size:14px;line-height:1.75;color:#52636E;margin:12px 0 18px}
+.partner-card dl{border-top:1px solid var(--line);padding-top:14px}
+.partner-card dt{font-size:11px;color:var(--gray);font-weight:700;margin-top:10px}
+.partner-card dt:first-child{margin-top:0}
+.partner-card dd{font-size:13px;line-height:1.6;margin-top:3px;color:var(--navy);font-weight:700}
+.partner-benefit{display:flex;gap:14px;align-items:baseline;padding:16px 20px;background:var(--teal-light);border-radius:10px;margin-top:16px;font-size:13px;line-height:1.65}
+.partner-benefit b{flex:none;color:var(--teal-dark)}
+.ad-box{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:center;padding:28px;border-color:#ADD5D8}
+.ad-box p{line-height:1.7}
+.contact-dm{display:inline-block;font-size:12px;color:var(--teal-dark);text-decoration:underline;margin-top:12px;line-height:1.5}
+.ad-box .btn{margin-top:0}
+.ad-box .small{overflow-wrap:anywhere;line-height:1.6}
+@media(max-width:720px){
+  header{padding-top:82px}
+  .hero-copy{padding-bottom:28px}
+  h1{font-size:clamp(25px,7vw,32px);line-height:1.4}
+  .hero-sub{font-size:13px;line-height:1.7}
+  .hero-btns{margin-top:18px}
+  .btn{padding:12px 16px;font-size:13px}
+  .stats{padding:16px 0 20px}
+  .stats-period{font-size:13px;padding-bottom:12px;line-height:1.65}
+  .stats-in{gap:7px}
+  .stat{padding:14px 9px;border-radius:10px}
+  .stat b{font-size:clamp(20px,6vw,26px)}
+  .stat span{font-size:10.5px;line-height:1.5;margin-top:5px}
+  .audience{gap:8px;margin-top:10px}
+  .audience-card{padding:12px 10px;border-radius:10px}
+  .audience-label{font-size:10.5px}
+  .audience-card strong{font-size:14px}
+  .audience-card p{font-size:10.5px;line-height:1.6}
+  .stats-secondary{font-size:10.5px;margin-top:10px}
+  section{padding:34px 0}
+  h2{font-size:23px}
+  .partner-cards{grid-template-columns:1fr;gap:10px;margin-top:18px}
+  .partner-card{padding:18px}
+  .partner-number{margin-bottom:5px}
+  .partner-card h3{font-size:18px}
+  .partner-card p{font-size:12.5px;margin:8px 0 12px;line-height:1.65}
+  .partner-card dl{display:grid;grid-template-columns:72px 1fr;gap:7px 8px;padding-top:12px}
+  .partner-card dt{margin:0;font-size:11px;line-height:1.6}
+  .partner-card dd{margin:0;font-size:12px}
+  .partner-benefit{display:block;padding:12px 16px;font-size:12px}
+  .partner-benefit span{display:block;margin-top:4px}
+  .ad-grid{gap:18px}
+  .ad-box{grid-template-columns:1fr;padding:20px;gap:16px}
+  .ad-box h3{font-size:18px;line-height:1.4}
+  .ad-box p{font-size:12px}
+  .ad-box .btn{margin-top:0}
+  .ad-box .small{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.card,.nav-cta{transition:none}}
 </style>
 </head>
 <body>
@@ -256,36 +306,26 @@ footer a:hover{color:#fff}
 <header id="top">
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <p class="hero-sub">수도권 청약과 시세를 공고문·실매물 데이터 기반으로 분석합니다. 9월 기준 인스타그램 팔로워 7.4만입니다.</p>
+      <p class="eyebrow">APTSUM · BUSINESS</p>
+      <h1>수도권 주거 관심층에게<br><span class="hl">브랜드를 전달하세요</span></h1>
+      <p class="hero-sub">공고문과 실매물 데이터를 기반으로 분석하는 아파트썸.<br>청약·시세 콘텐츠와 실거래 분석 서비스로 고객을 만납니다.</p>
+      <div class="hero-btns"><a class="btn btn-teal" href="#ad">비즈니스 제안하기 ↗</a><a class="btn btn-ghost" href="#content">콘텐츠 살펴보기</a></div>
     </div>
   </div>
 </header>
 
 <div class="stats">
-  <div class="wrap stats-period">9월 인스타그램 성과 · 게시물 240개</div>
+  <div class="wrap stats-period">9월 인스타그램 성과 / 게시물 평균 조회 5만 (게시물 240개)</div>
   <div class="wrap stats-in">
     <div class="stat"><b>7.4<em>만</em></b><span>인스타그램 팔로워</span></div>
-    <div class="stat"><b>1,155<em>만</em></b><span>전체 조회수</span></div>
-    <div class="stat"><b>26%</b><span>비팔로워 조회 비중</span></div>
-    <div class="stat"><b>67<em>만</em></b><span>도달한 계정</span></div>
-    <div class="stat"><b>5<em>만</em></b><span>게시물 평균 조회수</span></div>
-    <div class="stat stat-wide region">
-      <span class="sw-title">팔로워 지역</span>
-      <div class="sw-row">
-        <div><b>40%</b><em>서울</em></div>
-        <div><b>40%</b><em>경기</em></div>
-        <div><b>10%</b><em>인천</em></div>
-      </div>
-    </div>
-    <div class="stat stat-wide">
-      <span class="sw-title">팔로워 연령대</span>
-      <div class="sw-row">
-        <div><b>46%</b><em>25~34세</em></div>
-        <div><b>43%</b><em>35~44세</em></div>
-        <div><b>9%</b><em>45~54세</em></div>
-      </div>
-    </div>
+    <div class="stat"><b>1,155<em>만</em></b><span>9월 전체 조회수</span></div>
+    <div class="stat"><b>67<em>만</em></b><span>9월 도달한 계정</span></div>
   </div>
+  <div class="wrap audience">
+    <div class="audience-card"><span class="audience-label">주요 지역</span><strong>수도권 팔로워 <b>90%</b></strong><p>서울 40% · 경기 40% · 인천 10%</p></div>
+    <div class="audience-card"><span class="audience-label">주요 연령</span><strong>25~44세 팔로워 <b>89%</b></strong><p>25~34세 46% · 35~44세 43%</p></div>
+  </div>
+  <div class="wrap stats-secondary">비팔로워 조회 비중 <strong>26%</strong> <span>· 인스타그램 9월 지표 기준</span></div>
 </div>
 
 <div class="channels">
@@ -321,18 +361,17 @@ footer a:hover{color:#fff}
     <div>
       <div class="sec-eyebrow">PARTNERSHIP</div>
       <h2>아파트썸과 함께할<br>파트너를 찾습니다</h2>
-      <ul class="ad-points">
-        <li><span class="n">1</span><div><b>분양 광고</b> — 모집공고 원문 팩트체크를 청약 템플릿으로 분양 정보를 정확하고 임팩트 있게 전달</div></li>
-        <li><span class="n">2</span><div><b>웹앱 배너 광고</b> — aptsum.kr 실거래 분석 서비스 내 배너 노출, 실사용 방문자에게 직접 도달</div></li>
-        <li><span class="n">3</span><div><b>브랜드 협찬 콘텐츠</b> — 프롭테크·금융 브랜드 등 상품을 주간 카드뉴스 시리즈에 삽입</div></li>
-        <li><span class="n">4</span><div><b>다른 채널 광고 연계</b> — 인스타스토리 + 쓰레드(2.8만) + 블로그 + 유튜브 무료 게시</div></li>
-      </ul>
+      <p class="sec-sub">브랜드의 목적에 맞춰 콘텐츠와 노출 채널을 제안합니다.</p>
+      <div class="partner-cards">
+        <article class="partner-card"><span class="partner-number">01</span><h3>분양 광고</h3><p>모집공고 원문을 확인하고, 분양 정보를 이해하기 쉬운 청약 콘텐츠로 전달합니다.</p><dl><dt>노출 채널</dt><dd>인스타그램</dd><dt>제공 콘텐츠</dt><dd>분양 정보 · 청약 분석 카드뉴스</dd></dl></article>
+        <article class="partner-card"><span class="partner-number">02</span><h3>웹앱 배너 광고</h3><p>아파트 시세와 실매물을 직접 조회하는 서비스 이용자에게 브랜드를 알립니다.</p><dl><dt>노출 채널</dt><dd>aptsum.kr</dd><dt>제공 콘텐츠</dt><dd>실거래 분석 서비스 내 배너</dd></dl></article>
+        <article class="partner-card"><span class="partner-number">03</span><h3>브랜드 협찬 콘텐츠</h3><p>프롭테크·금융 브랜드의 상품을 주간 카드뉴스 콘텐츠와 연결합니다.</p><dl><dt>노출 채널</dt><dd>인스타그램</dd><dt>제공 콘텐츠</dt><dd>주간 카드뉴스 시리즈 내 상품 소개</dd></dl></article>
+      </div>
+      <div class="partner-benefit"><b>다른 채널 연계</b><span>인스타그램 스토리 · 쓰레드(2.8만) · 블로그 · 유튜브 무료 게시</span></div>
     </div>
     <div class="ad-box">
-      <h3>비즈니스 문의 <span class="dm-badge">DM 가능</span></h3>
-      <p>분양 마케팅, 프롭테크, 금융 브랜드.</p>
-      <a class="btn btn-teal" href="mailto:aptsum.biz@gmail.com">이메일로 문의하기</a>
-      <div class="small">aptsum.biz@gmail.com <button type="button" class="copy-btn" onclick="copyBusinessEmail(this)">복사</button></div>
+      <div><h3>함께할 프로젝트를 알려주세요</h3><p>브랜드명, 협업 목적, 희망 일정을 보내주시면 제안에 참고하겠습니다.</p><a class="contact-dm" href="https://instagram.com/apt_sum" target="_blank" rel="noopener">인스타그램 DM으로도 문의 가능합니다 ↗</a></div>
+      <div class="contact-actions"><a class="btn btn-teal" href="mailto:aptsum.biz@gmail.com">비즈니스 문의하기 ↗</a><div class="small">aptsum.biz@gmail.com <button type="button" class="copy-btn" onclick="copyBusinessEmail(this)">복사</button></div></div>
     </div>
   </div>
 </section>

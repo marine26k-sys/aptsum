@@ -62,12 +62,12 @@ export async function saveSnapshot(store, lawd, data) {
 // 클라이언트가 보낸 항목을 필요한 필드만 남겨 정리한다(엉뚱한 값·과대 문자열이 저장되지 않도록).
 export function cleanItem(x) {
   const peak = num(x?.peak), ask = num(x?.ask), ex = num(x?.ex);
-  if (!(peak > 0) || !(ask > 0) || !(ex > 0)) return null;
+  if ((!(peak > 0) && x?.occupancy !== "presale") || !(ask > 0) || !(ex > 0)) return null;
   const url = str(x.url, 300);
   return {
     nid: str(x.nid, 20), apt: str(x.apt, 80), umd: str(x.umd, 30), hh: num(x.hh), built: str(x.built, 10),
-    occupancy: x.occupancy === "tenant" ? "tenant" : "available",
-    ex, py: num(x.py), peak, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
+    occupancy: ["tenant", "presale"].includes(x.occupancy) ? x.occupancy : "available",
+    ex, py: num(x.py), peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
     url: /^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(url) ? url : "",
   };
@@ -97,7 +97,7 @@ export default async (request) => {
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
-    if (!["available", "tenant"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
+    if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
     const selectedItems = items => (items || []).filter(i => (i.occupancy || "available") === occupancy);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
