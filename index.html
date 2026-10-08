@@ -294,7 +294,7 @@ try {
   .listing-history-chart{padding:10px 8px 6px;border-radius:10px;background:var(--slate-bg)}
   .listing-history-chart svg{display:block;width:100%;height:auto;overflow:visible}
   .listing-history-chart text{font-family:inherit;fill:var(--sub);font-size:12px}
-  .listing-history-chart .price-label{fill:var(--blue);font-weight:700}
+  .listing-history-chart .price-label{fill:var(--blue);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--slate-bg);stroke-width:4px;stroke-linejoin:round}
   .listing-history-chart .chart-note{font-size:10px;line-height:1.5;margin:0 4px;color:var(--sub)}
   .listing-gap-row{padding:10px 0;border-bottom:1px dashed var(--line)}
   .listing-gap-row:last-child{border-bottom:none}
@@ -6595,7 +6595,7 @@ function listingTrendHistoryHTML(points, id){
   const grid=[0,1,2].map(i=>{const value=hi-(hi-lo)*i/2,cy=32+55*i;return `<line x1="52" x2="334" y1="${cy}" y2="${cy}" stroke="var(--line)"/><text x="44" y="${cy+4}" text-anchor="end">${value.toFixed(digits)}</text>`;}).join('');
   const markers=recent.map((p,i)=>`<circle cx="${x(p,i).toFixed(2)}" cy="${y(p).toFixed(2)}" r="${i===recent.length-1?4.5:3}" fill="var(--blue)" stroke="#fff" stroke-width="1.5"><title>${esc(p.date)} · ${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억</title></circle>`).join('');
   const labels=recent.map((p,i)=>i===0||i===recent.length-1||(i%Math.ceil(recent.length/5)===0 && x(recent.at(-1),recent.length-1)-x(p,i)>50)?`<text x="${x(p,i).toFixed(2)}" y="166" text-anchor="${i===0?'start':i===recent.length-1?'end':'middle'}">${esc(listingTrendDate(p.date))}</text>`:'').join('');
-  const ends=recent.filter((p,i)=>i===0||i===recent.length-1).map(p=>{const i=recent.indexOf(p);return `<text class="price-label" x="${x(p,i).toFixed(2)}" y="${y(p)-10}" text-anchor="${i===0?'start':'end'}">${p.ask.toFixed(listingTrendPriceDigits(recent,i))}억</text>`;}).join('');
+  const ends=recent.filter((p,i)=>i===0||i===recent.length-1).map(p=>{const i=recent.indexOf(p);return `<text class="price-label" x="${x(p,i).toFixed(2)}" y="${y(p)-12}" text-anchor="${i===0?'start':'end'}">${p.ask.toFixed(listingTrendPriceDigits(recent,i))}</text>`;}).join('');
   return `<div class="listing-trend-history" id="${id}" hidden><div class="listing-history-chart">
     <svg viewBox="0 0 360 182" role="img" aria-label="${esc('최저 호가 변화: '+description)}">
       <text x="8" y="15">단위: 억원</text>${grid}
