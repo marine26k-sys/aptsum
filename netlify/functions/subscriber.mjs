@@ -53,6 +53,10 @@ export default async (request, context) => {
     return response({ error: "invalid_request" }, { status: 400 });
   }
 
+  if (payload?.action === "logout") {
+    return response({ subscribed: false }, { headers: { "Set-Cookie": sessionCookie("", 0) } });
+  }
+
   if (payload?.action === "restore") {
     const session = await readRecovery(payload.recovery, sessionSecret);
     if (!session) return response({ subscribed: false, error: "restore_expired" }, { status: 401 });

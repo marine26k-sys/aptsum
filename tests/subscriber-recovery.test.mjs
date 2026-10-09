@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createRecovery,readRecovery} from '../shared/subscriber-recovery.mjs';
 import {createPersonalSession,restorePersonalSession} from '../shared/subscribers.mjs';
 import {sign} from '../shared/sessions.mjs';
+import subscriberHandler from '../netlify/functions/subscriber.mjs';
 const secret='test-secret';
 const sub={id:'sample',gen:1,revoked:false,expiresAt:Date.now()+86400000,scope:'listings'};
 const first=createPersonalSession(secret,sub);
@@ -59,4 +60,32 @@ test('valid existing cookie registers recovery without requiring code entry',asy
 test('shared code login clears credentials from a previous personal account',async()=>{
  const {client,storage}=browser(async()=>Response.json({subscribed:true}),'previous-personal');
  await client.login('SHARED');assert.equal(storage.size,0);
+});
+test('logout clears the browser recovery credential and does not restore the session',async()=>{
+ let cookie=true,restores=0;
+ const {client,storage}=browser(async(_url,options)=>{
+  if(options?.method==='POST'){
+   const body=JSON.parse(options.body);
+   if(body.action==='logout'){cookie=false;return Response.json({subscribed:false});}
+   if(body.action==='restore')restores++;
+  }
+  return Response.json({subscribed:cookie,recovery:cookie?'signed-recovery':null});
+ });
+ await client.check();assert.equal(storage.size,1);
+ assert.equal((await client.logout()).ok,true);
+ assert.equal(storage.size,0);
+ assert.equal((await (await client.check()).json()).subscribed,false);
+ assert.equal(restores,0);
+});
+test('logout endpoint expires the subscriber cookie',async()=>{
+ const previous=process.env.SUBSCRIBER_SESSION_SECRET;
+ process.env.SUBSCRIBER_SESSION_SECRET='test-secret';
+ try{
+  const response=await subscriberHandler(new Request('https://example.test/api/subscriber',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}),{});
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('Set-Cookie'),/__Host-aptsum_subscriber=;.*Max-Age=0/);
+ }finally{
+  if(previous===undefined)delete process.env.SUBSCRIBER_SESSION_SECRET;
+  else process.env.SUBSCRIBER_SESSION_SECRET=previous;
+ }
 });

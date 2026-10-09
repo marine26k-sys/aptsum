@@ -8,8 +8,9 @@
     return response;
   };
   const post=body=>fetch('/api/subscriber',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  let pending;
+  let pending, signingOut;
   const check=()=>{
+    if(signingOut)return Promise.resolve(Response.json({subscribed:false}));
     if(pending)return pending.then(response=>response.clone());
     pending=(async()=>{
       const response=await remember(await fetch('/api/subscriber',{credentials:'same-origin',cache:'no-store'}));
@@ -21,5 +22,11 @@
     })().finally(()=>{pending=null;});
     return pending.then(response=>response.clone());
   };
-  window.aptsumSession=Object.freeze({check,login:async code=>remember(await post({code}))});
+  const logout=()=>signingOut ||= (async()=>{
+    if(pending)await pending.catch(()=>{});
+    const response=await post({action:'logout'});
+    if(response.ok)save(null);
+    return response;
+  })().finally(()=>{signingOut=null;});
+  window.aptsumSession=Object.freeze({check,login:async code=>remember(await post({code})),logout});
 })();
