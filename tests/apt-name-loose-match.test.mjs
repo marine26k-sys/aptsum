@@ -145,6 +145,18 @@ test('단계별로 확인한 실거래 별칭은 네이버 이름으로 표시�
   assert.equal(names['광해리드빌(101동)|주안동'], undefined); // 네이버의 102동과 다른 건물
 });
 
+test('급지·교통 호재가 공유하는 단지 목록에도 네이버 이름을 사용한다', () => {
+  const tier = JSON.parse(readFileSync(new URL('../data/tier-map.json', import.meta.url), 'utf8'));
+  for (const [gu, dong, expected] of [
+    ['부평구', '삼산동', '삼산타운1단지'],
+    ['수원 영통구', '영통동', '신나무실5단지주공'],
+    ['화성 동탄구', '송동', '동탄2신도시하우스디더레이크'],
+  ]) {
+    assert.ok(tier.complexes.some(c => c.gu === gu && c.dong === dong && c.nm === expected), expected);
+  }
+  assert.ok(!tier.complexes.some(c => c.gu === '부평구' && c.dong === '삼산동' && c.nm === '삼산타운주공1단지'));
+});
+
 test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 분리한다', async () => {
   const c = vm.createContext({
     aptMem: {},

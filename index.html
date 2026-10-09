@@ -4448,7 +4448,9 @@ async function searchSubway(){
       // 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
       const candidates = pickSubwayPriceCandidates(bandResults);
       const pricePerPy = candidates.length ? Math.max(...candidates.map(c => c.amt / (c.area / SQM_PER_PY))) : null;
-      return { ...x, pricePerPy, bandResults, naverName: resolved ? naverNameOf(lawd, resolved, aptUmd.get(resolved)) : null };
+      // 실거래 탭과 동일한 표시명. 네이버 대응표에 없더라도 K-apt 관리명 대신
+      // 실제 가격 배지에 사용한 실거래명으로 표시해 탭마다 이름이 바뀌지 않게 한다.
+      return { ...x, pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
     });
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
