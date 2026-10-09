@@ -131,6 +131,20 @@ test('같은 실거래명도 법정동별로 다른 네이버 이름을 표시�
   assert.equal(c.aptLabel({apt:'동양파라곤', umd:'청담동'}), '청담동양파라곤');
 });
 
+test('단계별로 확인한 실거래 별칭은 네이버 이름으로 표시하고 다른 동 번호는 합치지 않는다', () => {
+  const cases = [
+    ['41117', '신나무실휴먼시아5단지|영통동', '신나무실5단지주공'],
+    ['28237', '삼산타운주공1단지|삼산동', '삼산타운1단지'],
+    ['HS-동탄구', '동탄2하우스디더레이크|송동', '동탄2신도시하우스디더레이크'],
+  ];
+  for (const [lawd, key, expected] of cases) {
+    const names = JSON.parse(readFileSync(new URL(`../data/naver-names/${lawd}.json`, import.meta.url), 'utf8'));
+    assert.equal(names[key], expected);
+  }
+  const names = JSON.parse(readFileSync(new URL('../data/naver-names/28177.json', import.meta.url), 'utf8'));
+  assert.equal(names['광해리드빌(101동)|주안동'], undefined); // 네이버의 102동과 다른 건물
+});
+
 test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 분리한다', async () => {
   const c = vm.createContext({
     aptMem: {},

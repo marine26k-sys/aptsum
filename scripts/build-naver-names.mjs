@@ -19,16 +19,18 @@
 // 입력: 네이버 단지 매핑표(운영자 제공 엑셀)를 JSON 배열로 바꾼 파일. 엑셀 원본은 저장소에 올리지 않는다.
 //   python3 scripts/naver-xlsx-to-json.py <엑셀> <출력.json>
 //   node scripts/build-naver-names.mjs --input=<출력.json>
+//   기존 검증 매핑을 보존하고 빠진 실거래 별칭만 보강: --augment=true
 
 import { mkdir, writeFile, readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { REGIONS } from "../shared/regions.mjs";
-import { findNaverComplex, sameHouseholds, naverNameKey } from "../shared/naver-name-match.mjs";
+import { findNaverComplex, matchNaverTradeNames, sameHouseholds, naverNameKey } from "../shared/naver-name-match.mjs";
 import { resolveComplexNames } from "../shared/name-match.mjs";
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
 if (!args.input) { console.error("--input=<네이버 매핑표 JSON> 이 필요합니다."); process.exit(1); }
+const augment = args.augment === "true";
 const rows = JSON.parse(await readFile(args.input, "utf-8"));
 
 const guToLawd = new Map();
@@ -42,12 +44,29 @@ for (const r of rows) {
   if (!naverByLawd.has(lawd)) naverByLawd.set(lawd, []);
   naverByLawd.get(lawd).push({
     name: String(r["단지명"]).trim(), umd: r["법정동"], hh: +r["세대수"] || 0,
-    built: r["준공년월"] ? String(r["준공년월"]) : null,
+    built: r["준공년월"] ? String(r["준공년월"]) : null, si: r["시"], gu: r["구"],
   });
 }
 
 const yearOf = (s) => { const m = String(s || "").match(/(19|20)\d\d/); return m ? +m[0] : null; };
 const yearOk = (a, b) => a == null || b == null || Math.abs(a - b) <= 1;
+const numbersOf = (s) => String(s || "").match(/\d+/g) || [];
+const sameNumbers = (a, b) => JSON.stringify(numbersOf(a)) === JSON.stringify(numbersOf(b));
+function sharedNamePart(a, b) {
+  const left = naverNameKey(a).replace(/\d+/g, "");
+  const right = naverNameKey(b).replace(/\d+/g, "");
+  for (let size = Math.min(left.length, right.length); size >= 4; size--)
+    for (let i = 0; i + size <= left.length; i++)
+      if (right.includes(left.slice(i, i + size))) return true;
+  return false;
+}
+function regionPrefixes(n) {
+  const first = String(n.gu || "").split(" ")[0];
+  const plain = first.replace(/[시군구]$/, "");
+  const prefixes = [...new Set([n.si, first].filter(Boolean))];
+  if (plain.length >= 2 && !prefixes.includes(plain)) prefixes.push({ name: plain, strict: true });
+  return prefixes;
+}
 const isRentalUnit = (name) => /\((?:공공)?임대(?:[,)]|$)|임대\([^)]*동\)/.test(name);
 const confirmedNaverNames = {
   '11620|봉천동아|봉천동': ['성현동아', 1261, 2000],
@@ -88,7 +107,7 @@ function nameVariants(apt) {
   return [...new Set(out.map((s) => s.trim()).filter((s) => s.length >= 2))];
 }
 
-const summary = { total: 0, byName: 0, byHh: 0, none: 0, ambiguous: 0, suspectDropped: 0 };
+const summary = { total: 0, byName: 0, byHh: 0, none: 0, ambiguous: 0, suspectDropped: 0, stagedAdded: 0, stagedAmbiguous: 0, existingConflicts: 0 };
 await mkdir("data/naver-names", { recursive: true });
 for (const [lawd, naver] of naverByLawd) {
   if (!existsSync(path.join("data", "analyze", lawd))) continue;
@@ -100,7 +119,10 @@ for (const [lawd, naver] of naverByLawd) {
     const hh = JSON.parse(await readFile(hhPath, "utf-8"));
     kapt = resolveComplexNames(hh.items || [], new Map([...meta].map(([n, m]) => [n, { umds: m.umds }])));
   }
-  const map = {};
+  const output = path.join("data", "naver-names", `${lawd}.json`);
+  // 이미 검증한 대응표를 보존하면서, 네이버 단지명 → 실거래명 단계별 규칙으로
+  // 확인된 누락 항목만 추가할 수 있다. 이전에 사용한 엑셀이 더 최신일 수도 있다.
+  const map = augment && existsSync(output) ? JSON.parse(await readFile(output, "utf-8")) : {};
   for (const [apt, m] of meta) {
     for (const umd of m.umds) {
       summary.total++;
@@ -116,7 +138,7 @@ for (const [lawd, naver] of naverByLawd) {
       const confirmed = confirmedNaverNames[`${lawd}|${apt}|${umd}`];
       if (confirmed) {
         const parent = local.find((n) => n.name === confirmed[0] && n.hh === confirmed[1] && yearOk(yearOf(n.built), confirmed[2]));
-        if (parent) { map[`${apt}|${umd}`] = parent.name; summary.byName++; continue; }
+        if (parent) { if (!augment || !map[`${apt}|${umd}`]) map[`${apt}|${umd}`] = parent.name; summary.byName++; continue; }
       }
       if (local.length) {
         const items = Object.fromEntries(local.map((n, i) => [i, n]));
@@ -136,12 +158,75 @@ for (const [lawd, naver] of naverByLawd) {
       }
       if (hits.size === 1) {
         const hit = [...hits.values()][0];
-        if (hit.name !== apt) map[`${apt}|${umd}`] = hit.name;
+        if (hit.name !== apt && (!augment || !map[`${apt}|${umd}`])) map[`${apt}|${umd}`] = hit.name;
         summary[how]++;
       } else if (hits.size > 1) summary.ambiguous++;
       else summary.none++;
     }
   }
-  await writeFile(path.join("data", "naver-names", `${lawd}.json`), JSON.stringify(map));
+  // 전고점 최신화와 같은 방향(네이버 단지 → 같은 법정동의 실거래명)으로
+  // 정규화·차수·접두어 규칙을 적용한다. 여러 네이버 단지가 같은 실거래명을
+  // 주장하면 제외하고, 정규화 후에도 이름이 다르면 K-apt 세대수로 확인한다.
+  const byDong = new Map();
+  for (const [apt, m] of meta) for (const umd of m.umds) {
+    if (!byDong.has(umd)) byDong.set(umd, []);
+    const builds = m.buildsByUmd.get(umd);
+    byDong.get(umd).push({ apt, umd, build: [...builds].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+      hh: m.umds.size === 1 ? kapt.get(apt)?.hhcnt || null : null });
+  }
+  for (const [umd, trades] of byDong) {
+    const local = naver.filter((n) => n.umd === umd);
+    if (!local.length) continue;
+    const candidates = new Map(), legacy = new Map(), owners = new Map();
+    for (const t of trades) {
+      for (const [target, key] of [[candidates, naverNameKey(t.apt, umd)], [legacy, naverNameKey(t.apt, umd, { keepChasu: false })]]) {
+        if (!target.has(key)) target.set(key, []);
+        target.get(key).push(t);
+      }
+    }
+    for (const n of local) {
+      const key = naverNameKey(n.name, umd);
+      if (!owners.has(key)) owners.set(key, new Set());
+      owners.get(key).add(n.name);
+    }
+    const reserved = new Set(owners.keys());
+    const ambiguous = new Set([...owners].filter(([, names]) => names.size > 1).map(([key]) => key));
+    const claims = new Map();
+    for (const n of local) {
+      let hits = matchNaverTradeNames(candidates, n.name, umd, {
+        reserved, ambiguous, legacy, prefixes: regionPrefixes(n),
+      });
+      // 네이버 이름에만 '신도시'가 들어간 경우는 나머지 이름이 정확히 같을 때만 시도한다.
+      // 예: 동탄2신도시하우스디더레이크 ↔ 동탄2하우스디더레이크.
+      if (!hits.length && n.name.includes("신도시")) {
+        const reduced = naverNameKey(n.name, umd).replace("신도시", "");
+        if (reduced && !reserved.has(reduced)) hits = candidates.get(reduced) || [];
+      }
+      for (const t of hits) {
+        if (isRentalUnit(t.apt) !== isRentalUnit(n.name)) continue;
+        if (!yearOk(yearOf(n.built), t.build)) continue;
+        if (t.hh && !sameHouseholds(t.hh, n.hh)) continue;
+        // 동 번호·지번·블록 번호가 다르면 세대수가 같아도 다른 단지일 수 있다.
+        if (!sameNumbers(t.apt, n.name)) continue;
+        const normalizedExact = naverNameKey(t.apt, umd) === naverNameKey(n.name, umd);
+        const numberedName = numbersOf(t.apt).length && sharedNamePart(t.apt, n.name)
+          && t.build && yearOf(n.built);
+        if (!normalizedExact && !(t.hh && sameHouseholds(t.hh, n.hh)) && !numberedName) continue;
+        const key = `${t.apt}|${umd}`;
+        if (!claims.has(key)) claims.set(key, new Set());
+        claims.get(key).add(n.name);
+      }
+    }
+    for (const [key, names] of claims) {
+      if (names.size !== 1) { summary.stagedAmbiguous++; continue; }
+      const name = [...names][0];
+      if (map[key] && map[key] !== name) { summary.existingConflicts++; continue; }
+      if (!map[key] && key.slice(0, key.lastIndexOf("|")) !== name) {
+        map[key] = name;
+        summary.stagedAdded++;
+      }
+    }
+  }
+  await writeFile(output, JSON.stringify(map));
 }
 console.log(summary);
