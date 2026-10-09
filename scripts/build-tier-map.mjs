@@ -114,6 +114,8 @@ async function main() {
 
     let calibratedAreas = [];
     try { calibratedAreas = JSON.parse(await readFile(path.join("data/supply-area-naver", `${lawd}.json`), "utf-8")); } catch {}
+    let naverNames = {};
+    try { naverNames = JSON.parse(await readFile(path.join("data/naver-names", `${lawd}.json`), "utf-8")); } catch {}
     for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
       let ymFiles;
       try { ymFiles = (await readdir(path.join(dir, lawd))).filter((f) => f.endsWith(".json")); }
@@ -137,7 +139,9 @@ async function main() {
           if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "기간 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
           const variants = nameVariantsByCk.get(ck) || {};
-          variants[t.apt] = (variants[t.apt] || 0) + 1;
+          // 급지 분석·교통 호재도 index.html의 실거래 탭과 같은 네이버 단지명을 표시한다.
+          const displayName = naverNames[`${t.apt}|${t.umd}`] || t.apt;
+          variants[displayName] = (variants[displayName] || 0) + 1;
           nameVariantsByCk.set(ck, variants);
           let dealMeta = dealMetaByLawd.get(lawd);
           if (!dealMeta) { dealMeta = new Map(); dealMetaByLawd.set(lawd, dealMeta); }
@@ -201,6 +205,23 @@ async function main() {
       presaleOnly: !!c.presaleOnly, // 매매 실거래가 아직 없어 분양권·입주권만으로 집계된 단지(프론트에서 배지 표시용)
     });
   }
+  // 여러 국토부 등록명이 네이버의 한 단지로 확인된 경우(예: 목련경남·목련동아
+  // → 목련8단지), 같은 이름의 급지 카드가 두 번 나오지 않게 대표 최고 평단가만 남긴다.
+  const byNaverName = new Map();
+  for (const c of result) {
+    const key = `${c.province}|${c.gu}|${c.dong}|${c.nm}`;
+    const prev = byNaverName.get(key);
+    if (!prev) { byNaverName.set(key, c); continue; }
+    const best = c.ppy > prev.ppy ? c : prev;
+    byNaverName.set(key, {
+      ...best,
+      hh: best.hh ?? prev.hh ?? c.hh,
+      by: best.by ?? prev.by ?? c.by,
+      presaleOnly: prev.presaleOnly && c.presaleOnly,
+    });
+  }
+  result.length = 0;
+  result.push(...byNaverName.values());
   result.sort((a, b) => b.ppy - a.ppy);
 
   // min을 결과에도 노출(2026.09, 동별 평단가 히트맵용) — 프론트에서 단지 단위가 아니라 "동 평균 평단가"처럼

@@ -131,6 +131,54 @@ test('같은 실거래명도 법정동별로 다른 네이버 이름을 표시�
   assert.equal(c.aptLabel({apt:'동양파라곤', umd:'청담동'}), '청담동양파라곤');
 });
 
+test('단계별로 확인한 실거래 별칭은 네이버 이름으로 표시하고 다른 동 번호는 합치지 않는다', () => {
+  const cases = [
+    ['41117', '신나무실휴먼시아5단지|영통동', '신나무실5단지주공'],
+    ['28237', '삼산타운주공1단지|삼산동', '삼산타운1단지'],
+    ['HS-동탄구', '동탄2하우스디더레이크|송동', '동탄2신도시하우스디더레이크'],
+  ];
+  for (const [lawd, key, expected] of cases) {
+    const names = JSON.parse(readFileSync(new URL(`../data/naver-names/${lawd}.json`, import.meta.url), 'utf8'));
+    assert.equal(names[key], expected);
+  }
+  const names = JSON.parse(readFileSync(new URL('../data/naver-names/28177.json', import.meta.url), 'utf8'));
+  assert.equal(names['광해리드빌(101동)|주안동'], undefined); // 네이버의 102동과 다른 건물
+});
+
+test('급지·교통 호재가 공유하는 단지 목록에도 네이버 이름을 사용한다', () => {
+  const tier = JSON.parse(readFileSync(new URL('../data/tier-map.json', import.meta.url), 'utf8'));
+  for (const [gu, dong, expected] of [
+    ['부평구', '삼산동', '삼산타운1단지'],
+    ['수원 영통구', '영통동', '신나무실5단지주공'],
+    ['화성 동탄구', '송동', '동탄2신도시하우스디더레이크'],
+  ]) {
+    assert.ok(tier.complexes.some(c => c.gu === gu && c.dong === dong && c.nm === expected), expected);
+  }
+  assert.ok(!tier.complexes.some(c => c.gu === '부평구' && c.dong === '삼산동' && c.nm === '삼산타운주공1단지'));
+});
+
+test('동안구 목련 실거래 별칭을 네이버 단지명으로 통일한다', () => {
+  const names = JSON.parse(readFileSync(new URL('../data/naver-names/41173.json', import.meta.url), 'utf8'));
+  const aliases = {
+    '목련선경': '목련1단지',
+    '목련마을2단지대우선경': '목련2단지',
+    '목련우성': '목련3단지',
+    '목련우성5': '목련5단지',
+    '목련두산': '목련6단지',
+    '목련우성7': '목련7단지',
+    '목련경남': '목련8단지',
+    '목련동아': '목련8단지',
+    '목련아파트': '목련9단지',
+  };
+  for (const [original, expected] of Object.entries(aliases))
+    assert.equal(names[`${original}|호계동`], expected);
+
+  const tier = JSON.parse(readFileSync(new URL('../data/tier-map.json', import.meta.url), 'utf8'));
+  const mokryeon = tier.complexes.filter(c => c.gu === '안양 동안구' && c.dong === '호계동' && c.nm.startsWith('목련'));
+  assert.deepEqual(mokryeon.map(c => c.nm).sort(),
+    ['목련1단지', '목련2단지', '목련3단지', '목련5단지', '목련6단지', '목련7단지', '목련8단지', '목련9단지']);
+});
+
 test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 분리한다', async () => {
   const c = vm.createContext({
     aptMem: {},
