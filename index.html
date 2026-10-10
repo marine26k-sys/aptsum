@@ -1163,7 +1163,7 @@ function captureViewInputs(){
   return {
     mode, lawd: sel.value,
     q: document.getElementById('q').value,
-    mN: document.getElementById('monthsN').value,
+    mN: analysisMonthsForMode(mode, document.getElementById('monthsN').value),
     fM: document.getElementById('floorMin').value,
     by: document.getElementById('buildYear').value,
     sliderLimits:lsSavedLimits(),
@@ -1193,7 +1193,7 @@ function pushView(){
 }
 function buildShareURL(inp){
   const p = new URLSearchParams();
-  p.set('m', inp.mode); p.set('p', inp.mN); p.set('f', inp.fM);
+  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? '36' : inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if(inp.mode==='listingtrend' && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if(inp.mode==='listingtrend' && inp.trendContinuous) p.set('ltc','1');
@@ -1245,7 +1245,7 @@ async function initFromURL(){
     return;
   }
   if(hasSharedQuery)resetQueriedSliderDefaults(requestedMode);
-  if(p.get('p')) document.getElementById('monthsN').value = p.get('p');
+  if(p.get('p')) document.getElementById('monthsN').value = analysisMonthsForMode(requestedMode, p.get('p'));
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
   if(p.get('ls') || p.get('lr') || p.get('lq') || (hasSharedQuery && isListingMode(requestedMode) && requestedMode!=='listinggap')){
@@ -1570,7 +1570,7 @@ function restoreView(vi){
   }
   sel.value = inp.lawd;
   document.getElementById('q').value = inp.q;
-  document.getElementById('monthsN').value = inp.mN;
+  document.getElementById('monthsN').value = analysisMonthsForMode(inp.mode, inp.mN);
   document.getElementById('floorMin').value = inp.fM;
   setBuildYearValue(inp.by || '');
   lsRestoreLimits(inp.sliderLimits);
@@ -1884,7 +1884,7 @@ function applyNativeRegionInputs(inp){
   if(!setMode(inp.mode,true)) return false;
   sel.value=inp.lawd;
   for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
-    if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=inp[key];}
+    if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=id==='monthsN'?analysisMonthsForMode(inp.mode,inp[key]):inp[key];}
   lsRestoreLimits(inp.sliderLimits);
   lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   document.getElementById('listingOccupancy').value=normalizeListingOccupancy(inp.occupancy,inp.mode);
@@ -2012,9 +2012,10 @@ function getQueriedSliderPref(m){
     return v;
   }catch{return null;}
 }
+function analysisMonthsForMode(m, selected){ return m==='region' ? '36' : selected; }
 function saveQueriedSliders(){
   const selects={};
-  for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=document.getElementById(id).value;
+  for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
@@ -2037,7 +2038,7 @@ function restoreQueriedSliders(m){
   resetQueriedSliderDefaults(m);
   if(!v)return;
   for(const [id,value] of Object.entries(v.selects||{})){
-    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
+    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id) || (m==='region'&&id==='monthsN'))continue;
     const el=document.getElementById(id);if([...el.options].some(o=>o.value===value))el.value=value;
   }
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
@@ -2095,10 +2096,11 @@ function syncAnalysisSelectSliders(){
     wrap.style.display=enabled?'':'none';
     if(!enabled)continue;
     entry.options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none');
+    input.disabled=select.disabled;
     input.max=Math.max(0,entry.options.length-1);
     input.value=Math.max(0,entry.options.findIndex(o=>o.value===select.value));
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
-    const number=document.getElementById(select.id+'Number');if(number){number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
+    const number=document.getElementById(select.id+'Number');if(number){number.disabled=select.disabled;number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
   }
   const reset=document.getElementById('sliderFilterResetRow');if(reset)reset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'flex':'none';
 }
@@ -2164,7 +2166,7 @@ function initializeAnalysisSelectSliders(){
     input.addEventListener('input',()=>{const option=entry.options[+input.value];if(option){select.value=option.value;label.textContent=option.textContent;number.value=option.value;}});
     input.addEventListener('change',()=>select.dispatchEvent(new Event('change',{bubbles:true})));
     select.addEventListener('change',syncAnalysisSelectSliders);
-    new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style'],subtree:true});
+    new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style','disabled'],subtree:true});
   }
   const ageSource=document.getElementById('buildYear'),ageWrap=document.createElement('div');ageWrap.id='analysisAgeFilters';ageWrap.className='ls-filters analysis-select-slider';
   ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div>';
@@ -2423,10 +2425,12 @@ function setMode(m, fromRestore){
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = (m==='longtermrise'||m==='jeonselongtermrise') ? '' : 'none';
   document.getElementById('priceBandRow').style.display = m==='pricebandrise' ? '' : 'none';
-  // 탭별 디폴트: 단지분석·단지비교·지역랭킹은 2년, 거래량은 1년 · 모든 탭 전체 층 (지역랭킹만 32~36평 기본 적용, 거래량·등락·저평가·신고가는 전체 평형)
+  // 지역 랭킹은 3년 고정. 다른 탭은 각 탭에서 선택한 조회 기간을 유지한다.
   document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
   restoreQueriedSliders(m);
+  document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
+  document.getElementById('monthsN').disabled = m==='region';
   document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
@@ -4673,7 +4677,8 @@ async function search(opts){
   if(mode==='listinggap') return searchListingGap(myToken, lawd, silentScroll);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
   if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
-  const mN = +document.getElementById('monthsN').value;
+  const mN = +analysisMonthsForMode(mode, document.getElementById('monthsN').value);
+  if(mode==='region') document.getElementById('monthsN').value = String(mN);
   const fM = (mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
