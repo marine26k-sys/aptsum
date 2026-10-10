@@ -155,11 +155,8 @@ try {
   .card-hd{background:var(--navy);color:#fff;padding:15px 18px;border-radius:16px 16px 0 0;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(15,43,61,.15)}
   .card-hd h2{font-size:20px;font-weight:900;letter-spacing:-.5px;text-align:center;margin-bottom:2px}
   .card-hd .meta{font-size:11px;color:#fff;opacity:.6;text-align:center}
-  .hd-top{position:relative;display:flex;align-items:center;justify-content:center;min-height:22px;margin-bottom:5px}
-  .hd-logo{position:absolute;left:0;display:inline-flex;align-items:center;gap:4px}
-  .hd-logo span{font-size:13px;font-weight:800;color:#00C2C2}
-  .hd-badge{font-size:13px;font-weight:800;color:#fff;background:var(--teal);padding:6px 13px;border-radius:16px}
-  .hd-badge.subscriber{background:#E0B84D;color:#4A3607}
+  .hd-top{display:flex;align-items:center;justify-content:center;min-height:45px;margin-bottom:7px}
+  .hd-top-complex{justify-content:flex-start;padding-right:70px;margin-bottom:9px}
   .price-band-meta{opacity:1!important;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
   .price-band-focus{display:inline-block;background:var(--teal);color:#fff;font-size:14px;font-weight:900;line-height:1.2;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,130,138,.35)}
   .price-band-context{color:rgba(255,255,255,.88);font-size:12px;font-weight:700}
@@ -4057,13 +4054,10 @@ function shortRegionLabel(s){
   return shortRegionOne(s);
 }
 
-// 랭킹류 탭(지역/거래량/전세가율/신고가/신저가/평단가/등락/저평가 3종/단지비교) 헤더 상단 공용 조각 —
-// 로고(왼쪽, 흐리게)·탭 배지(오른쪽, 청록 알약)를 한 줄로. 2026.08 리디자인: 예전엔 로고가 중앙-배지와
-// 자리를 다투며 배지를 가운데 정렬시켜야 했는데, 로고를 왼쪽 고정하며 배지를 오른쪽으로 옮겨 서로 안 겹치게 함.
-function hdTop(badgeLabel, subscriberOnly, badgeClass){
+// 결과 카드에도 페이지 상단과 같은 브랜드 표식을 사용한다.
+function hdTop(badgeLabel){
   return `<div class="hd-top">
-    <span class="hd-logo"><svg width="12" height="12" viewBox="0 0 20 20"><rect x="2" y="10" width="4" height="8" fill="#00A9B4"/><rect x="8" y="6" width="4" height="12" fill="#7FD4D9"/><rect x="14" y="2" width="4" height="16" fill="#00A9B4"/></svg><span>아파트썸</span></span>
-    <span class="hd-badge${subscriberOnly?' subscriber':''}${badgeClass?' '+badgeClass:''}">${esc(badgeLabel)}</span>
+    <span class="logo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg><span class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">${esc(badgeLabel)}</span></span></span>
   </div>`;
 }
 // 결과 목록의 구분선은 브랜드 문구 없이 표시한다.
@@ -5613,6 +5607,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
+      <div class="hd-top hd-top-complex"><span class="logo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg><span class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">단지 분석</span></span></span></div>
       <h2 style="padding-right:70px;text-align:left">${esc(d.name)}</h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
