@@ -12,6 +12,12 @@ test('Naver supply-area labels keep 68.62㎡ at 20평 and 69.42㎡ at 21평',()=
  const trades=[{apt:'평촌자이아이파크',area:45.5844,py:21},{apt:'평촌자이아이파크',area:49.9668,py:21}];
  assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[20,21]);
 });
+test('Pyeongchon Raemian Prugio exclusive 59 is displayed as Naver 25평 across the grouped variants',()=>{
+ const records=[{apt:'평촌래미안푸르지오',hh:1199,exclusiveArea:59.93,supplyArea:85.55}];
+ const trades=[{apt:'평촌래미안푸르지오',area:59.93,py:26},{apt:'평촌래미안푸르지오',area:59.96,py:26}];
+ assert.deepEqual(applyNaverSupplyAreas(trades,records,'41173').map(t=>t.py),[25,25]);
+ assert.deepEqual(applyNaverSupplyAreas(trades,records,'41171').map(t=>t.py),[26,26]);
+});
 test('verified supply areas can correct large interpolation errors',()=>{
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77}],[row])[0].py,70);
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77,hh:101}],[row])[0].py,77);

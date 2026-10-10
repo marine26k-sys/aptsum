@@ -2,12 +2,17 @@
 // naver의 비교 규칙 + 법정동 + K-apt 세대수 검증을 통과한 뒤 수행한다.
 const norm = s => String(s || '').replace(/\s/g,'');
 const caches = new Map();
+// 공급면적 환산값과 네이버 단지 화면의 평형 라벨이 다를 때 운영자가 확인한 표시값.
+// 전용면적은 버림 정수로 묶으므로 동일 그룹의 A/B 타입도 한 평형으로 표시한다.
+const verifiedPyeongLabels = new Map([
+  ['41173|평촌래미안푸르지오|59', 25],
+]);
 // 네이버 원본의 공급면적 평형 표기: 소수점 0.8 이상 올림, 미만 버림.
 // naver/src/utils/helpers.py의 AreaConverter 및 공급면적 엑셀과 동일하다.
 export function supplyAreaToPy(supplyArea) {
   return Math.floor(Number((supplyArea * 0.3025).toFixed(10)) + 0.2);
 }
-export function applyNaverSupplyAreas(items, records) {
+export function applyNaverSupplyAreas(items, records, lawd) {
   const types = new Map();
   const households = new Map();
   for (const row of Array.isArray(records) ? records : []) {
@@ -22,6 +27,8 @@ export function applyNaverSupplyAreas(items, records) {
   }
   return items.map(t => {
     const name = norm(t.apt);
+    const verifiedPy = verifiedPyeongLabels.get(`${lawd}|${name}|${Math.floor(t.area)}`);
+    if (verifiedPy) return {...t,py:verifiedPy};
     const hit = types.get(`${name}|${Math.round(t.area)}`);
     if (!hit || households.get(name)?.size !== 1 || (t.hh != null && t.hh !== hit.hh)) return t;
     return {...t,py:hit.py};
@@ -45,5 +52,5 @@ export async function applySupplyAreaOverrides(items,lawd,origin) {
     const py=supplyAreaToPy(match.supplyArea);
     return Math.abs(py-t.py)>3?t:{...t,py};
   });
-  return applyNaverSupplyAreas(hubItems,naver);
+  return applyNaverSupplyAreas(hubItems,naver,lawd);
 }
