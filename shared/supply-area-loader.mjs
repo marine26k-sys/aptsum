@@ -2,7 +2,11 @@
 // naver의 비교 규칙 + 법정동 + K-apt 세대수 검증을 통과한 뒤 수행한다.
 const norm = s => String(s || '').replace(/\s/g,'');
 const caches = new Map();
-const sqmPerPy = 3.3058;
+// 네이버 원본의 공급면적 평형 표기: 소수점 0.8 이상 올림, 미만 버림.
+// naver/src/utils/helpers.py의 AreaConverter 및 공급면적 엑셀과 동일하다.
+export function supplyAreaToPy(supplyArea) {
+  return Math.floor(Number((supplyArea * 0.3025).toFixed(10)) + 0.2);
+}
 export function applyNaverSupplyAreas(items, records) {
   const types = new Map();
   const households = new Map();
@@ -12,7 +16,7 @@ export function applyNaverSupplyAreas(items, records) {
     if (!households.has(name)) households.set(name,new Set());
     households.get(name).add(row.hh);
     const key = `${name}|${Math.round(row.exclusiveArea)}`;
-    const py = Math.round(row.supplyArea/sqmPerPy);
+    const py = supplyAreaToPy(row.supplyArea);
     if (!types.has(key)) types.set(key, {py,hh:row.hh});
     else if (types.get(key)?.py !== py || types.get(key)?.hh !== row.hh) types.set(key,null);
   }
@@ -38,7 +42,7 @@ export async function applySupplyAreaOverrides(items,lawd,origin) {
     const types=map.get(norm(t.apt));if(!Array.isArray(types))return t;
     const match=types.find(ty=>Math.round(ty.exclusiveArea)===Math.round(t.area));
     if(!match||!Number.isFinite(match.supplyArea)||!(match.supplyArea>0)||match.exclusiveArea/match.supplyArea>.85)return t;
-    const py=Math.round(match.supplyArea/sqmPerPy);
+    const py=supplyAreaToPy(match.supplyArea);
     return Math.abs(py-t.py)>3?t:{...t,py};
   });
   return applyNaverSupplyAreas(hubItems,naver);

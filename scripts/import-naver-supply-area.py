@@ -90,7 +90,8 @@ def main():
                 for name in raw_names:owners[(lawd,name)].add(nid)
                 for ex,supplies in c['areas'].items():
                     # 엑셀 면적은 네이버 응답의 정수 표기. 원본 실거래 면적을 다시 확인한다.
-                    pys={math.floor(s/3.3058+0.5) for s in supplies}
+                    # 네이버 앱의 AreaConverter와 같은 평형 표기를 사용한다.
+                    pys={math.floor(round(s*0.3025,10)+0.2) for s in supplies}
                     if len(pys)!=1:stats['ambiguousTypes']+=1;continue
                     # 공급면적이 여러 값이면 대표값을 추측하지 않는다.
                     if len(supplies)!=1:stats['multipleSupplyAreas']+=1;continue
@@ -103,7 +104,7 @@ def main():
                         item={'apt':name,'hh':hh,'exclusiveArea':area,'supplyArea':supply}
                         previous=outputs[lawd].get(k)
                         if previous is False:continue
-                        if previous and (previous['hh']!=hh or math.floor(previous['supplyArea']/3.3058+0.5)!=next(iter(pys))):
+                        if previous and (previous['hh']!=hh or math.floor(round(previous['supplyArea']*0.3025,10)+0.2)!=next(iter(pys))):
                             outputs[lawd][k]=False;stats['roundedAreaConflict']+=1
                         elif previous is None:outputs[lawd][k]=item
     args.out.mkdir(parents=True,exist_ok=True)
