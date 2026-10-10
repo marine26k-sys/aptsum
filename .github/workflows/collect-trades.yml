@@ -91,7 +91,7 @@ jobs:
           echo "수집 개월수: $MONTHS"
           echo "months=$MONTHS" >> "$GITHUB_OUTPUT"
 
-      - name: 실거래 배치 수집 실행 (kind별로 스크립트가 자체적으로 중간 커밋·푸시함)
+      - name: 실거래 수집 및 급지 대시보드 갱신 (스크립트가 중간·최종 커밋을 푸시함)
         if: steps.gate.outputs.run == 'true'
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
@@ -117,20 +117,23 @@ jobs:
             git rebase origin/main || { git rebase --abort; break; }
           done
 
-      - name: 남은 변경분 최종 커밋 & 푸시 (타임아웃/중단으로 스크립트가 always 실행 못했을 때의 안전망)
+      - name: 남은 변경분 최종 커밋 & 푸시 (중간 커밋의 푸시 실패도 재시도)
         if: always() && steps.gate.outputs.run == 'true'
         run: |
           for d in data/analyze data/presale data/rent; do
             [ -d "$d" ] && git add "$d"
           done
+          [ -f data/tier-map.json ] && git add data/tier-map.json
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
             git commit -m "chore: 실거래 데이터 배치 수집 최종 커밋 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            for i in 1 2 3 4 5; do
-              git push && break
-              echo "push 거절됨, fetch+rebase 후 재시도 ($i/5)"
-              git fetch origin main
-              git rebase origin/main || { git rebase --abort; break; }
-            done
           fi
+          for i in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            echo "push 거절됨, fetch+rebase 후 재시도 ($i/5)"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+          done
+          echo "5회 재시도 후에도 푸시 실패"
+          exit 1

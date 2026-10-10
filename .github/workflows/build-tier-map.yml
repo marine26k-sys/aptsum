@@ -1,13 +1,8 @@
 name: 급지 대시보드 데이터 생성
 
 on:
-  schedule:
-    # 매월 1일 06:00 UTC(= 15:00 KST). collect-trades.yml이 "매월 마지막 날 06:30 UTC"에 돌아
-    # data/analyze를 채운 뒤 그 결과를 재가공한다(예정 시각 기준 23시간 30분 뒤).
-    # 실거래 배치는 한국 시간 월말 15:30에 시작한다. 월 전환 후 생성하며 최신 main을 읽는다.
-    # 2026.09 추가 — 그전까지는 workflow_dispatch 전용이라, 실거래가 새로 수집돼도 여기를 수동으로
-    # 눌러주기 전까진 급지 분석 화면이 옛 데이터 그대로였음(운영자 지적).
-    - cron: "0 6 1 * *"
+  # 정기/수동 실거래 수집은 collect-trades.mjs가 종료 전에 급지 데이터를 함께 생성한다.
+  # 이 워크플로는 실거래 재수집 없이 급지만 별도로 재계산할 때 사용한다.
   workflow_dispatch:
     inputs:
       months:
@@ -41,9 +36,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # ⚠️ 폴백이 '6'이면 안 됨 — 스케줄 실행에선 inputs.months가 비어 있어서 폴백값이 그대로 쓰이는데,
-      # 급지 기준은 2026.09부터 "2년(24개월) 내 최고가" → 같은 달 "3년(36개월)"으로 바뀌었다(입력칸 default와 같게 유지). 폴백만 옛 값(6)으로
-      # 남아 있어서, 스케줄을 붙이는 순간 자동 실행만 6개월 기준으로 계산될 뻔했음(2026.09 수정).
+      # 독립 수동 실행도 기본 급지 기준(최근 36개월)을 사용한다.
       - name: 급지 대시보드 데이터 생성 (data/tier-map.json)
         run: node scripts/build-tier-map.mjs --months=${{ inputs.months || '36' }}
 
