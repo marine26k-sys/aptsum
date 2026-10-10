@@ -477,10 +477,6 @@ try {
         홈 화면에 추가
       </button>
     </div>
-    <a href="./stats.html" style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--sub);font-weight:600;text-decoration:none">
-      <span id="visitTotal">전체 -</span>
-      <span id="visitToday">오늘 -</span>
-    </a>
   </div>
   <div id="pwaModalBg" onclick="if(event.target===this)closePwaModal()">
     <div id="pwaModal">
@@ -491,15 +487,8 @@ try {
   </div>
 
   <script>
-    // 방문자 카운터 — /api/visits(Netlify Blobs 기반 자체 함수) 호출 1번으로 전체/오늘 카운트를 함께 올리고 받아옴.
-    // 기존 visitor-badge.laobi.icu(제3자 뱃지 이미지)는 새로고침마다 중복 집계되고 광고 차단기에 막히는
-    // 문제가 있어 자체 서버리스 함수로 교체.
-    (function(){
-      fetch('/api/visits?page=index').then(r => r.json()).then(d => {
-        document.getElementById('visitTotal').textContent = `전체 ${d.total.toLocaleString()}`;
-        document.getElementById('visitToday').textContent = `오늘 ${d.today.toLocaleString()}`;
-      }).catch(() => {});
-    })();
+    // 화면에는 방문자 수를 표시하지 않고, 운영자 통계용 집계만 유지한다.
+    fetch('/api/visits?page=index').catch(() => {});
     // 탭별 클릭 집계(2026.09, 운영자 요청 — stats.html "탭별 클릭"). 누를 때마다 보내지 않고 이 방문에서 누른 탭을 모아 두었다가
     // 페이지를 떠나거나 화면이 숨겨질 때 한 번에 보낸다(sendBeacon — 요청 수가 방문 1회당 1번 안팎, 페이지 이동을 막지 않음).
     // 같은 사람이 같은 탭을 여러 번 눌러도 서버에서 하루 1회로 센다(netlify/functions/tab-clicks.mjs).
