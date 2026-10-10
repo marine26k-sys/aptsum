@@ -240,6 +240,8 @@ try {
 
   .trend{display:flex;align-items:center;gap:10px;background:var(--slate-bg);border-radius:10px;padding:11px 14px}
   .trend .pct{font-size:14px;font-weight:900}
+  .trend .trend-size{display:flex;flex:none;flex-direction:column;gap:2px;white-space:nowrap;color:var(--navy);font-size:14px;font-weight:900;line-height:1.2}
+  .trend .trend-size small{color:var(--sub);font-size:10px;font-weight:600}
   .up{color:var(--red)} .down{color:var(--blue)}
   .trend .d{font-size:11px;color:var(--sub);line-height:1.5}
   .trend .d b{font-size:13px;color:var(--navy);font-weight:900}
@@ -5416,16 +5418,17 @@ function showMoreTrades(){
 function trendHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   const rows = list.map(p=>{
-    if(p.rentOnly) return `<div class="trend" style="margin-bottom:8px"><span class="pct rng" style="font-size:13px">-</span><span class="pct" style="color:var(--navy)">${esc(p.py)} (전용 ${p.sizeKey})</span><span class="d">매매 거래 없음</span></div>`;
+    const size = `<span class="trend-size"><span>${esc(p.py)}</span><small>(전용 ${p.sizeKey})</small></span>`;
+    if(p.rentOnly) return `<div class="trend" style="margin-bottom:8px"><span class="pct rng" style="font-size:13px">-</span>${size}<span class="d">매매 거래 없음</span></div>`;
     if(!p.trend) return `<div class="trend" style="margin-bottom:8px">
       <span class="pct rng" style="font-size:13px">-</span>
-      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)} (전용 ${p.sizeKey})</span>
+      ${size}
       <span class="d">전후 3개월 거래 부족으로 비교 불가</span>
     </div>`;
     const t = p.trend;
     return `<div class="trend" style="margin-bottom:8px">
       <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'▲':(t.pct<0?'▼':'')}${Math.abs(t.pct)}%</span>
-      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)} (전용 ${p.sizeKey})</span>
+      ${size}
       <span class="d">이전 3개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 3개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
     </div>`;
   }).join('');
