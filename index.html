@@ -749,7 +749,7 @@ try {
           const now = Date.now();
           taps = now - lastTap > 1500 ? 1 : taps + 1;
           lastTap = now;
-          if (taps === 3) window.location.assign('/stat');
+          if (taps === 3) window.location.assign('/stats');
         });
       })();
     </script>
