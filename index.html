@@ -740,6 +740,19 @@ try {
   <div class="tabs">
     <!-- 그룹 구분선(2026.09 운영자 요청) — 아래 "네이버 실매물 기준"과 짝을 이루도록 맨 위 공개 탭 묶음에도 데이터 출처를 표시 -->
     <div class="tab-divider source-divider" id="tabRtmsDivider" style="margin-top:0"><span>국토부 실거래 기준</span></div>
+    <script>
+      (() => {
+        const title = document.querySelector('#tabRtmsDivider span');
+        let taps = 0;
+        let lastTap = 0;
+        title.addEventListener('click', () => {
+          const now = Date.now();
+          taps = now - lastTap > 1500 ? 1 : taps + 1;
+          lastTap = now;
+          if (taps === 3) window.location.assign('/stat');
+        });
+      })();
+    </script>
     <!-- 국토부 실거래 탭 유형별 묶음(2026.09 운영자 요청) — 처음 온 사람이 "무엇을 알고 싶은지"로 탭을 고를 수 있게 소제목을 단다.
          탭 기능·id·공유 링크는 그대로이고 위치만 묶음별로 바꿨다. -->
     <div class="tab-grp">
