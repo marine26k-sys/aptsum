@@ -531,6 +531,8 @@ Actions 탭 → "실거래 데이터 배치 수집" → Run workflow → `months
 
 ## 급지 지도 — `tier.html` (2026.09 신규)
 
+- **현재 갱신 경로(2026.10)**: 정기·수동 실거래 수집은 `scripts/collect-trades.mjs`가 매매·분양권·전세 수집을 마친 직후 `scripts/build-tier-map.mjs --months=36`을 실행해 `data/tier-map.json`을 함께 커밋·푸시한다. 종류별 중간 커밋은 빌드를 건너뛰고 급지 데이터까지 포함한 마지막 커밋에서 빌드한다. 별도 급지 워크플로는 중복 월간 실행을 없애고 수동 재생성용으로 유지한다. Netlify 운영 게시 잠금은 그대로 적용되므로 실제 운영 화면 반영에는 운영자의 게시가 필요하다.
+
 - **배경**: 운영자가 참고용으로 올려준 외부 프로젝트 두 개(`seoul-apt-main`: Python+SQLite+카카오지도+텔레그램 알림+AI 추천 종합 서비스, `subuji-main`: 전국 단지를 가격대별 6단계 "급지"로 나눈 정적 대시보드)를 검토해서 aptsum에 붙일 만한 기능을 골랐음. 새 데이터 소스나 인프라(DB, 지오코딩, 알림 서버) 없이 **이미 수집된 실거래 데이터만으로 바로 만들 수 있는** `subuji-main`의 급지 대시보드를 1순위로 선정.
 - **`scripts/build-tier-map.mjs`**: `data/analyze/<lawd>/<ym>.json`(collect-trades.mjs가 이미 쌓아둔 매매 실거래)을 최근 N개월(기본 6개월)치 스캔해서, 단지별 "국민평형(전용 84±3㎡) 환산가"를 뽑는다. 그 범위 안의 실거래가 있으면 최근 것을 그대로 쓰고, 없으면 보유한 가장 최근 거래를 **가격∝면적**으로 선형 환산(근사치 — 정밀 감정평가 아님, 화면에도 "환산" 배지로 명시). `data/hhcnt`와 조인해서 세대수·준공연도도 참고용으로 붙임. 가격대는 `subuji-main`과 동일한 6단계(최상급지 30억+ ~ 하급지 8억 미만)를 그대로 채용 — 지방 단지가 대부분 하위 등급에 몰리는 건 버그가 아니라 실제 수도권-지방 가격 격차를 반영하는 것.
 - **`.github/workflows/build-tier-map.yml`**: `data/tier-map.json` 생성 후 자동 커밋·푸시. **매월 1일 06:00 UTC(15:00 KST) 자동 실행 + 필요 시 수동 실행**(`months` 입력으로 기간 조절). API 호출은 없지만(이미 있는 데이터 재가공) main에 push는 하므로 `aptsum-data-collect` concurrency 그룹에 함께 묶여 있음(collect-trades/collect-hhcnt와 겹쳐 돌면 서로 push가 거절됨).

@@ -5,6 +5,7 @@
 //
 // 사용법:
 //   DATA_GO_KR_KEY=xxx node scripts/collect-trades.mjs [--kinds=analyze,presale,rent] [--months=60] [--refresh=4] [--force] [--only=11680,HS-동탄구]
+// 수집이 끝나면 같은 실행에서 data/tier-map.json도 최근 36개월 기준으로 다시 생성한다.
 //
 // - months: 오늘 기준 과거 몇 개월치를 확보할지 (기본 60 = 5년, 사이트 조회 기간 최대값)
 // - refresh: 최근 N개월은 이미 파일이 있어도 항상 다시 조회 (실거래 신고 지연으로 뒤늦게 채워지는 값을 잡기 위함,
@@ -14,7 +15,7 @@
 
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
@@ -46,9 +47,9 @@ function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const dirs = ["data/analyze", "data/presale", "data/rent"].filter((d) => existsSync(d));
-    if (!dirs.length) return;
-    execSync(`git add ${dirs.join(" ")}`, { stdio: "inherit" });
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json"].filter((d) => existsSync(d));
+    if (!paths.length) return;
+    execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
     if (!diff) return; // 변경 없으면 커밋 안 함
     execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: "inherit" });
@@ -192,7 +193,7 @@ async function main() {
   const refreshSet = new Set(yms.slice(0, opt.refresh)); // 최신 N개월
   const failedKinds = []; // 실패가 한 건이라도 있었던 kind — 끝에서 실행 결과를 실패로 표시하는 데 씀
 
-  for (const [kindIdx, kind] of opt.kinds.entries()) {
+  for (const kind of opt.kinds) {
     const cfg = KIND_CONFIG[kind];
     if (!cfg) { console.error(`알 수 없는 kind: ${kind}`); continue; }
     console.log(`\n=== ${kind} 수집 시작 (지역 ${lawds.length}개 × 최대 ${yms.length}개월) ===`);
@@ -221,13 +222,15 @@ async function main() {
     console.log(`${kind}: 성공 ${ok}건, 실패 ${fail}건 (총 ${tasks.length}건 중 스킵 제외)`);
     if (fail > 0) failedKinds.push(`${kind} ${fail}건`);
 
-    // kind별 커밋이 이 스크립트의 유일한 정상 커밋 지점이라, 마지막 kind가 아닌 중간 커밋만
-    // [skip ci]를 붙여 Netlify 빌드를 유발하지 않게 함. 마지막 kind의 커밋은 skip ci 없이 남겨둬
-    // 배치 전체가 끝난 시점에 실제 배포가 한 번 트리거되게 함.
-    const isLast = kindIdx === opt.kinds.length - 1;
-    const skipTag = isLast ? "" : " [skip ci]";
-    commitProgress(`chore: ${kind} 실거래 배치 수집 중간 커밋 ${new Date().toISOString()}${skipTag}`);
+    // 종류별 중간 결과는 보존하되, 마지막 급지 데이터까지 만든 뒤 한 번만 빌드되도록 한다.
+    commitProgress(`chore: ${kind} 실거래 배치 수집 중간 커밋 ${new Date().toISOString()} [skip ci]`);
   }
+
+  // 자동/수동 수집 모두 같은 실행에서 급지 대시보드를 갱신한다. 매매·분양권 파일을
+  // 이미 중간 커밋했더라도 현재 작업 디렉터리의 최신 파일을 읽어 최종 커밋에 포함한다.
+  console.log("\n=== 급지 대시보드 데이터 갱신 (최근 36개월) ===");
+  execFileSync(process.execPath, ["scripts/build-tier-map.mjs", "--months=36"], { stdio: "inherit" });
+  commitProgress(`chore: 실거래 수집 후 급지 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
   // UND_ERR_CONNECT_TIMEOUT) 스크립트가 정상 종료해서 Actions에 "성공"으로 떴다(운영자 지적).
