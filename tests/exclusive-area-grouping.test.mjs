@@ -22,6 +22,29 @@ test('단지 분석은 같은 25평이어도 전용 59와 60을 분리하고 같
   assert.equal(result.trades.filter(t=>t.sizeKey===60).length,1);
 });
 
+test('매매 거래가 없는 전용면적도 전세 거래가 있으면 매매 평형에 가격 없이 표시한다', () => {
+  const ctx = vm.createContext({
+    matchComplex: all => ({hits:all}), naverNameOf:()=>null, naverKey:s=>s,
+    dkey:t=>`${t.ym}${t.d}`, markOutliers:a=>a, floorBands:()=>null,
+    avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,
+    R1:n=>Math.round(n*10)/10, ymLabel:s=>s, yearsLabel:()=>'',
+    esc:s=>String(s), selPy:-1,
+  });
+  vm.runInContext(helpers + html.slice(html.indexOf('function analyzeComplex('), html.indexOf('function analyzeRegion(')) +
+    html.slice(html.indexOf('function avgCell('), html.indexOf('function tradesHTML(')), ctx);
+  const months=['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511'];
+  const sale=ctx.analyzeComplex([trade(84.98,34,20)],'올림픽파크포레온',months,undefined,'11740');
+  const jeonse=ctx.analyzeComplex([trade(113.97,44,8)],'올림픽파크포레온',months,undefined,'11740');
+  const result=ctx.includeJeonseOnlySaleAreas(sale,jeonse);
+  assert.deepEqual(Array.from(result.byPy,p=>[p.sizeKey,p.n]),[[84,1],[113,0]]);
+  assert.equal(result.trades.length,1);
+  assert.match(ctx.pyTableHTML(result),/44평[\s\S]*매매 거래 없음/);
+  const rentOnly=ctx.includeJeonseOnlySaleAreas({found:false},jeonse);
+  assert.equal(rentOnly.found,true);
+  assert.deepEqual(Array.from(rentOnly.byPy,p=>[p.sizeKey,p.n]),[[113,0]]);
+  assert.equal(rentOnly.trades.length,0);
+});
+
 test('전세가율은 같은 평형 라벨이어도 매매와 전세를 전용면적 정수로 짝짓는다', () => {
   const ctx=vm.createContext({markOutliers:a=>a,avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s,yearsLabel:()=>''});
   vm.runInContext(helpers + html.slice(html.indexOf('function avgGroupA('), html.indexOf('// ═══ 단기 저평가')),ctx);

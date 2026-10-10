@@ -3364,6 +3364,30 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, sizeKey:exclusiveAreaKey(t), area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
 }
 
+// 전세만 거래된 전용면적도 매매 화면의 평형 목록에 보여준다.
+// 매매 가격·최고가·차트는 만들지 않고 전세에서 확인한 평형 라벨만 가져온다.
+function includeJeonseOnlySaleAreas(sale, jeonse){
+  if(!jeonse?.found || sale.multi) return sale;
+  const result = sale.found ? sale : {
+    found:true, mode:'complex', name:jeonse.name, umd:jeonse.umd, build:jeonse.build,
+    splitLawd:jeonse.splitLawd, period:jeonse.period, years:jeonse.years,
+    count:0, trades:[], byPy:[],
+  };
+  if(sale.found && (sale.umd!==jeonse.umd || naverKey(sale.name)!==naverKey(jeonse.name))) return sale;
+  const known = new Set(result.byPy.map(p=>p.sizeKey));
+  for(const p of jeonse.byPy){
+    if(known.has(p.sizeKey)) continue;
+    result.byPy.push({
+      py:p.py, sizeKey:p.sizeKey, area:p.area, n:0, rentOnly:true,
+      quarters:p.quarters.map(q=>({label:q.label,avg:null})),
+      max:null, maxDate:null, recent:null, isNewHigh:false,
+      monthly:[], trend:null, floorBand:null,
+    });
+  }
+  result.byPy.sort((a,b)=>a.sizeKey-b.sizeKey);
+  return result;
+}
+
 function analyzeRegion(all, months){
   const byApt={};
   // 시·도 전체 통합 조회에서는 서로 다른 구에 같은 단지명이 존재할 수 있으므로 구까지 키에 포함한다
@@ -4918,6 +4942,7 @@ async function search(opts){
         try{
           const itemsJ = windowF(floorF(rawJ));
           const dJ = analyzeComplex(itemsJ, name, months, undefined, lawd);
+          d = includeJeonseOnlySaleAreas(d, dJ);
           d.jeonse = dJ.found ? dJ : null;
         }catch(e){ d.jeonse = null; }
       }
@@ -5352,7 +5377,7 @@ function pyTableHTML(d){
       <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
       <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
       <td class="tr-r td-teal">${avgCell(p.quarters[3].avg)}</td>
-      <td class="tr-r td-max"><b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div></td>
+      <td class="tr-r td-max">${p.rentOnly?'<span class="rng">매매 거래 없음</span>':`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
   </table>`;
 }
@@ -5360,7 +5385,7 @@ function pyTableHTML(d){
 function tradesHTML(d, footNote){
   footNote = footNote || SALE_TRADES_FOOT;
   const full = selPy === -1 ? d.trades : d.trades.filter(t=>t.sizeKey===d.byPy[selPy].sizeKey);
-  if(!full.length) return '<div class="rng" style="padding:6px 0">해당 평형 거래 없음</div>';
+  if(!full.length) return `<div class="rng" style="padding:6px 0">${footNote===SALE_TRADES_FOOT?'해당 평형 매매 거래 없음':'해당 평형 전세 거래 없음'}</div>`;
   const list = full.slice(0, tradesShown);
   const maxByPy = {}; d.byPy.forEach(p=>{ maxByPy[p.sizeKey] = p.max; });
   const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
@@ -5386,6 +5411,7 @@ function showMoreTrades(){
 function trendHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   const rows = list.map(p=>{
+    if(p.rentOnly) return `<div class="trend" style="margin-bottom:8px"><span class="pct rng" style="font-size:13px">-</span><span class="pct" style="color:var(--navy)">${esc(p.py)} (전용 ${p.sizeKey})</span><span class="d">매매 거래 없음</span></div>`;
     if(!p.trend) return `<div class="trend" style="margin-bottom:8px">
       <span class="pct rng" style="font-size:13px">-</span>
       <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)} (전용 ${p.sizeKey})</span>
@@ -5403,7 +5429,7 @@ function trendHTML(d){
 
 function chartTarget(d){
   if(selPy !== -1) return selPy;
-  return d.byPy.reduce((best,p,i,a)=> p.n>a[best].n? i:best, 0); // 전체 = 거래 최다 평형
+  return d.byPy.reduce((best,p,i,a)=> p.n>0 && (best<0 || p.n>a[best].n)? i:best, -1); // 전체 = 매매/전세 거래 최다 평형
 }
 
 // ── 층별 가격 프리미엄 미니 차트 ──
@@ -5416,6 +5442,7 @@ function fbRow(label, b, color, pct){
   </div>`;
 }
 function floorPremiumHTML(d, ci){
+  if(d.byPy[ci].rentOnly) return '<div class="rng" style="padding:6px 0">매매 거래 없음</div>';
   const fb = d.byPy[ci].floorBand;
   if(!fb) return '<div class="rng" style="padding:6px 0">저층·고층 비교에 필요한 거래 (각 2건 이상)가 부족합니다</div>';
   const vals = [fb.low, fb.mid, fb.high].filter(Boolean).map(b=>b.v);
@@ -5503,11 +5530,12 @@ function selectPy(i){
   document.querySelectorAll('#pyChips .chip').forEach((c,j)=>c.classList.toggle('on', j===i+1));
   document.getElementById('pyTable').innerHTML = pyTableHTML(d);
   const ci = chartTarget(d);
-  document.getElementById('chartTitle').textContent = `월평균 ${priceLabel} 추이 — ` + d.byPy[ci].py + ` (전용 ${d.byPy[ci].sizeKey})` + (selPy===-1?' (거래 최다)':'');
-  document.getElementById('chartBox').innerHTML = chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel, d.byPy[ci].sizeKey);
+  const p = d.byPy[ci];
+  document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${p.py} (전용 ${p.sizeKey})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
+  document.getElementById('chartBox').innerHTML = !p || p.rentOnly ? '<div class="rng" style="padding:8px 0">해당 평형 매매 거래 없음</div>' : chartSVG(p.monthly, p.py, d, priceLabel, p.sizeKey);
   if(isSale){
-    document.getElementById('floorTitle').textContent = '층별 가격 프리미엄 — ' + d.byPy[ci].py + ` (전용 ${d.byPy[ci].sizeKey})` + (selPy===-1?' (거래 최다)':'') + ' · 최근 6개월';
-    document.getElementById('floorBox').innerHTML = floorPremiumHTML(d, ci);
+    document.getElementById('floorTitle').textContent = p ? `층별 가격 프리미엄 — ${p.py} (전용 ${p.sizeKey})${selPy===-1?' (거래 최다)':''} · 최근 6개월` : '층별 가격 프리미엄';
+    document.getElementById('floorBox').innerHTML = p ? floorPremiumHTML(d, ci) : '<div class="rng" style="padding:6px 0">매매 거래 없음</div>';
     document.getElementById('trendBox').innerHTML = trendHTML(d);
   }
   document.getElementById('tradesBox').innerHTML = tradesHTML(d, isSale?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT);
@@ -5559,6 +5587,7 @@ function complexDynamicHTML(){
     return `<div class="sec"><div class="rng" style="padding:10px 0">최근 조회 기간 내 이 단지의 전세 실거래가 없습니다.</div></div>`;
   }
   const ci = chartTarget(d);
+  const p = d.byPy[ci];
   return `
     ${isSale ? '' : jeonseRatioHTML()}
     <div class="sec">
@@ -5571,8 +5600,8 @@ function complexDynamicHTML(){
     </div>
 
     <div class="sec">
-      <h3 id="chartTitle">월평균 ${priceLabel} 추이 — ${esc(d.byPy[ci].py)} (전용 ${d.byPy[ci].sizeKey} · 거래 최다)</h3>
-      <div id="chartBox">${chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel, d.byPy[ci].sizeKey)}</div>
+      <h3 id="chartTitle">월평균 ${priceLabel} 추이${p?` — ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다)`:''}</h3>
+      <div id="chartBox">${!p || p.rentOnly ? '<div class="rng" style="padding:8px 0">해당 평형 매매 거래 없음</div>' : chartSVG(p.monthly, p.py, d, priceLabel, p.sizeKey)}</div>
     </div>
     ${isSale ? `
     <div class="sec">
@@ -5582,8 +5611,8 @@ function complexDynamicHTML(){
     </div>
 
     <div class="sec">
-      <h3 id="floorTitle">층별 가격 프리미엄 — ${esc(d.byPy[ci].py)} (전용 ${d.byPy[ci].sizeKey} · 거래 최다) · 최근 6개월</h3>
-      <div id="floorBox">${floorPremiumHTML(d, ci)}</div>
+      <h3 id="floorTitle">층별 가격 프리미엄${p?` — ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다) · 최근 6개월`:''}</h3>
+      <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
     </div>` : ''}
 
     <div class="sec">
