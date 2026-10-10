@@ -1,7 +1,17 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
-import { applyNaverSupplyAreas,applySupplyAreaOverrides } from '../shared/supply-area-loader.mjs';
+import { applyNaverSupplyAreas,applySupplyAreaOverrides,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
+test('Naver supply-area labels keep 68.62㎡ at 20평 and 69.42㎡ at 21평',()=>{
+ assert.equal(supplyAreaToPy(68.62),20);
+ assert.equal(supplyAreaToPy(69.42),21);
+ const records=[
+  {apt:'평촌자이아이파크',hh:2737,exclusiveArea:45.5844,supplyArea:68.62},
+  {apt:'평촌자이아이파크',hh:2737,exclusiveArea:49.9668,supplyArea:69.42},
+ ];
+ const trades=[{apt:'평촌자이아이파크',area:45.5844,py:21},{apt:'평촌자이아이파크',area:49.9668,py:21}];
+ assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[20,21]);
+});
 test('verified supply areas can correct large interpolation errors',()=>{
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77}],[row])[0].py,70);
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77,hh:101}],[row])[0].py,77);

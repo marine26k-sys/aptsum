@@ -8,7 +8,7 @@ import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 // 대상 범위: 서울·경기·인천·부산(2026.09 인천 재포함, 운영자 요청) — REGIONS에 있는 4개 시·도 전부 다룬다.
 //
 // "평단가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평단가"(pyprice) 탭과 같은 골격, 기준만 다름):
-// 1) 단지+평형(공급면적 기준 평형 라벨, 아래 참고)별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
+// 1) 단지+전용면적 내림 정수별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
 //    1건뿐인 평형은 이상치 방지로 제외 — pyprice 탭과 동일 원칙, 우연히 섞인 이례적 면적 1건이 대표로
 //    잘못 뽑히는 걸 막음).
 // 2) 그렇게 나온 평형별 최고가를 각 평형의 평단가로 환산한 뒤, 그중 평단가가 가장 높은 평형 딱 1개를
@@ -85,7 +85,7 @@ async function main() {
     recentYms.add(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  // "구|동|단지명|평형(py)" -> { maxAmt, count } — 평형 단위로 기간 내 최고가와 표본 수를 집계
+  // "구|동|단지명|전용면적 내림 정수" -> { maxAmt, count } — 공급면적 평형은 별도 표시·평단가 계산에 사용
   const pyGroups = new Map();
   // 단지명 표기가 "청담 르엘"/"청담르엘"처럼 띄어쓰기만 다른 경우 서로 다른 단지로 갈라져 급지 목록에
   // 중복으로 뜨던 문제(2026.09 제보) — 그룹 키는 공백을 제거한 이름으로 통일해서 합치되, 화면에 보여줄
@@ -132,9 +132,10 @@ async function main() {
           totalTx++;
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
-          const pk = `${ck}|${t.py}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
+          const pk = `${ck}|${Math.floor(t.area)}`;
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, pyCounts: {}, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
           g.count++;
+          g.pyCounts[t.py] = (g.pyCounts[t.py] || 0) + 1;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
           if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "기간 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
@@ -182,6 +183,7 @@ async function main() {
   // 단지별로 평형(py) 중 평단가가 가장 높은 것 1개만 대표로 채택
   const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
+    g.py = +Object.entries(g.pyCounts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
     if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
     if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
@@ -251,7 +253,7 @@ async function main() {
       complexes: result.length,
       months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지+평형별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평단가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+전용면적 내림 정수별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평단가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,
