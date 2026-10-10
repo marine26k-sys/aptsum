@@ -126,7 +126,7 @@ async function main() {
         let j;
         try { j = JSON.parse(await readFile(path.join(dir, lawd, f), "utf-8")); }
         catch { continue; }
-        for (const t of applyNaverSupplyAreas(j.items || [], calibratedAreas)) {
+        for (const t of applyNaverSupplyAreas(j.items || [], calibratedAreas, lawd)) {
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평단가 계산 불가
           totalTx++;
