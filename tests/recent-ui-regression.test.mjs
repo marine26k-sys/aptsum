@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import vm f
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 test('price-band current average includes 90 days while other rise tabs keep 30 days',()=>{
  const now=new Date(2026,9,3).getTime();class FixedDate extends Date{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}}
- const ctx=vm.createContext({Date:FixedDate,markOutliers:a=>a,avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10});
+ const ctx=vm.createContext({Date:FixedDate,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:trades=>trades[0].py,markOutliers:a=>a,avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10});
  vm.runInContext(html.slice(html.indexOf('function analyzeLongTermRise('),html.indexOf('// ═══ 전세 변동률')),ctx);
  const rows=[['202609',20,10],['202608',15,14],['202607',10,18],['202609',1,22],['202510',18,8]].map(([ym,d,amt])=>({apt:'단지',umd:'동',py:25,gu:'구',area:59,ym,d,amt}));
  assert.equal(ctx.analyzePriceBandRise(rows,[],12,16,'current').rows[0].recentAvg,16);

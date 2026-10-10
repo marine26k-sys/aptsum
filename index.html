@@ -2259,7 +2259,17 @@ document.addEventListener('click', e=>{
 function pyBandMultiFilter(items){
   if(!pyBandMultiSel.length) return items;
   const ranges = pyBandMultiSel.map(v=>v.split('-').map(Number));
-  return items.filter(t=> ranges.some(([mn,mx])=>t.py>=mn && t.py<=mx));
+  const groups=new Map();
+  for(const t of items){
+    const key=`${t.lawd||t.gu||''}|${t.apt}|${t.umd}|${exclusiveAreaKey(t)}`;
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(t);
+  }
+  const allowed=new Set([...groups].filter(([,trades])=>{
+    const py=representativePy(trades);
+    return ranges.some(([mn,mx])=>py>=mn && py<=mx);
+  }).map(([key])=>key));
+  return items.filter(t=>allowed.has(`${t.lawd||t.gu||''}|${t.apt}|${t.umd}|${exclusiveAreaKey(t)}`));
 }
 
 // 게이트
@@ -3265,6 +3275,15 @@ function looseMatchComplex(all, qnList, stage){
   return null;
 }
 
+// 실거래 타입은 화면에 표시하는 전용면적 정수와 동일하게 내림으로 구분한다.
+// 공급면적 기반 평형(py)은 이 그룹의 표시값과 평대 필터에만 사용한다.
+function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
+function representativePy(trades){
+  if(!trades.length) return 0;
+  const counts={};
+  for(const t of trades) counts[t.py]=(counts[t.py]||0)+1;
+  return +Object.entries(counts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
@@ -3291,7 +3310,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     splitBase = looseAptKey(Object.keys(nameCnt)[0].replace(/\([^)]*\)/g,''), true);
   }
   hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
-  const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
+  const groups={}; for(const t of hits){ const key=exclusiveAreaKey(t); (groups[key]=groups[key]||[]).push(t); }
   const monthsAsc = months.slice().reverse();
   const m3=months.slice(0,3), p3v=months.slice(3,6);
   const periodAvg=(arr,ms)=>{ const a=arr.filter(t=>ms.includes(t.ym)); return a.length? {v:R1(avgA(a)), n:a.length} : null; };
@@ -3301,7 +3320,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const qMap = {};
   months.forEach(ym=>{ const k=qKeyOf(ym); (qMap[k]=qMap[k]||[]).push(ym); });
   const last4Q = [...new Set(months.map(qKeyOf))].slice(0,4).reverse(); // 오래된→최신 순
-  const byPy = Object.entries(groups).map(([py, arrRaw])=>{
+  const byPy = Object.entries(groups).map(([sizeKey, arrRaw])=>{
     const clean = markOutliers(arrRaw, months);
     const arr = clean.length? clean : arrRaw;
     const max = Math.max(...arr.map(t=>t.amt));
@@ -3323,23 +3342,23 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       // 층별 프리미엄은 조회 기간과 무관하게 최근 6개월 고정 — 기간이 길면 시세 상승분이 층 프리미엄에 섞여 왜곡되므로
       const recentMonths = months.slice(0,6);
       const recentSet = new Set(recentMonths);
-      const rawMatch = rawAll.filter(t=>nameCnt[t.apt] && String(t.py)===py && recentSet.has(t.ym)); // 별칭·시공사별 분할 등록으로 합쳐진 이름 전부
+      const rawMatch = rawAll.filter(t=>nameCnt[t.apt] && String(exclusiveAreaKey(t))===sizeKey && recentSet.has(t.ym)); // 별칭·시공사별 분할 등록으로 합쳐진 이름 전부
       const rawClean = markOutliers(rawMatch, recentMonths);
       floorBand = floorBands(rawClean);
     }
-    return { py:`${py}평`, area:`(전용 ${Math.floor(recent.area)})`, n:arr.length,
+    return { py:`${representativePy(arr)}평`, sizeKey:+sizeKey, area:`(전용 ${sizeKey})`, n:arr.length,
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
       recent:{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor},
       max, maxDate, quarters, trend,
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
-  }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
+  }).sort((a,b)=>a.sizeKey-b.sizeKey);
   return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:hits[0].build,
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     byPy,
-    trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
+    trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, sizeKey:exclusiveAreaKey(t), area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
 }
 
 function analyzeRegion(all, months){
@@ -3349,11 +3368,9 @@ function analyzeRegion(all, months){
   const r3set = new Set(months.slice(0,3)), p3set = new Set(months.slice(3,6));
   const topVolume = Object.entries(byApt).map(([k,arr])=>{
     const sorted = arr.slice().sort((a,b)=>dkey(b).localeCompare(dkey(a)));
-    const pyCnt={}; sorted.forEach(t=>pyCnt[t.py]=(pyCnt[t.py]||0)+1);
-    const mainPy = Object.entries(pyCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    const mainPyTrades = sorted.filter(t=>t.py===mainPy);
-    const areaCnt={}; mainPyTrades.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 주력 평형 내 가장 흔한 전용면적을 대표값으로
-    const mainArea = Object.keys(areaCnt).length ? +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0] : null;
+    const areaCnt={}; sorted.forEach(t=>areaCnt[exclusiveAreaKey(t)]=(areaCnt[exclusiveAreaKey(t)]||0)+1);
+    const mainArea = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
+    const mainPy = representativePy(sorted.filter(t=>exclusiveAreaKey(t)===mainArea));
     const [apt,umd,gu]=k.split('|');
     const r3n = arr.filter(t=>r3set.has(t.ym)).length;
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
@@ -3384,10 +3401,10 @@ function analyzeNewHigh(all, months, weekOnly){
   // "신고가"로 잘못 알려지는 것을 막기 위함(표본 3건 카운트에서도 제외).
   all = all.filter(t=>!t.direct);
   const byApt={};
-  // 평형(py)을 키에 포함해야 함 — 안 그러면 같은 단지의 서로 다른 평형(예: 84㎡ vs 150㎡)이 한 그룹으로
+  // 전용면적 내림 정수를 키에 포함해야 함 — 안 그러면 같은 단지의 서로 다른 면적(예: 84㎡ vs 150㎡)이 한 그룹으로
   // 섞여서 "이번 달 84㎡ 신고가"가 훨씬 비싼 150㎡의 과거 거래 때문에 최고가로 안 잡히는(혹은 반대로
   // 잘못 잡히는) 문제가 있었음 — 평형 필터를 걸었을 때와 안 걸었을 때 결과 개수가 안 맞던 원인
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
   const results = [];
   for(const [k, arr] of Object.entries(byApt)){
     if(arr.length < 3) continue;
@@ -3402,9 +3419,10 @@ function analyzeNewHigh(all, months, weekOnly){
     // (top은 정의상 항상 그 그룹의 최댓값이라 prevMax<=top.amt가 수학적으로 항상 성립 — 즉 gapAmt<0은 원천적으로
     // 발생하지 않음. 이 줄은 "혹시 모를" 방어용일 뿐, 실질적으로는 표본 내 모든 최고가/동가 재현을 다 통과시킨다.)
     if(gapAmt < 0) continue;
-    const [apt, umd, py, gu] = k.split('|');
+    const [apt, umd, areaKey, gu] = k.split('|');
+    const py = representativePy(arr);
     results.push({
-      apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${py}평`, area:top.area, amt:top.amt,
+      apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${py}평`, area:+areaKey, amt:top.amt,
       date:`${ymLabel(top.ym)}.${top.d}`, floor:top.floor, build:top.build, kind:top.kind||null, n:arr.length,
       prevMax: prevMax || null, gapAmt, gapPct: prevMax? Math.round(gapAmt/prevMax*100) : null,
       // 이 탭의 집계 기준은 30일 이내지만(국토부 신고기한이 최대 30일이라 7일로 좁히면 아직 신고 안 된
@@ -3440,7 +3458,7 @@ function analyzeNewLow(all, months){
   // 층수 정보가 없는 거래(분양권 등)도 저층 여부를 확인할 수 없으므로 안전하게 함께 제외.
   all = all.filter(t=>!t.direct && parseInt(t.floor,10)>=6);
   const byApt={};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byApt[k]=byApt[k]||[]).push(t); }
   const DROP_THRESHOLD = 0.10; // -10% 이상 하락만 신저가로 인정
   // -25% 이상 빠진 거래는 오히려 제외(2026.08 운영자 요청, 최초 -30%에서 -25%로 더 좁힘) — 시세보다 지나치게 낮은 거래는 특수관계 매매(가족간
   // 저가 양도 등, direct 필드로 못 걸러지는 경우도 있음)나 급전 필요에 의한 이례적 급매일 가능성이 높아,
@@ -3458,9 +3476,10 @@ function analyzeNewLow(all, months){
     const bottom = candidates.slice().sort((a,b)=> a.amt-b.amt || dkey(b).localeCompare(dkey(a)))[0];
     const gapAmt = R1(peak.amt - bottom.amt);
     const gapPct = Math.round(gapAmt/peak.amt*100);
-    const [apt, umd, py, gu] = k.split('|');
+    const [apt, umd, areaKey, gu] = k.split('|');
+    const py = representativePy(arr);
     results.push({
-      apt, umd, gu:gu||null, lawd:bottom.lawd||null, py:`${py}평`, area:bottom.area, amt:bottom.amt,
+      apt, umd, gu:gu||null, lawd:bottom.lawd||null, py:`${py}평`, area:+areaKey, amt:bottom.amt,
       date:`${ymLabel(bottom.ym)}.${bottom.d}`, floor:bottom.floor, build:bottom.build, kind:bottom.kind||null, n:arr.length,
       prevMax: peak.amt, gapAmt, gapPct,
     });
@@ -3493,15 +3512,15 @@ const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (전용면적 → 전용평형 �
 function analyzePricePerPyeong(all, months){
   // 직거래는 최고가를 왜곡할 수 있어 제외 — 신고가 탭과 동일한 원칙.
   all = all.filter(t=>!t.direct);
-  // 1) 단지+평형(유닛 타입 구분용 py 라벨)별 3년 최고가 산출 (동가면 최근 계약일 우선)
-  //    ※ py는 여기서 "같은 평면구조 유닛인지 묶는 그룹핑 키"로만 쓰고, 아래 평단가 계산 자체에는 쓰지 않음
+  // 1) 단지+전용면적 내림 정수별 3년 최고가 산출 (동가면 최근 계약일 우선)
+  //    ※ 공급면적 평형(py)은 그룹 키가 아니라 표시·평대 필터에만 쓴다.
   const byPy = {};
   // pyCount: (단지|동|구|평형)별 표본 개수 — 딱 1건뿐인 평형은 뒤에서 이상치로 간주해 제외
   // (예: 국토부 원본 데이터에 단지 공식 평형과 무관한 소형 전용면적 1건이 섞여 들어오면, 분모가 작다는
   //  이유만으로 평단가가 비정상적으로 튀어 "가장 높은 평단가" 대표로 잘못 뽑히는 문제가 있었음)
   const pyCount = {};
   for(const t of all){
-    const pk = `${t.apt}|${t.umd}|${t.gu||''}|${t.py}`;
+    const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}`;
     pyCount[pk] = (pyCount[pk]||0) + 1;
     const cur = byPy[pk];
     if(!cur || t.amt > cur.amt || (t.amt===cur.amt && dkey(t) > dkey(cur))) byPy[pk] = t;
@@ -3510,7 +3529,7 @@ function analyzePricePerPyeong(all, months){
   const byComplex = {};
   for(const t of Object.values(byPy)){
     if(!t.area) continue; // 전용면적 정보 없는 거래는 평단가 계산 불가
-    const pk = `${t.apt}|${t.umd}|${t.gu||''}|${t.py}`;
+    const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}`;
     if((pyCount[pk]||0) < 2) continue; // 표본 1건뿐인 평형은 이상치 방지를 위해 대표 후보에서 제외
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
     const pyExact = R1(t.area / SQM_PER_PY); // 전용면적(㎡) → 전용평형(정밀, 보간 없음)
@@ -3561,7 +3580,7 @@ function analyzeInversion(all, months){
   const results = [];
   for(const [ck, arr] of Object.entries(byComplex)){
     const byPyRaw = {};
-    for(const t of arr){ (byPyRaw[t.py]=byPyRaw[t.py]||[]).push(t); }
+    for(const t of arr){ const key=exclusiveAreaKey(t); (byPyRaw[key]=byPyRaw[key]||[]).push(t); }
     const byPy = {};
     for(const [py, list] of Object.entries(byPyRaw)){ byPy[py] = markOutliers(list, months); } // 저가 이상치 제외(다른 랭킹 탭들과 동일 로직, 평형별로 적용 — 평형이 섞이면 가격 스케일이 달라 이상치 판정이 왜곡됨)
     const pyKeys = Object.keys(byPy);
@@ -3611,8 +3630,8 @@ function analyzeInversion(all, months){
     const [apt,umd,gu] = ck.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:(arr.find(t=>t.lawd)||{}).lawd || null, build:(arr.find(t=>t.build)||{}).build || '',
-      underPy:`${underPy}평`, otherPy:`${otherPy}평`,
-      refPy:`${refPy}평`, lowPy:`${lowPy}평`, // 비율(baselineRatio/recentRatio)은 항상 이 lowPy÷refPy 기준
+      underPy:`${representativePy(byPy[underPy])}평`, otherPy:`${representativePy(byPy[otherPy])}평`,
+      refPy:`${representativePy(byPy[refPy])}평`, lowPy:`${representativePy(byPy[lowPy])}평`, // 비율(baselineRatio/recentRatio)은 항상 이 lowPy÷refPy 기준
       refArea: areaOf(byPy[refPy]), lowArea: areaOf(byPy[lowPy]), // 표에 병기할 전용면적(㎡, 운영자 요청 2026.09)
       isLowUnder: deviation < 0, // true면 lowPy가 저평가(표에서 위쪽 행 강조), false면 refPy가 저평가(아래쪽 행 강조)
       baselineRatio, recentRatio,
@@ -3636,11 +3655,12 @@ function analyzeInversion(all, months){
 function buildRepRows(all, months, windowMonths=2){
   const eligible = all.filter(t=>parseInt(t.floor,10)>=5); // 1~4층 제외 (2026.07 저평가/peak 탭과 동일 기준으로 강화 — 4층까지만 걸러서는 저층 할인 왜곡이 통계에 새어 들어와 실제로는 시세 변동이 없는 단지가 등락 랭킹·초단기 저평가 단지에 허위로 잡히는 사례 발견)
   const byAptPy = {};
-  for(const t of eligible){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  for(const t of eligible){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   const r3set = new Set(months.slice(0,windowMonths)), p3set = new Set(months.slice(windowMonths,windowMonths*2));
   const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
     const arr = markOutliers(arrRaw, months);
-    const [apt,umd,py,gu] = k.split('|');
+    const [apt,umd,areaKey,gu] = k.split('|');
+    const py = representativePy(arr);
     const r3 = arr.filter(t=>r3set.has(t.ym));
     const p3 = arr.filter(t=>p3set.has(t.ym));
     if(r3.length<2 || p3.length<2) return null;
@@ -3673,7 +3693,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=
   // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
   // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
   const byAptPy = {};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   const dayDiff = t=>{ // analyzeInversion()과 동일한 날짜 계산 방식(오늘 기준 실제 경과일)
     const y=+t.ym.slice(0,4), mo=+t.ym.slice(4,6), da=+t.d;
     if(!y||!mo||!da) return Infinity;
@@ -3689,7 +3709,8 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=
     if(!pastAvg) continue;
     const changeAmt = R1(recentAvg - pastAvg);
     const changePct = Math.round((recentAvg-pastAvg)/pastAvg*100);
-    const [apt, umd, py, gu] = k.split('|');
+    const [apt, umd, areaKey, gu] = k.split('|');
+    const py = representativePy(arr);
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
     results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0].kind||null,
@@ -3747,7 +3768,7 @@ function avgGroupA(items, months, minN){
   const byKey = {};
   for(const t of items){
     if(!ms.has(t.ym)) continue;
-    const k = `${t.apt}|${t.umd}|${t.py}|${t.gu||''}`;
+    const k = `${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`;
     (byKey[k]=byKey[k]||[]).push(t);
   }
   const out = {};
@@ -3758,7 +3779,7 @@ function avgGroupA(items, months, minN){
     // 그룹 내 가장 흔한 전용면적을 대표값으로(등락 랭킹 buildRepRows와 동일한 방식)
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    out[k] = { avg: R1(avgA(arr)), n: arr.length, area, build: arr[0].build, lawd: arr[0].lawd||null };
+    out[k] = { avg: R1(avgA(arr)), n: arr.length, area, py:representativePy(arr), build: arr[0].build, lawd: arr[0].lawd||null };
   }
   return out;
 }
@@ -3769,7 +3790,8 @@ function analyzeGapRanking(saleAll, rentAll, months){
   for(const k of Object.keys(rentBy)){
     const s = saleBy[k], r = rentBy[k];
     if(!s || !s.avg) continue;
-    const [apt,umd,py,gu] = k.split('|');
+    const [apt,umd,areaKey,gu] = k.split('|');
+    const py = s.py;
     rows.push({
       apt, umd, py, gu: gu||null, area: s.area, build: s.build, lawd: s.lawd,
       saleAvg: s.avg, rentAvg: r.avg, saleN: s.n, rentN: r.n,
@@ -3839,11 +3861,12 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
 // 등락 랭킹과 달리 분양권·입주권까지 전부 포함. 층수 제한 없음(2026.07 5층 이상 제한 삭제 — 연간 저평가와 통일) — 20평대(20~29)끼리, 30평대(30~39)끼리 각각 따로 비교(2026.08)
 function buildPeakRows(all, months){
   const byAptPy = {};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   const r3set = new Set(months.slice(0,6)), p3set = new Set(months.slice(6,12));
   const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
     const arr = markOutliers(arrRaw, months);
-    const [apt,umd,py,gu] = k.split('|');
+    const [apt,umd,areaKey,gu] = k.split('|');
+    const py = representativePy(arr);
     const r3 = arr.filter(t=>r3set.has(t.ym));
     const p3 = arr.filter(t=>p3set.has(t.ym));
     if(r3.length<2 || p3.length<2) return null;
@@ -3902,13 +3925,14 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
 // 20~39평 제한(층수 제한 없음, 2026.07부로 두 탭 다 통일), 20평대·30평대 평대 단위로만 비교(2026.08), 비교군 구성(±2% 이내 최대 5개, 3명 이상), 5~15% 격차 기준 등 나머지 조건은 모두 동일.
 function buildLongPeakRows(all, months){
   const byAptPy = {};
-  for(const t of all){ const k=`${t.apt}|${t.umd}|${t.py}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
+  for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   // 올해 1월~현재월(curN개월) vs 작년 1~12월(12개월) — months.length는 항상 curN+12 (호출부 effMN 계산과 짝)
   const curN = months.length - 12;
   const r12set = new Set(months.slice(0,curN)), p12set = new Set(months.slice(curN,curN+12));
   const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
     const arr = markOutliers(arrRaw, months);
-    const [apt,umd,py,gu] = k.split('|');
+    const [apt,umd,areaKey,gu] = k.split('|');
+    const py = representativePy(arr);
     const r12 = arr.filter(t=>r12set.has(t.ym));
     const p12 = arr.filter(t=>p12set.has(t.ym));
     if(r12.length<2 || p12.length<2) return null;
@@ -3991,8 +4015,8 @@ function analyzeCompare(itemsByLawd, targets, months){
     if(!hits.length){ missing.push(tg.name); continue; }
     const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
     const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    const groups={}; for(const t of hits)(groups[t.py]=groups[t.py]||[]).push(t);
-    const pys = Object.entries(groups).map(([py, arrRaw])=>{
+    const groups={}; for(const t of hits){ const key=exclusiveAreaKey(t); (groups[key]=groups[key]||[]).push(t); }
+    const pys = Object.entries(groups).map(([areaKey, arrRaw])=>{
       const clean = markOutliers(arrRaw, months);
       const arr = clean.length? clean : arrRaw;
       const a3 = arr.filter(t=>m3.includes(t.ym));
@@ -4002,10 +4026,10 @@ function analyzeCompare(itemsByLawd, targets, months){
       }).filter(Boolean);
       const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
       const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-      return { py:`${py}평`, area, n:arr.length,
+      return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
         avg3: a3.length? {v:R1(avgA(a3)), n:a3.length} : null,
         max: Math.max(...arr.map(t=>t.amt)), monthly };
-    }).sort((a,b)=>parseInt(a.py)-parseInt(b.py));
+    }).sort((a,b)=>a.area-b.area);
     if(!pys.length){ missing.push(tg.name); continue; }
     complexes.push({name:naverNameOf(tg.lawd, officialName, hits[0].umd) || officialName, umd:hits[0].umd, count:hits.length, pys, lawd:tg.lawd});
   }
@@ -5246,13 +5270,13 @@ function placeLabels(points, offsets, boxW, boxH){
   return points;
 }
 
-function chartSVG(monthly, pyLabel, dataRef, priceLabel){
+function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   dataRef = dataRef || lastData;
   priceLabel = priceLabel || '매매가';
   const tipFor = m => {
     let s = `<b>20${m.ym}</b> · 평균 <b>${m.avg.toFixed(1)}억</b> · 거래 ${m.n}건`;
     if(pyLabel && dataRef && dataRef.trades){
-      const deals = dataRef.trades.filter(t=>t.py===pyLabel && t.date.startsWith(m.ym) && !t.ex).map(t=>t.amt);
+      const deals = dataRef.trades.filter(t=>t.sizeKey===sizeKey && t.date.startsWith(m.ym) && !t.ex).map(t=>t.amt);
       if(deals.length>1) s += `<br>범위 ${Math.min(...deals).toFixed(1)}~${Math.max(...deals).toFixed(1)}억`;
       s += '<br><span style="opacity:.7">한 번 더 탭하면 개별 거래 보기</span>';
     }
@@ -5280,7 +5304,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel){
   placeLabels(labelPos, [-8, 14, -24, 30], Math.max(20, fs*2.6), fs+3);
 
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
-  curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel };
+  curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel, sizeKey };
 
   return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeControls" hidden style="margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-size:12px;font-weight:700;color:#005B61">시작 월<select id="chartRangeStart" aria-label="비교 시작 월" onchange="updateChartRange('start')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label><label style="font-size:12px;font-weight:700;color:#005B61">끝 월<select id="chartRangeEnd" aria-label="비교 끝 월" onchange="updateChartRange('end')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'selected':''} ${i===0?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label></div><div style="font-size:11px;color:#64748B;margin-top:5px">시작 월과 끝 월을 선택하세요. 그래프를 터치해도 비교 구간은 바뀌지 않습니다.</div></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
@@ -5334,17 +5358,17 @@ function pyTableHTML(d){
 
 function tradesHTML(d, footNote){
   footNote = footNote || SALE_TRADES_FOOT;
-  const full = selPy === -1 ? d.trades : d.trades.filter(t=>t.py===d.byPy[selPy].py);
+  const full = selPy === -1 ? d.trades : d.trades.filter(t=>t.sizeKey===d.byPy[selPy].sizeKey);
   if(!full.length) return '<div class="rng" style="padding:6px 0">해당 평형 거래 없음</div>';
   const list = full.slice(0, tradesShown);
-  const maxByPy = {}; d.byPy.forEach(p=>{ maxByPy[p.py] = p.max; });
+  const maxByPy = {}; d.byPy.forEach(p=>{ maxByPy[p.sizeKey] = p.max; });
   const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
   const remain = full.length - list.length;
   return `<table>
     <tr><th>일자</th><th>평형</th><th>층</th><th class="tr-r">금액</th></tr>
     ${list.map(t=>{
-      const isMax = !t.ex && maxByPy[t.py] === t.amt && !maxMarked.has(t.py);
-      if(isMax) maxMarked.add(t.py);
+      const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
+      if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
       return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
@@ -5363,13 +5387,13 @@ function trendHTML(d){
   const rows = list.map(p=>{
     if(!p.trend) return `<div class="trend" style="margin-bottom:8px">
       <span class="pct rng" style="font-size:13px">-</span>
-      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
+      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)} (전용 ${p.sizeKey})</span>
       <span class="d">전후 3개월 거래 부족으로 비교 불가</span>
     </div>`;
     const t = p.trend;
     return `<div class="trend" style="margin-bottom:8px">
       <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'▲':(t.pct<0?'▼':'')}${Math.abs(t.pct)}%</span>
-      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)}</span>
+      <span class="pct" style="color:var(--navy);white-space:nowrap;flex-shrink:0">${esc(p.py)} (전용 ${p.sizeKey})</span>
       <span class="d">이전 3개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 3개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
     </div>`;
   }).join('');
@@ -5427,10 +5451,11 @@ function showMonthDeals(ym){
   // curChart.dataRef를 써야 전세 서브탭 차트를 클릭했을 때도 전세 거래가 뜬다
   const d = curChart && curChart.dataRef;
   const py = curChart && curChart.pyLabel;
+  const sizeKey = curChart && curChart.sizeKey;
   if(!d || !py) return;
-  const deals = d.trades.filter(t=>t.py===py && t.date.startsWith(ym));
+  const deals = d.trades.filter(t=>t.sizeKey===sizeKey && t.date.startsWith(ym));
   if(!deals.length) return;
-  document.getElementById('mpopTitle').textContent = `${py} · 20${ym} 거래 ${deals.length}건`;
+  document.getElementById('mpopTitle').textContent = `${py} (전용 ${sizeKey}) · 20${ym} 거래 ${deals.length}건`;
 
   const W=330,H=190,P={t:16,r:14,b:26,l:38};
   const days = deals.map(t=>+t.date.split('.')[2]);
@@ -5477,10 +5502,10 @@ function selectPy(i){
   document.querySelectorAll('#pyChips .chip').forEach((c,j)=>c.classList.toggle('on', j===i+1));
   document.getElementById('pyTable').innerHTML = pyTableHTML(d);
   const ci = chartTarget(d);
-  document.getElementById('chartTitle').textContent = `월평균 ${priceLabel} 추이 — ` + d.byPy[ci].py + (selPy===-1?' (거래 최다)':'');
-  document.getElementById('chartBox').innerHTML = chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel);
+  document.getElementById('chartTitle').textContent = `월평균 ${priceLabel} 추이 — ` + d.byPy[ci].py + ` (전용 ${d.byPy[ci].sizeKey})` + (selPy===-1?' (거래 최다)':'');
+  document.getElementById('chartBox').innerHTML = chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel, d.byPy[ci].sizeKey);
   if(isSale){
-    document.getElementById('floorTitle').textContent = '층별 가격 프리미엄 — ' + d.byPy[ci].py + (selPy===-1?' (거래 최다)':'') + ' · 최근 6개월';
+    document.getElementById('floorTitle').textContent = '층별 가격 프리미엄 — ' + d.byPy[ci].py + ` (전용 ${d.byPy[ci].sizeKey})` + (selPy===-1?' (거래 최다)':'') + ' · 최근 6개월';
     document.getElementById('floorBox').innerHTML = floorPremiumHTML(d, ci);
     document.getElementById('trendBox').innerHTML = trendHTML(d);
   }
@@ -5503,19 +5528,19 @@ function jeonseRatioHTML(){
   // 평형이 양쪽에 다 있는 경우만 비교 가능 — 전세 거래 건수가 가장 많은 평형을 대표로 삼는다
   const rows = [];
   jeon.byPy.forEach(jp=>{
-    const sp = sale.byPy.find(x=>x.py===jp.py);
+    const sp = sale.byPy.find(x=>x.sizeKey===jp.sizeKey);
     if(!sp) return;
     const jAvg = latestQAvg(jp), sAvg = latestQAvg(sp);
     if(!jAvg || !sAvg || !sAvg.v) return;
-    rows.push({ py:jp.py, pct: Math.round(jAvg.v/sAvg.v*100), jv:jAvg.v, sv:sAvg.v, n:jp.n });
+    rows.push({ py:jp.py, sizeKey:jp.sizeKey, pct: Math.round(jAvg.v/sAvg.v*100), jv:jAvg.v, sv:sAvg.v, n:jp.n });
   });
   if(!rows.length) return '';
   const rep = rows.slice().sort((a,b)=>b.n-a.n)[0]; // 전세 거래 최다 평형
-  const others = rows.filter(r=>r.py!==rep.py).sort((a,b)=>b.n-a.n)
-    .map(r=>`${esc(r.py)} <b style="color:var(--teal)">${r.pct}%</b>`).join(' · ');
+  const others = rows.filter(r=>r.sizeKey!==rep.sizeKey).sort((a,b)=>b.n-a.n)
+    .map(r=>`${esc(r.py)} (전용 ${r.sizeKey}) <b style="color:var(--teal)">${r.pct}%</b>`).join(' · ');
   return `
     <div class="sec" style="padding-bottom:0">
-      <h3>전세가율 — ${esc(rep.py)} (전세 거래 최다)</h3>
+      <h3>전세가율 — ${esc(rep.py)} (전용 ${rep.sizeKey} · 전세 거래 최다)</h3>
       <div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 4px">
         <span style="font-size:26px;font-weight:700;color:var(--teal)">${rep.pct}%</span>
         <span class="rng">전세 ${rep.jv}억 ÷ 매매 ${rep.sv}억</span>
@@ -5538,15 +5563,15 @@ function complexDynamicHTML(){
     <div class="sec">
       <div class="chips" id="pyChips">
         <span class="chip on" onclick="selectPy(-1)">전체</span>
-        ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)}</span>`).join('')}
+        ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
       <h3>평형별 요약 — 최근 ${priceLabel} (억)</h3>
       <div id="pyTable">${pyTableHTML(d)}</div>
     </div>
 
     <div class="sec">
-      <h3 id="chartTitle">월평균 ${priceLabel} 추이 — ${esc(d.byPy[ci].py)} (거래 최다)</h3>
-      <div id="chartBox">${chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel)}</div>
+      <h3 id="chartTitle">월평균 ${priceLabel} 추이 — ${esc(d.byPy[ci].py)} (전용 ${d.byPy[ci].sizeKey} · 거래 최다)</h3>
+      <div id="chartBox">${chartSVG(d.byPy[ci].monthly, d.byPy[ci].py, d, priceLabel, d.byPy[ci].sizeKey)}</div>
     </div>
     ${isSale ? `
     <div class="sec">
@@ -5556,7 +5581,7 @@ function complexDynamicHTML(){
     </div>
 
     <div class="sec">
-      <h3 id="floorTitle">층별 가격 프리미엄 — ${esc(d.byPy[ci].py)} (거래 최다) · 최근 6개월</h3>
+      <h3 id="floorTitle">층별 가격 프리미엄 — ${esc(d.byPy[ci].py)} (전용 ${d.byPy[ci].sizeKey} · 거래 최다) · 최근 6개월</h3>
       <div id="floorBox">${floorPremiumHTML(d, ci)}</div>
     </div>` : ''}
 
@@ -5607,18 +5632,18 @@ function renderComplex(d){
 
 // ── 단지 비교 렌더링 ──
 const CMP_COLORS = ['#00828A','#DC2626','#0F2B3D','#D97706'];
-let cmpPyMap = {}; // cmpPyMap: 단지 인덱스 -> 선택 평형 (단지별 독립 선택)
+let cmpPyMap = {}; // cmpPyMap: 단지 인덱스 -> 선택 전용면적 정수
 
 function cmpDefaultPyFor(c){
   // 32~36평(국민평형) 중 거래 최다 → 없으면 23~27평 중 거래 최다 → 그래도 없으면 전체 중 거래 최다
   const byRange = (lo,hi) => {
     let best=null, bestN=-1;
-    c.pys.forEach(p=>{ const n=parseInt(p.py,10); if(n>=lo && n<=hi && p.n>bestN){ bestN=p.n; best=p.py; } });
+    c.pys.forEach(p=>{ const n=parseInt(p.py,10); if(n>=lo && n<=hi && p.n>bestN){ bestN=p.n; best=p.area; } });
     return best;
   };
   return byRange(32,36) || byRange(23,27) || (()=>{
     let best=null, bestN=-1;
-    c.pys.forEach(p=>{ if(p.n > bestN){ bestN = p.n; best = p.py; } });
+    c.pys.forEach(p=>{ if(p.n > bestN){ bestN = p.n; best = p.area; } });
     return best;
   })();
 }
@@ -5708,39 +5733,39 @@ function chartMulti(series){
 
 function cmpSeries(d){
   return d.complexes.map((c,i)=>{
-    const py = cmpPyMap[i];
-    const p = c.pys.find(p=>p.py===py);
-    return { label:`${c.name}${py?' '+py:''}`, color:CMP_COLORS[i%4], monthly: p? p.monthly : [] };
+    const area = cmpPyMap[i];
+    const p = c.pys.find(p=>p.area===area);
+    return { label:`${c.name}${p?' '+p.py+' (전용 '+p.area+')':''}`, color:CMP_COLORS[i%4], monthly: p? p.monthly : [] };
   });
 }
 
 function drawCompare(d){
   document.getElementById('cmpChart').innerHTML = chartMulti(cmpSeries(d));
   document.getElementById('cmpLegend').innerHTML = d.complexes.map((c,i)=>{
-    const opts = c.pys.map(p=>p.py).sort((a,b)=>parseInt(a)-parseInt(b));
+    const opts = c.pys.slice().sort((a,b)=>a.area-b.area);
     const cur = cmpPyMap[i];
     if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)} (거래 없음)</span>`;
     return `<span style="display:inline-flex;align-items:center;gap:5px">
       <i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)}
       <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:16px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:1px 4px;background:#fff;max-width:120px">
-        ${opts.map(py=>{ const p=c.pys.find(p=>p.py===py); return `<option value="${esc(py)}"${py===cur?' selected':''}>${esc(py)} (전용 ${p.area})</option>`; }).join('')}
+        ${opts.map(p=>`<option value="${p.area}"${p.area===cur?' selected':''}>${esc(p.py)} (전용 ${p.area})</option>`).join('')}
       </select>
     </span>`;
   }).join('');
   document.getElementById('cmpTable').innerHTML = d.complexes.map((c,i)=>{
-    const py = cmpPyMap[i];
-    const p = c.pys.find(p=>p.py===py);
+    const area = cmpPyMap[i];
+    const p = c.pys.find(p=>p.area===area);
     const dot = `<i style="display:inline-block;width:10px;height:3px;border-radius:2px;background:${CMP_COLORS[i%4]};flex:none"></i>`;
     if(!p) return `<div class="rk">${dot}<span class="nm"><span class="nm-title">${esc(c.name)}</span><small>${esc(c.umd)}${c.hh?` · ${c.hh.hhcnt.toLocaleString()}세대`:''}</small></span><span class="val rng">거래 없음</span></div>`;
     return `<div class="rk">
       ${dot}
-      <span class="nm"><span class="nm-title">${esc(c.name)}</span><small>${esc(c.umd)}${c.hh?` · ${c.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(py)} (전용 ${p.area})</small></span>
+      <span class="nm"><span class="nm-title">${esc(c.name)}</span><small>${esc(c.umd)}${c.hh?` · ${c.hh.hhcnt.toLocaleString()}세대`:''} · ${esc(p.py)} (전용 ${p.area})</small></span>
       <span class="val">${p.avg3? `<b style="color:var(--teal)">${p.avg3.v.toFixed(1)}억</b>`:'-'}<small>${p.avg3?`최근 3개월 ${p.avg3.n}건`:''}</small><small>최고 ${p.max.toFixed(1)}억 · 총 ${p.n}건</small></span>
     </div>`;
   }).join('');
 }
 
-function selectCmpPyFor(idx, py){ cmpPyMap[idx] = py; drawCompare(lastData); }
+function selectCmpPyFor(idx, area){ cmpPyMap[idx] = Number(area); drawCompare(lastData); }
 
 function renderCompare(d){
   cmpPyMap = {};
