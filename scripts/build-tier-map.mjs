@@ -67,6 +67,7 @@ const ALLOWED_PROVINCES = new Set(["서울", "경기", "인천", "부산"]); // 
 const MIN_SAMPLES_PER_TYPE = 2; // 평형별 표본이 1건뿐이면 이상치 방지로 대표 후보에서 제외(pyprice 탭과 동일 원칙)
 const PY_MIN = 20, PY_MAX = 39; // 대표 평형 후보를 20~39평 범위로 한정(2026.09, 운영자 요청) — 초소형/초대형 평형의
 // 이례적 평단가가 단지 대표값으로 잘못 뽑히는 걸 막기 위함. 범위 밖 평형은 표본이 많아도 대표 후보에서 제외.
+const NAVER_COMBINED_HH = new Set(["안양 동안구|비산동|은하수,샛별5,6단지"]);
 
 async function main() {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
@@ -161,6 +162,7 @@ async function main() {
   // 2026.09 발견 — 82%가 세대수/년식 미표시였음).
   const hhcntDir = "data/hhcnt";
   const hhLookup = new Map(); // "구|단지명(공백제거)" -> {hh, by}
+  const naverHhLookup = new Map(); // "구|법정동|네이버 단지명" -> {hh, by}
   try {
     for (const f of await readdir(hhcntDir)) {
       if (!f.endsWith(".json")) continue;
@@ -172,6 +174,12 @@ async function main() {
       try {
         const naver = JSON.parse(await readFile(path.join("data/hhcnt-naver", `${lawd}.json`), "utf-8"));
         attachHouseholds(dealMeta, naver.items);
+        for (const entry of Object.values(naver.items || {})) {
+          if (entry?.name && entry.umd && entry.hh > 0)
+            naverHhLookup.set(`${region}|${entry.umd}|${entry.name}`, {
+              hh: entry.hh, by: entry.built ? parseInt(String(entry.built).slice(0, 4), 10) : null,
+            });
+        }
       } catch {}
       const resolved = resolveComplexNames(j.items, dealMeta);
       for (const [nameNorm, c] of resolved) {
@@ -223,7 +231,12 @@ async function main() {
     });
   }
   result.length = 0;
-  result.push(...byNaverName.values());
+  result.push(...[...byNaverName.values()].map(c => {
+    // K-apt 개별 관리단지에 잘못 붙는 합산 단지는 네이버 전체 세대수를 사용한다.
+    const key = `${c.gu}|${c.dong}|${c.nm}`;
+    const naver = NAVER_COMBINED_HH.has(key) ? naverHhLookup.get(key) : null;
+    return naver ? { ...c, hh: naver.hh, by: naver.by ?? c.by } : c;
+  }));
   result.sort((a, b) => b.ppy - a.ppy);
 
   // min을 결과에도 노출(2026.09, 동별 평단가 히트맵용) — 프론트에서 단지 단위가 아니라 "동 평균 평단가"처럼

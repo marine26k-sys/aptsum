@@ -3349,17 +3349,35 @@ function representativePy(trades){
   for(const t of trades) counts[t.py]=(counts[t.py]||0)+1;
   return +Object.entries(counts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
 }
+// 짧은 검색어가 여러 실거래 등록명에 걸릴 때도 선택지는 네이버 단지명으로 보여준다.
+// 같은 네이버 단지로 묶이는 등록명은 하나로 합치고, 서로 다른 법정동의 동명 단지만 동을 표시한다.
+function complexSuggestionNames(all, candidates, lawd){
+  const choices = candidates.flatMap(candidate=>{
+    const dongChoice = candidate.match(/^(.*) \[([^\]]+)\]$/);
+    const apt = dongChoice ? dongChoice[1] : candidate;
+    const rows = all.filter(t=>t.apt===apt && (!dongChoice || t.umd===dongChoice[2]));
+    return rows.length ? rows.map(t=>({ name:naverNameOf(lawd, t.apt, t.umd) || t.apt, umd:t.umd }))
+      : [{ name:candidate, umd:'' }];
+  });
+  const dongsByName = new Map();
+  choices.forEach(({name, umd})=>{
+    if(!dongsByName.has(name)) dongsByName.set(name, new Set());
+    dongsByName.get(name).add(umd);
+  });
+  return [...new Set(choices.map(({name, umd})=>
+    dongsByName.get(name).size>1 && umd ? `${name} [${umd}]` : name))];
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
-  if(m.multi) return {found:false, multi:true, suggest:m.multi.slice(0,8)};
+  if(m.multi) return {found:false, multi:true, suggest:complexSuggestionNames(all, m.multi, lawd).slice(0,8)};
   const hits = m.hits;
   if(!hits.length){
     const names = [...new Set(all.map(t=>t.apt))];
     const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
     const sugg = names.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
       .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n])=>n);
-    return {found:false, suggest:sugg};
+    return {found:false, suggest:complexSuggestionNames(all, sugg, lawd)};
   }
   const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
   let officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
@@ -5090,7 +5108,7 @@ async function search(opts){
       const pNames = [...new Set(rawP.map(t=>t.apt))].filter(n=>!(d.suggest||[]).includes(n));
       const pSugg = pNames.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
         .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);
-      d.suggest = [...(d.suggest||[]), ...pSugg];
+      d.suggest = [...new Set([...(d.suggest||[]), ...complexSuggestionNames(rawP, pSugg, lawd)])];
     }
 
     // 이 사이 더 최신 검색(예: 지역랭킹에서 단지명 클릭 → 단지분석 검색)이 이미 시작됐다면,
