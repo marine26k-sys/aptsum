@@ -62,6 +62,32 @@ test('네이버 실매물 기준 제목을 세 번 누르면 코드 세션에서
   assert.equal(reloads,1);
 });
 
+test('로그아웃 상태에서 같은 제목을 세 번 누르면 코드 입력창이 다시 열린다', async () => {
+  const listeners = {};
+  const element = () => ({style:{},classList:{remove(){}},addEventListener(type,handler){listeners.title=handler;}});
+  const title = element();
+  const nodes = Object.fromEntries(['tabNL','tabLPD','tabNH7','tabPBR','tabSubDivider','tabApply'].map(id=>[id,element()]));
+  let now=1000, prompts=0, logins=0, logouts=0, reloads=0;
+  const context={
+    document:{addEventListener(type,handler){listeners.ready=handler;},getElementById(id){return nodes[id]||null;},querySelector(){return title;}},
+    aptsumSession:{check:async()=>Response.json({subscribed:false}),login:async code=>{logins++;assert.equal(code,'ABCD-1234');return Response.json({subscribed:true,scope:'all'});},logout:async()=>{logouts++;return Response.json({subscribed:false});}},
+    Date:{now:()=>now},location:{reload(){reloads++;}},prompt(){return ++prompts===1?null:'ABCD-1234';},
+    alert(){throw new Error('unexpected alert');},setTimeout(){},
+  };
+  vm.runInNewContext(html.slice(html.indexOf('const aptsumSubscriberGate = (() => {'),html.indexOf('const SUBSCRIBER_APPLY_LINK')),context);
+  listeners.ready();
+  await Promise.resolve();
+  for(let i=0;i<2;i++){
+    for(let tap=0;tap<3;tap++){await listeners.title();now+=400;}
+    now+=1600;
+  }
+  assert.equal(prompts,2);
+  assert.equal(logins,1);
+  assert.equal(logouts,0);
+  assert.equal(reloads,0);
+  assert.equal(nodes.tabApply.style.display,'none');
+});
+
 test('build-year is restored for shared URLs and browser history', () => {
   assert.match(html, /p\.get\('by'\)[\s\S]*?setBuildYearValue\(p\.get\('by'\)\)/);
   assert.match(html, /setBuildYearValue\(inp\.by \|\| ''\)/);
