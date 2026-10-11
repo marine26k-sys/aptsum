@@ -64,6 +64,29 @@ test('continuous filter requires three consecutive records with two strict decli
  assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',true).length,0);
 });
 
+test('rise compares the same complex and exclusive area across the latest records',()=>{
+ const history=[4.2,4.4,4.6].map((ask,i)=>({uploadId:`u${i}`,items:[item(ask),item(8,{ex:59})]}));
+ const rows=ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'up');
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].drop,0.4);
+ assert.equal(rows[0].prevAsk,4.2);
+ assert.equal(rows[0].ask,4.6);
+ assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',true,'up').length,1);
+ assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'down').length,0);
+});
+
+test('rise rejects rebounds, flat endpoints, and missing immediately previous records',()=>{
+ for(const [prices,expected,continuous] of [
+  [[4.2,4.5,4.4],1,0],[[4.2,4.5,4.2],0,0],[[4.2,4.2,4.4],1,0],[[4.2,4.4,4.4],1,0]
+ ]){
+  const h=prices.map((ask,i)=>({uploadId:`u${i}`,items:[item(ask)]}));
+  assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',false,'up').length,expected);
+  assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',true,'up').length,continuous);
+ }
+ const missing=[4.2,4.4,4.6].map((ask,i)=>({uploadId:`u${i}`,items:i===1?[]:[item(ask)]}));
+ assert.equal(ctx.listingTrendSnapshotRows(missing[2],missing,{},'11680','강남구',false,'up').length,0);
+});
+
 test('newly appearing price filter compares identities rather than price changes',()=>{
  const c=vm.createContext({Set});
  vm.runInContext(html.slice(html.indexOf('function listingBudgetNewKeys('),html.indexOf('async function searchListingTab(')),c);
