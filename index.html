@@ -3344,7 +3344,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
     const sugg = names.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
       .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n])=>n);
-    return {found:false, suggest:sugg};
+    return {found:false, suggest:complexSuggestionNames(all, sugg, lawd)};
   }
   const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
   let officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
@@ -5075,7 +5075,7 @@ async function search(opts){
       const pNames = [...new Set(rawP.map(t=>t.apt))].filter(n=>!(d.suggest||[]).includes(n));
       const pSugg = pNames.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
         .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);
-      d.suggest = [...(d.suggest||[]), ...pSugg];
+      d.suggest = [...new Set([...(d.suggest||[]), ...complexSuggestionNames(rawP, pSugg, lawd)])];
     }
 
     // 이 사이 더 최신 검색(예: 지역랭킹에서 단지명 클릭 → 단지분석 검색)이 이미 시작됐다면,
