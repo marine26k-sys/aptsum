@@ -68,20 +68,20 @@ test('all browser inline scripts parse', () => {
   }
 });
 
-test('total failure stays retryable and successful retry clears warning', async () => {
+test('total failure stays retryable without showing a data warning', async () => {
   const allFailed = await collectMonths(['202601','202602'], async () => { throw Error('offline'); });
   assert.deepEqual(allFailed.failedMonths, ['202601','202602']);
   assert.deepEqual(allFailed.items, []);
-  const warning = {hidden:true};
+  assert.doesNotMatch(html, /id="dataWarning"/);
   const start = html.indexOf('const CHUNK_CONCURRENCY =');
   const end = html.indexOf('async function ensureMonths(', start);
-  const ctx = vm.createContext({document:{getElementById:()=>warning}});
+  const ctx = vm.createContext({});
   vm.runInContext(html.slice(start,end), ctx);
   let fail = true;
   async function fetchMonth() { return fail ? allFailed : {items:[],failedMonths:[]}; }
-  await ctx.fetchChunksLimited([['202601','202602']], fetchMonth, '26110');
-  assert.equal(warning.hidden, false);
+  const first = await ctx.fetchChunksLimited([['202601','202602']], fetchMonth, '26110');
+  assert.deepEqual(JSON.parse(JSON.stringify(first[0].items.failedMonths)), ['202601','202602']);
   fail = false;
-  await ctx.fetchChunksLimited([['202601','202602']], fetchMonth, '26110');
-  assert.equal(warning.hidden, true);
+  const retried = await ctx.fetchChunksLimited([['202601','202602']], fetchMonth, '26110');
+  assert.deepEqual(JSON.parse(JSON.stringify(retried[0].items.failedMonths)), []);
 });
