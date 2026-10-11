@@ -189,11 +189,16 @@ test('동안구 은하수·샛별 5,6단지는 2,3단지와 분리해 네이버 
 
   const c = vm.createContext({});
   vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
-    '\nthis.matchComplex=matchComplex;this.NAVER_NAMES=NAVER_NAMES;', c);
+    '\nthis.matchComplex=matchComplex;this.complexSuggestionNames=complexSuggestionNames;this.NAVER_NAMES=NAVER_NAMES;', c);
   c.NAVER_NAMES['41173'] = map;
   const trades = [...fifthSixth, ...secondThird, '은하수벽산'].map(apt => T(apt, '비산동', '1993'));
   assert.deepEqual(names(c.matchComplex(trades, '은하수,샛별5,6단지', '41173')), fifthSixth.slice().sort());
   assert.deepEqual(names(c.matchComplex(trades, '샛별한양2,3단지', '41173')), secondThird.slice().sort());
+  const shortMatches = [...trades, T('샛별마을한양4-1', '비산동', '1993')];
+  const ambiguous = c.matchComplex(shortMatches, '샛별', '41173');
+  assert.ok(ambiguous.multi);
+  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSuggestionNames(shortMatches, ambiguous.multi, '41173'))).sort(),
+    ['은하수,샛별5,6단지', '샛별한양1단지', '샛별한양2,3단지'].sort());
 
   const tier = JSON.parse(readFileSync(new URL('../data/tier-map.json', import.meta.url), 'utf8'));
   const bisan = tier.complexes.filter(x => x.gu === '안양 동안구' && x.dong === '비산동');
