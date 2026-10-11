@@ -77,6 +77,13 @@ const confirmedNaverNames = {
   '41173|목련경남|호계동': ['목련8단지', 516, 1992],
   '41173|목련동아|호계동': ['목련8단지', 516, 1992],
   '41173|목련아파트|호계동': ['목련9단지', 578, 1994],
+  // 네이버 5·6단지(3,227세대)는 실거래에서 여러 등록명으로 갈라진다.
+  // 인접한 샛별한양2,3단지(1,482세대)의 거래와 섞지 않는다.
+  '41173|은하수마을한양|비산동': ['은하수,샛별5,6단지', 3227, 1992],
+  '41173|샛별한양6(고층1109)|비산동': ['은하수,샛별5,6단지', 3227, 1992],
+  '41173|샛별한양6(고층1109-4)|비산동': ['은하수,샛별5,6단지', 3227, 1992],
+  '41173|샛별한양6(고층1109-6)|비산동': ['은하수,샛별5,6단지', 3227, 1992],
+  '41173|샛별한양6(저층)|비산동': ['은하수,샛별5,6단지', 3227, 1992],
 };
 
 // 실거래(매매·분양권·전세) 단지명별 법정동·건축년도
@@ -143,7 +150,7 @@ for (const [lawd, naver] of naverByLawd) {
       const confirmed = confirmedNaverNames[`${lawd}|${apt}|${umd}`];
       if (confirmed) {
         const parent = local.find((n) => n.name === confirmed[0] && n.hh === confirmed[1] && yearOk(yearOf(n.built), confirmed[2]));
-        if (parent) { if (!augment || !map[`${apt}|${umd}`]) map[`${apt}|${umd}`] = parent.name; summary.byName++; continue; }
+        if (parent) { map[`${apt}|${umd}`] = parent.name; summary.byName++; continue; }
       }
       if (local.length) {
         const items = Object.fromEntries(local.map((n, i) => [i, n]));
