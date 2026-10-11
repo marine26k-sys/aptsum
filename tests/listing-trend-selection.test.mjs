@@ -52,6 +52,9 @@ test('rounded equal comparison endpoints show two decimals only on affected pric
  assert.equal(c.listingTrendPrecision([points[0],points[2]]),2);
  const normal=[4.5,4.2,4.2].map(ask=>({ask}));
  assert.deepEqual(normal.map((p,i)=>p.ask.toFixed(c.listingTrendPriceDigits(normal,i,4.5))),['4.5','4.2','4.2']);
+ const smallRise=[4.54,4.58].map(ask=>({ask}));
+ assert.equal(c.listingTrendPrecision(smallRise),2);
+ assert.deepEqual(smallRise.map((p,i)=>p.ask.toFixed(c.listingTrendPriceDigits(smallRise,i,4.54))),['4.54','4.58']);
 });
 
 test('continuous filter requires three consecutive records with two strict declines',()=>{
