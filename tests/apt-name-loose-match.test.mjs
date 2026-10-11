@@ -179,6 +179,30 @@ test('동안구 목련 실거래 별칭을 네이버 단지명으로 통일한�
     ['목련1단지', '목련2단지', '목련3단지', '목련5단지', '목련6단지', '목련7단지', '목련8단지', '목련9단지']);
 });
 
+test('동안구 은하수·샛별 5,6단지는 2,3단지와 분리해 네이버 이름으로 조회한다', () => {
+  const map = JSON.parse(readFileSync(new URL('../data/naver-names/41173.json', import.meta.url), 'utf8'));
+  const fifthSixth = ['은하수마을한양', '샛별한양6(고층1109)', '샛별한양6(고층1109-4)', '샛별한양6(고층1109-6)', '샛별한양6(저층)'];
+  const secondThird = ['샛별한양4-2', '샛별한양4-3'];
+  for (const apt of fifthSixth) assert.equal(map[`${apt}|비산동`], '은하수,샛별5,6단지');
+  for (const apt of secondThird) assert.equal(map[`${apt}|비산동`], '샛별한양2,3단지');
+  assert.equal(map['은하수벽산|비산동'], '은하수(벽산)');
+
+  const c = vm.createContext({});
+  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
+    '\nthis.matchComplex=matchComplex;this.NAVER_NAMES=NAVER_NAMES;', c);
+  c.NAVER_NAMES['41173'] = map;
+  const trades = [...fifthSixth, ...secondThird, '은하수벽산'].map(apt => T(apt, '비산동', '1993'));
+  assert.deepEqual(names(c.matchComplex(trades, '은하수,샛별5,6단지', '41173')), fifthSixth.slice().sort());
+  assert.deepEqual(names(c.matchComplex(trades, '샛별한양2,3단지', '41173')), secondThird.slice().sort());
+
+  const tier = JSON.parse(readFileSync(new URL('../data/tier-map.json', import.meta.url), 'utf8'));
+  const bisan = tier.complexes.filter(x => x.gu === '안양 동안구' && x.dong === '비산동');
+  assert.equal(bisan.filter(x => x.nm === '은하수,샛별5,6단지').length, 1);
+  assert.equal(bisan.find(x => x.nm === '은하수,샛별5,6단지').hh, 3227);
+  assert.equal(bisan.find(x => x.nm === '샛별한양2,3단지').hh, 1482);
+  assert.ok(!bisan.some(x => x.nm.startsWith('샛별한양6(')));
+});
+
 test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 분리한다', async () => {
   const c = vm.createContext({
     aptMem: {},
