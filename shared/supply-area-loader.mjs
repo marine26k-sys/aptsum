@@ -8,21 +8,26 @@ export function supplyAreaToPy(supplyArea) {
   return Math.floor(Number((supplyArea * 0.3025).toFixed(10)) + 0.2);
 }
 export function applyNaverSupplyAreas(items, records, lawd) {
-  const types = new Map();
+  const exactTypes = new Map();
+  const roundedTypes = new Map();
   const households = new Map();
+  const addType = (map, key, py, hh) => {
+    if (!map.has(key)) map.set(key, {py,hh});
+    else if (map.get(key)?.py !== py || map.get(key)?.hh !== hh) map.set(key,null);
+  };
   for (const row of Array.isArray(records) ? records : []) {
     if (!row?.apt || !Number.isInteger(row.hh) || row.hh <= 0 || !Number.isFinite(row.exclusiveArea) || !Number.isFinite(row.supplyArea) || !(row.exclusiveArea > 0 && row.supplyArea > row.exclusiveArea)) continue;
     const name = norm(row.apt);
     if (!households.has(name)) households.set(name,new Set());
     households.get(name).add(row.hh);
-    const key = `${name}|${Math.round(row.exclusiveArea)}`;
     const py = supplyAreaToPy(row.supplyArea);
-    if (!types.has(key)) types.set(key, {py,hh:row.hh});
-    else if (types.get(key)?.py !== py || types.get(key)?.hh !== row.hh) types.set(key,null);
+    addType(exactTypes, `${name}|${row.exclusiveArea.toFixed(2)}`, py, row.hh);
+    addType(roundedTypes, `${name}|${Math.round(row.exclusiveArea)}`, py, row.hh);
   }
   return items.map(t => {
     const name = norm(t.apt);
-    const hit = types.get(`${name}|${Math.round(t.area)}`);
+    const exactKey = `${name}|${Number(t.area).toFixed(2)}`;
+    const hit = exactTypes.has(exactKey) ? exactTypes.get(exactKey) : roundedTypes.get(`${name}|${Math.round(t.area)}`);
     if (!hit || households.get(name)?.size !== 1 || (t.hh != null && t.hh !== hit.hh)) return t;
     return {...t,py:hit.py};
   });

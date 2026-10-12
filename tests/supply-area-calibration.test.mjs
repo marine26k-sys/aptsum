@@ -22,6 +22,20 @@ test('verified supply areas can correct large interpolation errors',()=>{
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77}],[row])[0].py,70);
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77,hh:101}],[row])[0].py,77);
 });
+test('exact exclusive areas use the matching Naver type before rounded-area fallback',()=>{
+ const records=[
+  {apt:'복합단지',hh:500,exclusiveArea:59.18,supplyArea:70.13},
+  {apt:'복합단지',hh:500,exclusiveArea:59.20,supplyArea:76.58},
+ ];
+ const trades=[{apt:'복합단지',area:59.18,py:25},{apt:'복합단지',area:59.20,py:25},{apt:'복합단지',area:59.19,py:25}];
+ assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[21,23,25]);
+});
+test('confirmed Naver mapping replaces an older spreadsheet supply area for the same type',()=>{
+ const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/11530.json',import.meta.url)));
+ const hit=records.find(r=>r.apt==='뉴홍현솔레디움'&&r.exclusiveArea===84.86);
+ assert.equal(hit.supplyArea,110.54);
+ assert.equal(applyNaverSupplyAreas([{apt:hit.apt,area:84.86,py:31}],[hit])[0].py,33);
+});
 test('ambiguous rounded types and household conflicts preserve the existing estimate',()=>{
  const items=[{apt:'단지',area:194.98,py:77}];
  for(const rows of [[row,{...row,supplyArea:250}],[row,{...row,hh:101}],[{...row,hh:0}],[{...row,supplyArea:194}],[{...row,exclusiveArea:NaN}]])assert.equal(applyNaverSupplyAreas(items,rows)[0].py,77);
@@ -38,7 +52,7 @@ test('all exported data has only the four allowed fields and no ambiguous type o
  const dir=new URL('../data/supply-area-naver/',import.meta.url);
  for(const f of readdirSync(dir).filter(f=>f.endsWith('.json'))){
   const rows=JSON.parse(readFileSync(new URL(f,dir)));const hh=new Map();const keys=new Set();
-  for(const r of rows){assert.deepEqual(Object.keys(r).sort(),['apt','exclusiveArea','hh','supplyArea']);assert.ok(r.hh>0&&r.supplyArea>r.exclusiveArea);const k=r.apt+'|'+Math.round(r.exclusiveArea);assert.equal(keys.has(k),false,`${f} ${k}`);keys.add(k);assert.ok(!hh.has(r.apt)||hh.get(r.apt)===r.hh);hh.set(r.apt,r.hh);}
+  for(const r of rows){assert.deepEqual(Object.keys(r).sort(),['apt','exclusiveArea','hh','supplyArea']);assert.ok(r.hh>0&&r.supplyArea>r.exclusiveArea);const k=r.apt+'|'+r.exclusiveArea.toFixed(2);assert.equal(keys.has(k),false,`${f} ${k}`);keys.add(k);assert.ok(!hh.has(r.apt)||hh.get(r.apt)===r.hh);hh.set(r.apt,r.hh);}
  }
 });
 

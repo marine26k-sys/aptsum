@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""로컬 엑셀에서 검증된 네 항목만 추출. 원본·가격·링크·단지ID는 출력하지 않는다.
+"""로컬 네이버 매칭표(우선) 또는 엑셀에서 검증된 네 항목만 추출한다.
+원본·가격·링크·단지ID는 출력하지 않는다.
 naver의 기존 비교 함수를 직접 사용하고 K-apt/기존 aptsum 세대수 일치를 검증한다.
-사용: bundled-python scripts/import-naver-supply-area.py --workbook <xlsx> --naver-root ../naver
+사용: bundled-python scripts/import-naver-supply-area.py --mapping <json> --naver-root ../naver
+구형 엑셀: --mapping 대신 --workbook <xlsx>
 이전 엑셀에만 있던 검증값도 유지하려면 --previous data/supply-area-naver 를 지정한다.
 """
 import argparse, collections, json, math, re, sys
@@ -10,7 +12,9 @@ import openpyxl
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--workbook', required=True, type=Path)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--workbook', type=Path)
+    source.add_argument('--mapping', type=Path)
     parser.add_argument('--naver-root', required=True, type=Path)
     parser.add_argument('--out', type=Path, default=Path('data/supply-area-naver'))
     parser.add_argument('--previous', type=Path)
@@ -24,22 +28,48 @@ def main():
     for city, block in re.findall(r"\['(서울|경기|인천|부산)', \[\[(.*?)\]\]\]", text):
         for gu, lawd in re.findall(r"'([^']+)','([^']+)'", block):
             regions[(city, gu)] = lawd
-    book = openpyxl.load_workbook(args.workbook, read_only=True, data_only=True)
-    rows = book.active.iter_rows(values_only=True); headers = next(rows)
     complexes = {}; stats = collections.Counter()
-    for row in rows:
-        stats['sourceRows'] += 1
-        r = dict(zip(headers, row)); lawd = regions.get((r.get('시'), r.get('구')))
-        try:
-            ex = float(r['전용면적(㎡)']); supply = float(r['면적(㎡)']); hh = int(r['세대수'])
-        except (ValueError, TypeError, KeyError):
-            stats['invalidRows'] += 1; continue
-        if not lawd or not all(math.isfinite(v) for v in (ex, supply)) or not (0 < ex < supply and hh > 0):
-            stats['invalidRows'] += 1; continue
-        key = (lawd, str(r['법정동']), str(r['단지명']), str(r['단지ID']))
-        c = complexes.setdefault(key, {'hh':set(), 'areas':collections.defaultdict(set), 'city':r['시'], 'gu':r['구']})
-        c['hh'].add(hh); c['areas'][ex].add(supply)
-    book.close()
+    if args.mapping:
+        source_data = json.loads(args.mapping.read_text())
+        if source_data.get('schema_version') != 1 or not isinstance(source_data.get('complexes'), dict):
+            parser.error('지원하지 않는 네이버 매칭표 형식')
+        for nid, entry in source_data['complexes'].items():
+            region = entry.get('region') or {}
+            city, gu, dong = region.get('시'), region.get('구'), region.get('법정동')
+            lawd = regions.get((city, gu))
+            for row in (entry.get('areas') or {}).values():
+                stats['sourceRows'] += 1
+                if row.get('status') != 'confirmed':
+                    stats['unconfirmedRows'] += 1; continue
+                try:
+                    ex = float(row['exclusive_area']); supply = float(row['supply_area']); hh = int(entry['households'])
+                except (ValueError, TypeError, KeyError):
+                    stats['invalidRows'] += 1; continue
+                if not lawd or not dong or not entry.get('name') or not all(math.isfinite(v) for v in (ex, supply)) or not (0 < ex < supply and hh > 0):
+                    stats['invalidRows'] += 1; continue
+                key = (lawd, str(dong), str(entry['name']), str(nid))
+                c = complexes.setdefault(key, {'hh':set(), 'areas':collections.defaultdict(set), 'city':city, 'gu':gu})
+                c['hh'].add(hh); c['areas'][ex].add(supply)
+    else:
+        book = openpyxl.load_workbook(args.workbook, read_only=True, data_only=True)
+        rows = book.active.iter_rows(values_only=True); headers = next(rows)
+        for row in rows:
+            stats['sourceRows'] += 1
+            r = dict(zip(headers, row)); lawd = regions.get((r.get('시'), r.get('구')))
+            try:
+                ex = float(r['전용면적(㎡)']); supply = float(r['면적(㎡)']); hh = int(r['세대수'])
+            except (ValueError, TypeError, KeyError):
+                stats['invalidRows'] += 1; continue
+            if not lawd or not all(math.isfinite(v) for v in (ex, supply)) or not (0 < ex < supply and hh > 0):
+                stats['invalidRows'] += 1; continue
+            key = (lawd, str(r['법정동']), str(r['단지명']), str(r['단지ID']))
+            c = complexes.setdefault(key, {'hh':set(), 'areas':collections.defaultdict(set), 'city':r['시'], 'gu':r['구']})
+            c['hh'].add(hh); c['areas'][ex].add(supply)
+        book.close()
+    def area_matches(actual, source):
+        if args.mapping:
+            return math.floor(float(actual)*100+0.5) == math.floor(source*100+0.5)
+        return math.floor(float(actual)) == source
     raw_dongs = collections.defaultdict(set)
     by_dong = collections.defaultdict(list)
     for key, c in complexes.items(): by_dong[key[:2]].append((key,c))
@@ -81,7 +111,8 @@ def main():
                 for ex in c['areas']:
                     for h in hits:
                         area=float(h.get('area',0))
-                        if math.floor(area)==ex:observed_types.add((lawd,h['apt'],math.floor(area+0.5)))
+                        if area_matches(area,ex):
+                            observed_types.add((lawd,h['apt'],round(area,2) if args.mapping else math.floor(area+0.5)))
                 kh=matching.match_trade_names(kapt_candidates,apt,dong,reserved_qns=reserved,ambiguous_qns=ambiguous,region_prefixes=prefixes)
                 kh={h.get('kaptCode') or h.get('kaptAddr'):h for h in kh}
                 if len(kh)==1:
@@ -102,7 +133,7 @@ def main():
                     owners[(lawd,name)].add(nid)
                     verified_hh[(lawd,name)].add(hh)
                 for ex,supplies in c['areas'].items():
-                    areas={(h['apt'],float(h['area'])) for h in hits if math.floor(float(h.get('area',0)))==ex}
+                    areas={(h['apt'],float(h['area'])) for h in hits if area_matches(h.get('area',0),ex)}
                     # 엑셀 면적은 네이버 응답의 정수 표기. 원본 실거래 면적을 다시 확인한다.
                     # 네이버 앱의 AreaConverter와 같은 평형 표기를 사용한다.
                     pys={math.floor(round(s*0.3025,10)+0.2) for s in supplies}
@@ -113,10 +144,10 @@ def main():
                     if len(supplies)>1:stats['samePyeongSupplyAreas']+=1
                     supply=min(supplies)
                     if not areas:stats['areaUnmatched']+=1;continue
-                    for name,area in areas:
+                    for name,area in sorted(areas):
                         if not (0<area<supply):continue
-                        rounded=math.floor(area+0.5);k=(name,rounded)
-                        item={'apt':name,'hh':hh,'exclusiveArea':area,'supplyArea':supply}
+                        rounded=math.floor(area+0.5);k=(name,ex if args.mapping else rounded)
+                        item={'apt':name,'hh':hh,'exclusiveArea':ex if args.mapping else area,'supplyArea':supply}
                         previous=outputs[lawd].get(k)
                         if previous is False:continue
                         if previous and (previous['hh']!=hh or math.floor(round(previous['supplyArea']*0.3025,10)+0.2)!=next(iter(pys))):
@@ -126,15 +157,17 @@ def main():
         for file in args.previous.glob('*.json'):
             lawd=file.stem
             for row in json.loads(file.read_text()):
-                name=row['apt'];rounded=math.floor(row['exclusiveArea']+0.5);key=(name,rounded)
-                # 최신 엑셀에 같은 타입이 있으면 그 판정(충돌·제외 포함)을 존중한다.
-                if key in outputs[lawd] or (lawd,name,rounded) in observed_types:continue
+                name=row['apt'];rounded=math.floor(row['exclusiveArea']+0.5)
+                area_key=round(row['exclusiveArea'],2) if args.mapping else rounded
+                key=(name,area_key)
+                # 우선 자료에 같은 타입이 있으면 그 판정(충돌·제외 포함)을 존중한다.
+                if key in outputs[lawd] or (lawd,name,area_key) in observed_types:continue
                 if rounded not in current_areas[(lawd,name)]:continue
                 if len(raw_dongs[(lawd,name)])!=1 or len(owners[(lawd,name)])>1:continue
                 if verified_hh[(lawd,name)] and verified_hh[(lawd,name)]!={row['hh']}:continue
                 if not (row['hh']>0 and row['supplyArea']>row['exclusiveArea']>0):continue
                 outputs[lawd][key]=row
-                retained_types.add((lawd,name,rounded))
+                retained_types.add((lawd,name,area_key))
                 stats['previousTypesRetained']+=1
     args.out.mkdir(parents=True,exist_ok=True)
     for lawd, items in outputs.items():
