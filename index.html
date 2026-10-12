@@ -765,9 +765,10 @@ try {
     })();
     // 비공개 탭 신청·코드 입력 페이지(apply.html, 2026.09 원스톱 신청) — 인증이 필요한 곳마다 이리로 안내한다.
     const SUBSCRIBER_APPLY_LINK = '<a href="./apply.html" style="color:inherit;font-weight:800;text-decoration:underline">이용 신청 · 코드 입력 →</a>';
-    const SUBSCRIBER_ENDED_MSG = `비공개 탭 이용 기간이 끝났거나 접근 코드가 해지되었습니다. ${SUBSCRIBER_APPLY_LINK}`;
+    const MASTER_REQUIRED_MSG = '운영자 마스터 로그인 후 이용할 수 있는 탭입니다.';
+    const SUBSCRIBER_ENDED_MSG = `실매물 탭 이용 기간이 끝났거나 접근 코드가 해지되었습니다. ${SUBSCRIBER_APPLY_LINK}`;
     function askSubscriberApply(){
-      if (confirm('비공개 탭 이용 신청이 필요합니다.\n신청 페이지로 이동할까요? (접근 코드가 있으면 거기서 입력할 수 있어요)')) location.href = './apply.html';
+      if (confirm('실매물 탭 이용 신청이 필요합니다.\n신청 페이지로 이동할까요? (접근 코드가 있으면 거기서 입력할 수 있어요)')) location.href = './apply.html';
     }
   </script>
   <header>
@@ -1225,8 +1226,8 @@ let lastData = null;
 // 신고가를 놓치므로(analyzeNewHigh 주석 참고) 수집 로직은 안 건드리고 표시 단계에서만 필터링.
 let newHighWeekOnly = false;
 function openNewHigh7(){
-  if (!aptsumSubscriberGate.isVerified()) {
-    askSubscriberApply();
+  if (!aptsumSubscriberGate.hasMasterAccess()) {
+    showError(MASTER_REQUIRED_MSG);
     return;
   }
   newHighWeekOnly = true;
@@ -1331,7 +1332,7 @@ async function initFromURL(){
   newHighWeekOnly = requestedMode==='newhigh' && p.get('nh7')==='1';
   if(needsSubscriberSession(requestedMode) || isListingMode(requestedMode)) await aptsumSubscriberGate.ready;
   if(!setMode(requestedMode, true)){
-    showError(`비공개 탭 인증이 필요합니다. ${SUBSCRIBER_APPLY_LINK}`);
+    showError(MASTER_REQUIRED_MSG);
     return;
   }
   if(hasSharedQuery)resetQueriedSliderDefaults(requestedMode);
@@ -2390,7 +2391,7 @@ function listingTrialBadgeHTML(){
 const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
   if (needsSubscriberSession(m) && !aptsumSubscriberGate.hasMasterAccess()) {
-    if (!fromRestore) askSubscriberApply();
+    if (!fromRestore) showError(MASTER_REQUIRED_MSG);
     return false;
   }
   if (isListingMode(m) && !fromRestore && isListingTrial()) {
@@ -2401,7 +2402,7 @@ function setMode(m, fromRestore){
   if (needsSubscriberSession(m)) {
     // 탭 전환은 바로 하고, 로그인 상태는 뒤에서 다시 확인 — 만료·해지됐으면 단지 분석으로 돌려보낸다
     aptsumSubscriberGate.recheck().then(ok => {
-      if ((!ok || !aptsumSubscriberGate.hasMasterAccess()) && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
+      if ((!ok || !aptsumSubscriberGate.hasMasterAccess()) && mode === m) { setMode('complex', true); showError(MASTER_REQUIRED_MSG); }
     });
   }
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
@@ -4745,7 +4746,7 @@ async function search(opts){
     if(myToken!==searchToken || mode!==requestMode)return;
     if(!authorized || !aptsumSubscriberGate.hasMasterAccess()){
       setMode('complex', true);
-      showError(SUBSCRIBER_ENDED_MSG);
+      showError(MASTER_REQUIRED_MSG);
       return;
     }
   }
