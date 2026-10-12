@@ -2211,9 +2211,9 @@ function initializeAnalysisRangeNumbers(){
   }
 }
 function initializeAnalysisSelectSliders(){
-  // 평형 조건을 다른 필터보다 먼저 보여준다. 숨겨진 탭의 필터는 공간을 차지하지 않는다.
+  // 필터 초기화 바로 아래에 평형 조건을 두고, 그 다음에 다른 필터를 보여준다.
   const resetRow=document.getElementById('sliderFilterResetRow');
-  for(const id of ['analysisPyFilters','lsFilters','listingGapFilters'])resetRow.before(document.getElementById(id));
+  resetRow.after(...['analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
