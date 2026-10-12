@@ -2,6 +2,17 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import { applyNaverSupplyAreas,applySupplyAreaOverrides,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
+test('runtime refreshes changed supply mappings after one minute',async()=>{
+ const priorFetch=globalThis.fetch,priorNow=Date.now;let now=1_000,supply=232;
+ try{
+  Date.now=()=>now;
+  globalThis.fetch=async url=>url.includes('supply-area-naver')?Response.json([{...row,supplyArea:supply}]):Response.json({items:{}});
+  const items=[{apt:'단지',area:194.98,py:77}];
+  assert.equal((await applySupplyAreaOverrides(items,'41173','https://refresh-calibration.test'))[0].py,70);
+  supply=250;now+=61_000;
+  assert.equal((await applySupplyAreaOverrides(items,'41173','https://refresh-calibration.test'))[0].py,75);
+ }finally{globalThis.fetch=priorFetch;Date.now=priorNow;}
+});
 test('Pyeongchon Xi Persnity confirmed mapping covers presale decimal precision',()=>{
  const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/41173.json',import.meta.url)));
  const trades=[{apt:'평촌자이 퍼스니티',area:53.9578,py:22},{apt:'평촌자이 퍼스니티',area:59.9833,py:25}];
