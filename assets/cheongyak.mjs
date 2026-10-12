@@ -20,6 +20,7 @@ function render(){
  if(!hasData)return;
  const expanded=new Set([...document.querySelectorAll('.notice details[open]')].map(d=>d.closest('.notice').querySelector('.favorite').dataset.key));
  const f=filters(),all=filterNotices(items,{...f,status:'all'},today),open=all.filter(x=>noticeStatus(x,today)==='open').length,upcoming=all.filter(x=>noticeStatus(x,today)==='upcoming').length;
+ $('sortOrder').textContent={active:'최신 공고일 순',open:'마감 임박 순',upcoming:'접수 시작일 순',closed:'최근 마감 순',all:'접수 상태·일정 순'}[f.status];
  $('countActive').textContent=open+upcoming;$('countOpen').textContent=open;$('countUpcoming').textContent=upcoming;
  document.querySelectorAll('.count').forEach(b=>{const on=b.dataset.status===f.status;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
  const filtered=filterNotices(items,f,today);$('resultCount').textContent=`공고 ${filtered.length.toLocaleString()}건`;

@@ -4,6 +4,14 @@ import {readFileSync} from 'node:fs';
 import {kstToday,noticeStatus,filterNotices,officialURL,daysUntil} from '../shared/cheongyak.mjs';
 import handler,{validData,updatedTime} from '../netlify/functions/cheongyak.mjs';
 const item={name:'검증 공고',category:'apt',pblancNo:'1',region:'서울',apply_start:'2026-10-13',apply_end:'2026-10-14'};
+test('active notices sort by newest publication date across open and upcoming states',()=>{
+ const old={...item,pblancNo:'old',notice_date:'2026-10-01'};
+ const upcoming={...item,pblancNo:'new',notice_date:'2026-10-12',apply_start:'2026-10-15',apply_end:'2026-10-16'};
+ const unknown={...item,pblancNo:'missing',notice_date:'invalid'};
+ assert.deepEqual(filterNotices([old,unknown,upcoming],{},'2026-10-13').map(x=>x.pblancNo),['new','old','missing']);
+ const latest={...item,pblancNo:'later-deadline',notice_date:'2026-10-13',apply_end:'2026-10-20'};
+ assert.deepEqual(filterNotices([latest,old],{status:'open'},'2026-10-13').map(x=>x.pblancNo),['old','later-deadline']);
+});
 test('malformed dates and detail tables do not replace the valid deployed dataset',()=>{
  assert(Number.isNaN(updatedTime({updated_at:'2026-02-31 06:30 KST'})));
  assert(Number.isNaN(updatedTime({updated_at:'2026-10-13 29:30 KST'})));
