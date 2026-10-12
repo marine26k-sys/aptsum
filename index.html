@@ -780,7 +780,24 @@ try {
 
   <div class="tabs">
     <!-- 그룹 구분선(2026.09 운영자 요청) — 아래 "네이버 실매물 기준"과 짝을 이루도록 맨 위 공개 탭 묶음에도 데이터 출처를 표시 -->
-    <div class="tab-divider source-divider" id="tabRtmsDivider" style="margin-top:0"><span>국토부 실거래 분석</span></div>
+    <div class="tab-divider source-divider" id="tabListingDivider" style="margin-top:0"><span>네이버 실거래 분석</span></div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">실매물</div>
+      <div class="tab-grp-tabs">
+        <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
+        <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">분석</div>
+      <div class="tab-grp-tabs">
+        <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>호가 변동</a>
+        <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가</a>
+        <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 비교</a>
+      </div>
+    </div>
+    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
+    <div class="tab-divider source-divider" id="tabRtmsDivider"><span>국토부 실거래 분석</span></div>
     <script>
       (() => {
         const title = document.querySelector('#tabRtmsDivider span');
@@ -835,23 +852,6 @@ try {
     </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
          쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
-    <div class="tab-divider source-divider" id="tabListingDivider"><span>네이버 실거래 분석</span></div>
-    <div class="tab-grp">
-      <div class="tab-grp-name">실매물</div>
-      <div class="tab-grp-tabs">
-        <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
-        <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
-      </div>
-    </div>
-    <div class="tab-grp">
-      <div class="tab-grp-name">분석</div>
-      <div class="tab-grp-tabs">
-        <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>호가 변동</a>
-        <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가</a>
-        <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 비교</a>
-      </div>
-    </div>
-    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
     <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈</span></div>
     <div class="tab-grp">
       <div class="tab-grp-name">분양</div>
