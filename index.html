@@ -53,7 +53,15 @@ try {
   a.tab{text-decoration:none}
   select.analysis-slider-source{display:none!important}
   .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
-  #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
+  #optRow,#risePeriodRow,#subwayRow,#listingGapFilters{display:none!important}
+  #sliderRow{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;min-width:0;padding-bottom:4px;scrollbar-width:thin}
+  #sliderRow > .ls-filters{flex:1 0 160px;min-width:160px;min-height:80px;box-sizing:border-box;margin:0;padding:7px 8px 4px}
+  #sliderRow > #lsFilters{flex:1 0 100%;display:flex;gap:6px;min-height:0;padding:0;border:0;background:none;overflow-x:auto;scrollbar-width:thin}
+  #sliderRow > #lsFilters .ls-row{flex:1 0 160px;min-width:160px;box-sizing:border-box;margin:0;padding:7px 8px 4px;border:1px solid var(--line);border-radius:12px;flex-direction:column;align-items:stretch;gap:2px}
+  #sliderRow > #lsFilters .ls-hd{flex:none;width:100%;flex-direction:row;justify-content:space-between;align-items:baseline;font-size:10px}
+  #sliderRow > #lsFilters .ls-hd b{font-size:10px}
+  #sliderRow > #lsFilters .ls-control{width:100%}
+  #priceBandRow{flex-wrap:wrap}
   .price-basis{flex:0 0 100%;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
   .price-basis button{flex:1;padding:9px 5px;border:1px solid transparent;border-radius:7px;background:transparent;color:#5F706C;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
   .price-basis:has(option[value="current"]:checked) [data-basis="current"],.price-basis:has(option[value="past"]:checked) [data-basis="past"]{background:var(--teal);color:white;border-color:var(--teal)}
@@ -2156,7 +2164,12 @@ function syncAnalysisSelectSliders(){
   syncAnalysisAgeSlider();
   for(const entry of analysisSelectSliders){
     const {select,wrap,input,label}=entry;
-    const enabled=select.style.display!=='none';
+    const id=select.id;
+    const modeVisible=(id==='risePeriodN' ? mode==='longtermrise'||mode==='jeonselongtermrise'
+      : id==='priceBandPeriodN'||id==='priceBandN' ? mode==='pricebandrise'
+      : id==='subwayWalkMax' ? mode==='subway'
+      : id==='listingGapSmall'||id==='listingGapLarge' ? mode==='listinggap' : true);
+    const enabled=select.style.display!=='none'&&modeVisible;
     select.classList.toggle('analysis-slider-source',enabled);
     wrap.style.display=enabled?'':'none';
     if(!enabled)continue;
@@ -2167,6 +2180,8 @@ function syncAnalysisSelectSliders(){
     label.textContent=select.selectedOptions[0]?.textContent||'선택';
     const number=document.getElementById(select.id+'Number');if(number){number.disabled=select.disabled;number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
   }
+  const sliderRow=document.getElementById('sliderRow');
+  if(sliderRow)sliderRow.style.display=[...sliderRow.children].some(el=>el.style.display!=='none')?'flex':'none';
   const reset=document.getElementById('sliderFilterResetRow');if(reset)reset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'flex':'none';
 }
 // Touch scrolling and a light tap must not change an age filter.
@@ -2211,14 +2226,16 @@ function initializeAnalysisRangeNumbers(){
   }
 }
 function initializeAnalysisSelectSliders(){
-  // 필터 초기화 바로 아래에 평형 조건을 두고, 그 다음에 다른 필터를 보여준다.
+  // 필터 초기화 아래의 가로줄에 탭별 슬라이더를 모은다.
   const resetRow=document.getElementById('sliderFilterResetRow');
-  resetRow.after(...['analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
+  const sliderRow=document.createElement('div');sliderRow.id='sliderRow';sliderRow.tabIndex=0;sliderRow.setAttribute('role','region');sliderRow.setAttribute('aria-label','필터 슬라이더');resetRow.after(sliderRow);
+  sliderRow.append(document.getElementById('analysisPyFilters'),document.getElementById('lsFilters'));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
     wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
     select.after(wrap);
+    sliderRow.append(wrap);
     const number=document.createElement('input');number.type='number';number.id=id+'Number';number.step='any';number.setAttribute('aria-label',title+' 직접 입력');
     const units={monthsN:'개월',risePeriodN:'개월 전',priceBandPeriodN:'개월 전',floorMin:'층 이상',subwayWalkMax:'분 이내',priceBandN:'억대',listingGapSmall:'평대',listingGapLarge:'평대'};
     const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.dataset.source=id;numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
@@ -2239,6 +2256,7 @@ function initializeAnalysisSelectSliders(){
   const ageSource=document.getElementById('buildYear'),ageWrap=document.createElement('div');ageWrap.id='analysisAgeFilters';ageWrap.className='ls-filters analysis-select-slider';
   ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div>';
   ageSource.after(ageWrap);
+  sliderRow.append(ageWrap);
   for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
   new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
   for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
