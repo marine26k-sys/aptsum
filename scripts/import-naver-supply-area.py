@@ -70,7 +70,8 @@ def main():
         book.close()
     def area_matches(actual, source):
         if args.mapping:
-            return math.floor(float(actual)*100+0.5) == math.floor(source*100+0.5)
+            # 네이버는 소수 둘째 자리까지 절삭한 면적도 제공한다.
+            return math.floor(float(actual)*100+0.5) == math.floor(source*100+0.5) or math.floor(float(actual)*100+1e-7) == math.floor(source*100+0.5)
         return math.floor(float(actual)) == source
     raw_dongs = collections.defaultdict(set)
     by_dong = collections.defaultdict(list)
@@ -117,7 +118,12 @@ def main():
                             observed_types.add((lawd,h['apt'],round(area,2) if args.mapping else math.floor(area+0.5)))
                 kh=matching.match_trade_names(kapt_candidates,apt,dong,reserved_qns=reserved,ambiguous_qns=ambiguous,region_prefixes=prefixes)
                 kh={h.get('kaptCode') or h.get('kaptAddr'):h for h in kh}
-                if len(kh)==1:
+                exact_source_match = args.mapping and matching._norm_name(apt,dong) not in ambiguous and hits and all(re.sub(r'\s+', '', h['apt']) == re.sub(r'\s+', '', apt) for h in hits)
+                if exact_source_match:
+                    # 같은 법정동에서 공백을 제외한 이름이 완전히 같으면
+                    # 세대수 보조 자료와 관계없이 확정 매칭표를 우선한다.
+                    stats['sourceExactNameAccepted']+=1
+                elif len(kh)==1:
                     confirmed=next(iter(kh.values()))
                     if confirmed.get('hhcnt')!=hh:stats['householdMismatch']+=1;continue
                     stats['kaptHouseholdVerified']+=1
@@ -125,9 +131,10 @@ def main():
                     # K-apt 자료가 없는 지역은 aptsum에 이미 저장된 네이버 세대수와 비교.
                     # 이름이 달라 추측해야 하는 경우는 승인하지 않는다.
                     stored_hits=[v for v in stored.values() if v.get('umd')==dong and matching._norm_name(v.get('name',''),dong)==matching._norm_name(apt,dong)]
-                    if len(stored_hits)!=1:stats['householdUnconfirmed']+=1;continue
-                    if stored_hits[0].get('hh')!=hh:stats['householdMismatch']+=1;continue
-                    stats['storedHouseholdVerified']+=1
+                    if len(stored_hits)==1:
+                        if stored_hits[0].get('hh')!=hh:stats['householdMismatch']+=1;continue
+                        stats['storedHouseholdVerified']+=1
+                    else:stats['householdUnconfirmed']+=1;continue
                 if not hits:stats['nameUnmatched']+=1;continue
                 stats['complexesMatched']+=1
                 raw_names={h['apt'] for h in hits}

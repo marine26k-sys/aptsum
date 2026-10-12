@@ -2,6 +2,12 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import { applyNaverSupplyAreas,applySupplyAreaOverrides,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
+test('Pyeongchon Xi Persnity confirmed mapping covers presale decimal precision',()=>{
+ const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/41173.json',import.meta.url)));
+ const trades=[{apt:'평촌자이 퍼스니티',area:53.9578,py:22},{apt:'평촌자이 퍼스니티',area:59.9833,py:25}];
+ assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[21,24]);
+ assert.equal(records.find(r=>r.apt==='평촌자이 퍼스니티'&&r.exclusiveArea===53.95)?.supplyArea,72.37);
+});
 test('revised Naver mapping floors supply pyeong including values just below 21',()=>{
  assert.equal(supplyAreaToPy(68.62),20);
  assert.equal(supplyAreaToPy(69.42),20);
