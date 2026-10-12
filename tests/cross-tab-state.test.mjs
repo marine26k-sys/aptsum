@@ -19,15 +19,21 @@ test('share URL preserves build-year and weekly-new-high state', () => {
   assert.equal(params.get('nh7'), '1');
 });
 
-test('region share URL replaces a legacy three-month period with three years', () => {
+test('region share URL keeps a selected five-year period and replaces a legacy three-month period', () => {
   const start = html.indexOf('function buildShareURL(');
   const end = html.indexOf('async function initFromURL(', start);
   const ctx = vm.createContext({ URLSearchParams, location:{ pathname:'/index.html' } });
+  const monthsStart = html.indexOf('function analysisMonthsForMode(');
+  vm.runInContext(html.slice(monthsStart, html.indexOf('function saveQueriedSliders(', monthsStart)), ctx);
   vm.runInContext(html.slice(start, end), ctx);
   const inputs = {mode:'region',mN:'3',fM:'0',cmp:[],lawd:'41173',q:'',regionSel:[],pym:['23-27'],rp:'',pbp:'',pb:''};
   const region = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
   assert.equal(region.get('p'),'36');
   assert.equal(region.get('pym'),'23-27');
+  inputs.mN='60';
+  const fiveYears = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
+  assert.equal(fiveYears.get('p'),'60');
+  inputs.mN='3';
   inputs.mode='volume';
   const volume = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
   assert.equal(volume.get('p'),'3');

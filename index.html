@@ -52,9 +52,10 @@ try {
 
   a.tab{text-decoration:none}
   select.analysis-slider-source{display:none!important}
-  .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
-  #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
-  .price-basis{flex:0 0 100%;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
+  .analysis-select-slider{flex:none;width:100%;box-sizing:border-box;min-width:0;margin:4px 0;padding:7px 10px}
+  #optRow,#risePeriodRow,#priceBandRow,#subwayRow{flex-direction:column}
+  #listingGapFilters > div{flex-direction:column}
+  .price-basis{flex:none;width:100%;box-sizing:border-box;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
   .price-basis button{flex:1;padding:9px 5px;border:1px solid transparent;border-radius:7px;background:transparent;color:#5F706C;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
   .price-basis:has(option[value="current"]:checked) [data-basis="current"],.price-basis:has(option[value="past"]:checked) [data-basis="past"]{background:var(--teal);color:white;border-color:var(--teal)}
 
@@ -1258,7 +1259,7 @@ function pushView(){
 }
 function buildShareURL(inp){
   const p = new URLSearchParams();
-  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? '36' : inp.mN); p.set('f', inp.fM);
+  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendContinuous) p.set('ltc','1');
@@ -2076,7 +2077,7 @@ function getQueriedSliderPref(m){
     return v;
   }catch{return null;}
 }
-function analysisMonthsForMode(m, selected){ return m==='region' ? '36' : selected; }
+function analysisMonthsForMode(m, selected){ return m==='region' && !['12','24','36','48','60'].includes(String(selected)) ? '36' : selected; }
 function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
@@ -2102,8 +2103,9 @@ function restoreQueriedSliders(m){
   resetQueriedSliderDefaults(m);
   if(!v)return;
   for(const [id,value] of Object.entries(v.selects||{})){
-    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id) || (m==='region'&&id==='monthsN'))continue;
-    const el=document.getElementById(id);if([...el.options].some(o=>o.value===value))el.value=value;
+    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
+    const el=document.getElementById(id),restored=id==='monthsN'?analysisMonthsForMode(m,value):value;
+    if([...el.options].some(o=>o.value===restored))el.value=restored;
   }
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
   if(isListingMode(m)&&v.ls){lsRestoreLimits(v.limits);lsSet(v.ls);}
@@ -2210,6 +2212,9 @@ function initializeAnalysisRangeNumbers(){
   }
 }
 function initializeAnalysisSelectSliders(){
+  // 필터 초기화 바로 아래에 평형 조건을 두고, 그 다음에 다른 필터를 보여준다.
+  const resetRow=document.getElementById('sliderFilterResetRow');
+  resetRow.after(...['analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
@@ -2484,7 +2489,7 @@ function setMode(m, fromRestore){
     if(atBase || +hh.value < base) hh.value = base;
     lsSync();
   }
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
+  document.getElementById('floorMin').style.display = (m==='complex'||m==='compare'||m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(운영자 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
   // 공유하는 셀렉트라 영향받지 않도록 표시만 토글.
@@ -2492,12 +2497,12 @@ function setMode(m, fromRestore){
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = (m==='longtermrise'||m==='jeonselongtermrise') ? '' : 'none';
   document.getElementById('priceBandRow').style.display = m==='pricebandrise' ? '' : 'none';
-  // 지역 랭킹은 3년 고정. 다른 탭은 각 탭에서 선택한 조회 기간을 유지한다.
+  // 지역 랭킹은 3년을 기본값으로 쓰고, 선택한 1~5년 조회 기간을 유지한다.
   document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
   restoreQueriedSliders(m);
   document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
-  document.getElementById('monthsN').disabled = m==='region';
+  document.getElementById('monthsN').disabled = false;
   document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
@@ -4755,7 +4760,7 @@ async function search(opts){
   if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
   const mN = +analysisMonthsForMode(mode, document.getElementById('monthsN').value);
   if(mode==='region') document.getElementById('monthsN').value = String(mN);
-  const fM = (mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  const fM = (mode==='complex'||mode==='compare'||mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 층수 필터를 숨긴 탭에서는 이전 선택값도 계산에 적용하지 않음
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
@@ -5551,7 +5556,7 @@ function floorPremiumHTML(d, ci){
     ${fbRow('저층', fb.low, '#94A3B8', pct(fb.low.v))}
     ${fbRow('중층', fb.mid, '#00828A', fb.mid?pct(fb.mid.v):0)}
     ${fbRow('고층', fb.high, '#0F2B3D', pct(fb.high.v))}
-    <div class="rng" style="margin-top:4px">현재 층수 필터와 무관하게, 해당 평형의 관측된 최저~최고 층을 5등분 (저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
+    <div class="rng" style="margin-top:4px">해당 평형의 관측된 최저~최고 층을 5등분 (저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
 }
 
 // ── 월 클릭 → 해당월 개별 거래 플로팅 산점도 ──
