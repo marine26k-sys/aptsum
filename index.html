@@ -2922,7 +2922,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
 // 2026.10 18→19: 운영자 제공 10/4 엑셀의 누락 세대수 보완, 이전 미조회 캐시 갱신
-const HH_CACHE_VER = 19;
+const HH_CACHE_VER = 20;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -2947,7 +2947,7 @@ async function fetchHHCnt(lawd, name){
     v = (d && d.found) ? d : null;
     ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
   }catch(e){ v = null; } // 네트워크·파싱 오류 — 결과를 신뢰할 수 없으므로 ok=false로 남겨 캐시하지 않음(다음 조회 시 바로 재시도)
-  hhMem[k] = v; // 같은 세션(페이지) 안에서는 반복 재요청 방지용으로만 메모리에 저장
+  if(ok) hhMem[k] = v; // 네트워크 오류는 다음 조회에서 재시도한다.
   if(ok){ ls[k] = { v, t: Date.now() }; hhLSSave(); } // 확정된 결과만 로컬스토리지에 영구 캐시
   return v;
 }
@@ -5131,6 +5131,10 @@ async function search(opts){
       showError((d.note || '해당 기간·층수 조건에 맞는 거래 내역이 없습니다. 기간을 늘리거나 층 필터를 풀어보세요.') +
         (d.suggest && d.suggest.length ? '<br>혹시 이 단지? ' + d.suggest.map(s=>`<a onclick="quick('${esc(s)}')">${esc(s)}</a>`).join(' · ') : ''));
       return;
+    }
+    if(d.mode==='complex'){
+      d.hh = await fetchHHCnt(lawd, d.name);
+      if(myToken!==searchToken) return;
     }
     lastData = d;
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
