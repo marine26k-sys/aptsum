@@ -87,7 +87,9 @@ function applyPartialOverride(lawd, name, result) {
 // 세대수를 보완한다. 같은 지역에서 같은 이름의 세대수가 서로 다른 항목은 생성 단계에서 제외돼 자동 보완하지 않는다.
 const naverCache = new Map(); // lawd -> {items, keyIndex} | null — 컨테이너 warm 재사용 동안만
 async function loadNaverHh(origin, lawd) {
-  if (naverCache.has(lawd)) return naverCache.get(lawd);
+  const cacheKey = `${origin}|${lawd}`;
+  const cached = naverCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) return cached.data;
   let data = null;
   try {
     const r = await fetch(`${origin}/data/hhcnt-naver/${encodeURIComponent(lawd)}.json`);
@@ -96,7 +98,7 @@ async function loadNaverHh(origin, lawd) {
       if (j && j.items) data = { items: j.items, keyIndex: j.keyIndex || {} };
     }
   } catch (e) { data = null; }
-  naverCache.set(lawd, data);
+  if (data) naverCache.set(cacheKey, {data, expires: Date.now() + 60_000});
   return data;
 }
 // 2026.09 — "목련아파트"(호계동, 1994년 준공)가 "아파트" 접미사 제거만으로 키가 "목련"(2자)이 되면서
@@ -141,9 +143,12 @@ function naverLookup(nv, lawd, name) {
   return findNaverComplex(nv.items, n);
 }
 function applyFallback(fallback, lawd, name, result) {
-  // 국토교통부에서 이미 확정된 값은 절대 덮어쓰지 않는다.
-  if (result && result.found && result.hhcnt > 0) return result;
   const hit = naverLookup(fallback, lawd, name);
+  // K-apt 세대수·지하철 정보는 유지하고, 같은 세대수의 네이버 용적률만 보완한다.
+  if (result && result.found && result.hhcnt > 0) {
+    return hit && hit.hh === result.hhcnt && result.far == null && hit.far != null
+      ? { ...result, far: hit.far } : result;
+  }
   if (!hit) return result;
   const base = (result && result.found) ? result : { found: true, name };
   // 매핑표에 있는 보조 메타만 채우고, K-apt에서 온 필드는 유지한다.
