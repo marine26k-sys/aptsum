@@ -30,7 +30,7 @@ export function filterNotices(items,{status='active',category='',region='',query
       (!q||`${item.name||''}${item.address||''}`.replace(/\s/g,'').toLowerCase().includes(q))&&
       (!favoritesOnly||saved.has(noticeKey(item)));
   }).sort((a,b)=>{
-    if(status==='active'){
+    if(status==='active'||status==='open'){
       const order=(validDate(b.notice_date)||'').localeCompare(validDate(a.notice_date)||'');
       if(order)return order;
     }

@@ -10,7 +10,7 @@ test('active notices sort by newest publication date across open and upcoming st
  const unknown={...item,pblancNo:'missing',notice_date:'invalid'};
  assert.deepEqual(filterNotices([old,unknown,upcoming],{},'2026-10-13').map(x=>x.pblancNo),['new','old','missing']);
  const latest={...item,pblancNo:'later-deadline',notice_date:'2026-10-13',apply_end:'2026-10-20'};
- assert.deepEqual(filterNotices([latest,old],{status:'open'},'2026-10-13').map(x=>x.pblancNo),['old','later-deadline']);
+ assert.deepEqual(filterNotices([latest,old],{status:'open'},'2026-10-13').map(x=>x.pblancNo),['later-deadline','old']);
 });
 test('malformed dates and detail tables do not replace the valid deployed dataset',()=>{
  assert(Number.isNaN(updatedTime({updated_at:'2026-02-31 06:30 KST'})));
