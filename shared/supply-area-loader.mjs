@@ -39,11 +39,12 @@ export function applyNaverSupplyAreas(items, records, lawd) {
 }
 async function load(origin,lawd) {
   const key = `${origin}|${lawd}`;
-  if(caches.has(key))return caches.get(key);
-  const read=async path=>{try{const r=await fetch(`${origin}/data/${path}/${encodeURIComponent(lawd)}.json`);return r.ok?await r.json():null;}catch{return null;}};
+  const cached = caches.get(key);
+  if(cached && cached.expires > Date.now())return cached.data;
+  const read=async path=>{try{const r=await fetch(`${origin}/data/${path}/${encodeURIComponent(lawd)}.json`,{cache:'no-store'});return r.ok?await r.json():null;}catch{return null;}};
   const [hub,naver]=await Promise.all([/^\d{5}$/.test(lawd)?read('supply-area'):null,read('supply-area-naver')]);
   const map=new Map(Object.entries(hub?.items||{}).map(([n,t])=>[norm(n),t]));
-  const data={map,naver};caches.set(key,data);return data;
+  const data={map,naver};caches.set(key,{data,expires:Date.now()+60_000});return data;
 }
 export async function applySupplyAreaOverrides(items,lawd,origin) {
   if(!origin||!lawd)return items;
