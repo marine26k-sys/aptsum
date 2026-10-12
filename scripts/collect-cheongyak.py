@@ -4,7 +4,7 @@
 수집 대상
   - APT 분양정보 (특별공급·1순위·2순위)
   - APT 무순위/잔여세대/계약취소/불법행위 재공급
-  - 오피스텔/생활숙박시설/도시형생활주택/민간임대
+  - 오피스텔·기타 공고는 수집하지 않는다
 외부 패키지 없이 표준 라이브러리만 사용한다.
 """
 import html
@@ -34,12 +34,7 @@ LISTS = {
         "apply": "/ap/apr/reqst/selectSubscrtReqstAptMainView.do",
         "cols": ["region", "supply_kind", "name", "builder", "notice_date", "apply_period", "announce_date"],
     },
-    "other": {
-        "list": "/ai/aia/selectOtherLttotPblancListView.do",
-        "detail": "/ai/aia/selectPRMOLttotPblancDetailView.do",
-        "apply": "/ap/apb/reqst/selectSubscrtReqstUOMainView.do",
-        "cols": ["region", "house_kind", "name", "builder", "phone", "notice_date", "apply_period", "announce_date"],
-    },
+
 }
 
 CAPITAL = {"서울", "경기", "인천"}

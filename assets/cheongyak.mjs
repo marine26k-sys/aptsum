@@ -36,7 +36,7 @@ async function load(){
  if(loading)return;loading=true;
  try{
   const response=await fetch('/api/cheongyak');if(!response.ok)throw Error('network');const data=await response.json();if(!Array.isArray(data.items))throw Error('format');
-  const seen=new Set();items=data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x)));
+  const seen=new Set();items=data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&['apt','remainder'].includes(x.category)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x)));
   $('updated').textContent=`최근 갱신 ${data.updated_at||'확인 불가'} · 서울·경기·인천·부산`;
   const match=String(data.updated_at||'').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) KST$/),updated=match?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
   $('warning').hidden=true;

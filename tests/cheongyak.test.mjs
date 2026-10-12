@@ -17,6 +17,7 @@ test('combined filters and favorites use category-scoped notice identifiers',()=
  assert.deepEqual(filterNotices([item,other],{region:'서울',query:'검증공고'},'2026-10-13'),[item]);
  assert.deepEqual(filterNotices([item,other],{favoritesOnly:true,favorites:['remainder:1']},'2026-10-13'),[other]);
  assert.equal(filterNotices([item],{},'2026-10-15').length,0);
+ assert.equal(filterNotices([{...item,category:'other'}],{status:'all'},'2026-10-13').length,0);
  assert.equal(officialURL('javascript:alert(1)'),null);
  assert.equal(officialURL('https://www.applyhome.co.kr.evil.test/'),null);
  assert.equal(officialURL('https://www.applyhome.co.kr/ai/aia/notice'), 'https://www.applyhome.co.kr/ai/aia/notice');
@@ -24,7 +25,7 @@ test('combined filters and favorites use category-scoped notice identifiers',()=
 test('API prefers newer main data without redeploy and falls back when remote fails',async()=>{
  const oldFetch=globalThis.fetch;
  const local={updated_at:'2026-10-12 06:30 KST',items:[item]};
- const newer={updated_at:'2026-10-13 06:30 KST',items:[{...item,name:'최신 공고'},{...item,name:'제외 지역',region:'대구'}]};
+ const newer={updated_at:'2026-10-13 06:30 KST',items:[{...item,name:'최신 공고'},{...item,name:'제외 지역',region:'대구'},{...item,name:'제외 유형',category:'other'}]};
  try{
   globalThis.fetch=async url=>Response.json(url.includes('githubusercontent')?newer:local);
   let data=await (await handler(new Request('https://fixture.test/api/cheongyak'))).json();
@@ -38,5 +39,5 @@ test('API prefers newer main data without redeploy and falls back when remote fa
 test('stored notices contain only requested regions and safe official links',()=>{
  const data=JSON.parse(readFileSync(new URL('../data/cheongyak.json',import.meta.url)));
  assert.equal(data.count,data.items.length);assert(data.items.length>0);
- for(const row of data.items){assert(['서울','경기','인천','부산'].includes(row.region));assert(officialURL(row.detail_url));assert(!('score' in row));}
+ for(const row of data.items){assert(['서울','경기','인천','부산'].includes(row.region));assert(officialURL(row.detail_url));assert(!('score' in row));assert(['apt','remainder'].includes(row.category));}
 });

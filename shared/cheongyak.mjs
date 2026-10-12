@@ -1,4 +1,4 @@
-export const CATEGORIES = {apt:'아파트',remainder:'무순위·잔여세대',other:'오피스텔·기타'};
+export const CATEGORIES = {apt:'아파트',remainder:'무순위·잔여세대'};
 export const noticeKey = item => `${item.category}:${item.pblancNo}`;
 export function kstToday(now=new Date()){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
@@ -25,7 +25,7 @@ export function filterNotices(items,{status='active',category='',region='',query
   const saved=new Set(favorites),q=query.replace(/\s/g,'').toLowerCase();
   return items.filter(item=>{
     const state=noticeStatus(item,today);
-    return (status==='all'||(status==='active'?['open','upcoming'].includes(state):state===status))&&
+    return ['apt','remainder'].includes(item.category)&&(status==='all'||(status==='active'?['open','upcoming'].includes(state):state===status))&&
       (!category||item.category===category)&&(!region||item.region===region)&&
       (!q||`${item.name||''}${item.address||''}`.replace(/\s/g,'').toLowerCase().includes(q))&&
       (!favoritesOnly||saved.has(noticeKey(item)));
