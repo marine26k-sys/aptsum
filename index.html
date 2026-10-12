@@ -615,7 +615,9 @@ try {
     const aptsumSubscriberGate = (() => {
       let verified = false;
       let scope = "all";
+      let master = false;
       let deactivate = () => {};
+      let refreshVisibility = () => {};
       let resolveReady;
       const ready = new Promise(resolve => { resolveReady = resolve; });
       document.addEventListener('DOMContentLoaded', function(){
@@ -628,16 +630,17 @@ try {
       const applyCta = document.getElementById('tabApply');
       const reveal = () => {
         if (applyCta) applyCta.style.display = 'none';
-        subTabs.forEach(t => { t.style.display = scope === 'all' ? '' : 'none'; });
-        subDividers.forEach(d => { d.style.display = scope === 'all' ? '' : 'none'; });
+        subTabs.forEach(t => { t.style.display = master ? '' : 'none'; });
+        subDividers.forEach(d => { d.style.display = master ? '' : 'none'; });
       };
+      refreshVisibility = reveal;
       const activate = () => {
         verified = true;
         reveal();
       };
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
-        verified = false;
+        verified = false; master = false;
         if (applyCta) applyCta.style.display = '';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
         subDividers.forEach(d => { d.style.display = 'none'; });
@@ -649,7 +652,7 @@ try {
           const r = await aptsumSession.check();
           if (!r.ok) return false;
           const body = await r.json();
-          scope = body.scope || "all";
+          scope = body.scope || "all"; master = body.master === true;
           return body.subscribed === true;
         } catch (e) {
           return false;
@@ -688,7 +691,7 @@ try {
           const r = await aptsumSession.login(code);
           const login = await r.json().catch(() => ({}));
           if (r.ok && login.subscribed === true) {
-            scope = login.scope || 'all';
+            scope = login.scope || 'all'; master = login.master === true;
             activate();
             closeSubscriberCodeInput();
             // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
@@ -751,14 +754,14 @@ try {
           const r = await aptsumSession.check();
           if (!r.ok) return true;
           const body = await r.json();
-          if (body.subscribed === true) { scope = body.scope || "all"; return true; }
+          if (body.subscribed === true) { scope = body.scope || "all"; master = body.master === true; refreshVisibility(); return true; }
         } catch (e) {
           return true;
         }
         deactivate();
         return false;
       };
-      return Object.freeze({ ready, isVerified: () => verified, hasFullAccess: () => verified && scope === "all", recheck });
+      return Object.freeze({ ready, isVerified: () => verified, hasFullAccess: () => verified && scope === "all", hasMasterAccess: () => verified && master, recheck });
     })();
     // 비공개 탭 신청·코드 입력 페이지(apply.html, 2026.09 원스톱 신청) — 인증이 필요한 곳마다 이리로 안내한다.
     const SUBSCRIBER_APPLY_LINK = '<a href="./apply.html" style="color:inherit;font-weight:800;text-decoration:underline">이용 신청 · 코드 입력 →</a>';
@@ -1986,7 +1989,7 @@ function applyNativeRegionInputs(inp){
 function canRestoreNativeRegionData(record){
   if(!record.data)return false;
   const m=record.inputs?.mode;
-  if(needsSubscriberSession(m)&&!aptsumSubscriberGate.hasFullAccess())return false;
+  if(needsSubscriberSession(m)&&!aptsumSubscriberGate.hasMasterAccess())return false;
   if(isListingMode(m)&&record.verified!==false&&!aptsumSubscriberGate.isVerified())return false;
   return true;
 }
@@ -2386,7 +2389,7 @@ function listingTrialBadgeHTML(){
 }
 const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
-  if (needsSubscriberSession(m) && !aptsumSubscriberGate.hasFullAccess()) {
+  if (needsSubscriberSession(m) && !aptsumSubscriberGate.hasMasterAccess()) {
     if (!fromRestore) askSubscriberApply();
     return false;
   }
@@ -2398,7 +2401,7 @@ function setMode(m, fromRestore){
   if (needsSubscriberSession(m)) {
     // 탭 전환은 바로 하고, 로그인 상태는 뒤에서 다시 확인 — 만료·해지됐으면 단지 분석으로 돌려보낸다
     aptsumSubscriberGate.recheck().then(ok => {
-      if ((!ok || !aptsumSubscriberGate.hasFullAccess()) && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
+      if ((!ok || !aptsumSubscriberGate.hasMasterAccess()) && mode === m) { setMode('complex', true); showError(SUBSCRIBER_ENDED_MSG); }
     });
   }
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
@@ -4740,7 +4743,7 @@ async function search(opts){
     const authorized=await aptsumSubscriberGate.recheck();
     // 인증 대기 중 탭 전환·중지·다른 조회가 있었다면 이전 요청은 여기서 끝낸다.
     if(myToken!==searchToken || mode!==requestMode)return;
-    if(!authorized || !aptsumSubscriberGate.hasFullAccess()){
+    if(!authorized || !aptsumSubscriberGate.hasMasterAccess()){
       setMode('complex', true);
       showError(SUBSCRIBER_ENDED_MSG);
       return;
