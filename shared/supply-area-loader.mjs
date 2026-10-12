@@ -22,12 +22,18 @@ export function applyNaverSupplyAreas(items, records, lawd) {
     households.get(name).add(row.hh);
     const py = supplyAreaToPy(row.supplyArea);
     addType(exactTypes, `${name}|${row.exclusiveArea.toFixed(2)}`, py, row.hh);
-    addType(roundedTypes, `${name}|${Math.round(row.exclusiveArea)}`, py, row.hh);
+    const roundedKey = `${name}|${Math.round(row.exclusiveArea)}`;
+    const rounded = roundedTypes.get(roundedKey);
+    if (!roundedTypes.has(roundedKey)) roundedTypes.set(roundedKey,{py,hh:row.hh,areas:[row.exclusiveArea]});
+    else if (rounded && rounded.py === py && rounded.hh === row.hh) rounded.areas.push(row.exclusiveArea);
+    else roundedTypes.set(roundedKey,null);
   }
   return items.map(t => {
     const name = norm(t.apt);
     const exactKey = `${name}|${Number(t.area).toFixed(2)}`;
-    const hit = exactTypes.has(exactKey) ? exactTypes.get(exactKey) : roundedTypes.get(`${name}|${Math.round(t.area)}`);
+    const rounded = roundedTypes.get(`${name}|${Math.round(t.area)}`);
+    const hit = exactTypes.has(exactKey) ? exactTypes.get(exactKey) :
+      rounded?.areas.some(area => Math.abs(area - t.area) <= 0.05 + 1e-9) ? rounded : null;
     if (!hit || households.get(name)?.size !== 1 || (t.hh != null && t.hh !== hit.hh)) return t;
     return {...t,py:hit.py};
   });

@@ -35,6 +35,7 @@ test('confirmed Naver mapping replaces an older spreadsheet supply area for the 
  const hit=records.find(r=>r.apt==='뉴홍현솔레디움'&&r.exclusiveArea===84.86);
  assert.equal(hit.supplyArea,110.54);
  assert.equal(applyNaverSupplyAreas([{apt:hit.apt,area:84.86,py:31}],[hit])[0].py,33);
+ assert.equal(applyNaverSupplyAreas([{apt:hit.apt,area:84.69,py:31}],[hit])[0].py,31);
 });
 test('ambiguous rounded types and household conflicts preserve the existing estimate',()=>{
  const items=[{apt:'단지',area:194.98,py:77}];
