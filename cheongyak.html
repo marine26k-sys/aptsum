@@ -13,7 +13,7 @@
 <body><main class="wrap">
 <header><a class="back" href="./index.html" aria-label="아파트썸 메뉴로">←</a><div class="brand"><svg viewBox="0 0 28 28" width="27" height="27" aria-hidden="true" fill="#83d1d2"><rect x="2" y="16" width="5" height="10"/><rect x="11" y="9" width="5" height="17"/><rect x="20" y="2" width="5" height="24"/></svg>아파트썸</div><div class="description">청약 공고</div></header>
 <div id="warning" class="warning" hidden></div>
-<section class="counts" aria-label="접수 중 청약 공고" style="grid-template-columns:1fr"><div class="count on">접수 중<b id="countOpen">—</b></div></section>
+<section class="counts" aria-label="청약 접수 상태" style="grid-template-columns:repeat(2,1fr)"><button class="count on" data-status="open">접수 중<b id="countOpen">—</b></button><button class="count" data-status="upcoming">진행 예정<b id="countUpcoming">—</b></button></section>
 <section class="panel" aria-label="청약 공고 필터">
 <div class="filter"><label for="category">공급 유형</label><select id="category"><option value="">전체</option><option value="apt">아파트</option><option value="remainder">무순위·잔여세대</option></select></div>
 <div class="filter"><label for="region">지역</label><select id="region"><option value="">전체</option><option>서울</option><option>경기</option><option>인천</option><option>부산</option></select></div>

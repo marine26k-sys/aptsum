@@ -3,9 +3,10 @@ const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,
 let items=[],limit=20,today=kstToday(),favorites=[],loading=false,lastLoaded=0,lastPayload='',hasData=false;
 try{const data=JSON.parse(localStorage.getItem('apc:cheongyak:favs:v1')||'[]');if(Array.isArray(data))favorites=data.filter(x=>typeof x==='string');}catch{}
 const params=new URLSearchParams(location.search);
+let selectedStatus=params.get('s')==='upcoming'?'upcoming':'open';
 for(const [id,key] of [['category','c'],['region','r']])if([...$(id).options].some(o=>o.value===params.get(key)))$(id).value=params.get(key);
 $('query').value=params.get('q')||'';
-const filters=()=>({status:'open',category:$('category').value,region:$('region').value,query:$('query').value,favoritesOnly:$('favoritesOnly').checked,favorites});
+const filters=()=>({status:selectedStatus,category:$('category').value,region:$('region').value,query:$('query').value,favoritesOnly:$('favoritesOnly').checked,favorites});
 function money(value){return Number.isFinite(value)&&value>0?`${(value/10000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')}억`:'공고문 확인';}
 function card(item){
  const state=noticeStatus(item,today),status={open:'접수 중',upcoming:'접수 예정',closed:'마감',unknown:'일정 확인'}[state];
@@ -19,18 +20,22 @@ function card(item){
 function render(){
  if(!hasData)return;
  const expanded=new Set([...document.querySelectorAll('.notice details[open]')].map(d=>d.closest('.notice').querySelector('.favorite').dataset.key));
- const f=filters();
+ const f=filters(),all=filterNotices(items,{...f,status:'all'},today);
+ $('countOpen').textContent=all.filter(x=>noticeStatus(x,today)==='open').length;
+ $('countUpcoming').textContent=all.filter(x=>noticeStatus(x,today)==='upcoming').length;
+ document.querySelectorAll('.count').forEach(b=>{const on=b.dataset.status===selectedStatus;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
  $('sortOrder').textContent='최신 공고일 순';
- const filtered=filterNotices(items,f,today);$('resultCount').textContent=`공고 ${filtered.length.toLocaleString()}건`;$('countOpen').textContent=filtered.length;
+ const filtered=filterNotices(items,f,today);$('resultCount').textContent=`공고 ${filtered.length.toLocaleString()}건`;
  $('results').innerHTML=filtered.length?filtered.slice(0,limit).map(card).join(''):'<div class="empty">조건에 맞는 공고가 없습니다.<br>접수 상태나 지역을 바꿔 보세요.</div>';
  for(const detail of document.querySelectorAll('.notice details'))if(expanded.has(detail.closest('.notice').querySelector('.favorite').dataset.key))detail.open=true;
  $('more').hidden=filtered.length<=limit;$('more').textContent=`더 보기 (${Math.min(limit,filtered.length)}/${filtered.length})`;
- const p=new URLSearchParams();if(f.category)p.set('c',f.category);if(f.region)p.set('r',f.region);if(f.query)p.set('q',f.query);
+ const p=new URLSearchParams();if(selectedStatus==='upcoming')p.set('s','upcoming');if(f.category)p.set('c',f.category);if(f.region)p.set('r',f.region);if(f.query)p.set('q',f.query);
  history.replaceState(null,'',location.pathname+(p.size?'?'+p.toString():''));
 }
 for(const id of ['category','region','favoritesOnly'])$(id).addEventListener('change',()=>{limit=20;render();});
 $('query').addEventListener('input',()=>{limit=20;render();});
-$('reset').addEventListener('click',()=>{$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;limit=20;render();});
+document.querySelectorAll('.count').forEach(b=>b.addEventListener('click',()=>{selectedStatus=b.dataset.status;limit=20;render();}));
+$('reset').addEventListener('click',()=>{selectedStatus='open';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;limit=20;render();});
 $('more').addEventListener('click',()=>{limit+=20;render();});
 $('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;favorites=favorites.includes(key)?favorites.filter(x=>x!==key):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
 async function load(){
