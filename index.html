@@ -1258,7 +1258,7 @@ function pushView(){
 }
 function buildShareURL(inp){
   const p = new URLSearchParams();
-  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? '36' : inp.mN); p.set('f', inp.fM);
+  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendContinuous) p.set('ltc','1');
@@ -2076,7 +2076,7 @@ function getQueriedSliderPref(m){
     return v;
   }catch{return null;}
 }
-function analysisMonthsForMode(m, selected){ return m==='region' ? '36' : selected; }
+function analysisMonthsForMode(m, selected){ return m==='region' && !['12','24','36','48','60'].includes(String(selected)) ? '36' : selected; }
 function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
@@ -2102,8 +2102,9 @@ function restoreQueriedSliders(m){
   resetQueriedSliderDefaults(m);
   if(!v)return;
   for(const [id,value] of Object.entries(v.selects||{})){
-    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id) || (m==='region'&&id==='monthsN'))continue;
-    const el=document.getElementById(id);if([...el.options].some(o=>o.value===value))el.value=value;
+    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
+    const el=document.getElementById(id),restored=id==='monthsN'?analysisMonthsForMode(m,value):value;
+    if([...el.options].some(o=>o.value===restored))el.value=restored;
   }
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
   if(isListingMode(m)&&v.ls){lsRestoreLimits(v.limits);lsSet(v.ls);}
@@ -2210,6 +2211,9 @@ function initializeAnalysisRangeNumbers(){
   }
 }
 function initializeAnalysisSelectSliders(){
+  // 평형 조건을 다른 필터보다 먼저 보여준다. 숨겨진 탭의 필터는 공간을 차지하지 않는다.
+  const resetRow=document.getElementById('sliderFilterResetRow');
+  for(const id of ['analysisPyFilters','lsFilters','listingGapFilters'])resetRow.before(document.getElementById(id));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
@@ -2492,12 +2496,12 @@ function setMode(m, fromRestore){
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = (m==='longtermrise'||m==='jeonselongtermrise') ? '' : 'none';
   document.getElementById('priceBandRow').style.display = m==='pricebandrise' ? '' : 'none';
-  // 지역 랭킹은 3년 고정. 다른 탭은 각 탭에서 선택한 조회 기간을 유지한다.
+  // 지역 랭킹은 3년을 기본값으로 쓰고, 선택한 1~5년 조회 기간을 유지한다.
   document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
   restoreQueriedSliders(m);
   document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
-  document.getElementById('monthsN').disabled = m==='region';
+  document.getElementById('monthsN').disabled = false;
   document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
