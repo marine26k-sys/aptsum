@@ -52,9 +52,10 @@ try {
 
   a.tab{text-decoration:none}
   select.analysis-slider-source{display:none!important}
-  .analysis-select-slider{flex:1 1 150px;min-width:0;margin:4px 0;padding:7px 10px}
-  #optRow,#risePeriodRow,#priceBandRow{flex-wrap:wrap}
-  .price-basis{flex:0 0 100%;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
+  .analysis-select-slider{flex:none;width:100%;box-sizing:border-box;min-width:0;margin:4px 0;padding:7px 10px}
+  #optRow,#risePeriodRow,#priceBandRow,#subwayRow{flex-direction:column}
+  #listingGapFilters > div{flex-direction:column}
+  .price-basis{flex:none;width:100%;box-sizing:border-box;display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#F3F7F6}
   .price-basis button{flex:1;padding:9px 5px;border:1px solid transparent;border-radius:7px;background:transparent;color:#5F706C;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
   .price-basis:has(option[value="current"]:checked) [data-basis="current"],.price-basis:has(option[value="past"]:checked) [data-basis="past"]{background:var(--teal);color:white;border-color:var(--teal)}
 
@@ -115,6 +116,17 @@ try {
   #tabListingDivider::after{background:#DFC98F}
   #tabListingDivider span{background:#FFF0C9}
   #tabListingDivider span{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .subscriber-code-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,43,61,.62)}
+  .subscriber-code-overlay[hidden]{display:none}
+  .subscriber-code-card{position:relative;width:min(100%,380px);padding:24px 20px 20px;border-radius:17px;background:#fff;box-shadow:0 18px 50px rgba(15,43,61,.25)}
+  .subscriber-code-card h2{font-size:20px;color:var(--navy);margin-bottom:5px}
+  .subscriber-code-card p{font-size:13px;color:var(--sub);margin-bottom:16px}
+  .subscriber-code-card input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;letter-spacing:1px}
+  .subscriber-code-card input:focus{outline:none;border-color:var(--teal)}
+  .subscriber-code-card .code-submit{width:100%;margin-top:12px;padding:11px;border:0;border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800;cursor:pointer}
+  .subscriber-code-card .code-submit:disabled{opacity:.6;cursor:default}
+  .subscriber-code-card .code-error{min-height:20px;margin-top:8px;color:var(--red);font-size:12px}
+  .subscriber-code-card .code-close{position:absolute;right:14px;top:12px;border:0;background:transparent;color:var(--sub);font-size:26px;line-height:1;cursor:pointer}
   .tab.subscriber{border-color:#E0B84D;background:#FFF8E8}
   .tab.subscriber:not(.on){color:#8A6D1F}
   .tab.apply-cta{max-width:100%;min-height:36px;justify-content:center;gap:7.2px;padding:8.1px 10.8px;text-align:center;white-space:normal;word-break:keep-all;line-height:1.35;font-size:11.25px;font-weight:800;text-decoration:none;background:var(--navy);border:1.8px solid #E0B84D;color:#fff;box-shadow:0 4px 12px rgba(15,43,61,.22)}
@@ -294,6 +306,7 @@ try {
   .listing-trend-change button.price{border:0;font-family:inherit;font-weight:inherit;line-height:inherit;cursor:pointer}
   .listing-trend-change button.price:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .listing-trend-change .price.now{background:#EAF2FF;color:var(--blue)}
+  .listing-trend-row.rising .listing-trend-change .price.now{background:#FEF2F2;color:var(--red)}
   .listing-trend-change .date{color:var(--sub);font-size:calc(9px * var(--history-scale,1));font-weight:500}
   .listing-trend-change .arrow{flex:none;color:var(--sub)}
   .listing-trend-history{margin:7px 0 0 30px;color:var(--sub);font-size:10px}
@@ -470,6 +483,18 @@ try {
 </head>
 <body>
 <div class="wrap">
+  <div class="subscriber-code-overlay" id="subscriberCodeOverlay" hidden>
+    <div class="subscriber-code-card" role="dialog" aria-modal="true" aria-labelledby="subscriberCodeTitle">
+      <button class="code-close" id="subscriberCodeClose" type="button" aria-label="닫기">×</button>
+      <h2 id="subscriberCodeTitle">접근 코드 입력</h2>
+      <p>이용 중인 접근 코드를 입력해 주세요.</p>
+      <form id="subscriberCodeForm">
+        <input id="subscriberCodeInput" type="text" placeholder="ABCD-1234" autocomplete="off" autocapitalize="characters" maxlength="20" aria-label="접근 코드">
+        <div class="code-error" id="subscriberCodeError" role="alert"></div>
+        <button class="code-submit" id="subscriberCodeSubmit" type="submit">로그인</button>
+      </form>
+    </div>
+  </div>
   <div id="pwaModalBg" onclick="if(event.target===this)closePwaModal()">
     <div id="pwaModal">
       <h3>📲 홈 화면에 추가하기</h3>
@@ -636,6 +661,55 @@ try {
         return ok;
       });
 
+      const codeOverlay = document.getElementById('subscriberCodeOverlay');
+      const codeInput = document.getElementById('subscriberCodeInput');
+      const codeError = document.getElementById('subscriberCodeError');
+      const codeSubmit = document.getElementById('subscriberCodeSubmit');
+      const closeSubscriberCodeInput = () => { codeOverlay.hidden = true; };
+      document.getElementById('subscriberCodeClose').addEventListener('click', closeSubscriberCodeInput);
+      codeOverlay.addEventListener('click', e => { if (e.target === codeOverlay) closeSubscriberCodeInput(); });
+      codeOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubscriberCodeInput(); });
+      const openSubscriberCodeInput = async () => {
+        await sessionReady;
+        if (verified) return;
+        codeInput.value = '';
+        codeError.textContent = '';
+        codeOverlay.hidden = false;
+        codeInput.focus();
+      };
+      document.getElementById('subscriberCodeForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (codeSubmit.disabled) return;
+        const code = codeInput.value.trim();
+        if (!code) { codeError.textContent = '접근 코드를 입력해 주세요.'; codeInput.focus(); return; }
+        codeSubmit.disabled = true;
+        codeError.textContent = '';
+        try {
+          const r = await aptsumSession.login(code);
+          const login = await r.json().catch(() => ({}));
+          if (r.ok && login.subscribed === true) {
+            scope = login.scope || 'all';
+            activate();
+            closeSubscriberCodeInput();
+            // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
+            setTimeout(() => { if (typeof initFromURL === 'function') initFromURL(); }, 0);
+          } else if (r.status === 401) {
+            codeError.textContent = Number.isInteger(login.remaining) ? `접근 코드가 맞지 않습니다. (남은 시도 ${login.remaining}회)` : '접근 코드가 맞지 않습니다.';
+          } else if (r.status === 403) {
+            codeError.textContent = login.error === 'code_revoked' ? '해지된 접근 코드입니다. 운영자에게 문의해 주세요.' : '기간이 끝난 접근 코드입니다. 운영자에게 문의해 주세요.';
+          } else if (r.status === 429) {
+            // 로그인 시도 제한(5회 실패 시 30분 잠금, 2026.09)
+            const sec = login.retryAfter || 1800;
+            codeError.textContent = `접근 코드를 여러 번 틀려 잠시 잠겼습니다. 약 ${Math.ceil(sec / 60)}분 후 다시 시도해 주세요.`;
+          } else {
+            codeError.textContent = '접근 코드 인증을 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+          }
+        } catch (e) {
+          codeError.textContent = '네트워크 오류로 접근 코드 인증을 처리할 수 없습니다.';
+        } finally {
+          codeSubmit.disabled = false;
+        }
+      });
       let taps = 0, lastTap = 0;
       const zone = document.getElementById('logoTapZone');
       if (zone) {
@@ -646,46 +720,18 @@ try {
           if (taps < 5) return;
 
           taps = 0;
-          await sessionReady;
-          if (verified) return;
-
-          const code = prompt('비공개 탭 접근 코드를 입력하세요');
-          if (code === null) return;
-          try {
-            const r = await aptsumSession.login(code);
-            const login = r.ok ? await r.json() : null;
-            if (login?.subscribed === true) {
-              scope = login.scope || 'all';
-              activate();
-              // 구독 전용 공유 링크로 들어온 뒤 인증한 경우 원래 탭과 필터를 즉시 복원한다.
-              setTimeout(() => { if (typeof initFromURL === 'function') initFromURL(); }, 0);
-            } else if (r.status === 401) {
-              const left = (await r.json().catch(() => ({}))).remaining;
-              alert(Number.isInteger(left) ? `접근 코드가 맞지 않습니다. (남은 시도 ${left}회)` : '접근 코드가 맞지 않습니다.');
-            } else if (r.status === 403) {
-              const err = (await r.json().catch(() => ({}))).error;
-              alert(err === 'code_revoked' ? '해지된 접근 코드입니다. 운영자에게 문의해 주세요.' : '기간이 끝난 접근 코드입니다. 운영자에게 문의해 주세요.');
-            } else if (r.status === 429) {
-              // 로그인 시도 제한(5회 실패 시 30분 잠금, 2026.09)
-              const sec = (await r.json().catch(() => ({}))).retryAfter || 1800;
-              alert(`접근 코드를 여러 번 틀려 잠시 잠겼습니다. 약 ${Math.ceil(sec / 60)}분 후 다시 시도해 주세요.`);
-            } else {
-              alert('접근 코드 인증을 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.');
-            }
-          } catch (e) {
-            alert('네트워크 오류로 접근 코드 인증을 처리할 수 없습니다.');
-          }
+          await openSubscriberCodeInput();
         });
       }
       let logoutTaps = 0, lastLogoutTap = 0;
-      document.querySelector('#tabListingDivider span')?.addEventListener('click', async () => {
+      document.getElementById('tabListingDivider')?.addEventListener('click', async () => {
         const now = Date.now();
-        logoutTaps = now - lastLogoutTap > 1500 ? 1 : logoutTaps + 1;
+        logoutTaps = now - lastLogoutTap > 2500 ? 1 : logoutTaps + 1;
         lastLogoutTap = now;
         if (logoutTaps < 3) return;
         logoutTaps = 0;
         await sessionReady;
-        if (!verified) return;
+        if (!verified) { await openSubscriberCodeInput(); return; }
         try {
           const r = await aptsumSession.logout();
           if (!r.ok) throw new Error('logout_failed');
@@ -798,6 +844,7 @@ try {
     <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</a>
     <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</a>
     <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>최저 호가 하락</a>
+    <a class="tab subscriber" id="tabLTRU" href="./index.html?m=listingrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18M5 15l5-5 4 3 5-7"/></svg>최저 호가 상승</a>
     <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 간 가격차</a>
     <!-- 구독 전용 그룹(2026.08) — 하락 거래·연간 저평가(동일 권역)·역세권·박스권 넷 다 인스타 구독
          콘텐츠라 하나로 묶었다(운영자 정정 — 원래 "운영자 확인용"이라고 잘못 표기했던 두 탭도 실은 구독
@@ -1021,9 +1068,9 @@ try {
     <div id="listingTrendFilters" class="ls-filters" style="display:none">
       <details id="listingTrendHistoryPanel">
         <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--teal-dark)">조회 기록</summary>
-        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="width:100%;min-width:0;margin-top:8px" aria-label="최저 호가 하락 조회 기록"><option value="">최신 업로드</option></select>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingTrendContinuous" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)">연속 하락만</label>
-      <div style="font-size:11px;color:var(--sub);margin-top:4px">최근 3개 기록에서 두 번 연속 하락한 단지·평형만 표시합니다.</div>
+        <select id="listingTrendUpload" onchange="listingTrendUploadApply()" style="width:100%;min-width:0;margin-top:8px" aria-label="최저 호가 조회 기록"><option value="">최신 업로드</option></select>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer"><input id="listingTrendContinuous" type="checkbox" onchange="search({silentScroll:true})" style="width:18px;height:18px;accent-color:var(--teal)"><span id="listingTrendContinuousLabel">연속 하락만</span></label>
+      <div id="listingTrendContinuousHelp" style="font-size:11px;color:var(--sub);margin-top:4px">최근 3개 기록에서 두 번 연속 하락한 단지·평형만 표시합니다.</div>
       <div style="font-size:11px;color:var(--sub);margin-top:6px">선택한 기준일까지 최근 3개 기록의 첫 금액과 마지막 금액을 비교합니다.</div>
       </details>
     </div>
@@ -1048,7 +1095,6 @@ try {
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
-  <div id="dataWarning" role="status" hidden style="padding:12px;color:#8a4b00;background:#fff3cd">일부 데이터 미수신: 결과가 불완전하거나 이전 데이터일 수 있습니다. 다시 검색하면 실패한 월을 재시도합니다.</div>
   <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><div id="tradeLoadNote" class="loading-note" hidden><strong>최근 2개월 실거래 자료를 실시간으로 확인하고 있어요.</strong><p>최신 신고 내역을 확인하는 과정으로, 선택한 지역이 많으면 시간이 더 걸릴 수 있습니다.</p></div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
@@ -1213,12 +1259,12 @@ function pushView(){
 }
 function buildShareURL(inp){
   const p = new URLSearchParams();
-  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? '36' : inp.mN); p.set('f', inp.fM);
+  p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
   if(inp.by) p.set('by', inp.by);
-  if(inp.mode==='listingtrend' && inp.trendUpload) p.set('ltu',inp.trendUpload);
-  if(inp.mode==='listingtrend' && inp.trendContinuous) p.set('ltc','1');
+  if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendUpload) p.set('ltu',inp.trendUpload);
+  if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendContinuous) p.set('ltc','1');
   if((inp.occupancy==='tenant' || (inp.mode==='listingbudget' && inp.occupancy==='presale')) && isListingMode(inp.mode)) p.set('occupancy',inp.occupancy);
-  if((inp.mode==='listingtrend'||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
+  if(((inp.mode==='listingtrend'||inp.mode==='listingrise')||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
@@ -1254,7 +1300,7 @@ async function initFromURL(){
   // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평단가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
-  const URL_MODES = ['complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listinggap',
+  const URL_MODES = ['complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap',
     'newhigh','newlow','pyprice','inversion',
     'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
@@ -1275,8 +1321,8 @@ async function initFromURL(){
     lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1});
   }
   document.getElementById('listingOccupancy').value = normalizeListingOccupancy(p.get('occupancy'),requestedMode);
-  listingTrendUploadId = requestedMode==='listingtrend' ? (p.get('ltu')||'') : '';
-  document.getElementById('listingTrendContinuous').checked=requestedMode==='listingtrend' && p.get('ltc')==='1';
+  listingTrendUploadId = (requestedMode==='listingtrend'||requestedMode==='listingrise') ? (p.get('ltu')||'') : '';
+  document.getElementById('listingTrendContinuous').checked=(requestedMode==='listingtrend'||requestedMode==='listingrise') && p.get('ltc')==='1';
 
   if(requestedMode==='listinggap' && (hasSharedQuery || p.has('lg'))){
     const [small,large] = (p.get('lg')||'20-30').split('-').map(Number);
@@ -1489,7 +1535,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
+  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -1512,7 +1558,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -1523,11 +1569,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -1543,7 +1589,7 @@ function favRegionGo(code){
   updateRegionFavBtn();
   renderFavRegions();
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
-  if(mode==='region'||mode==='volume'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
+  if(mode==='region'||mode==='volume'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') search(); // 랭킹은 단지명 입력이 필요 없으니 바로 조회
 }
 function restoreMainMenu(){
   searchToken++;lastData=null;
@@ -1553,7 +1599,6 @@ function restoreMainMenu(){
   document.querySelector('.brand-description').textContent='실거래와 실매물, 아파트 가격을 한눈에';
   document.getElementById('result').replaceChildren();document.getElementById('result').classList.remove('on');
   document.getElementById('error').classList.remove('on');document.getElementById('loading').classList.remove('on');
-  document.getElementById('dataWarning').hidden=true;
   document.getElementById('adArea').innerHTML=adBannerHTML();document.getElementById('staticAdArea').innerHTML=couponBannerHTML();fillAds();
 }
 function restoreListingSelectionInputs(inp){
@@ -1626,7 +1671,7 @@ function restoreView(vi){
   else if(v.data.mode==='longpeaklisting') renderListingUndervalue(v.data);
   else if(v.data.mode==='listingurgent') renderListingUrgent(v.data);
   else if(v.data.mode==='listingbudget') renderListingBudget(v.data);
-  else if(v.data.mode==='listingtrend') renderListingTrend(v.data);
+  else if((v.data.mode==='listingtrend'||v.data.mode==='listingrise')) renderListingTrend(v.data);
   else if(v.data.mode==='listinggap') renderListingGap(v.data);
   else if(v.data.mode==='volume') renderVolume(v.data);
   else if(v.data.mode==='newhigh') renderNewHigh(v.data);
@@ -1730,7 +1775,7 @@ const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평�
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){
   return mode==='region' || (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
-    || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| mode==='listingtrend' || mode==='listinggap';
+    || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| (mode==='listingtrend'||mode==='listingrise') || mode==='listinggap';
 }
 function regionSelMax(){
   // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
@@ -1775,7 +1820,7 @@ function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
+  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -1795,7 +1840,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
+  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
     return regionScopeLabel(regionSel);
   }
   const o = sel.options[sel.selectedIndex];
@@ -1806,7 +1851,7 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
+  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
   document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
@@ -1867,7 +1912,7 @@ function pickRegion(v){
     closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
     return;
   }
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -2006,7 +2051,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||mode==='listingtrend'||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -2032,7 +2077,7 @@ function getQueriedSliderPref(m){
     return v;
   }catch{return null;}
 }
-function analysisMonthsForMode(m, selected){ return m==='region' ? '36' : selected; }
+function analysisMonthsForMode(m, selected){ return m==='region' && !['12','24','36','48','60'].includes(String(selected)) ? '36' : selected; }
 function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
@@ -2058,8 +2103,9 @@ function restoreQueriedSliders(m){
   resetQueriedSliderDefaults(m);
   if(!v)return;
   for(const [id,value] of Object.entries(v.selects||{})){
-    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id) || (m==='region'&&id==='monthsN'))continue;
-    const el=document.getElementById(id);if([...el.options].some(o=>o.value===value))el.value=value;
+    if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
+    const el=document.getElementById(id),restored=id==='monthsN'?analysisMonthsForMode(m,value):value;
+    if([...el.options].some(o=>o.value===restored))el.value=restored;
   }
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
   if(isListingMode(m)&&v.ls){lsRestoreLimits(v.limits);lsSet(v.ls);}
@@ -2166,6 +2212,9 @@ function initializeAnalysisRangeNumbers(){
   }
 }
 function initializeAnalysisSelectSliders(){
+  // 필터 초기화 바로 아래에 평형 조건을 두고, 그 다음에 다른 필터를 보여준다.
+  const resetRow=document.getElementById('sliderFilterResetRow');
+  resetRow.after(...['analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
@@ -2302,7 +2351,7 @@ function needsSubscriberSession(m){
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
 const LISTING_TRIAL_LAWD = '11680';
-function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'; }
+function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
 // 무료 체험 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
 function listingTrialBlocked(lawd){
@@ -2363,6 +2412,7 @@ function setMode(m, fromRestore){
   document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget');
   document.getElementById('tabLUR').classList.toggle('on', m==='listingurgent');
   document.getElementById('tabLTRD').classList.toggle('on', m==='listingtrend');
+  document.getElementById('tabLTRU').classList.toggle('on', m==='listingrise');
   document.getElementById('tabLGAP').classList.toggle('on', m==='listinggap');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
@@ -2379,7 +2429,7 @@ function setMode(m, fromRestore){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
+  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -2391,7 +2441,7 @@ function setMode(m, fromRestore){
   // 칩(regionSel)으로 복수 지역을 고르는 탭 전체 — useMulti/renderRegionChips/multiTargets 등이 쓰는 목록과
   // 같은 집합이어야 한다. 예전엔 6개(longpeakdong·surge·inversion·turnover·jeonseupdown·gaptrend)가 빠져 있어
   // 그 탭들만 이전 탭에서 고른 지역을 칩으로 이어받지 못했음(2026.09 수정).
-  const multiModes = ['region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listinggap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
+  const multiModes = ['region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   if(multiModes.includes(m)){
@@ -2415,13 +2465,15 @@ function setMode(m, fromRestore){
   pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : []);
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
-  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingtrend'||m==='longpeaklisting') ? '' : 'none';
+  document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
   document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
-  document.getElementById('lsAgeRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
-  document.getElementById('lsHhRow').style.display = (m==='listingtrend'||m==='longpeaklisting') ? 'none' : '';
+  document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
+  document.getElementById('lsHhRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsRateRow').style.display = m==='listingbudget' ? '' : 'none';
-  document.getElementById('listingTrendFilters').style.display = m==='listingtrend' ? '' : 'none';
+  document.getElementById('listingTrendFilters').style.display = (m==='listingtrend'||m==='listingrise') ? '' : 'none';
+  document.getElementById('listingTrendContinuousLabel').textContent = m==='listingrise' ? '연속 상승만' : '연속 하락만';
+  document.getElementById('listingTrendContinuousHelp').textContent = `최근 3개 기록에서 두 번 연속 ${m==='listingrise'?'상승':'하락'}한 단지·평형만 표시합니다.`;
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -2429,7 +2481,7 @@ function setMode(m, fromRestore){
   presaleOption.hidden=presaleOption.disabled=m!=='listingbudget';
   document.getElementById('listingOccupancy').value=normalizeListingOccupancy(document.getElementById('listingOccupancy').value,m);
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
-  if(m==='listingbudget'||m==='listingurgent'||m==='listingtrend'){
+  if(m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
     const hh = document.getElementById('lsHhMin'), base = m==='listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH;
     const atBase = +hh.value <= +hh.min;
@@ -2437,20 +2489,20 @@ function setMode(m, fromRestore){
     if(atBase || +hh.value < base) hh.value = base;
     lsSync();
   }
-  document.getElementById('floorMin').style.display = (m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
-  document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||m==='listingtrend'||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
+  document.getElementById('floorMin').style.display = (m==='complex'||m==='compare'||m==='region'||m==='volume'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
+  document.getElementById('monthsN').style.display = (m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='shortval'||m==='gap'||m==='subway'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? 'none' : '';
   // 거래량 랭킹만 3/6개월처럼 더 짧은 기간 옵션 노출(운영자 요청) — 다른 탭(지역 랭킹·단지분석·단지비교)은
   // 공유하는 셀렉트라 영향받지 않도록 표시만 토글.
   document.querySelectorAll('#monthsN .volOnly').forEach(o => { o.style.display = m==='volume' ? '' : 'none'; });
   document.getElementById('subwayRow').style.display = m==='subway' ? '' : 'none';
   document.getElementById('risePeriodRow').style.display = (m==='longtermrise'||m==='jeonselongtermrise') ? '' : 'none';
   document.getElementById('priceBandRow').style.display = m==='pricebandrise' ? '' : 'none';
-  // 지역 랭킹은 3년 고정. 다른 탭은 각 탭에서 선택한 조회 기간을 유지한다.
+  // 지역 랭킹은 3년을 기본값으로 쓰고, 선택한 1~5년 조회 기간을 유지한다.
   document.getElementById('monthsN').value = (m==='complex'||m==='compare'||m==='region') ? '36' : '12';
   document.getElementById('floorMin').value = '0';
   restoreQueriedSliders(m);
   document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
-  document.getElementById('monthsN').disabled = m==='region';
+  document.getElementById('monthsN').disabled = false;
   document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
@@ -2518,8 +2570,9 @@ function addCmpRow(){
 // 95/97/99/109/110 다섯 지점만 ±1평 오차가 있어 정확히 맞춤. 나머지 지점은 이미 실측과 일치해 그대로 둠)
 // (2026.10 16→17: 실측 공급면적의 평형 계산을 네이버 표기로 통일. 16의 월별 캐시에는 이전 평형이 남아 있음)
 // (2026.10 17→18: 새 네이버 공급면적 보정 자료를 월별 실거래 평형에 반영)
+// (2026.10 19→20: 20261012 네이버 엑셀 공급면적을 우선 적용하고 기존 월별 평형 캐시 갱신)
 // Split district live and historical transactions now share the selected district calibration.
-const CACHE_VER = 19;
+const CACHE_VER = 20;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -2621,7 +2674,6 @@ const CHUNK_CONCURRENCY = 4;
 // 지역 수가 많을수록 "어느 한 지역의 어느 한 달"이 실패할 확률이 누적돼, 결과적으로 지역 1개만 조회할
 // 때보다 오히려 총 결과가 더 적게 나오는 원인이었음). 청크별로 개별 catch해서 실패한 청크만 null로
 // 표시하고 나머지 성공한 청크는 그대로 살린다.
-const failedMonthRequests = new Set();
 function applyMonthResults(cache, chunk, result, now) {
   if (result === null) return;
   const failed = new Set(result.failedMonths);
@@ -2637,14 +2689,6 @@ async function fetchChunksLimited(chunks, fetchFn, lawd){
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
   }
-  for (const { chunk, items } of results) {
-    for (const ym of chunk) {
-      const key = fetchFn.name + ':' + lawd + ':' + ym;
-      if (items === null || items.failedMonths.includes(ym)) failedMonthRequests.add(key);
-      else failedMonthRequests.delete(key);
-    }
-  }
-  document.getElementById('dataWarning').hidden = failedMonthRequests.size === 0;
   return results;
 }
 
@@ -3311,17 +3355,35 @@ function representativePy(trades){
   for(const t of trades) counts[t.py]=(counts[t.py]||0)+1;
   return +Object.entries(counts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
 }
+// 짧은 검색어가 여러 실거래 등록명에 걸릴 때도 선택지는 네이버 단지명으로 보여준다.
+// 같은 네이버 단지로 묶이는 등록명은 하나로 합치고, 서로 다른 법정동의 동명 단지만 동을 표시한다.
+function complexSuggestionNames(all, candidates, lawd){
+  const choices = candidates.flatMap(candidate=>{
+    const dongChoice = candidate.match(/^(.*) \[([^\]]+)\]$/);
+    const apt = dongChoice ? dongChoice[1] : candidate;
+    const rows = all.filter(t=>t.apt===apt && (!dongChoice || t.umd===dongChoice[2]));
+    return rows.length ? rows.map(t=>({ name:naverNameOf(lawd, t.apt, t.umd) || t.apt, umd:t.umd }))
+      : [{ name:candidate, umd:'' }];
+  });
+  const dongsByName = new Map();
+  choices.forEach(({name, umd})=>{
+    if(!dongsByName.has(name)) dongsByName.set(name, new Set());
+    dongsByName.get(name).add(umd);
+  });
+  return [...new Set(choices.map(({name, umd})=>
+    dongsByName.get(name).size>1 && umd ? `${name} [${umd}]` : name))];
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
-  if(m.multi) return {found:false, multi:true, suggest:m.multi.slice(0,8)};
+  if(m.multi) return {found:false, multi:true, suggest:complexSuggestionNames(all, m.multi, lawd).slice(0,8)};
   const hits = m.hits;
   if(!hits.length){
     const names = [...new Set(all.map(t=>t.apt))];
     const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
     const sugg = names.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
       .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n])=>n);
-    return {found:false, suggest:sugg};
+    return {found:false, suggest:complexSuggestionNames(all, sugg, lawd)};
   }
   const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
   let officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
@@ -4693,13 +4755,13 @@ async function search(opts){
   if(isListingMode(mode) && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(isListingMode(mode))saveQueriedSliders();
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
-  if(mode==='listingtrend') return searchListingTrend(myToken, lawd, silentScroll);
+  if((mode==='listingtrend'||mode==='listingrise')) return searchListingTrend(myToken, lawd, silentScroll);
   if(mode==='listinggap') return searchListingGap(myToken, lawd, silentScroll);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
   if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
   const mN = +analysisMonthsForMode(mode, document.getElementById('monthsN').value);
   if(mode==='region') document.getElementById('monthsN').value = String(mN);
-  const fM = (mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 이 탭들은 층수 필터 UI 자체를 숨겼으므로(고정 내부 층수 규칙 사용) 계산에서도 항상 무시
+  const fM = (mode==='complex'||mode==='compare'||mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 층수 필터를 숨긴 탭에서는 이전 선택값도 계산에 적용하지 않음
   // 연간 저평가: 올해 1월~현재월(N개월) vs 작년 1~12월(12개월) 캘린더 연도 비교 → 실제 분석에 필요한 개월수 = 현재월+12
   const curMonthNum = new Date().getMonth()+1; // 1~12
   // 신고가 탭: "선택 기간"이 아니라 그 단지 최고가 갱신 여부를 봐야 하므로, 조회기간 셀렉트와 무관하게
@@ -5052,7 +5114,7 @@ async function search(opts){
       const pNames = [...new Set(rawP.map(t=>t.apt))].filter(n=>!(d.suggest||[]).includes(n));
       const pSugg = pNames.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
         .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);
-      d.suggest = [...(d.suggest||[]), ...pSugg];
+      d.suggest = [...new Set([...(d.suggest||[]), ...complexSuggestionNames(rawP, pSugg, lawd)])];
     }
 
     // 이 사이 더 최신 검색(예: 지역랭킹에서 단지명 클릭 → 단지분석 검색)이 이미 시작됐다면,
@@ -5495,7 +5557,7 @@ function floorPremiumHTML(d, ci){
     ${fbRow('저층', fb.low, '#94A3B8', pct(fb.low.v))}
     ${fbRow('중층', fb.mid, '#00828A', fb.mid?pct(fb.mid.v):0)}
     ${fbRow('고층', fb.high, '#0F2B3D', pct(fb.high.v))}
-    <div class="rng" style="margin-top:4px">현재 층수 필터와 무관하게, 해당 평형의 관측된 최저~최고 층을 5등분 (저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
+    <div class="rng" style="margin-top:4px">해당 평형의 관측된 최저~최고 층을 5등분 (저층 1구간·중층 2~4구간·고층 5구간)해 비교</div>`;
 }
 
 // ── 월 클릭 → 해당월 개별 거래 플로팅 산점도 ──
@@ -6409,7 +6471,7 @@ function syncListingTrendUpload(choices){
   el.value=listingTrendUploadId;
 
 }
-function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false){
+function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down'){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
   if(idx<1)return [];
   const previousUploadId=snapshots[idx-1].uploadId,byType=new Map();
@@ -6426,9 +6488,10 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false)
     if(prev.uploadId!==previousUploadId || now.uploadId!==current.uploadId || now.ask!==item.ask)continue;
     const older=points[points.length-3];
     const baseline=older && older.uploadId===snapshots[idx-2]?.uploadId ? older : prev;
-    if(now.ask>=baseline.ask)continue;
-    if(continuous && (baseline===prev || !(baseline.ask>prev.ask && prev.ask>now.ask)))continue;
-    rows.push({...item,lawd,gu,prevAsk:baseline.ask,drop:+(baseline.ask-now.ask).toFixed(2),dropPct:(baseline.ask-now.ask)/baseline.ask*100,points});
+    const change=direction==='up'?now.ask-baseline.ask:baseline.ask-now.ask;
+    if(!(change>0))continue;
+    if(continuous && (baseline===prev || !(direction==='up' ? baseline.ask<prev.ask && prev.ask<now.ask : baseline.ask>prev.ask && prev.ask>now.ask)))continue;
+    rows.push({...item,lawd,gu,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100,points});
   }
   return rows;
 }
@@ -6437,6 +6500,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   document.getElementById('loadMsg').textContent=`${targets.length}개 지역 최저 호가 이력 불러오는 중…`;
   document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
   const requestedUpload=listingTrendUploadId;
+  const direction=mode==='listingrise'?'up':'down';
   const continuous=document.getElementById('listingTrendContinuous').checked;
   try{
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
@@ -6459,12 +6523,12 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       currentItems.push(...(chosen.items||[]));
       const idx=snapshots.findIndex(s=>s.uploadId===selectedId);
       historyCount=Math.max(historyCount,idx+1);
-      rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous));
+      rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous,direction));
     }
     lsDataBounds(rows,['py','ask']);Object.assign(ls,lsGet());
     for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
-    const d={found:true,mode:'listingtrend',asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
+    const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
     lastData=d;renderListingTrend(d);
     if(!silentScroll)window.scrollTo(0,0);pushView();saveLastRegionPref(lawd);
@@ -6781,7 +6845,7 @@ function lsSync(el){
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || lastData.mode === 'listingtrend' || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
+  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || (lastData.mode==='listingtrend'||lastData.mode==='listingrise') || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 function getListingBudgetFavorites(){
   try{const items=JSON.parse(localStorage.getItem('apc:budgetConditions')||'[]');return Array.isArray(items)?items.filter(x=>x && typeof x.name==='string' && x.conditions?.ls).slice(0,20):[];}catch(e){return [];}
@@ -6982,12 +7046,12 @@ function listingTrendHistoryHTML(points, id){
 function listingTrendPriceDigits(points, i, baselineAsk){
   const p=points[i];
   const comparison=baselineAsk!==undefined && (p.ask===baselineAsk || i===points.length-1) ? [{ask:baselineAsk},points[points.length-1]] : [];
-  return [...comparison,points[i-1],points[i+1]].some(other=>other && other.ask!==p.ask && other.ask.toFixed(1)===p.ask.toFixed(1)) ? 2 : 1;
+  return [...comparison,points[i-1],points[i+1]].some(other=>other && other.ask!==p.ask && (Math.abs(other.ask-p.ask)<0.05 || other.ask.toFixed(1)===p.ask.toFixed(1))) ? 2 : 1;
 }
 function listingTrendPrecision(points){
-  return points.some((p,i)=>i>0 && p.ask!==points[i-1].ask && p.ask.toFixed(1)===points[i-1].ask.toFixed(1)) ? 2 : 1;
+  return points.some((p,i)=>i>0 && p.ask!==points[i-1].ask && (Math.abs(p.ask-points[i-1].ask)<0.05 || p.ask.toFixed(1)===points[i-1].ask.toFixed(1))) ? 2 : 1;
 }
-function listingTrendRowHTML(x, i, multiRegion){
+function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   const precision=listingTrendPrecision([{ask:x.prevAsk},{ask:x.ask}]);
   const recent = x.points.slice(-3), historyId=`listing-history-${i}`;
   const prices=recent.map((p,j)=>{
@@ -6999,9 +7063,9 @@ function listingTrendRowHTML(x, i, multiRegion){
       : `<span class="price${latest?' now':''}">${label}</span>`;
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
-  return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
+  return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · 최근 3년 최고가 ${x.peak.toFixed(1)}억`:""}</small></span>
-    <span class="val">▼${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
+    <span class="val" style="color:var(--${direction==='up'?'red':'blue'})">${direction==='up'?'▲':'▼'}${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }
@@ -7030,24 +7094,25 @@ function renderListingGap(d){
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 function renderListingTrend(d){
+  const rising=d.mode==='listingrise',word=rising?'상승':'하락';
   listingTrendUploadId=d.trendUpload||'';syncListingTrendUpload(d.trendChoices||[]);
   document.getElementById('listingTrendContinuous').checked=!!d.trendContinuous;
   const multiRegion = regionMulti(d.rows);
   const body = d.historyCount < 2
     ? `<div class="rng" style="padding:10px 0">비교할 최저 호가 이력이 아직 없습니다.</div>`
     : !d.rows.length
-      ? `<div class="rng" style="padding:10px 0">${d.trendContinuous ? '최근 3개 기록에서 두 번 연속 하락한 매물이 없습니다.' : '최근 3개 기록 기준으로 최저 호가가 내린 매물이 없습니다.'}</div>`
-      : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion)).join('');
+      ? `<div class="rng" style="padding:10px 0">${d.trendContinuous ? `최근 3개 기록에서 두 번 연속 ${word}한 단지·평형이 없습니다.` : `최근 3개 기록 기준으로 최저 호가가 ${rising?'오른':'내린'} 단지·평형이 없습니다.`}</div>`
+      : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion,rising?'up':'down')).join('');
   const html = `<div class="card">
-    ${listingHeaderHTML(d, '최저 호가 하락', null, null)}
+    ${listingHeaderHTML(d, `최저 호가 ${word}`, null, null)}
     <div class="sec">
-      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">최근 3개 기록의 첫 금액 대비 마지막 최저 호가가 내려간 매물</div>
-      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.trendContinuous ? '연속 하락만 · ' : ''}하락 금액 큰 순`)}
+      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">최근 3개 기록의 첫 금액 대비 마지막 최저 호가가 ${rising?'올라간':'내려간'} 단지·평형</div>
+      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.trendContinuous ? `연속 ${word}만 · ` : ''}${word} 금액 큰 순`)}
       ${listingLinkLegend()}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 인하를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 선택한 기준일까지 최근 3개 연속 기록의 첫 금액과 마지막 금액을 비교하며, 기록이 2개면 두 금액을 비교합니다. 최근 3개 기록을 선택할 수 있으며, 선택한 기준일까지의 가격 이력을 최대 12일 표시합니다.</div>`;
+    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 선택한 기준일까지 최근 3개 연속 기록의 첫 금액과 마지막 금액을 비교하며, 기록이 2개면 두 금액을 비교합니다. 최근 3개 기록을 선택할 수 있으며, 선택한 기준일까지의 가격 이력을 최대 12일 표시합니다.</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   requestAnimationFrame(fitListingTrendPrices);
   if(document.fonts) document.fonts.ready.then(fitListingTrendPrices);

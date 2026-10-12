@@ -19,15 +19,21 @@ test('share URL preserves build-year and weekly-new-high state', () => {
   assert.equal(params.get('nh7'), '1');
 });
 
-test('region share URL replaces a legacy three-month period with three years', () => {
+test('region share URL keeps a selected five-year period and replaces a legacy three-month period', () => {
   const start = html.indexOf('function buildShareURL(');
   const end = html.indexOf('async function initFromURL(', start);
   const ctx = vm.createContext({ URLSearchParams, location:{ pathname:'/index.html' } });
+  const monthsStart = html.indexOf('function analysisMonthsForMode(');
+  vm.runInContext(html.slice(monthsStart, html.indexOf('function saveQueriedSliders(', monthsStart)), ctx);
   vm.runInContext(html.slice(start, end), ctx);
   const inputs = {mode:'region',mN:'3',fM:'0',cmp:[],lawd:'41173',q:'',regionSel:[],pym:['23-27'],rp:'',pbp:'',pb:''};
   const region = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
   assert.equal(region.get('p'),'36');
   assert.equal(region.get('pym'),'23-27');
+  inputs.mN='60';
+  const fiveYears = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
+  assert.equal(fiveYears.get('p'),'60');
+  inputs.mN='3';
   inputs.mode='volume';
   const volume = new URL('https://example.test'+ctx.buildShareURL(inputs)).searchParams;
   assert.equal(volume.get('p'),'3');
@@ -42,9 +48,11 @@ test('subscriber state is closure-protected and URL restore waits for session ch
 });
 test('네이버 실매물 기준 제목을 세 번 누르면 코드 세션에서 로그아웃한다', async () => {
   const listeners = {};
-  const element = () => ({style:{},classList:{remove(){}},addEventListener(type,handler){listeners.title=handler;}});
-  const title = element();
+  const element = id => ({style:{},classList:{remove(){}},addEventListener(type,handler){if(id==='tabListingDivider' && type==='click')listeners.title=handler;},focus(){}});
+  const title = element('tabListingDivider');
   const nodes = Object.fromEntries(['tabNL','tabLPD','tabNH7','tabPBR','tabSubDivider','tabApply'].map(id=>[id,element()]));
+  for(const id of ['subscriberCodeOverlay','subscriberCodeInput','subscriberCodeError','subscriberCodeSubmit','subscriberCodeClose','subscriberCodeForm'])nodes[id]=element(id);
+  nodes.tabListingDivider=title;
   let now=1000, logouts=0, reloads=0;
   const context={
     document:{addEventListener(type,handler){listeners.ready=handler;},getElementById(id){return nodes[id]||null;},querySelector(){return title;}},
@@ -60,6 +68,39 @@ test('네이버 실매물 기준 제목을 세 번 누르면 코드 세션에서
   await listeners.title();
   assert.equal(logouts,1);
   assert.equal(reloads,1);
+});
+
+test('로그아웃 상태에서 같은 제목을 세 번 누르면 코드 입력창이 다시 열린다', async () => {
+  const listeners = {};
+  const element = id => ({style:{},classList:{remove(){}},hidden:true,value:'',disabled:false,addEventListener(type,handler){listeners[`${id}:${type}`]=handler;},focus(){}});
+  const title = element('tabListingDivider');
+  const nodes = Object.fromEntries(['tabNL','tabLPD','tabNH7','tabPBR','tabSubDivider','tabApply'].map(id=>[id,element()]));
+  for(const id of ['subscriberCodeOverlay','subscriberCodeInput','subscriberCodeError','subscriberCodeSubmit','subscriberCodeClose','subscriberCodeForm'])nodes[id]=element(id);
+  nodes.tabListingDivider=title;
+  let now=1000, logins=0, logouts=0, reloads=0;
+  const context={
+    document:{addEventListener(type,handler){listeners.ready=handler;},getElementById(id){return nodes[id]||null;},querySelector(){return title;}},
+    aptsumSession:{check:async()=>Response.json({subscribed:false}),login:async code=>{logins++;assert.equal(code,'ABCD-1234');return Response.json({subscribed:true,scope:'all'});},logout:async()=>{logouts++;return Response.json({subscribed:false});}},
+    Date:{now:()=>now},location:{reload(){reloads++;}},
+    alert(){throw new Error('unexpected alert');},setTimeout(){},
+  };
+  vm.runInNewContext(html.slice(html.indexOf('const aptsumSubscriberGate = (() => {'),html.indexOf('const SUBSCRIBER_APPLY_LINK')),context);
+  listeners.ready();
+  await Promise.resolve();
+  for(let tap=0;tap<3;tap++){await listeners['tabListingDivider:click']();now+=400;}
+  assert.equal(nodes.subscriberCodeOverlay.hidden,false);
+  listeners['subscriberCodeClose:click']();
+  assert.equal(nodes.subscriberCodeOverlay.hidden,true);
+  now+=2600;
+  for(let tap=0;tap<3;tap++){await listeners['tabListingDivider:click']();now+=400;}
+  assert.equal(nodes.subscriberCodeOverlay.hidden,false);
+  nodes.subscriberCodeInput.value='ABCD-1234';
+  await listeners['subscriberCodeForm:submit']({preventDefault(){}});
+  assert.equal(logins,1);
+  assert.equal(logouts,0);
+  assert.equal(reloads,0);
+  assert.equal(nodes.subscriberCodeOverlay.hidden,true);
+  assert.equal(nodes.tabApply.style.display,'none');
 });
 
 test('build-year is restored for shared URLs and browser history', () => {
