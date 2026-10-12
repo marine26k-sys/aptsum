@@ -621,7 +621,7 @@ try {
       document.addEventListener('DOMContentLoaded', function(){
       // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 무료 체험으로 조회할 수 있어 항상 노출 —
       // 여기(인증 시에만 노출·해지 시 숨김) 목록에서 뺐다. 지역 제한은 listingTrialBlocked()와 서버(/api/listings)가 건다.
-      const subTabs = ['tabNL', 'tabLPD', 'tabNH7', 'tabPBR'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabNH7', 'tabPBR'].map(id => document.getElementById(id)).filter(Boolean);
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
       if (!subTabs.length) { resolveReady(false); return; }
 
@@ -780,7 +780,7 @@ try {
 
   <div class="tabs">
     <!-- 그룹 구분선(2026.09 운영자 요청) — 아래 "네이버 실매물 기준"과 짝을 이루도록 맨 위 공개 탭 묶음에도 데이터 출처를 표시 -->
-    <div class="tab-divider source-divider" id="tabRtmsDivider" style="margin-top:0"><span>국토부 실거래 기준</span></div>
+    <div class="tab-divider source-divider" id="tabRtmsDivider" style="margin-top:0"><span>국토부 실거래 분석</span></div>
     <script>
       (() => {
         const title = document.querySelector('#tabRtmsDivider span');
@@ -801,7 +801,7 @@ try {
       <div class="tab-grp-tabs">
           <a class="tab" id="tabC" href="./index.html?m=complex"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>단지 분석</a>
           <a class="tab" id="tabCmp" href="./index.html?m=compare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/></svg>단지 비교</a>
-          <a class="tab" id="tabCY" href="./cheongyak.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4m-9 7h3m4 0h3"/></svg>청약</a>
+          <a class="tab" id="tabCY" href="./cheongyak.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4m-9 7h3m4 0h3"/></svg>청약 공고</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -816,9 +816,7 @@ try {
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>지역</a>
-          <a class="tab" id="tabV" href="./index.html?m=volume"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량</a>
           <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</a>
-          <a class="tab" id="tabGap" href="./index.html?m=gap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -826,21 +824,19 @@ try {
       <div class="tab-grp-tabs">
           <a class="tab" id="tabNH" href="./index.html?m=newhigh"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</a>
           <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</a>
-          <a class="tab" id="tabJLTR" href="./index.html?m=jeonselongtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</a>
       </div>
     </div>
     <div class="tab-grp">
       <div class="tab-grp-name">저평가</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabSU" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기</a>
-          <a class="tab" id="tabP" href="./index.html?m=peak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기</a>
           <a class="tab" id="tabLP" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간</a>
           <a class="tab" id="tabINV" href="./index.html?m=inversion"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</a>
       </div>
     </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
          쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
-    <div class="tab-divider source-divider" id="tabListingDivider"><span>네이버 실매물 기준</span></div>
+    <div class="tab-divider source-divider" id="tabListingDivider"><span>네이버 실거래 분석</span></div>
     <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별 실매물</a>
     <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매 선별</a>
     <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가 실매물</a>
@@ -854,6 +850,10 @@ try {
          2026.09 — 화면 표기를 "구독 전용"→"비공개 탭"으로 변경(구독비 없음, 운영자 요청). 코드·쿠키·API의
          subscriber 명칭은 그대로 둠(표기만 변경).-->
     <div class="tab-divider" id="tabSubDivider" style="display:none">비공개 탭</div>
+    <a class="tab subscriber" id="tabV" style="display:none" href="./index.html?m=volume"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</a>
+    <a class="tab subscriber" id="tabGap" style="display:none" href="./index.html?m=gap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</a>
+    <a class="tab subscriber" id="tabJLTR" style="display:none" href="./index.html?m=jeonselongtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</a>
+    <a class="tab subscriber" id="tabP" style="display:none" href="./index.html?m=peak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</a>
     <a class="tab subscriber" id="tabNL" style="display:none" href="./index.html?m=newlow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</a>
     <a class="tab subscriber" id="tabLPD" style="display:none" href="./index.html?m=longpeakdong"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</a>
     <a class="tab subscriber" id="tabNH7" style="display:none" href="./index.html?m=newhigh&amp;nh7=1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</a>
@@ -2351,7 +2351,7 @@ function pyBandMultiFilter(items){
 
 // 게이트
 function needsSubscriberSession(m){
-  return m==='newlow'||m==='longpeakdong'||m==='pricebandrise'||(m==='newhigh'&&newHighWeekOnly);
+  return ['volume','gap','jeonselongtermrise','peak'].includes(m)||m==='newlow'||m==='longpeakdong'||m==='pricebandrise'||(m==='newhigh'&&newHighWeekOnly);
 }
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).

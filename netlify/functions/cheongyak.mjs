@@ -1,10 +1,13 @@
+import {validDate} from '../../shared/cheongyak.mjs';
 export const config={path:'/api/cheongyak'};
 const regions=new Set(['서울','경기','인천','부산']);
 export function updatedTime(data){
   const match=String(data?.updated_at||'').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) KST$/);
-  return match?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
+  return match&&validDate(match[1])&&+match[2].slice(0,2)<24&&+match[2].slice(3)<60?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
 }
-export function validData(data){return Array.isArray(data?.items)&&data.items.length>0&&Number.isFinite(updatedTime(data))&&data.items.every(x=>x.name&&x.pblancNo&&['apt','remainder','other'].includes(x.category));}
+export function validData(data){return Array.isArray(data?.items)&&data.items.length>0&&Number.isFinite(updatedTime(data))&&data.items.every(x=>x&&typeof x.name==='string'&&typeof x.pblancNo==='string'&&['apt','remainder','other'].includes(x.category)&&
+  (x.units==null||Array.isArray(x.units)&&x.units.every(u=>u&&typeof u==='object'))&&
+  (x.schedule==null||Array.isArray(x.schedule)&&x.schedule.every(s=>s&&typeof s==='object')));}
 export default async function handler(request){
   const origin=new URL(request.url).origin;
   const urls=[`${origin}/data/cheongyak.json`,'https://raw.githubusercontent.com/marine26k-sys/aptsum/main/data/cheongyak.json'];

@@ -2,8 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {kstToday,noticeStatus,filterNotices,officialURL,daysUntil} from '../shared/cheongyak.mjs';
-import handler from '../netlify/functions/cheongyak.mjs';
+import handler,{validData,updatedTime} from '../netlify/functions/cheongyak.mjs';
 const item={name:'검증 공고',category:'apt',pblancNo:'1',region:'서울',apply_start:'2026-10-13',apply_end:'2026-10-14'};
+test('malformed dates and detail tables do not replace the valid deployed dataset',()=>{
+ assert(Number.isNaN(updatedTime({updated_at:'2026-02-31 06:30 KST'})));
+ assert(Number.isNaN(updatedTime({updated_at:'2026-10-13 29:30 KST'})));
+ assert.equal(validData({updated_at:'2026-10-13 06:30 KST',items:[{...item,units:{}}]}),false);
+ assert.equal(validData({updated_at:'2026-10-13 06:30 KST',items:[{...item,schedule:[null]}]}),false);
+});
 test('KST midnight and closing day retain correct application status',()=>{
  assert.equal(kstToday(new Date('2026-10-12T15:00:00Z')),'2026-10-13');
  assert.equal(noticeStatus(item,'2026-10-12'),'upcoming');
