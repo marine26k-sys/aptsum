@@ -8,6 +8,17 @@ const ctx=vm.createContext({Date,Map,LISTING_MIN_HH:300,lsPyMatch:()=>true});
 vm.runInContext(html.slice(html.indexOf('function listingTrendChoices('),html.indexOf('async function searchListingTrend(')),ctx);
 const item=(ask,extra={})=>({nid:'a',ex:84,ask,hh:500,apt:'옛 단지',py:34,url:'https://fin.land.naver.com/articles/1',...extra});
 const snapshots=[12,11,10,13].map((ask,i)=>({uploadId:`u${i}`,asOf:`2026.10.0${i+1}`,items:[item(ask)]}));
+test('direction changes preserve selected filters and refresh existing results',()=>{
+ const filters={p0:30,p1:40,q0:5,q1:15},limits={ask:{min:0,max:70}};let refreshed=0;
+ const elements={listingTrendDirection:{value:'up'},loading:{classList:{contains:()=>false}}};
+ const state=vm.createContext({mode:'listingtrend',lastData:{mode:'listingtrend'},document:{getElementById:id=>elements[id]},
+  lsGet:()=>filters,lsSavedLimits:()=>limits,lsRestoreLimits:value=>assert.equal(value,limits),lsSet:value=>assert.equal(value,filters),
+  setMode:next=>{state.mode=next;return true;},search:()=>refreshed++});
+ vm.runInContext(html.slice(html.indexOf('function listingTrendDirectionApply('),html.indexOf('async function searchListingTrend(')),state);
+ state.listingTrendDirectionApply();assert.equal(state.mode,'listingrise');assert.equal(refreshed,1);
+ elements.listingTrendDirection.value='down';state.lastData=null;
+ state.listingTrendDirectionApply();assert.equal(state.mode,'listingtrend');assert.equal(refreshed,1);
+});
 test('older selected uploads restore old declines even when newest upload rose or removed the apartment',()=>{
  assert.equal(ctx.listingTrendSnapshotRows(snapshots[3],snapshots,{},'11680','강남구').length,0);
  const previous=ctx.listingTrendSnapshotRows(snapshots[2],snapshots,{},'11680','강남구')[0];
