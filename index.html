@@ -6545,7 +6545,8 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       historyCount=Math.max(historyCount,idx+1);
       rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous,direction));
     }
-    lsDataBounds(rows,['py','ask']);Object.assign(ls,lsGet());
+    // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
+    lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
     for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
     const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
