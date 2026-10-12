@@ -1,6 +1,6 @@
 import {CATEGORIES,kstToday,noticeKey,noticeStatus,daysUntil,officialURL,filterNotices} from '../shared/cheongyak.mjs';
 const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let items=[],limit=20,today=kstToday(),favorites=[];
+let items=[],limit=20,today=kstToday(),favorites=[],loading=false,lastLoaded=0;
 try{const data=JSON.parse(localStorage.getItem('apc:cheongyak:favs:v1')||'[]');if(Array.isArray(data))favorites=data.filter(x=>typeof x==='string');}catch{}
 const params=new URLSearchParams(location.search);
 for(const [id,key] of [['status','s'],['category','c'],['region','r']])if([...$(id).options].some(o=>o.value===params.get(key)))$(id).value=params.get(key);
@@ -33,13 +33,17 @@ $('reset').addEventListener('click',()=>{$('status').value='active';$('category'
 $('more').addEventListener('click',()=>{limit+=20;render();});
 $('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;favorites=favorites.includes(key)?favorites.filter(x=>x!==key):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
 async function load(){
+ if(loading)return;loading=true;
  try{
   const response=await fetch('/api/cheongyak');if(!response.ok)throw Error('network');const data=await response.json();if(!Array.isArray(data.items))throw Error('format');
   const seen=new Set();items=data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x)));
   $('updated').textContent=`최근 갱신 ${data.updated_at||'확인 불가'} · 서울·경기·인천·부산`;
   const match=String(data.updated_at||'').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) KST$/),updated=match?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
+  $('warning').hidden=true;
   if(!Number.isFinite(updated)||Date.now()-updated>36*3600000){$('warning').hidden=false;$('warning').textContent='데이터 갱신이 지연되고 있습니다. 최근 공고는 청약홈에서 확인해 주세요.';}
-  render();
- }catch{$('resultCount').textContent='공고 조회 실패';$('results').innerHTML='<div class="empty">공고를 불러오지 못했습니다.<br><button class="reset" id="retry">다시 시도</button></div>';$('retry').addEventListener('click',load);}
+  lastLoaded=Date.now();render();
+ }catch{if(items.length){$('warning').hidden=false;$('warning').textContent='최신 공고를 갱신하지 못해 이전 자료를 표시합니다. 청약홈에서 최신 공고를 확인해 주세요.';return;}$('resultCount').textContent='공고 조회 실패';$('results').innerHTML='<div class="empty">공고를 불러오지 못했습니다.<br><button class="reset" id="retry">다시 시도</button></div>';$('retry').addEventListener('click',load);}
+ finally{loading=false;}
 }
-load();setInterval(()=>{const date=kstToday();if(date!==today){today=date;render();}},60000);
+load();setInterval(()=>{const date=kstToday();if(date!==today){today=date;render();}if(!document.hidden&&Date.now()-lastLoaded>300000)load();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoaded>300000)load();});
