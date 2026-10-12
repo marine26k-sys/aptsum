@@ -2,10 +2,9 @@
 // naver의 비교 규칙 + 법정동 + K-apt 세대수 검증을 통과한 뒤 수행한다.
 const norm = s => String(s || '').replace(/\s/g,'');
 const caches = new Map();
-// 네이버 원본의 공급면적 평형 표기: 소수점 0.8 이상 올림, 미만 버림.
-// naver/src/utils/helpers.py의 AreaConverter 및 공급면적 엑셀과 동일하다.
+// 개정 네이버 매칭표의 supply_pyeong_rule: floor(supply_area * 0.3025).
 export function supplyAreaToPy(supplyArea) {
-  return Math.floor(Number((supplyArea * 0.3025).toFixed(10)) + 0.2);
+  return Math.floor(supplyArea * 0.3025);
 }
 export function applyNaverSupplyAreas(items, records, lawd) {
   const exactTypes = new Map();

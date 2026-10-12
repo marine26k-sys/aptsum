@@ -2,21 +2,21 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import { applyNaverSupplyAreas,applySupplyAreaOverrides,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
-test('Naver supply-area labels keep 68.62㎡ at 20평 and 69.42㎡ at 21평',()=>{
+test('revised Naver mapping floors supply pyeong including values just below 21',()=>{
  assert.equal(supplyAreaToPy(68.62),20);
- assert.equal(supplyAreaToPy(69.42),21);
+ assert.equal(supplyAreaToPy(69.42),20);
  const records=[
   {apt:'평촌자이아이파크',hh:2737,exclusiveArea:45.5844,supplyArea:68.62},
   {apt:'평촌자이아이파크',hh:2737,exclusiveArea:49.9668,supplyArea:69.42},
  ];
  const trades=[{apt:'평촌자이아이파크',area:45.5844,py:21},{apt:'평촌자이아이파크',area:49.9668,py:21}];
- assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[20,21]);
+ assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[20,20]);
 });
 test('Pyeongchon Raemian Prugio exclusive 59 follows the workbook supply area',()=>{
  const records=[{apt:'평촌래미안푸르지오',hh:1199,exclusiveArea:59.93,supplyArea:85.55}];
  const trades=[{apt:'평촌래미안푸르지오',area:59.93,py:26},{apt:'평촌래미안푸르지오',area:59.96,py:26}];
- assert.deepEqual(applyNaverSupplyAreas(trades,records,'41173').map(t=>t.py),[26,26]);
- assert.deepEqual(applyNaverSupplyAreas(trades,records,'41171').map(t=>t.py),[26,26]);
+ assert.deepEqual(applyNaverSupplyAreas(trades,records,'41173').map(t=>t.py),[25,25]);
+ assert.deepEqual(applyNaverSupplyAreas(trades,records,'41171').map(t=>t.py),[25,25]);
 });
 test('verified supply areas can correct large interpolation errors',()=>{
  assert.equal(applyNaverSupplyAreas([{apt:'단지',area:194.98,py:77}],[row])[0].py,70);
@@ -88,6 +88,6 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: split district liv
   };
   const {default:handler}=await import(`../netlify/functions/${kind}.mjs`);
   const response=await handler(new Request(`https://${kind}-split-calibration.example/api/${kind}?lawd=HS-%EB%B3%91%EC%A0%90%EA%B5%AC&yms=202610&v=15`));
-  assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===24));
+  assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===23));
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });

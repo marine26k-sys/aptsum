@@ -33,6 +33,8 @@ def main():
         source_data = json.loads(args.mapping.read_text())
         if source_data.get('schema_version') != 1 or not isinstance(source_data.get('complexes'), dict):
             parser.error('지원하지 않는 네이버 매칭표 형식')
+        if source_data.get('supply_pyeong_rule') != 'floor(supply_area * 0.3025)':
+            parser.error('지원하지 않는 공급평형 계산 규칙')
         for nid, entry in source_data['complexes'].items():
             region = entry.get('region') or {}
             city, gu, dong = region.get('시'), region.get('구'), region.get('법정동')
@@ -135,8 +137,8 @@ def main():
                 for ex,supplies in c['areas'].items():
                     areas={(h['apt'],float(h['area'])) for h in hits if area_matches(h.get('area',0),ex)}
                     # 엑셀 면적은 네이버 응답의 정수 표기. 원본 실거래 면적을 다시 확인한다.
-                    # 네이버 앱의 AreaConverter와 같은 평형 표기를 사용한다.
-                    pys={math.floor(round(s*0.3025,10)+0.2) for s in supplies}
+                    # 개정 매칭표의 공급평형 계산 규칙을 사용한다.
+                    pys={math.floor(s*0.3025) for s in supplies}
                     if len(pys)!=1:stats['ambiguousTypes']+=1;continue
                     # 서로 다른 타입의 실제 공급면적이어도 표시 평형이 같으면
                     # 이 파일의 용도(평형 라벨 보정)에는 모호함이 없다.
@@ -150,7 +152,7 @@ def main():
                         item={'apt':name,'hh':hh,'exclusiveArea':ex if args.mapping else area,'supplyArea':supply}
                         previous=outputs[lawd].get(k)
                         if previous is False:continue
-                        if previous and (previous['hh']!=hh or math.floor(round(previous['supplyArea']*0.3025,10)+0.2)!=next(iter(pys))):
+                        if previous and (previous['hh']!=hh or math.floor(previous['supplyArea']*0.3025)!=next(iter(pys))):
                             outputs[lawd][k]=False;stats['roundedAreaConflict']+=1
                         elif previous is None:outputs[lawd][k]=item
     if args.previous:
