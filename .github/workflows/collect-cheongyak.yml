@@ -1,0 +1,34 @@
+name: 청약 공고 자동 갱신
+on:
+  schedule:
+    - cron: '30 21 * * *'
+    - cron: '30 9 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: aptsum-data-collect
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 서울·경기·인천·부산 청약홈 공고 수집
+        run: python scripts/collect-cheongyak.py
+      - name: 데이터 저장
+        run: |
+          git config user.name 'aptsum-bot'
+          git config user.email 'aptsum-bot@users.noreply.github.com'
+          git add data/cheongyak.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'data: 청약 공고 자동 갱신 [skip netlify]'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

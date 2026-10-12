@@ -36,7 +36,7 @@ export default async (request, context) => {
   if (request.method === "GET") {
     const session = await getSubscriberSession(request, sessionSecret);
     if (session?.kind === "personal") await touchDevice(session.sub.id, session.did);
-    return response({ subscribed: !!session, scope: session?.sub?.scope || "all", recovery: createRecovery(sessionSecret, session) });
+    return response({ subscribed: !!session, master: session?.kind === "shared", scope: session?.sub?.scope || "all", recovery: createRecovery(sessionSecret, session) });
   }
 
   if (request.method !== "POST") {
@@ -63,7 +63,7 @@ export default async (request, context) => {
     // 최초 로그인 만료일과 기기 ID를 유지한다. 복원으로 이용 기간을 연장하지 않는다.
     const {token,maxAge} = restorePersonalSession(sessionSecret, session);
     await touchDevice(session.sub.id, session.did);
-    return response({ subscribed: true, scope: session.sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
+    return response({ subscribed: true, master: false, scope: session.sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
   }
 
   // 로그인 시도 제한 — 5번 틀리면 30분 잠금(shared/login-throttle.mjs)
@@ -75,7 +75,7 @@ export default async (request, context) => {
   if (typeof code === "string" && code.length <= 256) {
     if (accessCode && sameValue(code, accessCode)) {
       await throttle.success();
-      return response({ subscribed: true }, { headers: { "Set-Cookie": sessionCookie(createSession(sessionSecret, accessCode)) } });
+      return response({ subscribed: true, master: true }, { headers: { "Set-Cookie": sessionCookie(createSession(sessionSecret, accessCode)) } });
     }
     const sub = await findByCode(code);
     if (sub) {
@@ -85,7 +85,7 @@ export default async (request, context) => {
       const { token, did, maxAge } = createPersonalSession(sessionSecret, sub);
       await touchDevice(sub.id, did, true);
       const session = {kind:"personal",sub,did,expiresAt:JSON.parse(Buffer.from(token.split(".")[0],"base64url").toString()).expiresAt};
-      return response({ subscribed: true, scope: sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
+      return response({ subscribed: true, master: false, scope: sub.scope || "all", recovery: createRecovery(sessionSecret, session) }, { headers: { "Set-Cookie": sessionCookie(token, maxAge) } });
     }
   }
 
