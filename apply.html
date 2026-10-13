@@ -103,13 +103,16 @@
   [hidden]{display:none!important}
 </style>
 <script src="/assets/subscriber-session.js?v=1"></script>
+<link rel="stylesheet" href="/assets/page-header.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <a class="back" href="./index.html" aria-label="메인으로">←</a>
-    <div class="logo"><span style="color:#00C2C2">아파트썸</span> 실매물 탭 신청</div>
-    <p>신청 · 결제 · 이용까지 여기서 한 번에</p>
+    <div class="logo">
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
+      <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실매물 탭 신청</span></div>
+    </div>
   </header>
 
   <!-- 결제 후 돌아왔을 때 결과 -->
@@ -175,6 +178,10 @@
       <div id="emailField" hidden>
       <label class="q" for="fEmail"><i>*</i>선별 리스트 받을 메일 주소</label>
       <input type="email" id="fEmail" name="email" autocomplete="email" maxlength="120" placeholder="example@naver.com" required>
+      <label class="q" for="fEmailConfirm"><i>*</i>메일 주소 다시 입력</label>
+      <div class="hint" id="emailConfirmReason">메일 주소 오입력으로 선별 리스트를 받지 못하는 일을 방지하기 위해 한 번 더 확인합니다.</div>
+      <input type="email" id="fEmailConfirm" name="emailConfirm" autocomplete="off" maxlength="120" placeholder="같은 메일 주소를 다시 입력해 주세요" aria-describedby="emailConfirmReason emailConfirmMsg" required>
+      <div class="hint" id="emailConfirmMsg" aria-live="polite"></div>
 
       </div>
       <div class="agree">
@@ -240,7 +247,7 @@ function renderProduct(){
   $('#mailStep').hidden=!p.includesMail;
   $('#selectionFields').hidden=!p.includesMail;
   $('#emailField').hidden=!p.includesMail;
-  for(const k of ['region','budget','size','movein','condition','email']) { $('#applyForm').elements[k].disabled=!p.includesMail; $('#applyForm').elements[k].required=p.includesMail; }
+  for(const k of ['region','budget','size','movein','condition','email','emailConfirm']) { $('#applyForm').elements[k].disabled=!p.includesMail; $('#applyForm').elements[k].required=p.includesMail; }
   $('#consentPurpose').textContent=p.includesMail?'단지 선별 메일 발송, 결제 확인 및 이용권 발급':'결제 확인 및 이용권 발급';
   $('#consentFields').textContent=p.includesMail?'메일 주소, 위 희망 조건, 결제 정보(결제창에서 입력한 휴대폰 번호 포함)':'결제 정보(결제창에서 입력한 휴대폰 번호 포함)';
   $('#payBtn').disabled=!p.paymentEnabled;
@@ -265,6 +272,14 @@ const ERR = {
   too_many_attempts:'신청이 너무 많이 들어왔습니다. 잠시 후 다시 시도해 주세요.',
 };
 
+function validateEmailConfirmation(){
+ const email=$('#fEmail'),confirm=$('#fEmailConfirm');
+ const mismatch=!confirm.disabled&&confirm.value!==''&&email.value.trim()!==confirm.value.trim();
+ confirm.setCustomValidity(mismatch?'메일 주소가 일치하지 않습니다. 다시 확인해 주세요.':'');
+ $('#emailConfirmMsg').textContent=mismatch?'메일 주소가 일치하지 않습니다. 다시 확인해 주세요.':'';
+ return !mismatch;
+}
+for(const id of ['fEmail','fEmailConfirm']) $('#'+id).addEventListener('input',validateEmailConfirmation);
 $('#applyForm').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const msg = $('#applyMsg');
@@ -275,6 +290,7 @@ $('#applyForm').addEventListener('submit', async (ev) => {
   for(const k of ['region','budget','size','movein','condition','email']) body[k] = selectedProduct().includesMail ? f.elements[k].value.trim() : '';
   const missing = (selectedProduct().includesMail ? ['region','budget','size','movein','condition','email'] : []).find(k => !body[k]);
   if(missing){ msg.textContent = ERR[`${missing}_required`] || ERR.invalid_email; f.elements[missing].focus(); return; }
+  if(selectedProduct().includesMail&&(!f.elements.emailConfirm.value.trim()||!validateEmailConfirmation())){msg.textContent='메일 주소를 다시 입력하고 일치하는지 확인해 주세요.';f.elements.emailConfirm.focus();return;}
   if(!body.agree){ msg.textContent = ERR.agree_required; return; }
   const btn = $('#payBtn');
   btn.disabled = true; btn.textContent = '결제창 여는 중…';
