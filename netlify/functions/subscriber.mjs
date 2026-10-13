@@ -27,6 +27,7 @@ function response(body, { status = 200, headers = {} } = {}) {
 
 export default async (request, context) => {
   const accessCode = process.env.SUBSCRIBER_CODE;
+  const adminCode = process.env.STATS_ACCESS_CODE;
   const sessionSecret = process.env.SUBSCRIBER_SESSION_SECRET;
 
   if (!sessionSecret) {
@@ -73,9 +74,9 @@ export default async (request, context) => {
 
   const code = payload?.code;
   if (typeof code === "string" && code.length <= 256) {
-    if (accessCode && sameValue(code, accessCode)) {
+    if ((accessCode && sameValue(code, accessCode)) || (adminCode && sameValue(code, adminCode))) {
       await throttle.success();
-      return response({ subscribed: true, master: true }, { headers: { "Set-Cookie": sessionCookie(createSession(sessionSecret, accessCode)) } });
+      return response({ subscribed: true, master: true }, { headers: { "Set-Cookie": sessionCookie(createSession(sessionSecret, accessCode && sameValue(code, accessCode) ? accessCode : adminCode)) } });
     }
     const sub = await findByCode(code);
     if (sub) {
