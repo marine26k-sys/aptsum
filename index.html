@@ -943,11 +943,6 @@ try {
     </div>
     <div id="regionChips" style="display:none"></div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
-    <div id="listingNameSearch" style="display:none;margin:8px 0">
-      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 · 전 지역" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
-      <div class="rng" style="margin-top:5px">검색어를 입력하면 지역 선택과 관계없이 전 지역에서 찾습니다.</div>
-      <div id="listingNameCandidates"></div>
-    </div>
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
@@ -1089,6 +1084,11 @@ try {
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">입주 조건
         <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option><option id="listingPresaleOption" value="presale" hidden disabled>분양권</option></select>
       </label>
+    </div>
+    <div id="listingNameSearch" style="display:none;margin:8px 0">
+      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 · 전 지역" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
+      <div class="rng" style="margin-top:5px">검색어를 입력하면 지역 선택과 관계없이 전 지역에서 찾습니다.</div>
+      <div id="listingNameCandidates"></div>
     </div>
     <div id="listingTrendDirectionFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">변동 방향
