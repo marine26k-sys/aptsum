@@ -74,8 +74,8 @@ function showLogin(error = ""){
     <div class="card">
       <div class="card-title">관리자 인증</div>
       <form id="statsLoginForm">
-        <input id="statsCode" type="password" autocomplete="current-password" placeholder="통계 관리자 코드" aria-label="통계 관리자 코드" style="box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit">
-        <button type="submit" style="margin-top:10px;padding:10px 15px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer">통계 보기</button>
+        <input id="statsCode" type="password" autocomplete="current-password" placeholder="통계 관리자 코드" aria-label="통계 관리자 코드" style="box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit">
+        <button type="submit" style="display:block;width:100%;margin-top:10px;padding:10px 15px;border:0;border-radius:8px;background:var(--teal);color:#fff;font:inherit;font-weight:700;cursor:pointer">확인</button>
       </form>
       <div id="statsLoginError" role="alert" style="min-height:18px;margin-top:10px;color:#d95d5d;font-size:12px">${esc(error)}</div>
     </div>
@@ -130,7 +130,7 @@ async function submitStatsCode(event){
   }finally{
     if($("#statsLoginForm")){
       button.disabled = false;
-      button.textContent = "통계 보기";
+      button.textContent = "확인";
     }
   }
 }
