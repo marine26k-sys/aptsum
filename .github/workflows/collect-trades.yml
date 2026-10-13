@@ -126,6 +126,7 @@ jobs:
           [ -f data/tier-map.json ] && git add data/tier-map.json
           [ -f data/regional-change.json ] && git add data/regional-change.json
           [ -f data/regional-samples.json ] && git add data/regional-samples.json
+          [ -f data/regional-all-samples.json ] && git add data/regional-all-samples.json
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
