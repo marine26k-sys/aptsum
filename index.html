@@ -1655,6 +1655,10 @@ function restoreListingSelectionInputs(inp){
   document.getElementById('listingTrendContinuous').checked=false;
 
   listingBudgetSel=inp.budgetBand||null;
+  document.getElementById('listingNameQuery').value=inp.listingNameQuery||'';
+  listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';listingNameChoices=[];
+  document.getElementById('listingNameCandidates').replaceChildren();
+  listingFloorScope=inp.listingFloor==='all'?'all':'mid';syncListingFloor();
 }
 function restoreView(vi){
   // 뒤로가기 시점에 아직 로딩 중인 검색이 있다면(예: 로딩 도중 뒤로가기), 그 결과가 나중에 도착해서
