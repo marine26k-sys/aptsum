@@ -5831,8 +5831,8 @@ function placeComplexSchools(wrapper){
 }
 
 const nearbySchoolCache=new Map();
-function matchNearbySchools(items,d,alias){
-  const norm=n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+function matchNearbySchools(items,d,alias,nameKey){
+  const norm=nameKey|| (n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,''));
   if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
   if(!d.umd)return null;
   const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
@@ -5933,11 +5933,12 @@ function addComplexSchoolMap(body,matched){
     finally{loading=false;button.disabled=false;}
   };
 }
-function selectComplexMapPlace(places,d,alias,region){
+function selectComplexMapPlace(places,d,alias,region,nameKey){
   const norm=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/\(\d{4}년\d{1,2}월예정\)$/,'').replace(/아파트$/,'');
-  const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
+  const key=nameKey||norm;
+  const names=new Set([key(d.name),key(alias)].filter(Boolean));
   const regionParts=String(region||'').split(/\s+/).filter(Boolean);
-  const matches=places.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시'))&&names.has(norm(x.place_name))&&String(x.address_name||'').split(/\s+/).includes(d.umd)&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
+  const matches=places.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시'))&&names.has(key(x.place_name))&&String(x.address_name||'').split(/\s+/).includes(d.umd)&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
   return matches.length===1?matches[0]:null;
 }
 function addUnmatchedComplexMap(body,d,lawd,alias){
@@ -5951,7 +5952,8 @@ function addUnmatchedComplexMap(body,d,lawd,alias){
       const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
       const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch(alias||d.name,(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
       if(!body.isConnected)return;
-      const place=selectComplexMapPlace(places,d,alias,region);
+      const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+      const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
       if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:[],nearby:[]});
       body.querySelector('button').click();
@@ -5972,7 +5974,8 @@ async function loadComplexSchools(panel,d,lawd){
     }
     await ensureNaverNames(lawd);
     if(!panel.isConnected)return;
-    const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd));
+    const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+    const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
     const rows=matched?.schools||[];
     body.innerHTML=rows.length?['초','중','고'].map(level=>{
       const schools=rows.filter(x=>x.level===level).sort((a,b)=>a.distance-b.distance);

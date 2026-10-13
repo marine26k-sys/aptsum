@@ -1,3 +1,4 @@
+import {naverNameKey} from '../shared/naver-name-match.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -46,4 +47,12 @@ test('fallback location requires unique exact complex name, dong and region',()=
  assert.equal(c.selectComplexMapPlace([place],{name:'단지',umd:'관양동'},null,'안양 동안구'),null);
  assert.equal(c.selectComplexMapPlace([place],{name:'단지',umd:'비산동'},null,'수원 영통구'),null);
  assert.equal(c.selectComplexMapPlace([place,{...place}],{name:'단지',umd:'비산동'},null,'안양 동안구'),null);
+});
+
+test('school coordinates reuse existing Naver name normalization',()=>{
+ const row={name:'석수e편한세상',umd:'석수동'};
+ assert.equal(c.matchNearbySchools([row],{name:'석수e-편한세상',umd:'석수동'},null,naverNameKey),row);
+ assert.equal(c.matchNearbySchools([row,{name:'석수2차e편한세상',umd:'석수동'}],{name:'석수e-편한세상',umd:'석수동'},null,naverNameKey),row);
+ assert.equal(c.matchNearbySchools([row,{...row}],{name:'석수e-편한세상',umd:'석수동'},null,naverNameKey),null);
+ assert.equal(c.matchNearbySchools([row],{name:'석수e-편한세상',umd:'비산동'},null,naverNameKey),null);
 });
