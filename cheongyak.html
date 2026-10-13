@@ -11,9 +11,10 @@
 /* Compact notice cards while keeping controls easy to tap. */
 .notice{margin-bottom:9px}.notice-head{padding:12px 14px}.topline{margin-bottom:3px}.notice h2{line-height:1.25}.address{margin-top:3px;line-height:1.25}.notice-body{padding:10px 14px}.statusline{margin-bottom:7px}dl{row-gap:4px;column-gap:8px;line-height:1.35}details{margin-top:9px;padding-top:7px}.notice summary{padding:6px 10px;min-height:44px}th,td{padding:4px 3px;line-height:1.25}.schedule{margin-top:5px;line-height:1.35}.actions{margin-top:9px;gap:7px}.action{min-height:44px;padding:7px 4px;display:flex;align-items:center;justify-content:center}
 </style>
+<link rel="stylesheet" href="/assets/page-header.css">
 </head>
 <body><main class="wrap">
-<header><a class="back" href="./index.html" aria-label="아파트썸 메뉴로">←</a><div class="brand"><svg viewBox="0 0 28 28" width="27" height="27" aria-hidden="true" fill="#83d1d2"><rect x="2" y="16" width="5" height="10"/><rect x="11" y="9" width="5" height="17"/><rect x="20" y="2" width="5" height="24"/></svg>아파트썸</div><div class="description">청약 공고</div></header>
+<header><a class="back" href="./index.html" aria-label="아파트썸 메뉴로">←</a><div class="logo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg><div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">청약 공고</span></div></div></header>
 <div id="warning" class="warning" hidden></div>
 <section class="counts" aria-label="청약 접수 상태" style="grid-template-columns:repeat(2,1fr)"><button class="count on" data-status="open">접수 중<b id="countOpen">—</b></button><button class="count" data-status="upcoming">진행 예정<b id="countUpcoming">—</b></button></section>
 <section class="panel" aria-label="청약 공고 필터">
