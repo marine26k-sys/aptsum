@@ -664,7 +664,7 @@ try {
         }
       };
       const sessionReady = checkSession().then(ok => {
-        if (ok) activate();
+        if (ok) activate(); else deactivate();
         resolveReady(ok);
         return ok;
       });
@@ -805,7 +805,7 @@ try {
         <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 비교</a>
       </div>
     </div>
-    <a class="tab apply-cta" id="tabApply" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
+    <a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
     <div class="tab-divider source-divider" id="tabRtmsDivider"><span>국토부 실거래 분석</span></div>
     <script>
       (() => {
