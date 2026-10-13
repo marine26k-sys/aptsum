@@ -100,7 +100,7 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: split district liv
    const u=new URL(url),path=u.pathname;
    if(path.includes('/data/supply-area-naver/'))return Response.json(path.includes('HS-')?[{apt:'병점역아이파크캐슬',hh:2666,exclusiveArea:59.89,supplyArea:79}]:[]);
    if(path.includes('/data/supply-area/'))return Response.json({items:{}});
-   if(u.hostname.includes('apis.data.go.kr'))return new Response('<response><header><resultCode>000</resultCode></header><body><items><item><aptNm>병점역아이파크캐슬</aptNm><umdNm>병점동</umdNm><excluUseAr>59.89</excluUseAr><dealAmount>70,000</dealAmount><dealYear>2026</dealYear><dealMonth>10</dealMonth><dealDay>1</dealDay><floor>10</floor><buildYear>2021</buildYear><deposit>70,000</deposit><monthlyRent>0</monthlyRent></item></items></body></response>');
+   if(u.hostname.includes('apis.data.go.kr'))return new Response('<response><header><resultCode>000</resultCode></header><body><totalCount>1</totalCount><pageNo>1</pageNo><numOfRows>2000</numOfRows><items><item><aptNm>병점역아이파크캐슬</aptNm><umdNm>병점동</umdNm><excluUseAr>59.89</excluUseAr><dealAmount>70,000</dealAmount><dealYear>2026</dealYear><dealMonth>10</dealMonth><dealDay>1</dealDay><floor>10</floor><buildYear>2021</buildYear><deposit>70,000</deposit><monthlyRent>0</monthlyRent></item></items></body></response>');
    return new Response('',{status:404});
   };
   const {default:handler}=await import(`../netlify/functions/${kind}.mjs`);
