@@ -209,7 +209,7 @@ function render(d){
         <input id="listingFile" type="file" accept=".xlsx,.xls,.csv" style="display:none">
       </label>
       <div id="listingStatus" role="status" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--ink);white-space:pre-line"></div>
-      <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·세안고·분양권 각각 중층 이상 매물의 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
+      <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·세안고·분양권 각각 중층 이상 및 저층 포함 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
     </div>
 
     <div class="card" id="appCard">
@@ -659,12 +659,18 @@ function summarizeListings(rows){
     const peak = +r["실거래최고가(억)"];
     if(peak > x.peak){ x.peak = peak; x.peakYm = String(r["실거래최고_시점"] ?? ""); }
     const occupancy = String(r["입주구분"]).trim();
-    if(!MID_UP.has(String(r["층구분"]).trim()) || ![MOVE_IN,"세안고","분양권"].includes(occupancy)) continue;
-    const offer = x.offers[occupancy] ||= {ask:Infinity,n:0};
+    const floorType=String(r["층구분"]).trim();
+    if(!["저층","중층","고층"].includes(floorType) || ![MOVE_IN,"세안고","분양권"].includes(occupancy)) continue;
+    const offer = x.offers[occupancy] ||= {ask:Infinity,n:0,allFloors:{ask:Infinity,n:0}};
     const ask = +r["매매가(억)"];
     if(!(ask > 0)) continue;
-    offer.n++;
-    if(ask < offer.ask) Object.assign(offer, { ask, fl:String(r["층"]??""), dong:String(r["동"]??""), url:String(r["매물링크"]??""), d, urgent: r["급매"]==="급매"?1:0 });
+    const detail={ask,fl:String(r["층"]??""),dong:String(r["동"]??""),url:String(r["매물링크"]??""),d,urgent:r["급매"]==="급매"?1:0};
+    offer.allFloors.n++;
+    if(ask<offer.allFloors.ask)Object.assign(offer.allFloors,detail);
+    if(MID_UP.has(floorType)){
+      offer.n++;
+      if(ask<offer.ask)Object.assign(offer,detail);
+    }
   }
   const regions = {};
   let types = 0;
@@ -673,8 +679,8 @@ function summarizeListings(rows){
     for(const x of g.values()){
       const py = +(Object.entries(x.pyCnt).sort((a,b)=>b[1]-a[1])[0]||[])[0] || null;
       const { pyCnt, offers, ...rest } = x;
-      for(const [state, offer] of Object.entries(offers)) if(Number.isFinite(offer.ask) && (x.peak>0 || state==="분양권"))
-        items.push({ ...rest, ...offer, py, occupancy: state===MOVE_IN ? "available" : state==="분양권" ? "presale" : "tenant" });
+      for(const [state, offer] of Object.entries(offers)) if(Number.isFinite(offer.allFloors.ask) && (x.peak>0 || state==="분양권"))
+        items.push({ ...rest, ...offer, ...(Number.isFinite(offer.ask)?{}:offer.allFloors), midAvailable:Number.isFinite(offer.ask), py, occupancy: state===MOVE_IN ? "available" : state==="분양권" ? "presale" : "tenant" });
     }
     if(items.length){ regions[region] = items; types += items.length; }
   }

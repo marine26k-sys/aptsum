@@ -66,6 +66,8 @@ export function cleanItem(x) {
   const url = str(x.url, 300);
   return {
     nid: str(x.nid, 20), apt: str(x.apt, 80), umd: str(x.umd, 30), hh: num(x.hh), built: str(x.built, 10),
+    midAvailable:x.midAvailable!==false,
+    ...(x.allFloors && num(x.allFloors.ask)>0 ? {allFloors:{ask:num(x.allFloors.ask),n:num(x.allFloors.n)||1,fl:str(x.allFloors.fl,12),dong:str(x.allFloors.dong,20),d:str(x.allFloors.d,8),urgent:x.allFloors.urgent?1:0,url:/^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(str(x.allFloors.url,300))?str(x.allFloors.url,300):""}}:{}),
     occupancy: ["tenant", "presale"].includes(x.occupancy) ? x.occupancy : "available",
     ex, py: num(x.py), peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
@@ -73,9 +75,15 @@ export function cleanItem(x) {
   };
 }
 
+export function listingItemsForFloor(items,occupancy,floorScope='mid'){
+  return (items||[]).filter(x=>(x.occupancy||'available')===occupancy && (floorScope==='all'?x.allFloors?.ask>0:x.midAvailable!==false)).map(x=>{
+    const {allFloors,...base}=x;
+    return floorScope==='all'?{...base,...allFloors}:base;
+  });
+}
 export function snapshotForHistory(data, occupancy, details = false) {
   if (!data) return null;
-  const items = (data.items || []).filter(i => (i.occupancy || "available") === occupancy);
+  const items = listingItemsForFloor(data.items,occupancy);
   return { asOf:data.asOf, uploadId:data.uploadId,
     items:details ? items : items.map(i => ({nid:i.nid, ex:i.ex, ask:i.ask})) };
 }
@@ -92,21 +100,24 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
+    const floorScope=q.get("floorScope")||"mid";
+    if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
       if(!isAdmin && !(await getSubscriberSession(request, secret)))return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).replace(/\s/g,"").toLowerCase();
       if(query.length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
-      const items=[],failed=[];
+      const items=[],failed=[],floorMissing=[];
       const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd})));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
         try{
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
-          for(const x of data?.items||[])if((x.occupancy||"available")===occupancy&&String(x.apt||"").replace(/\s/g,"").toLowerCase().includes(query))items.push({...x,...t,asOf:data.asOf});
+          if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&String(x.apt||'').replace(/\s/g,'').toLowerCase().includes(query)))floorMissing.push(t.gu);
+          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(String(x.apt||"").replace(/\s/g,"").toLowerCase().includes(query))items.push({...x,...t,asOf:data.asOf});
         }catch(e){failed.push(t.gu);}
       }));
-      return json({items,failedRegions:failed});
+      return json({items,failedRegions:failed,floorMissing});
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
@@ -114,7 +125,7 @@ export default async (request) => {
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
-    const selectedItems = items => (items || []).filter(i => (i.occupancy || "available") === occupancy);
+    const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
       // 기준일별 마지막 업로드에서 최신 12일분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
@@ -128,7 +139,7 @@ export default async (request) => {
       return json({ snapshots: snapshots.filter(Boolean) });
     }
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
-    return json(data ? {...data,items:selectedItems(data.items)} : { asOf: null, items: [] }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
+    return json(data ? {...data,items:selectedItems(data.items),floorDataAvailable:floorScope!=="all"||data.items.every(x=>!!x.allFloors)} : { asOf: null, items: [],floorDataAvailable:true }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
   }
 
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {cleanItem, dailyHistoryIndex, snapshotForHistory} from '../netlify/functions/listings.mjs';
+import {cleanItem, dailyHistoryIndex, snapshotForHistory, listingItemsForFloor} from '../netlify/functions/listings.mjs';
 const stats=readFileSync(new URL('../stats.html',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function summarize(rows){
@@ -73,4 +73,16 @@ test('changing occupancy never queries and cancels the previous condition',()=>{
  ctx.listingOccupancyApply();
  assert.equal(calls,0);assert.equal(aborts,1);assert.equal(ctx.searchToken,2);assert.equal(ctx.lastData,null);assert.equal(elements.result.innerHTML,'');assert.equal(elements.btn.disabled,false);
  ctx.searchAbortController=null;ctx.listingOccupancyApply();assert.equal(calls,0);
+});
+
+
+test('floor scopes keep separate minimums, matching links and low-only types',()=>{
+ const d=summarize([base,{...base,'층구분':'저층','매매가(억)':8,'매물링크':'https://fin.land.naver.com/articles/low'}, {...base,'전용면적(㎡)':59,'층구분':'저층','매매가(억)':6}]);
+ const items=d.regions['서울시|강남구'].map(cleanItem);
+ const mid=listingItemsForFloor(items,'available'),all=listingItemsForFloor(items,'available','all');
+ assert.equal(mid.length,1);assert.equal(mid[0].ask,15);
+ assert.equal(all.length,2);assert.equal(all.find(x=>x.ex===84).ask,8);
+ assert.equal(all.find(x=>x.ex===84).url,'https://fin.land.naver.com/articles/low');
+ assert.equal(snapshotForHistory({items},'available').items.length,1);
+ assert.equal(listingItemsForFloor([{ask:10,occupancy:'available'}],'available','all').length,0);
 });
