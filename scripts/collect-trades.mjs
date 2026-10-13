@@ -47,7 +47,7 @@ function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json"].filter((d) => existsSync(d));
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json"].filter((d) => existsSync(d));
     if (!paths.length) return;
     execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
@@ -230,6 +230,7 @@ async function main() {
   // 이미 중간 커밋했더라도 현재 작업 디렉터리의 최신 파일을 읽어 최종 커밋에 포함한다.
   console.log("\n=== 급지 대시보드 데이터 갱신 (최근 36개월) ===");
   execFileSync(process.execPath, ["scripts/build-tier-map.mjs", "--months=36"], { stdio: "inherit" });
+  execFileSync(process.execPath, ["scripts/build-regional-change.mjs"], { stdio: "inherit" });
   commitProgress(`chore: 실거래 수집 후 급지 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
