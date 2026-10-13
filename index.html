@@ -1437,7 +1437,9 @@ function getRecentComplexes(){
 }
 function rememberRecentComplex(lawd,d){
   if(!lawd||!d.name)return;
-  const rows=getRecentComplexes().filter(x=>!(x.lawd===lawd&&x.name===d.name&&x.umd===d.umd));
+  const requestedLawd=lawd;lawd=d.lawd||d.splitLawd||lawd;
+  const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
+  const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
   try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,10)));}catch{}
   renderRecentComplexes();
@@ -5227,7 +5229,8 @@ async function search(opts){
       return;
     }
     if(d.mode==='complex'){
-      d.hh = await fetchHHCnt(lawd, d.name);
+      d.lawd=d.splitLawd||lawd;
+      d.hh = await fetchHHCnt(d.lawd, d.name);
       if(myToken!==searchToken) return;
     }
     lastData = d;
@@ -5280,7 +5283,8 @@ function complexMetaHTML(d){
 async function attachHHCountsAsync(d, myToken, lawd){
   try{
     if(d.mode==='complex'){
-      d.hh = await fetchHHCnt(lawd, d.name);
+      d.lawd=d.splitLawd||lawd;
+      d.hh = await fetchHHCnt(d.lawd, d.name);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
       if(el) el.innerHTML = complexMetaHTML(d);
@@ -6021,7 +6025,7 @@ function renderComplex(d){
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
-  const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=sel.value;
+  const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
   placeComplexSchools(schoolPanel.parentElement);
   document.getElementById('complexMapButton').onclick=async event=>{
