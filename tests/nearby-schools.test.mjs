@@ -27,3 +27,11 @@ test('map coordinates reject invalid values instead of placing unrelated points'
  assert.equal(c.validSchoolCoordinate({lat:37.4,lng:126.9}),true);
  for(const x of [{lat:null,lng:127},{lat:0,lng:0},{lat:37,lng:999},{lat:'37',lng:127}])assert.equal(c.validSchoolCoordinate(x),false);
 });
+
+test('nearby complex lists stay within one kilometer and are ordered by distance',()=>{
+ const dir=new URL('../data/nearby-schools/',import.meta.url);
+ for(const file of readdirSync(dir))for(const apt of JSON.parse(readFileSync(new URL(file,dir),'utf8')).items){
+  assert.ok(apt.nearby.length<=15);let previous=-1;
+  for(const row of apt.nearby){assert.ok(row.lawd&&row.name);assert.ok(row.distance>=previous&&row.distance<=1000);previous=row.distance;}
+ }
+});
