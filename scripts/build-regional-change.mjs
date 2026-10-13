@@ -1,8 +1,9 @@
-import {readFile,writeFile,readdir} from 'node:fs/promises';
+import {readFile,writeFile,readdir,mkdir} from 'node:fs/promises';
 import {REGIONS} from '../shared/regions.mjs';
 import {changePeriods,regionalChange,selectRegionalSamples} from '../shared/regional-change.mjs';
 const asOf=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const periods=changePeriods(asOf),regions=[];
+await mkdir('data/regional-change-details',{recursive:true});
 let fixed;try{fixed=JSON.parse(await readFile('data/regional-samples.json','utf8'));}catch(e){if(e.code!=='ENOENT')throw e;fixed={selectedAt:asOf,regions:{}};}
 const selectionEnd=periods.monthly[0].end,selectionDate=new Date(selectionEnd);selectionDate.setUTCFullYear(selectionDate.getUTCFullYear()-1);const selectionStart=+selectionDate;
 if(fixed.method!=='top50-unit-price-v1')fixed={method:'top50-unit-price-v1',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
@@ -23,6 +24,8 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
   const required=[];const day=new Date(p.previousStart);while(+day<p.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCDate(1);day.setUTCMonth(day.getUTCMonth()+1);}
   const samples=allFixed.regions[lawd]||[];
   return required.every(ym=>available.has(ym))?regionalChange(items,p,names,samples):{rate:null,groups:0,sampleCount:samples.length,previousTrades:0,currentTrades:0,missing:true};});
+ const details={all:{},top50:{}};periods.monthly.forEach((p,i)=>{details.all[p.label]=allMetrics.monthly[i].comparisons||[];details.top50[p.label]=metrics.monthly[i].comparisons||[];delete allMetrics.monthly[i].comparisons;delete metrics.monthly[i].comparisons;});
+ await writeFile(`data/regional-change-details/${lawd}.json`,JSON.stringify(details));
  regions.push({province,name,lawd,metrics,allMetrics});
 }
 await writeFile('data/regional-samples.json',JSON.stringify(fixed));
