@@ -476,6 +476,11 @@ try {
   .fdcard-skel{height:64px;background:linear-gradient(90deg,var(--slate-bg) 25%,#eef2f6 37%,var(--slate-bg) 63%);
     background-size:400% 100%;animation:fdshimmer 1.4s ease infinite;border-radius:12px;margin-bottom:8px}
   @keyframes fdshimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+
+#searchBox[data-mode="listingfavorites"] #optRow,
+#searchBox[data-mode="listingfavorites"] #sliderFilterResetRow,
+#searchBox[data-mode="listingfavorites"] #regionChips,
+#searchBox[data-mode="listingfavorites"] #favRegions{display:none!important}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
 <script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
@@ -790,6 +795,7 @@ try {
       <div class="tab-grp-tabs">
         <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
         <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
+        <a class="tab subscriber" id="tabLFAV" href="./index.html?m=listingfavorites">관심 단지</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -1325,7 +1331,7 @@ async function initFromURL(){
   // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평단가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
-  const URL_MODES = ['complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap',
+  const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap',
     'newhigh','newlow','pyprice','inversion',
     'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
@@ -1695,6 +1701,7 @@ function restoreView(vi){
   else if(v.data.mode==='longpeakdong') renderLongPeak(v.data);
   else if(v.data.mode==='longpeaklisting') renderListingUndervalue(v.data);
   else if(v.data.mode==='listingurgent') renderListingUrgent(v.data);
+  else if(v.data.mode==='listingfavorites') renderListingFavorites(v.data);
   else if(v.data.mode==='listingbudget') renderListingBudget(v.data);
   else if((v.data.mode==='listingtrend'||v.data.mode==='listingrise')) renderListingTrend(v.data);
   else if(v.data.mode==='listinggap') renderListingGap(v.data);
@@ -2376,7 +2383,7 @@ function needsSubscriberSession(m){
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
 const LISTING_TRIAL_LAWD = '11680';
-function isListingMode(m){ return m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'; }
+function isListingMode(m){ return m==='listingfavorites'||m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
 // 무료 체험 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
 function listingTrialBlocked(lawd){
@@ -2434,13 +2441,14 @@ function setMode(m, fromRestore){
   document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
   document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabLPL').classList.toggle('on', m==='longpeaklisting');
+  document.getElementById('tabLFAV').classList.toggle('on', m==='listingfavorites');
   document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget');
   document.getElementById('tabLUR').classList.toggle('on', m==='listingurgent');
   document.getElementById('tabLTRD').classList.toggle('on', m==='listingtrend'||m==='listingrise');
   document.getElementById('tabLGAP').classList.toggle('on', m==='listinggap');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
-  document.getElementById('singleRow').style.display = m==='compare' ? 'none' : '';
+  document.getElementById('singleRow').style.display = (m==='compare'||m==='listingfavorites') ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
@@ -4751,6 +4759,7 @@ async function search(opts){
     }
   }
   beginSearchRequests();
+  if(mode==='listingfavorites') return searchListingFavorites(myToken);
   // 입력 검증 오류(단지명·지역·금액대 미선택 등)로 아래에서 바로 return해도, 이전 탭의 결과 카드가 새 탭 아래에
   // 그대로 남아 있지 않도록 먼저 비운다(2026.09 버그 검토에서 발견 — 예: 연간 저평가 결과가 뜬 채로 금액대별
   // 변동률 탭에서 금액대 없이 조회하면 오류 문구 밑에 연간 저평가 카드가 계속 보였음)
@@ -6385,6 +6394,65 @@ function renderPeak(d){
 const listingMem = {}; // lawd → {asOf, items} (세션 내 메모리 캐시 — 구독 전용 데이터라 localStorage엔 안 남김)
 let listingTrendUploadId = "";
 const listingHistoryMem = {}; // lawd → 업로드별 요약본. 브라우저 저장소에는 남기지 않는다.
+function listingFavoriteRows(f,items){
+  const norm=n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+  const names=new Set([norm(f.name)]);
+  // 국토부 단지명과 검증된 네이버 이름 연결만 사용한다.
+  for(const [key,name] of Object.entries(typeof NAVER_NAMES==='undefined'?{}:(NAVER_NAMES[f.lawd]||{}))){
+    if(norm(key.split('|')[0])===norm(f.name))names.add(norm(name));
+  }
+  const matches=items.filter(x=>names.has(norm(x.apt)));
+  const ids=new Set(matches.map(x=>String(x.nid)));
+  if(ids.size>1)return {rows:[],ambiguous:true};
+  return {rows:matches.filter(x=>x.ask>0).sort((a,b)=>a.ex-b.ex),ambiguous:false};
+}
+async function searchListingFavorites(myToken){
+  const result=document.getElementById('result');result.innerHTML='';result.classList.remove('on');
+  document.getElementById('error').classList.remove('on');
+  document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
+  document.getElementById('loadMsg').textContent='관심 단지 호가 불러오는 중…';
+  try{
+    const favs=getFavs().slice(0,10),packs=new Map();
+    const codes=[...new Set(favs.map(f=>f.lawd))].filter(code=>!isListingTrial()||code===LISTING_TRIAL_LAWD);
+    await Promise.all(codes.map(async code=>{
+      try{
+        const [current]=await Promise.all([fetchListings(code),ensureNaverNames(code)]);
+        let history=null;try{history=await fetchListingHistory(code);}catch(e){if(e.auth)throw e;}
+        packs.set(code,{current,history});
+      }catch(e){packs.set(code,{failed:true,auth:!!e.auth});}
+    }));
+    if(myToken!==searchToken)return;
+    const cards=favs.map(f=>{
+      if(isListingTrial()&&f.lawd!==LISTING_TRIAL_LAWD)return {...f,status:'locked',rows:[]};
+      const pack=packs.get(f.lawd);
+      if(!pack||pack.failed)return {...f,status:pack?.auth?'locked':'failed',rows:[]};
+      const matched=listingFavoriteRows(f,pack.current.items||[]);
+      const snapshots=pack.history?.snapshots||[],idx=snapshots.findIndex(x=>x.uploadId===pack.current.uploadId);
+      const previous=idx>0?snapshots[idx-1]:null;
+      const rows=matched.rows.map(x=>{
+        const prev=previous?.items?.find(y=>String(y.nid)===String(x.nid)&&y.ex===x.ex);
+        return {...x,previousAsk:prev?.ask>0?prev.ask:null,previousDate:previous?.asOf};
+      });
+      return {...f,rows,asOf:pack.current.asOf,status:matched.ambiguous?'ambiguous':rows.length?'ok':'missing'};
+    });
+    lastData={mode:'listingfavorites',cards};renderListingFavorites(lastData);pushView();
+  }catch(err){
+    if(myToken===searchToken)showError('관심 단지 조회 중 오류가 발생했습니다. 다시 조회해 주세요.');
+  }finally{
+    if(myToken===searchToken){document.getElementById('loading').classList.remove('on');document.getElementById('btn').disabled=false;}
+  }
+}
+function renderListingFavorites(d){
+  const messages={locked:'이 지역은 실매물 이용권이 필요합니다.',failed:'자료를 불러오지 못했습니다. 다시 조회해 주세요.',missing:'매물 정보 없음',ambiguous:'동일한 이름의 단지가 여러 개여서 자동 연결하지 않았습니다.'};
+  const cards=d.cards.map(f=>`<div class="card"><div class="card-hd"><h2>${esc(f.name)}</h2><div class="meta">${esc(f.label||'')} ${f.asOf?' · 기준일 '+esc(f.asOf):''}</div></div><div class="sec">${f.status==='ok'?f.rows.map(x=>{
+    const change=x.previousAsk!==null?(x.ask-x.previousAsk):null;
+    const pct=change!==null?Math.abs(change)/x.previousAsk*100:null;
+    const delta=change===null?'이전 기록 없음':pct>=30-1e-9?'변동률 30% 이상 · 변동 표시 제외':change===0?'변동 없음':`${change>0?'▲':'▼'} ${Math.abs(change).toFixed(2)}억 (${pct.toFixed(1)}%)`;
+    const url=/^https:\/\/(?:fin\.land\.naver\.com|new\.land\.naver\.com)\//.test(x.url||'')?x.url:null;
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(x.py)}평 (전용 ${esc(x.ex)})</b><b style="float:right;color:var(--teal-dark)">${x.ask.toFixed(2)}억</b><div class="rng" style="margin-top:6px">${delta}${x.previousAsk!==null?' · 이전 '+x.previousAsk.toFixed(2)+'억 ('+esc(x.previousDate||'-')+')':''}</div>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:7px">네이버 매물 보기 ↗</a>`:''}</div>`;
+  }).join(''):`<div class="rng">${messages[f.status]||messages.missing}</div>${f.status==='locked'?SUBSCRIBER_APPLY_LINK:''}`}</div></div>`).join('');
+  const r=document.getElementById('result');r.innerHTML=`<div class="rng" style="margin:12px 0">단지 분석에서 별표로 저장한 관심 단지 · ${listingOccupancyLabel()} · 중층 이상</div>${cards||'<div class="card"><div class="sec">저장한 관심 단지가 없습니다. 단지 분석에서 단지명 옆 ☆를 눌러 저장해 주세요.</div></div>'}<div class="src-note">관심 단지는 이 브라우저에 저장됩니다. 직전 업로드와 같은 단지·전용면적의 최저 호가를 비교하며, 서로 다른 매물일 수 있습니다. 자료가 없거나 연결이 모호한 단지는 가격을 표시하지 않습니다.</div>`;r.classList.add('on');
+}
 function normalizeListingOccupancy(value,tab){ return value==='tenant' ? 'tenant' : value==='presale' && tab==='listingbudget' ? 'presale' : 'available'; }
 function listingOccupancy(){ return normalizeListingOccupancy(document.getElementById('listingOccupancy').value,mode); }
 function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세안고',presale:'분양권'}[listingOccupancy()]; }
