@@ -6890,6 +6890,10 @@ function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
   document.getElementById('listingOccupancy').value='available';
+  document.getElementById('listingNameQuery').value='';
+  listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
+  document.getElementById('listingNameCandidates').replaceChildren();
+  listingFloorScope='mid';syncListingFloor();
 
   document.getElementById('listingTrendContinuous').checked=false;
   listingTrendUploadId='';listingBudgetSel=null;
