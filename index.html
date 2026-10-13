@@ -6371,7 +6371,6 @@ function renderPricePerPyeong(d){
 
     <div class="sec">
       <h3>공급면적 평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px;padding:9px 11px;background:var(--teal-soft);border-radius:9px;color:var(--navy);line-height:1.5">표시된 <b>공급면적 평형</b>을 기준으로 계산합니다. 네이버 공급면적 매칭표를 우선 적용하며, 공급면적 자료가 없는 단지는 추정 평형을 사용합니다.</div>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 공급면적 평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
