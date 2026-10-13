@@ -828,7 +828,7 @@ try {
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>단지 랭킹</a>
-          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>공급면적 평단가</a>
+          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가 랭킹</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -6364,14 +6364,14 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('공급면적 평단가')}
+      ${hdTop('평단가 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 기준${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>공급면적 평단가 랭킹</h3>
+      <h3>평단가 랭킹</h3>
       <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 공급면적 평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
