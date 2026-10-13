@@ -7038,7 +7038,7 @@ async function resolveListingName(myToken){
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
   const box=document.getElementById('listingNameCandidates');box.replaceChildren();
-  const info=document.createElement('div');info.className='rng';info.textContent=listingNameChoices.length?'단지를 선택해 주세요.':'검색 결과가 없습니다.';box.append(info);
+  const info=document.createElement('div');info.className='rng';info.textContent=listingNameSelected?'선택한 단지 · '+listingNameSelected.apt:listingNameChoices.length?'단지를 선택해 주세요.':'검색 결과가 없습니다.';box.append(info);
   if(data.failedRegions?.length){const warning=document.createElement('div');warning.className='rng';warning.textContent='조회 실패 지역: '+data.failedRegions.join(', ');box.append(warning);}
   listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';button.textContent=`${x.apt} · ${x.name} ${x.umd}`;button.style.cssText=`display:block;width:100%;text-align:left;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
   return listingNameSelected;
