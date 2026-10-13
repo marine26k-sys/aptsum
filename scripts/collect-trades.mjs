@@ -47,7 +47,7 @@ function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json"].filter((d) => existsSync(d));
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json", "data/regional-all-samples.json"].filter((d) => existsSync(d));
     if (!paths.length) return;
     execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
@@ -228,9 +228,16 @@ async function main() {
 
   // 자동/수동 수집 모두 같은 실행에서 급지 대시보드를 갱신한다. 매매·분양권 파일을
   // 이미 중간 커밋했더라도 현재 작업 디렉터리의 최신 파일을 읽어 최종 커밋에 포함한다.
-  console.log("\n=== 급지 대시보드 데이터 갱신 (최근 36개월) ===");
-  execFileSync(process.execPath, ["scripts/build-tier-map.mjs", "--months=36"], { stdio: "inherit" });
-  commitProgress(`chore: 실거래 수집 후 급지 대시보드 갱신 ${new Date().toISOString()}`);
+  // 한 대시보드 생성이 실패해도 다른 대시보드는 최신 수집 자료로 갱신한다.
+  for (const [label, args] of [
+    ["급지 대시보드", ["scripts/build-tier-map.mjs", "--months=36"]],
+    ["지역 변동률", ["scripts/build-regional-change.mjs"]],
+  ]) {
+    console.log(`\n=== ${label} 데이터 갱신 ===`);
+    try { execFileSync(process.execPath, args, { stdio: "inherit" }); }
+    catch { failedKinds.push(`${label} 생성 실패`); console.error(`${label} 생성 실패 — 기존 자료 유지`); }
+  }
+  commitProgress(`chore: 실거래 수집 후 급지·지역 변동률 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
   // UND_ERR_CONNECT_TIMEOUT) 스크립트가 정상 종료해서 Actions에 "성공"으로 떴다(운영자 지적).

@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {fetchAllRtmsPages} from '../shared/rtms-pages.mjs';
+const xml=(page,total,count)=>`<totalCount>${total}</totalCount><pageNo>${page}</pageNo><numOfRows>2</numOfRows>${'<item><aptNm>A</aptNm></item>'.repeat(count)}`;
+test('all pages are read even if server returns smaller page size',async()=>{const calls=[];const r=await fetchAllRtmsPages(async(p,s)=>{calls.push([p,s]);return {text:xml(p,5,p===3?1:2)};});assert.equal(r.collectedCount,5);assert.deepEqual(calls,[[1,2000],[2,2],[3,2]]);});
+test('partial pages and missing totals cannot be treated as complete months',async()=>{assert.equal((await fetchAllRtmsPages(async p=>({text:xml(p,4,p===1?2:0)}))).failed,true);assert.equal((await fetchAllRtmsPages(async()=>({text:'<item></item>'}))).failed,true);assert.equal((await fetchAllRtmsPages(async()=>({text:xml(1,0,0)}))).failed,false);});

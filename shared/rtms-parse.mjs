@@ -1,3 +1,4 @@
+import {fetchAllRtmsPages} from './rtms-pages.mjs';
 // 국토부 실거래 XML 파싱 공용 유틸 — scripts/collect-trades.mjs 전용
 // (netlify/functions/*.mjs의 로직과 동일하지만, 서버 함수 코드는 건드리지 않기 위해 별도 사본으로 둔다)
 
@@ -142,13 +143,14 @@ function describeFailure(t, e) {
   return t.slice(0, 120).replace(/\s+/g, " ");
 }
 
-export async function fetchText(rtmsUrl, key, lawd, ym, retries = 2, timeoutMs = 20000) {
+export function fetchText(rtmsUrl,key,lawd,ym,retries=2,timeoutMs=20000){return fetchAllRtmsPages((page,size)=>fetchTextPage(rtmsUrl,key,lawd,ym,retries,timeoutMs,page,size));}
+async function fetchTextPage(rtmsUrl, key, lawd, ym, retries, timeoutMs, page, size) {
   let lastInfo = "";
   for (let i = 0; i <= retries; i++) {
     try {
       // 요청당 20초 타임아웃: data.go.kr이 응답 없이 커넥션만 붙잡고 있으면 이 워커가 무한정
       // 막혀서 pool() 전체가 안 끝나고(=Promise.all이 절대 resolve 안 됨) 300분을 그냥 날리게 되는 걸 방지
-      const r = await fetch(`${rtmsUrl}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`, {
+      const r = await fetch(`${rtmsUrl}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=${size}&pageNo=${page}`, {
         signal: AbortSignal.timeout(timeoutMs),
       });
       const t = await r.text();

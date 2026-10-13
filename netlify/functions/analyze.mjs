@@ -1,3 +1,4 @@
+import {fetchAllRtmsPages} from '../../shared/rtms-pages.mjs';
 import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
@@ -167,12 +168,13 @@ function rtmsFailed(t) {
   return true;                                                   // header도 resultCode도 없는 이상한 응답
 }
 
-async function fetchText(key, lawd, ym, retries = 2) {
+function fetchText(key,lawd,ym,retries=2){return fetchAllRtmsPages((page,size)=>fetchTextPage(key,lawd,ym,retries,page,size));}
+async function fetchTextPage(key, lawd, ym, retries, page, size) {
   for (let i = 0; i <= retries; i++) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
     try {
-      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`, { signal: ac.signal });
+      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=${size}&pageNo=${page}`, { signal: ac.signal });
       const t = await r.text();
       if (!rtmsFailed(t)) return { text: t, failed: false };
       if (i === retries) return { text: t || "", failed: true }; // 형식이 이상한 응답 — 마지막 시도까지 실패로 간주
@@ -352,13 +354,13 @@ export default async (req) => {
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (!yms.length) return Response.json({ error: "조회 월 없음" }, { status: 400 });
 
-  const r = await collectMonths(yms, (ym) => fetchShard(key, lawd, [ym], url.origin));
+  const r = await collectMonths(yms, (ym) => url.searchParams.get("live")==="1"?fetchShardLive(key,lawd,[ym],url.origin):fetchShard(key, lawd, [ym], url.origin));
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
   // 캐시 전략: 최신 2개월이 섞이거나 재시도까지 실패한 달이 있으면 30분, 전부 과거월이고 완전 성공이면 30일 (CDN 캐시)
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
   const { cur, prev } = currentAndPrevYm();
-  const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
+  const stable = url.searchParams.get("live")!=="1" && yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
   return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",

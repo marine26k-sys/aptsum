@@ -9,3 +9,18 @@ test('recent complexes retain ten most recent unique region/name/dong identities
  store.set('apc:recentComplexes','{"not":"array"}');assert.equal(c.getRecentComplexes().length,0);
  store.set('apc:recentComplexes','invalid');assert.equal(c.getRecentComplexes().length,0);
 });
+
+test('recent complex uses result region and removes old query-region duplicate',()=>{
+ const store=new Map();const c=vm.createContext({document:{getElementById:()=>null},localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)}});
+ vm.runInContext(html.slice(html.indexOf('function getRecentComplexes('),html.indexOf('function getFavs(')),c);
+ c.rememberRecentComplex('41171',{name:'평촌래미안푸르지오',umd:'비산동'});
+ c.rememberRecentComplex('41173',{name:'평촌래미안푸르지오',umd:'비산동'});
+ c.rememberRecentComplex('41171',{name:'평촌래미안푸르지오',umd:'비산동',splitLawd:'41173'});
+ assert.equal(c.getRecentComplexes().length,1);assert.equal(c.getRecentComplexes()[0].lawd,'41173');
+ c.rememberRecentComplex('11110',{name:'다른단지',umd:'동일동'});
+ c.rememberRecentComplex('11140',{name:'다른단지',umd:'동일동'});
+ assert.equal(c.getRecentComplexes().filter(x=>x.name==='다른단지').length,2);
+ c.rememberRecentComplex('41173',{name:'석수e-편한세상',umd:'석수동'});
+ c.rememberRecentComplex('41173',{name:'석수e편한세상',umd:'석수동'});
+ assert.equal(c.getRecentComplexes().filter(x=>x.umd==='석수동').length,1);
+});
