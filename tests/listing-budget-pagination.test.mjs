@@ -40,3 +40,15 @@ test('changing a regular price band resets pagination',()=>{
  c.setListingBudgetBand('high');assert.equal([...result.innerHTML.matchAll(/class="rk"/g)].length,5);
  c.setListingBudgetBand('all');assert.equal([...result.innerHTML.matchAll(/class="rk"/g)].length,100);
 });
+
+
+test('name search and selected price ranges omit pills and include all matching price bands',()=>{
+ for(const flag of ['nameSearch','askRangeSelected']){
+  const {c,result,d}=setup(205);d[flag]=true;c.renderListingBudget(d);
+  assert.ok(!result.innerHTML.includes('onclick="setListingBudgetBand'));
+  c.showMoreListingBudget();c.showMoreListingBudget();
+  assert.equal([...result.innerHTML.matchAll(/class="rk"/g)].length,205);
+  d[flag]=false;c.renderListingBudget(d);
+  assert.ok(result.innerHTML.includes('onclick="setListingBudgetBand'));
+ }
+});

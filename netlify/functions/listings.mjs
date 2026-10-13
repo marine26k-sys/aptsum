@@ -92,6 +92,22 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
+    if(q.has("search")) {
+      if(!isAdmin && !(await getSubscriberSession(request, secret)))return json({error:"subscriber_required"},401);
+      const query=str(q.get("search"),80).replace(/\s/g,"").toLowerCase();
+      if(query.length<2)return json({error:"query_too_short"},400);
+      const occupancy=q.get("occupancy")||"available";
+      if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
+      const items=[],failed=[];
+      const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd})));
+      for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
+        try{
+          const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
+          for(const x of data?.items||[])if((x.occupancy||"available")===occupancy&&String(x.apt||"").replace(/\s/g,"").toLowerCase().includes(query))items.push({...x,...t,asOf:data.asOf});
+        }catch(e){failed.push(t.gu);}
+      }));
+      return json({items,failedRegions:failed});
+    }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만

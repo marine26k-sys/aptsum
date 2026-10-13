@@ -943,6 +943,11 @@ try {
     </div>
     <div id="regionChips" style="display:none"></div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
+    <div id="listingNameSearch" style="display:none;margin:8px 0">
+      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 · 전 지역" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
+      <div class="rng" style="margin-top:5px">검색어를 입력하면 지역 선택과 관계없이 전 지역에서 찾습니다.</div>
+      <div id="listingNameCandidates"></div>
+    </div>
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
@@ -1269,6 +1274,8 @@ function captureViewInputs(){
     occupancy: listingOccupancy(),
     trendUpload: listingTrendUploadId,
     trendChoices:[...document.getElementById('listingTrendUpload').options].map(o=>({value:o.value,label:o.textContent})),
+    listingNameQuery:document.getElementById('listingNameQuery').value,
+    listingNameKey:listingNameSelected?.key||'',
     budgetBand:listingBudgetSel,
     trendContinuous: document.getElementById('listingTrendContinuous').checked,
     budgetNewOnly: false,
@@ -1291,6 +1298,7 @@ function pushView(){
 function buildShareURL(inp){
   const p = new URLSearchParams();
   p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
+  if(inp.mode==='listingbudget'&&inp.listingNameQuery){p.set('lnq',inp.listingNameQuery);if(inp.listingNameKey)p.set('lnk',inp.listingNameKey);}
   if(inp.by) p.set('by', inp.by);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendContinuous) p.set('ltc','1');
@@ -1323,7 +1331,7 @@ async function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
   if(!m) return;
-  const hasSharedQuery = ['r','rs','q','c'].some(key=>Boolean(p.get(key)?.trim()));
+  const hasSharedQuery = ['r','rs','q','c','lnq'].some(key=>Boolean(p.get(key)?.trim()));
   // 급지 지도는 2026.09에 메인 탭에서 다시 별도 페이지(tier.html)로 분리됐음 — 과거(그 사이 짧은 기간)
   // 공유된 ?m=tier 링크가 여전히 돌고 있을 수 있어, 그런 링크로 들어오면 tier.html로 리다이렉트한다.
   if(m==='tier'){ location.replace('./tier.html'); return; }
@@ -1341,6 +1349,8 @@ async function initFromURL(){
     showError(MASTER_REQUIRED_MSG);
     return;
   }
+  document.getElementById('listingNameQuery').value=requestedMode==='listingbudget'?(p.get('lnq')||''):'';
+  listingNameSelected=null;listingNameRestoreKey=p.get('lnk')||'';
   if(hasSharedQuery)resetQueriedSliderDefaults(requestedMode);
   if(p.get('p')) document.getElementById('monthsN').value = analysisMonthsForMode(requestedMode, p.get('p'));
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
@@ -1690,6 +1700,8 @@ function restoreView(vi){
     document.getElementById('cmpRows').innerHTML='';
     inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
   }
+  document.getElementById('listingNameQuery').value=inp.listingNameQuery||'';
+  listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';
   lastData = v.data;
   updateRegionFavBtn();
   renderFavRegions();
@@ -2508,6 +2520,7 @@ function setMode(m, fromRestore){
   document.getElementById('listingTrendFilters').style.display = (m==='listingtrend'||m==='listingrise') ? '' : 'none';
   document.getElementById('listingTrendContinuousLabel').textContent = m==='listingrise' ? '연속 상승만' : '연속 하락만';
   document.getElementById('listingTrendContinuousHelp').textContent = `최근 3개 기록에서 두 번 연속 ${m==='listingrise'?'상승':'하락'}한 단지·평형만 표시합니다.`;
+  document.getElementById('listingNameSearch').style.display=m==='listingbudget'?'':'none';
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -4780,7 +4793,7 @@ async function search(opts){
     cmpItems = filledCmpItems;
   }
   if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
-  if(mode!=='compare' && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
+  if(mode!=='compare' && !listingNameActive() && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
   if(mode==='pricebandrise'){
     if(!document.getElementById('priceBandPeriodN').value){ showError('비교할 시점을 선택해 주세요.'); return; }
     if(document.getElementById('priceBandN').value===''){ showError('비교할 금액대를 선택해 주세요.'); return; }
@@ -4788,7 +4801,7 @@ async function search(opts){
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
-  if(isListingMode(mode) && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
+  if(isListingMode(mode) && !listingNameActive() && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(isListingMode(mode))saveQueriedSliders();
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   if((mode==='listingtrend'||mode==='listingrise')) return searchListingTrend(myToken, lawd, silentScroll);
@@ -7000,19 +7013,51 @@ function listingBudgetNewKeys(current,snapshots){
   const previous=new Set((snapshots[idx-1].items||[]).map(x=>`${x.nid}|${x.ex}`));
   return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
 }
+let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
+function listingNameActive(){return mode==='listingbudget'&&document.getElementById('listingNameQuery').value.trim().length>0;}
+function listingNameChanged(){
+  listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
+  document.getElementById('listingNameCandidates').replaceChildren();
+  listingOccupancyApply();
+}
+function chooseListingName(index){
+  listingNameSelected=listingNameChoices[index]||null;
+  if(listingNameSelected)search({silentScroll:true});
+}
+async function resolveListingName(myToken){
+  const query=document.getElementById('listingNameQuery').value.trim();
+  if(query.length<2){showError('단지명을 2자 이상 입력해 주세요.');return null;}
+  const selected=listingNameSelected;
+  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=${listingOccupancy()}`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
+  if(response.status===401)throw Object.assign(new Error('전 지역 단지 검색은 실매물 이용권이 필요합니다.'),{auth:true});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const data=await response.json();if(myToken!==searchToken)return null;
+  const grouped=new Map();
+  for(const x of data.items||[]){const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
+  listingNameChoices=[...grouped.values()].sort((a,b)=>a.apt.localeCompare(b.apt,'ko')||a.name.localeCompare(b.name,'ko')||a.umd.localeCompare(b.umd,'ko'));
+  const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
+  listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
+  const box=document.getElementById('listingNameCandidates');box.replaceChildren();
+  const info=document.createElement('div');info.className='rng';info.textContent=listingNameChoices.length?'단지를 선택해 주세요.':'검색 결과가 없습니다.';box.append(info);
+  if(data.failedRegions?.length){const warning=document.createElement('div');warning.className='rng';warning.textContent='조회 실패 지역: '+data.failedRegions.join(', ');box.append(warning);}
+  listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';button.textContent=`${x.apt} · ${x.name} ${x.umd}`;button.style.cssText=`display:block;width:100%;text-align:left;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
+  return listingNameSelected;
+}
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
-  const targets = regionSel.length ? regionSel.slice()
+  const nameSearch=tabMode==='listingbudget'&&listingNameActive();
+  let targets=nameSearch?[]:regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
-  document.getElementById('loadMsg').textContent = `${targets.length}개 지역 실매물 불러오는 중…`;
+  document.getElementById('loadMsg').textContent = nameSearch?'전 지역 단지 검색 중…':`${targets.length}개 지역 실매물 불러오는 중…`;
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
+    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected)return;targets=[selected];}
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
     await Promise.all(targets.map(async t=>{
       try{
-        const d = await fetchListings(t.lawd);
+        const d = nameSearch?{asOf:t.asOf,items:t.items}:await fetchListings(t.lawd);
         if(d.asOf && (!asOf || d.asOf > asOf)) asOf = d.asOf;
         let newKeys=null;
         if(newOnly){
@@ -7038,7 +7083,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
     const items=cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
-      scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
+      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',
+      scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
       // 네이버 급매: 실거래 조회 없이 엑셀의 3년 최고가(전고점) 대비 호가 변동률이 음수인 급매만(운영자 요청 — 처음엔
@@ -7058,7 +7104,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     saveLastRegionPref(lawd);
   }catch(err){
     if(err.auth) aptsumSubscriberGate.recheck();
-    if(myToken===searchToken) showError(err.auth ? (isListingTrial() ? LISTING_TRIAL_MSG : SUBSCRIBER_ENDED_MSG) : '오류: ' + esc(err.message));
+    if(myToken===searchToken) showError(err.auth ? (nameSearch?'전 지역 단지 검색은 실매물 이용권이 필요합니다. '+SUBSCRIBER_APPLY_LINK:(isListingTrial() ? LISTING_TRIAL_MSG : SUBSCRIBER_ENDED_MSG)) : '오류: ' + esc(err.message));
   }finally{
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
@@ -7273,12 +7319,13 @@ function renderListingBudget(d,limit=100){
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
-  const cur = presale ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const hideBands=presale||d.nameSearch||d.askRangeSelected;
+  const cur = hideBands ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
   const all = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : d.rows.slice()).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
   listingBudgetVisibleCount=Math.min(all.length,limit);
   const list=all.slice(0,listingBudgetVisibleCount);
   const multiRegion = regionMulti(all);
-  const chips = presale ? '' : bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
+  const chips = hideBands ? '' : bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·중층 이상 매물)</div>`
     : list.map((x,i)=>{
@@ -7294,7 +7341,7 @@ function renderListingBudget(d,limit=100){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      ${presale ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
+      ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${body}
