@@ -176,7 +176,8 @@
       <label class="q" for="fEmail"><i>*</i>선별 리스트 받을 메일 주소</label>
       <input type="email" id="fEmail" name="email" autocomplete="email" maxlength="120" placeholder="example@naver.com" required>
       <label class="q" for="fEmailConfirm"><i>*</i>메일 주소 다시 입력</label>
-      <input type="email" id="fEmailConfirm" name="emailConfirm" autocomplete="off" maxlength="120" placeholder="같은 메일 주소를 다시 입력해 주세요" aria-describedby="emailConfirmMsg" required>
+      <div class="hint" id="emailConfirmReason">메일 주소 오입력으로 선별 리스트를 받지 못하는 일을 방지하기 위해 한 번 더 확인합니다.</div>
+      <input type="email" id="fEmailConfirm" name="emailConfirm" autocomplete="off" maxlength="120" placeholder="같은 메일 주소를 다시 입력해 주세요" aria-describedby="emailConfirmReason emailConfirmMsg" required>
       <div class="hint" id="emailConfirmMsg" aria-live="polite"></div>
 
       </div>
