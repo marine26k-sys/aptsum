@@ -115,7 +115,8 @@ function readPersonalToken(request, secret) {
 
 // 구독자 세션 확인 — { kind: "shared" } | { kind: "personal", sub, did } | null
 export async function getSubscriberSession(request, secret) {
-  if (hasValidSession(request, secret, process.env.SUBSCRIBER_CODE)) return { kind: "shared" };
+  if (hasValidSession(request, secret, process.env.SUBSCRIBER_CODE) ||
+      (process.env.STATS_ACCESS_CODE && hasValidSession(request, secret, process.env.STATS_ACCESS_CODE))) return { kind: "shared" };
   const data = readPersonalToken(request, secret);
   if (!data) return null;
   const sub = await getSubscriber(data.sid);

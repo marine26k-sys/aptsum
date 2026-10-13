@@ -41,7 +41,7 @@ try {
 <script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
 <style>
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
-  html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
+  html:not(.complex-analysis) #recentComplexes,html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
   html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
   html.analysis-page #contactCard,html.analysis-page .tabs,html.analysis-page .ad-banner,html.analysis-page .coupang-ad{display:none}
   .analysis-back{display:none;position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);align-items:center;justify-content:center}
@@ -494,7 +494,7 @@ try {
       <h2 id="subscriberCodeTitle">접근 코드 입력</h2>
       <p>이용 중인 접근 코드를 입력해 주세요.</p>
       <form id="subscriberCodeForm">
-        <input id="subscriberCodeInput" type="text" placeholder="ABCD-1234" autocomplete="off" autocapitalize="characters" maxlength="20" aria-label="접근 코드">
+        <input id="subscriberCodeInput" type="text" placeholder="ABCD-1234" autocomplete="off" autocapitalize="none" maxlength="256" aria-label="접근 코드">
         <div class="code-error" id="subscriberCodeError" role="alert"></div>
         <button class="code-submit" id="subscriberCodeSubmit" type="submit">로그인</button>
       </form>
@@ -633,8 +633,10 @@ try {
       if (!subTabs.length) { resolveReady(false); return; }
 
       const applyCta = document.getElementById('tabApply');
+      const issueGroup = document.getElementById('listingIssueGroup');
       const reveal = () => {
         if (applyCta) applyCta.style.display = 'none';
+        if(issueGroup) issueGroup.style.display='none';
         subTabs.forEach(t => { t.style.display = master ? '' : 'none'; });
         subDividers.forEach(d => { d.style.display = master ? '' : 'none'; });
       };
@@ -647,6 +649,7 @@ try {
       deactivate = () => {
         verified = false; master = false;
         if (applyCta) applyCta.style.display = '';
+        if(issueGroup) issueGroup.style.display='';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
         subDividers.forEach(d => { d.style.display = 'none'; });
         if (typeof listingMem === 'object') Object.keys(listingMem).forEach(k => { delete listingMem[k]; });
@@ -679,7 +682,7 @@ try {
       codeOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubscriberCodeInput(); });
       const openSubscriberCodeInput = async () => {
         await sessionReady;
-        if (verified) return;
+        if (verified && master) return;
         codeInput.value = '';
         codeError.textContent = '';
         codeOverlay.hidden = false;
@@ -789,23 +792,6 @@ try {
 
   <div class="tabs">
     <!-- 그룹 구분선(2026.09 운영자 요청) — 아래 "네이버 실매물 기준"과 짝을 이루도록 맨 위 공개 탭 묶음에도 데이터 출처를 표시 -->
-    <div class="tab-divider source-divider" id="tabListingDivider" style="margin-top:0"><span>네이버 실매물 분석</span></div>
-    <div class="tab-grp">
-      <div class="tab-grp-name">실매물</div>
-      <div class="tab-grp-tabs">
-        <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
-        <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
-      </div>
-    </div>
-    <div class="tab-grp">
-      <div class="tab-grp-name">분석</div>
-      <div class="tab-grp-tabs">
-        <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>호가 변동</a>
-        <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가</a>
-        <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 비교</a>
-      </div>
-    </div>
-    <a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a>
     <div class="tab-divider source-divider" id="tabRtmsDivider"><span>국토부 실거래 분석</span></div>
     <script>
       (() => {
@@ -861,6 +847,26 @@ try {
     </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
          쓰는 탭들을 비공개 탭 안에서 따로 묶는다. 구분선은 비공개 탭 인증 후 다른 비공개 탭과 함께 노출. -->
+    <div class="tab-divider source-divider" id="tabListingDivider" style="margin-top:0"><span>네이버 실매물 분석</span></div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">실매물</div>
+      <div class="tab-grp-tabs">
+        <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
+        <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
+      </div>
+    </div>
+    <div class="tab-grp">
+      <div class="tab-grp-name">분석</div>
+      <div class="tab-grp-tabs">
+        <a class="tab subscriber" id="tabLTRD" href="./index.html?m=listingtrend"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 9l5 5 4-3 5 7"/></svg>호가 변동</a>
+        <a class="tab subscriber" id="tabLPL" href="./index.html?m=longpeaklisting"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>저평가</a>
+        <a class="tab subscriber" id="tabLGAP" href="./index.html?m=listinggap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>평형 비교</a>
+      </div>
+    </div>
+    <div class="tab-grp" id="listingIssueGroup" style="display:none">
+      <div class="tab-grp-name">발급</div>
+      <div class="tab-grp-tabs"><a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a></div>
+    </div>
     <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈</span></div>
     <div class="tab-grp">
       <div class="tab-grp-name">분양</div>
@@ -1130,6 +1136,7 @@ try {
   </div>
 
   <div class="chips" id="favRegions" style="margin:2px 0 6px"></div>
+  <div id="recentComplexes" hidden style="margin:2px 0 10px"></div>
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
@@ -1425,6 +1432,31 @@ async function shareCurrent(){
 // (2026.08 히든 탭 잠금해제 로직 — 전세가율 탭 공개 전환으로 제거)
 
 // ── 즐겨찾기 ──
+function getRecentComplexes(){
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,10):[];}catch{return [];}
+}
+function rememberRecentComplex(lawd,d){
+  if(!lawd||!d.name)return;
+  const rows=getRecentComplexes().filter(x=>!(x.lawd===lawd&&x.name===d.name&&x.umd===d.umd));
+  rows.unshift({lawd,name:d.name,umd:d.umd||''});
+  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,10)));}catch{}
+  renderRecentComplexes();
+}
+function renderRecentComplexes(){
+  const box=document.getElementById('recentComplexes');if(!box)return;
+  box.replaceChildren();box.hidden=mode!=='complex';if(box.hidden)return;
+  const rows=getRecentComplexes();if(!rows.length)return;
+  const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin:8px 0';header.textContent='최근 본 단지 · 이 브라우저에 저장';
+  const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('apc:recentComplexes');}catch{}renderRecentComplexes();};header.append(clear);box.append(header);
+  const chips=document.createElement('div');chips.className='chips';
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=x.name+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name);chips.append(button);});box.append(chips);
+}
+function openRelatedComplex(lawd,name){
+  if(![...sel.options].some(o=>o.value===lawd))return;
+  closeExpandedComplexMap();setMode('complex');sel.value=lawd;
+  regionSel=[{lawd,name:[...sel.options].find(o=>o.value===lawd).textContent}];saveRegionSel();renderRegionChips();syncRegionPickBtn();
+  document.getElementById('q').value=name;search();
+}
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
 function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
 function toggleFav(lawd, name){
@@ -2437,7 +2469,9 @@ function setMode(m, fromRestore){
   // 탭 전환 시 이전 탭에서 아직 응답을 기다리는 중인 검색이 있다면 무효화 —
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
+  closeExpandedComplexMap();
   mode = m;
+  renderRecentComplexes();
   document.getElementById('searchBox').dataset.mode=m;
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
@@ -5758,14 +5792,16 @@ function complexDynamicHTML(){
     </div>
     ${isSale ? `
     <div class="sec">
-      <h3>단기 추세 — 평형별 (이전 3개월 vs 최근 3개월)</h3>
+      <details id="complexTrendPanel" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)" ontoggle="this.querySelector('summary').textContent=this.open?'단기 추세 · 접기':'단기 추세 · 펼쳐보기'"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단기 추세 · 펼쳐보기</summary><div class="rng" style="margin-top:10px">평형별 · 이전 3개월 vs 최근 3개월</div>
       <div id="trendBox">${trendHTML(d)}</div>
       <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
+      </details>
     </div>
 
     <div class="sec">
-      <h3 id="floorTitle">층별 가격 프리미엄${p?` — ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다) · 최근 6개월`:''}</h3>
+      <details id="complexFloorPanel" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)" ontoggle="this.querySelector('summary').textContent=this.open?'층별 가격 프리미엄 · 접기':'층별 가격 프리미엄 · 펼쳐보기'"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">층별 가격 프리미엄 · 펼쳐보기</summary><div id="floorTitle" class="rng" style="margin-top:10px">${p?` ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다) · 최근 6개월`:''}</div>
       <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
+      </details>
     </div>` : ''}
 
     <div class="sec">
@@ -5782,10 +5818,178 @@ function setComplexView(v){
   if(sb) sb.classList.toggle('on', v==='sale');
   if(jb) jb.classList.toggle('on', v==='jeonse');
   const box = document.getElementById('complexDynamic');
+  const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
+  placeComplexSchools(schoolWrap);
 }
 
+function placeComplexSchools(wrapper){
+  if(!wrapper)return;
+  const box=document.getElementById('complexDynamic');
+  const target=box?.querySelector('#trendBox')?.closest('.sec')||box?.querySelector('#tradesBox')?.closest('.sec');
+  if(target)target.before(wrapper);else box?.append(wrapper);
+}
+
+const nearbySchoolCache=new Map();
+function matchNearbySchools(items,d,alias,nameKey){
+  const norm=nameKey|| (n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,''));
+  if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
+  if(!d.umd)return null;
+  const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
+  const matches=items.filter(x=>norm(x.umd)===norm(d.umd)&&names.has(norm(x.name)));
+  // 같은 이름이라도 연결 후보가 둘 이상이면 임의로 고르지 않는다.
+  return matches.length===1?matches[0]:null;
+}
+let expandedComplexMap=null;
+function closeExpandedComplexMap(){if(expandedComplexMap)expandedComplexMap.close();}
+function expandComplexMap(container,map,section){
+  closeExpandedComplexMap();
+  const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','단지·학교 지도 크게 보기');dialog.style.cssText='width:calc(100vw - 24px);max-width:1100px;height:85dvh;max-height:900px;padding:12px;border:1px solid #00828A;border-radius:14px;background:#fff';
+  const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;height:36px;margin-bottom:8px;font-size:14px;font-weight:800;color:#00828A';header.textContent='단지·학교 지도';
+  const close=document.createElement('button');close.type='button';close.textContent='닫기 ×';close.style.cssText='padding:7px 12px;border:1px solid #00828A;border-radius:8px;background:#fff;color:#00828A;cursor:pointer';close.onclick=()=>dialog.close();header.append(close);
+  const next=container.nextSibling;dialog.append(header,container);container.style.height='calc(100% - 52px)';document.body.append(dialog);
+  dialog.addEventListener('close',()=>{if(section.isConnected){section.insertBefore(container,next&&next.parentNode===section?next:null);container.style.height='320px';map.relayout();}dialog.remove();if(expandedComplexMap===dialog)expandedComplexMap=null;});
+  expandedComplexMap=dialog;dialog.showModal();map.relayout();close.focus();
+}
+let complexMapSDKPromise=null;
+function validSchoolCoordinate(x){return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)&&x.lat>=25&&x.lat<=45&&x.lng>=120&&x.lng<=135;}
+function loadComplexMapSDK(){
+  if(window.kakao?.maps?.Map)return Promise.resolve(window.kakao.maps);
+  if(complexMapSDKPromise)return complexMapSDKPromise;
+  complexMapSDKPromise=(async()=>{
+    const response=await fetch('/data/map-config.json');
+    if(!response.ok)throw Error('map config');
+    const config=await response.json();
+    if(!/^[a-f0-9]{32}$/i.test(config.kakaoJavaScriptKey||''))throw Error('map key');
+    return new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      const timeout=setTimeout(()=>{script.remove();reject(Error('map timeout'));},15000);
+      script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(config.kakaoJavaScriptKey)}&autoload=false&libraries=services`;
+      script.onerror=()=>{clearTimeout(timeout);script.remove();reject(Error('map script'));};
+      script.onload=()=>{
+        if(!window.kakao?.maps?.load){clearTimeout(timeout);script.remove();reject(Error('map unavailable'));return;}
+        window.kakao.maps.load(()=>{clearTimeout(timeout);if(window.kakao.maps.Map)resolve(window.kakao.maps);else reject(Error('map unavailable'));});
+      };
+      document.head.append(script);
+    });
+  })().catch(error=>{complexMapSDKPromise=null;throw error;});
+  return complexMapSDKPromise;
+}
+function addComplexSchoolMap(body,matched){
+  if(!validSchoolCoordinate(matched))return;
+  const section=document.createElement('div');section.style.cssText='margin:12px 0';
+  const button=document.createElement('button');button.type='button';button.textContent='단지·학교 지도 보기';button.style.cssText='width:100%;padding:10px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:800;cursor:pointer';
+  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');status.style.marginTop='6px';
+  const container=document.createElement('div');container.hidden=true;container.setAttribute('aria-label','단지와 주변 학교 위치 지도');container.style.cssText='width:100%;height:320px;margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden';
+  const controls=document.createElement('div');controls.hidden=true;controls.style.cssText='margin-top:8px';
+  const expand=document.createElement('button');expand.type='button';expand.textContent='지도 크게 보기';expand.style.cssText='padding:8px;border:1px solid var(--teal);border-radius:8px;background:#fff;color:var(--teal-dark);cursor:pointer';
+  const nearby=document.createElement('button');nearby.type='button';nearby.textContent='주변 단지 보기';nearby.setAttribute('aria-pressed','false');nearby.style.cssText=expand.style.cssText+';margin-left:6px';controls.append(expand,nearby);
+  const neighbors=document.createElement('div');neighbors.hidden=true;neighbors.style.marginTop='10px';
+  section.append(button,status,controls,container,neighbors);body.prepend(section);
+  let map=null,loading=false;
+  button.onclick=async()=>{
+    if(loading)return;
+    if(map){container.hidden=!container.hidden;controls.hidden=container.hidden;neighbors.hidden=container.hidden||nearby.getAttribute('aria-pressed')!=='true';button.textContent=container.hidden?'단지·학교 지도 보기':'지도 접기';if(!container.hidden)map.relayout();return;}
+    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';
+    try{
+      const maps=await loadComplexMapSDK();if(!section.isConnected)return;
+      container.hidden=false;
+      map=new maps.Map(container,{center:new maps.LatLng(matched.lat,matched.lng),level:5,draggable:true,scrollwheel:true});
+      map.setZoomable(true);
+      map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
+      const bounds=new maps.LatLngBounds();
+      const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706'};
+      const points=[{...matched,level:'단지'},...(matched.schools||[]).filter(validSchoolCoordinate)];
+      let info=null;
+      points.forEach(point=>{
+        const position=new maps.LatLng(point.lat,point.lng);bounds.extend(position);
+        const marker=document.createElement('button');marker.type='button';marker.textContent=point.level;marker.title=point.name;marker.setAttribute('aria-label',point.name+' 위치');marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
+        new maps.CustomOverlay({map,position,content:marker,yAnchor:1,zIndex:point.level==='단지'?5:2});
+        marker.onclick=()=>{
+          if(info)info.setMap(null);
+          const label=document.createElement('div');label.style.cssText='background:#fff;border:1px solid #00828A;border-radius:8px;padding:9px 12px;font-size:12px;white-space:nowrap;box-shadow:0 2px 5px #0003';
+          label.textContent=point.name+(point.level==='단지'?'':` · 직선 ${point.distance.toLocaleString()}m`);
+          info=new maps.CustomOverlay({map,position,content:label,yAnchor:2.5,zIndex:10});
+        };
+      });
+      const neighborOverlays=[];
+      const nearbyRows=(matched.nearby||[]).filter(validSchoolCoordinate);
+      const hint=document.createElement('div');hint.className='rng';hint.textContent=nearbyRows.length?'직선 1km 이내 · 가까운 15개까지 · 누르면 단지 분석':'자료에 직선 1km 이내 주변 단지가 없습니다.';neighbors.append(hint);
+      nearbyRows.forEach(point=>{
+        const label=document.createElement('button');label.type='button';label.textContent='주변';label.title=point.name;label.setAttribute('aria-label',point.name+' 단지 분석');label.style.cssText='padding:4px 6px;border:2px solid white;border-radius:12px;background:#475569;color:white;font-size:11px;cursor:pointer';label.onclick=()=>openRelatedComplex(point.lawd,point.name);
+        neighborOverlays.push(new maps.CustomOverlay({position:new maps.LatLng(point.lat,point.lng),content:label,yAnchor:1,zIndex:1}));
+        const row=document.createElement('button');row.type='button';row.style.cssText='display:block;width:100%;text-align:left;padding:10px;margin-top:5px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);cursor:pointer';
+        const region=[...sel.options].find(o=>o.value===point.lawd)?.textContent||point.lawd;
+        row.textContent=point.name+' · '+region+' '+point.umd+' · 직선 '+point.distance+'m';row.onclick=()=>openRelatedComplex(point.lawd,point.name);neighbors.append(row);
+      });
+      nearby.onclick=()=>{const show=nearby.getAttribute('aria-pressed')!=='true';nearby.setAttribute('aria-pressed',String(show));nearby.textContent=show?'주변 단지 숨기기':'주변 단지 보기';neighbors.hidden=!show;neighborOverlays.forEach(x=>x.setMap(show?map:null));};
+      expand.onclick=()=>expandComplexMap(container,map,section);controls.hidden=false;
+      maps.event.addListener(map,'click',()=>{if(info)info.setMap(null);});
+      if(points.length>1)map.setBounds(bounds,30,30,30,30);
+      status.textContent='두 손가락으로 확대·축소 · 표시를 누르면 이름 확인';
+      button.textContent='지도 접기';
+      const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!section.isConnected){closeExpandedComplexMap();observer.disconnect();}});observer.observe(container);
+    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
+    finally{loading=false;button.disabled=false;}
+  };
+}
+function selectComplexMapPlace(places,d,alias,region,nameKey){
+  const norm=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/\(\d{4}년\d{1,2}월예정\)$/,'').replace(/아파트$/,'');
+  const key=nameKey||norm;
+  const names=new Set([key(d.name),key(alias)].filter(Boolean));
+  const regionParts=String(region||'').split(/\s+/).filter(Boolean);
+  const matches=places.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시'))&&names.has(key(x.place_name))&&String(x.address_name||'').split(/\s+/).includes(d.umd)&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
+  return matches.length===1?matches[0]:null;
+}
+function addUnmatchedComplexMap(body,d,lawd,alias){
+  const button=document.createElement('button');button.type='button';button.textContent='단지·학교 지도 보기';button.style.cssText='width:100%;padding:10px;margin-bottom:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:800;cursor:pointer';body.prepend(button);
+  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');button.after(status);
+  button.onclick=async()=>{
+    button.disabled=true;status.textContent='단지 위치를 확인하는 중…';
+    try{
+      const maps=await loadComplexMapSDK();
+      if(!maps.services?.Places)throw Error('places unavailable');
+      const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+      const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch(alias||d.name,(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
+      if(!body.isConnected)return;
+      const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+      const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
+      if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
+      button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:[],nearby:[]});
+      body.querySelector('button').click();
+    }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 다시 눌러 주세요.';}
+    finally{button.disabled=false;}
+  };
+}
+async function loadComplexSchools(panel,d,lawd){
+  if(!panel.open||panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
+  const body=panel.querySelector('.nearby-school-body');panel.dataset.loading='1';body.textContent='학교 정보를 불러오는 중…';
+  try{
+    let data=nearbySchoolCache.get(lawd);
+    if(!data){
+      const response=await fetch(`/data/nearby-schools/${encodeURIComponent(lawd)}.json`);
+      if(response.status===404)data={items:[]};
+      else{if(!response.ok)throw new Error('school fetch');data=await response.json();if(!Array.isArray(data.items))throw new Error('invalid schools');}
+      nearbySchoolCache.set(lawd,data);
+    }
+    await ensureNaverNames(lawd);
+    if(!panel.isConnected)return;
+    const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+    const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
+    const rows=matched?.schools||[];
+    body.innerHTML=rows.length?['초','중','고'].map(level=>{
+      const schools=rows.filter(x=>x.level===level).sort((a,b)=>a.distance-b.distance);
+      return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
+    }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
+    body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">단지 좌표와 학교 좌표 사이의 직선거리입니다. 배정 학교·통학구역·실제 도보 경로를 의미하지 않습니다. 출처: 제공된 학교 위치·단지 좌표 자료 (2026.10.13 반영)</div>');
+    if(validSchoolCoordinate(matched))addComplexSchoolMap(body,matched);
+    else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd));
+    panel.dataset.loaded='1';
+  }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
+  finally{delete panel.dataset.loading;}
+}
 function renderComplex(d){
+  closeExpandedComplexMap();rememberRecentComplex(sel.value,d);
   selPy = -1;
   tradesShown = TRADES_PAGE_SIZE;
   complexView = 'sale';
@@ -5796,7 +6000,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(d.name)}</h2>
+      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -5807,11 +6011,32 @@ function renderComplex(d){
       </div>
     </div>
 
+    <div class="sec" style="padding-top:12px;padding-bottom:0">
+      <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교 · 펼쳐보기</summary>
+        <div class="nearby-school-body" style="padding-top:8px"></div>
+      </details>
+    </div>
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=sel.value;
+  schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
+  placeComplexSchools(schoolPanel.parentElement);
+  document.getElementById('complexMapButton').onclick=async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    try{
+      schoolPanel.open=true;
+      await loadComplexSchools(schoolPanel,d,schoolLawd);
+      if(!schoolPanel.isConnected)return;
+      const mapButton=schoolPanel.querySelector('.nearby-school-body button');
+      if(mapButton&&mapButton.textContent!=='지도 접기')mapButton.click();
+      schoolPanel.scrollIntoView({behavior:'smooth',block:'start'});
+    }finally{button.disabled=false;}
+  };
 }
+
 
 // ── 단지 비교 렌더링 ──
 const CMP_COLORS = ['#00828A','#DC2626','#0F2B3D','#D97706'];
