@@ -91,7 +91,7 @@ jobs:
           echo "수집 개월수: $MONTHS"
           echo "months=$MONTHS" >> "$GITHUB_OUTPUT"
 
-      - name: 실거래 수집 및 급지 대시보드 갱신 (스크립트가 중간·최종 커밋을 푸시함)
+      - name: 실거래 수집 및 급지·지역 변동률 갱신 (자동·수동 공통)
         if: steps.gate.outputs.run == 'true'
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
