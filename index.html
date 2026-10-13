@@ -5782,7 +5782,16 @@ function setComplexView(v){
   if(sb) sb.classList.toggle('on', v==='sale');
   if(jb) jb.classList.toggle('on', v==='jeonse');
   const box = document.getElementById('complexDynamic');
+  const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
+  placeComplexSchools(schoolWrap);
+}
+
+function placeComplexSchools(wrapper){
+  if(!wrapper)return;
+  const box=document.getElementById('complexDynamic');
+  const target=box?.querySelector('#trendBox')?.closest('.sec')||box?.querySelector('#tradesBox')?.closest('.sec');
+  if(target)target.before(wrapper);else box?.append(wrapper);
 }
 
 const nearbySchoolCache=new Map();
@@ -5853,6 +5862,7 @@ function renderComplex(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
+  placeComplexSchools(schoolPanel.parentElement);
 }
 
 
