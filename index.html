@@ -827,7 +827,7 @@ try {
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>단지 랭킹</a>
-          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가</a>
+          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>공급면적 평단가</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -3707,17 +3707,8 @@ function analyzeNewLow(all, months){
 }
 
 // ═══ 전용면적 평단가 탭 ═══
-// 단지별로 "3년 내 최고가" 기준 전용면적 평단가(만원/전용평)를 평형(유닛 타입)별로 계산한 뒤, 그중 평단가가
-// 가장 높은 평형 딱 1개만 그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평단가가 높은 경우가
-// 흔해서(동일 단지 안에서도 평형별 프리미엄 차이가 큼) 대표 평형을 고정하지 않고 "가장 비싼 평단가"로 자동 선정.
-// 결과는 단지 1개당 1행, 평단가 높은 순 정렬.
-//
-// [2026.08] "평단가"는 관행적으로 공급면적(전용+공용) 기준인데, 국토부 실거래 API는 전용면적만 제공하고
-// 공급면적은 아예 주지 않음. 기존엔 "84㎡→33평"처럼 공급면적 관행 라벨로 역산하는 보간표(areaToPy)를 그대로
-// 나눗셈에 썼는데, 이 라벨 자체가 근사치라 평단가 계산(나눗셈)에 쓰면 오차가 그대로 증폭되는 문제가 있었음.
-// → 보간·근사 없이, 가진 데이터(전용면적) 그대로 "전용면적÷3.3058"로 정밀 환산한 전용평형으로 나눔.
-// 계산의 정확성은 확보되지만, 사람들이 흔히 말하는 "평당가"(공급면적 기준)보다는 낮게 나올 수 있어
-// 화면·제목에 "전용면적 평단가"라고 명시해 기준을 분명히 한다.
+// 최근 3년 최고가를 공급면적 매칭이 적용된 표시 평형(t.py)으로 나눈다.
+// 미매칭 단지는 기존 공급면적 추정 평형을 사용하며 화면에 기준을 안내한다.
 const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (전용면적 → 전용평형 정밀 환산 상수, 보간 없음)
 function analyzePricePerPyeong(all, months){
   // 직거래는 최고가를 왜곡할 수 있어 제외 — 신고가 탭과 동일한 원칙.
@@ -3742,8 +3733,9 @@ function analyzePricePerPyeong(all, months){
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}`;
     if((pyCount[pk]||0) < 2) continue; // 표본 1건뿐인 평형은 이상치 방지를 위해 대표 후보에서 제외
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
-    const pyExact = R1(t.area / SQM_PER_PY); // 전용면적(㎡) → 전용평형(정밀, 보간 없음)
-    const pricePerPy = Math.round(t.amt*10000/pyExact); // 억 → 만원 환산 후 전용평형으로 나눔 = 만원/전용평
+    const pyExact = Number(t.py); // 기존 공급면적 매칭이 적용된 표시 평형
+    if(!Number.isFinite(pyExact)||pyExact<=0)continue;
+    const pricePerPy = Math.round(t.amt*10000/pyExact); // 만원/공급평
     const cur = byComplex[ck];
     if(!cur || pricePerPy > cur.pricePerPy) byComplex[ck] = {...t, pricePerPy, pyExact};
   }
@@ -6371,23 +6363,23 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('전용면적 평단가')}
+      ${hdTop('공급면적 평단가')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 기준${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>전용면적 평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px;padding:9px 11px;background:var(--teal-soft);border-radius:9px;color:var(--navy);line-height:1.5">전용면적 평단가는 단지마다 다른 <b>전용률</b>(공급면적 대비 전용면적 비율)의 영향을 받지 않아, 흔히 쓰는 공급면적 평단가보다 단지 간 시세를 더 왜곡 없이 비교할 수 있는 <b>본질적인 시세</b> 지표입니다. 다만 매물·분양 시장에서 익숙한 "○○평" 표기는 보통 공급면적 기준이라, 표시된 평형과 체감이 다를 수 있습니다.</div>
-      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 전용평형</div>
+      <h3>공급면적 평단가 랭킹</h3>
+      <div class="rng" style="margin-bottom:8px;padding:9px 11px;background:var(--teal-soft);border-radius:9px;color:var(--navy);line-height:1.5">표시된 <b>공급면적 평형</b>을 기준으로 계산합니다. 네이버 공급면적 매칭표를 우선 적용하며, 공급면적 자료가 없는 단지는 추정 평형을 사용합니다.</div>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 공급면적 평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/전용평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
+        <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/공급평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
     </div>
 
   </div>
-  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 전용면적 기준 (공급면적 아님)</div>`;
+  <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 공급면적 평형 기준 · 매칭 자료가 없으면 추정 평형 적용</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
