@@ -5948,9 +5948,8 @@ function addUnmatchedComplexMap(body,d,lawd,alias){
     try{
       const maps=await loadComplexMapSDK();
       if(!maps.services?.Places)throw Error('places unavailable');
-      const group=REGIONS.find(([,rows])=>rows.some(([,code])=>code===lawd));
       const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
-      const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch([group?.[0],region,d.umd,alias||d.name].filter(Boolean).join(' '),(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
+      const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch(alias||d.name,(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
       if(!body.isConnected)return;
       const place=selectComplexMapPlace(places,d,alias,region);
       if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
