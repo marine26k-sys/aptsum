@@ -1,2 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {REGIONAL_LAYOUT} from '../shared/regional-layout.mjs';import {REGIONS} from '../shared/regions.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {REGIONAL_LAYOUT,compactRegionRow} from '../shared/regional-layout.mjs';import {REGIONS} from '../shared/regions.mjs';
 test('geographical layout includes each configured district once in seven-column rows',()=>{for(const [province,regions] of REGIONS){const rows=REGIONAL_LAYOUT[province];assert.ok(rows.every(r=>r.length===7));const names=rows.flat().filter(Boolean);assert.equal(new Set(names).size,names.length);assert.deepEqual([...names].sort(),regions.map(r=>r[0]).sort());}});
+
+test('adjacent tiles fill blank columns without changing geographic order',()=>{for(const rows of Object.values(REGIONAL_LAYOUT))for(const row of rows){const tiles=compactRegionRow(row);assert.equal(tiles.reduce((sum,t)=>sum+t.span,0),7);assert.deepEqual(tiles.map(t=>t.name),row.filter(Boolean));assert.equal(tiles[0].start,1);}});

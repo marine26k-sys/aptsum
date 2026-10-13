@@ -34,3 +34,9 @@ export const REGIONAL_LAYOUT={
  [null,null,'사하구','서구','동구','남구',null],
  [null,null,null,'중구','영도구',null,null]]
 };
+
+// 같은 줄의 빈칸을 인접 지역에 나눠 붙인다. 지리 순서는 유지한다.
+export function compactRegionRow(row){
+ const points=row.map((name,column)=>({name,column})).filter(x=>x.name);
+ return points.map((point,i)=>{const start=i?Math.floor((points[i-1].column+point.column)/2)+1:0;const end=i===points.length-1?row.length:Math.floor((point.column+points[i+1].column)/2)+1;return {name:point.name,start:start+1,span:end-start};});
+}
