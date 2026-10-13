@@ -5804,6 +5804,71 @@ function matchNearbySchools(items,d,alias){
   // 같은 이름이라도 연결 후보가 둘 이상이면 임의로 고르지 않는다.
   return matches.length===1?matches[0]:null;
 }
+let complexMapSDKPromise=null;
+function validSchoolCoordinate(x){return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)&&x.lat>=25&&x.lat<=45&&x.lng>=120&&x.lng<=135;}
+function loadComplexMapSDK(){
+  if(window.kakao?.maps?.Map)return Promise.resolve(window.kakao.maps);
+  if(complexMapSDKPromise)return complexMapSDKPromise;
+  complexMapSDKPromise=(async()=>{
+    const response=await fetch('/data/map-config.json');
+    if(!response.ok)throw Error('map config');
+    const config=await response.json();
+    if(!/^[a-f0-9]{32}$/i.test(config.kakaoJavaScriptKey||''))throw Error('map key');
+    return new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      const timeout=setTimeout(()=>{script.remove();reject(Error('map timeout'));},15000);
+      script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(config.kakaoJavaScriptKey)}&autoload=false`;
+      script.onerror=()=>{clearTimeout(timeout);script.remove();reject(Error('map script'));};
+      script.onload=()=>{
+        if(!window.kakao?.maps?.load){clearTimeout(timeout);script.remove();reject(Error('map unavailable'));return;}
+        window.kakao.maps.load(()=>{clearTimeout(timeout);if(window.kakao.maps.Map)resolve(window.kakao.maps);else reject(Error('map unavailable'));});
+      };
+      document.head.append(script);
+    });
+  })().catch(error=>{complexMapSDKPromise=null;throw error;});
+  return complexMapSDKPromise;
+}
+function addComplexSchoolMap(body,matched){
+  if(!validSchoolCoordinate(matched))return;
+  const section=document.createElement('div');section.style.cssText='margin:12px 0';
+  const button=document.createElement('button');button.type='button';button.textContent='단지·학교 지도 보기';button.style.cssText='width:100%;padding:10px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:800;cursor:pointer';
+  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');status.style.marginTop='6px';
+  const container=document.createElement('div');container.hidden=true;container.setAttribute('aria-label','단지와 주변 학교 위치 지도');container.style.cssText='width:100%;height:320px;margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden';
+  section.append(button,status,container);body.prepend(section);
+  let map=null,loading=false;
+  button.onclick=async()=>{
+    if(loading)return;
+    if(map){container.hidden=!container.hidden;button.textContent=container.hidden?'단지·학교 지도 보기':'지도 접기';if(!container.hidden)map.relayout();return;}
+    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';
+    try{
+      const maps=await loadComplexMapSDK();if(!section.isConnected)return;
+      container.hidden=false;
+      map=new maps.Map(container,{center:new maps.LatLng(matched.lat,matched.lng),level:5,scrollwheel:false});
+      map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
+      const bounds=new maps.LatLngBounds();
+      const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706'};
+      const points=[{...matched,level:'단지'},...(matched.schools||[]).filter(validSchoolCoordinate)];
+      let info=null;
+      points.forEach(point=>{
+        const position=new maps.LatLng(point.lat,point.lng);bounds.extend(position);
+        const marker=document.createElement('button');marker.type='button';marker.textContent=point.level;marker.title=point.name;marker.setAttribute('aria-label',point.name+' 위치');marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
+        new maps.CustomOverlay({map,position,content:marker,yAnchor:1,zIndex:point.level==='단지'?5:2});
+        marker.onclick=()=>{
+          if(info)info.setMap(null);
+          const label=document.createElement('div');label.style.cssText='background:#fff;border:1px solid #00828A;border-radius:8px;padding:9px 12px;font-size:12px;white-space:nowrap;box-shadow:0 2px 5px #0003';
+          label.textContent=point.name+(point.level==='단지'?'':` · 직선 ${point.distance.toLocaleString()}m`);
+          info=new maps.CustomOverlay({map,position,content:label,yAnchor:2.5,zIndex:10});
+        };
+      });
+      maps.event.addListener(map,'click',()=>{if(info)info.setMap(null);});
+      map.setBounds(bounds,30,30,30,30);
+      status.textContent='단지 · 초등학교 · 중학교 · 고등학교 (표시를 누르면 이름 확인)';
+      button.textContent='지도 접기';
+      const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!container.isConnected)observer.disconnect();});observer.observe(container);
+    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
+    finally{loading=false;button.disabled=false;}
+  };
+}
 async function loadComplexSchools(panel,d,lawd){
   if(!panel.open||panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
   const body=panel.querySelector('.nearby-school-body');panel.dataset.loading='1';body.textContent='학교 정보를 불러오는 중…';
@@ -5824,6 +5889,7 @@ async function loadComplexSchools(panel,d,lawd){
       return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
     }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
     body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">단지 좌표와 학교 좌표 사이의 직선거리입니다. 배정 학교·통학구역·실제 도보 경로를 의미하지 않습니다. 출처: 제공된 학교 위치·단지 좌표 자료 (2026.10.13 반영)</div>');
+    if(rows.length)addComplexSchoolMap(body,matched);
     panel.dataset.loaded='1';
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
   finally{delete panel.dataset.loading;}

@@ -33,9 +33,9 @@ def main():
                         if not isinstance(index,int) or not 0<=index<len(schools) or not 0<=distance<=3000:continue
                         school=schools[index]
                         if school.get('lv')!=level:continue
-                        nearby.append({'id':school['id'],'name':school['name'],'level':level,'distance':distance,'type':school.get('type','')})
+                        nearby.append({'id':school['id'],'name':school['name'],'level':level,'distance':distance,'type':school.get('type',''),'lat':school.get('lat'),'lng':school.get('lng')})
                 if not nearby:continue
-                groups[lawd].append({'name':apt['name'],'umd':apt.get('dong',''),'kaptCode':apt['key'][2:] if apt['key'].startswith('K:') else None,'hh':apt.get('ho',0),'schools':nearby})
+                groups[lawd].append({'name':apt['name'],'umd':apt.get('dong',''),'kaptCode':apt['key'][2:] if apt['key'].startswith('K:') else None,'hh':apt.get('ho',0),'lat':apt.get('lat'),'lng':apt.get('lng'),'schools':nearby})
     out=Path(__file__).resolve().parents[1]/'data'/'nearby-schools';out.mkdir(exist_ok=True)
     for code,items in groups.items():
         (out/(code+'.json')).write_text(json.dumps({'source':'운영자 제공 wooahakgun 자료','asOf':'2026-10-13','distanceKind':'straight','items':items},ensure_ascii=False,separators=(',',':')))
