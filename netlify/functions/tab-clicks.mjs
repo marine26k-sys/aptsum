@@ -20,7 +20,7 @@ export const config = { path: "/api/tab-clicks" };
 export const TAB_IDS = [
   "tabC", "tabCmp", "tabCY", "tabTM", "tabSL", "tabSub",
   "tabR", "tabV", "tabPP", "tabGap",
-  "tabNH", "tabLTR", "tabJLTR",
+  "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange",
   "tabSU", "tabP", "tabLP", "tabINV",
   "tabLPL", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",

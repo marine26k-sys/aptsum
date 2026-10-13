@@ -53,3 +53,5 @@ test('business clicks use the tab ledger and deduplicate with other tab clicks',
   await recordTabs(s, '2026-10-08', 'v2', ['tabBusiness']);
   assert.deepEqual(count(s, '2026-10-08'), { tabBusiness: 2, tabC: 1 });
 });
+
+test('stats includes every tracked current tab including regional change and favorites',async()=>{const {default:vm}=await import('node:vm');const html=readFileSync(new URL('../stats.html',import.meta.url),'utf8');const source=html.slice(html.indexOf('const TAB_LABELS ='),html.indexOf('let tabData ='));const groups=vm.runInNewContext(source+';TAB_LABELS');const rows=groups.flatMap(g=>g[1]);assert.deepEqual(Array.from(rows,r=>r[0]).sort(),[...TAB_IDS].sort());assert.equal(rows.find(r=>r[0]==='tabR')[1],'단지 랭킹');assert.equal(rows.find(r=>r[0]==='tabPP')[1],'공급면적 평단가');});
