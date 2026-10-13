@@ -5758,14 +5758,16 @@ function complexDynamicHTML(){
     </div>
     ${isSale ? `
     <div class="sec">
-      <h3>단기 추세 — 평형별 (이전 3개월 vs 최근 3개월)</h3>
+      <details id="complexTrendPanel"><summary style="cursor:pointer;color:var(--teal-dark);font-weight:800;font-size:13px">단기 추세 — 평형별 (이전 3개월 vs 최근 3개월)</summary>
       <div id="trendBox">${trendHTML(d)}</div>
       <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
+      </details>
     </div>
 
     <div class="sec">
-      <h3 id="floorTitle">층별 가격 프리미엄${p?` — ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다) · 최근 6개월`:''}</h3>
+      <details id="complexFloorPanel"><summary id="floorTitle" style="cursor:pointer;color:var(--teal-dark);font-weight:800;font-size:13px">층별 가격 프리미엄${p?` — ${esc(p.py)} (전용 ${p.sizeKey} · 거래 최다) · 최근 6개월`:''}</summary>
       <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
+      </details>
     </div>` : ''}
 
     <div class="sec">
