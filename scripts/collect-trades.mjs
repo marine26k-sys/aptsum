@@ -47,7 +47,7 @@ function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json"].filter((d) => existsSync(d));
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json"].filter((d) => existsSync(d));
     if (!paths.length) return;
     execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
