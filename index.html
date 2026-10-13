@@ -5864,7 +5864,7 @@ function loadComplexMapSDK(){
     return new Promise((resolve,reject)=>{
       const script=document.createElement('script');
       const timeout=setTimeout(()=>{script.remove();reject(Error('map timeout'));},15000);
-      script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(config.kakaoJavaScriptKey)}&autoload=false`;
+      script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(config.kakaoJavaScriptKey)}&autoload=false&libraries=services`;
       script.onerror=()=>{clearTimeout(timeout);script.remove();reject(Error('map script'));};
       script.onload=()=>{
         if(!window.kakao?.maps?.load){clearTimeout(timeout);script.remove();reject(Error('map unavailable'));return;}
@@ -5925,12 +5925,39 @@ function addComplexSchoolMap(body,matched){
       nearby.onclick=()=>{const show=nearby.getAttribute('aria-pressed')!=='true';nearby.setAttribute('aria-pressed',String(show));nearby.textContent=show?'주변 단지 숨기기':'주변 단지 보기';neighbors.hidden=!show;neighborOverlays.forEach(x=>x.setMap(show?map:null));};
       expand.onclick=()=>expandComplexMap(container,map,section);controls.hidden=false;
       maps.event.addListener(map,'click',()=>{if(info)info.setMap(null);});
-      map.setBounds(bounds,30,30,30,30);
+      if(points.length>1)map.setBounds(bounds,30,30,30,30);
       status.textContent='두 손가락으로 확대·축소 · 표시를 누르면 이름 확인';
       button.textContent='지도 접기';
       const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!section.isConnected){closeExpandedComplexMap();observer.disconnect();}});observer.observe(container);
     }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
     finally{loading=false;button.disabled=false;}
+  };
+}
+function selectComplexMapPlace(places,d,alias,region){
+  const norm=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+  const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
+  const regionParts=String(region||'').split(/\s+/).filter(Boolean);
+  const matches=places.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시'))&&names.has(norm(x.place_name))&&String(x.address_name||'').split(/\s+/).includes(d.umd)&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
+  return matches.length===1?matches[0]:null;
+}
+function addUnmatchedComplexMap(body,d,lawd,alias){
+  const button=document.createElement('button');button.type='button';button.textContent='단지·학교 지도 보기';button.style.cssText='width:100%;padding:10px;margin-bottom:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:800;cursor:pointer';body.prepend(button);
+  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');button.after(status);
+  button.onclick=async()=>{
+    button.disabled=true;status.textContent='단지 위치를 확인하는 중…';
+    try{
+      const maps=await loadComplexMapSDK();
+      if(!maps.services?.Places)throw Error('places unavailable');
+      const group=REGIONS.find(([,rows])=>rows.some(([,code])=>code===lawd));
+      const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+      const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch([group?.[0],region,d.umd,alias||d.name].filter(Boolean).join(' '),(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
+      if(!body.isConnected)return;
+      const place=selectComplexMapPlace(places,d,alias,region);
+      if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
+      button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:[],nearby:[]});
+      body.querySelector('button').click();
+    }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 다시 눌러 주세요.';}
+    finally{button.disabled=false;}
   };
 }
 async function loadComplexSchools(panel,d,lawd){
@@ -5953,7 +5980,8 @@ async function loadComplexSchools(panel,d,lawd){
       return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
     }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
     body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">단지 좌표와 학교 좌표 사이의 직선거리입니다. 배정 학교·통학구역·실제 도보 경로를 의미하지 않습니다. 출처: 제공된 학교 위치·단지 좌표 자료 (2026.10.13 반영)</div>');
-    if(rows.length)addComplexSchoolMap(body,matched);
+    if(validSchoolCoordinate(matched))addComplexSchoolMap(body,matched);
+    else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd));
     panel.dataset.loaded='1';
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
   finally{delete panel.dataset.loading;}

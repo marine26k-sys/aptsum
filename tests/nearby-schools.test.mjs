@@ -35,3 +35,12 @@ test('nearby complex lists stay within one kilometer and are ordered by distance
   for(const row of apt.nearby){assert.ok(row.lawd&&row.name);assert.ok(row.distance>=previous&&row.distance<=1000);previous=row.distance;}
  }
 });
+
+test('fallback location requires unique exact complex name, dong and region',()=>{
+ vm.runInContext(html.slice(html.indexOf('function selectComplexMapPlace('),html.indexOf('function addUnmatchedComplexMap(')),c);
+ const place={place_name:'단지 아파트',address_name:'경기 안양시 동안구 비산동 1',x:'126.9',y:'37.4'};
+ assert.equal(c.selectComplexMapPlace([place],{name:'단지',umd:'비산동'},null,'안양 동안구'),place);
+ assert.equal(c.selectComplexMapPlace([place],{name:'단지',umd:'관양동'},null,'안양 동안구'),null);
+ assert.equal(c.selectComplexMapPlace([place],{name:'단지',umd:'비산동'},null,'수원 영통구'),null);
+ assert.equal(c.selectComplexMapPlace([place,{...place}],{name:'단지',umd:'비산동'},null,'안양 동안구'),null);
+});
