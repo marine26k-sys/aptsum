@@ -494,7 +494,7 @@ try {
       <h2 id="subscriberCodeTitle">접근 코드 입력</h2>
       <p>이용 중인 접근 코드를 입력해 주세요.</p>
       <form id="subscriberCodeForm">
-        <input id="subscriberCodeInput" type="text" placeholder="ABCD-1234" autocomplete="off" autocapitalize="characters" maxlength="20" aria-label="접근 코드">
+        <input id="subscriberCodeInput" type="text" placeholder="ABCD-1234" autocomplete="off" autocapitalize="none" maxlength="256" aria-label="접근 코드">
         <div class="code-error" id="subscriberCodeError" role="alert"></div>
         <button class="code-submit" id="subscriberCodeSubmit" type="submit">로그인</button>
       </form>
@@ -682,7 +682,7 @@ try {
       codeOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubscriberCodeInput(); });
       const openSubscriberCodeInput = async () => {
         await sessionReady;
-        if (verified) return;
+        if (verified && master) return;
         codeInput.value = '';
         codeError.textContent = '';
         codeOverlay.hidden = false;
