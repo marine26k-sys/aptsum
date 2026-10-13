@@ -5851,7 +5851,8 @@ function addComplexSchoolMap(body,matched){
     try{
       const maps=await loadComplexMapSDK();if(!section.isConnected)return;
       container.hidden=false;
-      map=new maps.Map(container,{center:new maps.LatLng(matched.lat,matched.lng),level:5,scrollwheel:false});
+      map=new maps.Map(container,{center:new maps.LatLng(matched.lat,matched.lng),level:5,draggable:true,scrollwheel:true});
+      map.setZoomable(true);
       map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
       const bounds=new maps.LatLngBounds();
       const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706'};
@@ -5870,7 +5871,7 @@ function addComplexSchoolMap(body,matched){
       });
       maps.event.addListener(map,'click',()=>{if(info)info.setMap(null);});
       map.setBounds(bounds,30,30,30,30);
-      status.textContent='단지 · 초등학교 · 중학교 · 고등학교 (표시를 누르면 이름 확인)';
+      status.textContent='두 손가락으로 확대·축소 · 표시를 누르면 이름 확인';
       button.textContent='지도 접기';
       const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!container.isConnected)observer.disconnect();});observer.observe(container);
     }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
