@@ -19,3 +19,12 @@ export function regionalChange(items,period,names={},samples=null){
 export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1);
  const monthly=Array.from({length:6},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m-1,1)).toISOString().slice(0,7),start:Date.UTC(y,m-1,1),end:Date.UTC(y,m,1),previousStart:Date.UTC(y,m-2,1)};});
  return {monthly};}
+
+// 최근 완료된 12개월의 전용㎡당 평균 가격 상위 50개. 선정 후 목록은 고정한다.
+export function selectRegionalSamples(items,names={},start,end,limit=50){
+ const groups=new Map();
+ for(const t of items){const date=tradeDay(t);if(!(date>=start&&date<end)||t.direct||t.cancel||t.cancelled||!t.apt||!t.umd||!Number.isFinite(t.amt)||t.amt<=0||!Number.isFinite(t.area)||t.area<=0)continue;
+  const name=names[`${t.apt}|${t.umd}`]||t.apt,key=JSON.stringify([t.umd,name]);const row=groups.get(key)||{key,name,umd:t.umd,sum:0,trades:0};row.sum+=t.amt/t.area;row.trades++;groups.set(key,row);
+ }
+ return [...groups.values()].map(({sum,...r})=>({...r,price:sum/r.trades})).sort((a,b)=>b.price-a.price||a.key.localeCompare(b.key,'ko')).slice(0,limit);
+}
