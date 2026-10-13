@@ -5785,6 +5785,40 @@ function setComplexView(v){
   if(box) box.innerHTML = complexDynamicHTML();
 }
 
+const nearbySchoolCache=new Map();
+function matchNearbySchools(items,d,alias){
+  const norm=n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+  if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
+  if(!d.umd)return null;
+  const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
+  const matches=items.filter(x=>norm(x.umd)===norm(d.umd)&&names.has(norm(x.name)));
+  // 같은 이름이라도 연결 후보가 둘 이상이면 임의로 고르지 않는다.
+  return matches.length===1?matches[0]:null;
+}
+async function loadComplexSchools(panel,d,lawd){
+  if(!panel.open||panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
+  const body=panel.querySelector('.nearby-school-body');panel.dataset.loading='1';body.textContent='학교 정보를 불러오는 중…';
+  try{
+    let data=nearbySchoolCache.get(lawd);
+    if(!data){
+      const response=await fetch(`/data/nearby-schools/${encodeURIComponent(lawd)}.json`);
+      if(response.status===404)data={items:[]};
+      else{if(!response.ok)throw new Error('school fetch');data=await response.json();if(!Array.isArray(data.items))throw new Error('invalid schools');}
+      nearbySchoolCache.set(lawd,data);
+    }
+    await ensureNaverNames(lawd);
+    if(!panel.isConnected)return;
+    const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd));
+    const rows=matched?.schools||[];
+    body.innerHTML=rows.length?['초','중','고'].map(level=>{
+      const schools=rows.filter(x=>x.level===level).sort((a,b)=>a.distance-b.distance);
+      return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
+    }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
+    body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">단지 좌표와 학교 좌표 사이의 직선거리입니다. 배정 학교·통학구역·실제 도보 경로를 의미하지 않습니다. 출처: 제공된 학교 위치·단지 좌표 자료 (2026.10.13 반영)</div>');
+    panel.dataset.loaded='1';
+  }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
+  finally{delete panel.dataset.loading;}
+}
 function renderComplex(d){
   selPy = -1;
   tradesShown = TRADES_PAGE_SIZE;
@@ -5807,11 +5841,20 @@ function renderComplex(d){
       </div>
     </div>
 
+    <div class="sec" style="padding-top:12px;padding-bottom:0">
+      <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교 · 펼쳐보기</summary>
+        <div class="nearby-school-body" style="padding-top:8px"></div>
+      </details>
+    </div>
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=sel.value;
+  schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
 }
+
 
 // ── 단지 비교 렌더링 ──
 const CMP_COLORS = ['#00828A','#DC2626','#0F2B3D','#D97706'];
