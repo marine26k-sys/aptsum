@@ -1,3 +1,4 @@
+import {applyNaverSupplyAreas} from '../shared/supply-area-loader.mjs';
 import {readFile,writeFile,readdir,mkdir} from 'node:fs/promises';
 import {REGIONS} from '../shared/regions.mjs';
 import {changePeriods,regionalChange,selectRegionalSamples} from '../shared/regional-change.mjs';
@@ -6,16 +7,17 @@ const periods=changePeriods(asOf),regions=[];
 await mkdir('data/regional-change-details',{recursive:true});
 let fixed;try{fixed=JSON.parse(await readFile('data/regional-samples.json','utf8'));}catch(e){if(e.code!=='ENOENT')throw e;fixed={selectedAt:asOf,regions:{}};}
 const selectionEnd=periods.monthly[0].end,selectionDate=new Date(selectionEnd);selectionDate.setUTCFullYear(selectionDate.getUTCFullYear()-1);const selectionStart=+selectionDate;
-if(fixed.method!=='top50-unit-price-v1')fixed={method:'top50-unit-price-v1',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
+if(fixed.method!=='top50-supply-price-v1')fixed={method:'top50-supply-price-v1',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
 const allFixed=JSON.parse(await readFile('data/regional-all-samples.json','utf8'));
 const earliest=Math.min(...Object.values(periods).flat().map(p=>p.previousStart));
 for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
  let files=[];try{files=await readdir(`data/analyze/${lawd}`);}catch{}
  const items=[];const available=new Set();
  let names={};try{names=JSON.parse(await readFile(`data/naver-names/${lawd}.json`,'utf8'));}catch{}
+ let supplyAreas=[];try{supplyAreas=JSON.parse(await readFile(`data/supply-area-naver/${lawd}.json`,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  const selectionItems=[];
- for(const file of files.filter(f=>/^\d{6}\.json$/.test(f))){const ym=file.slice(0,6);const data=JSON.parse(await readFile(`data/analyze/${lawd}/${file}`,'utf8'));if(!Array.isArray(data.items))throw Error('invalid trade data');selectionItems.push(...data.items);
- if(Date.UTC(+ym.slice(0,4),+ym.slice(4)-1,1)>=earliest-32*86400000){items.push(...data.items);available.add(ym);}}
+ for(const file of files.filter(f=>/^\d{6}\.json$/.test(f))){const ym=file.slice(0,6);const data=JSON.parse(await readFile(`data/analyze/${lawd}/${file}`,'utf8'));if(!Array.isArray(data.items))throw Error('invalid trade data');const calibrated=applyNaverSupplyAreas(data.items,supplyAreas,lawd);selectionItems.push(...calibrated);
+ if(Date.UTC(+ym.slice(0,4),+ym.slice(4)-1,1)>=earliest-32*86400000){items.push(...calibrated);available.add(ym);}}
  if(!fixed.regions[lawd]){const selected=selectRegionalSamples(selectionItems,names,selectionStart,selectionEnd);fixed.regions[lawd]=selected.map(x=>x.key);fixed.details[lawd]=selected;}
  const metrics={};for(const [kind,ps] of Object.entries(periods))metrics[kind]=ps.map(p=>{
   const required=[];const day=new Date(p.previousStart);while(+day<p.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCDate(1);day.setUTCMonth(day.getUTCMonth()+1);}
@@ -29,5 +31,5 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
  regions.push({province,name,lawd,metrics,allMetrics});
 }
 await writeFile('data/regional-samples.json',JSON.stringify(fixed));
-await writeFile('data/regional-change.json',JSON.stringify({asOf,sampleMethod:fixed.method,sampleSelectionStart:fixed.selectionStart,sampleSelectionEnd:fixed.selectionEnd,sampleSelectedAt:fixed.selectedAt,generatedAt:new Date().toISOString(),periods,regions}));
+await writeFile('data/regional-change.json',JSON.stringify({asOf,priceBasis:'supply-pyeong',priceUnit:'억원/평',sampleMethod:fixed.method,sampleSelectionStart:fixed.selectionStart,sampleSelectionEnd:fixed.selectionEnd,sampleSelectedAt:fixed.selectedAt,generatedAt:new Date().toISOString(),periods,regions}));
 console.log(`지역별 실거래 변동률 생성: ${regions.length}개 지역 (${asOf})`);
