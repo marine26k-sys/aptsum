@@ -125,6 +125,7 @@ jobs:
           done
           [ -f data/tier-map.json ] && git add data/tier-map.json
           [ -f data/regional-change.json ] && git add data/regional-change.json
+          [ -d data/regional-change-details ] && git add data/regional-change-details
           [ -f data/regional-samples.json ] && git add data/regional-samples.json
           [ -f data/regional-all-samples.json ] && git add data/regional-all-samples.json
           if git diff --cached --quiet; then
