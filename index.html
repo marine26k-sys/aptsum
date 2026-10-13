@@ -1362,7 +1362,7 @@ async function initFromURL(){
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
   if(p.get('ls') || p.get('lr') || p.get('lq') || (hasSharedQuery && isListingMode(requestedMode) && requestedMode!=='listinggap')){
     const [a0,a1,h,p0,p1,h1] = (p.get('ls')||'').split('-').map(Number);
-    const [r0,r1] = (p.get('lr')||'').split('~').map(Number);
+    const [r0,r1] = p.has('lr') ? p.get('lr').split('~').map(Number) : [];
     const [q0,q1] = p.has('lq') ? p.get('lq').split('~').map(Number) : [0,50];
     lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1});
   }
