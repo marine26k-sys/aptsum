@@ -15,6 +15,6 @@ export function regionalChange(items,period,names={}){
  for(const [key,now] of buckets[1]){const old=buckets[0].get(key);if(!old||old.length<2||now.length<2)continue;changes.push((median(now)/median(old)-1)*100);previousTrades+=old.length;currentTrades+=now.length;}
  return {rate:changes.length>=5&&previousTrades>=10&&currentTrades>=10?Math.round(median(changes)*100)/100:null,groups:changes.length,previousTrades,currentTrades};
 }
-export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1),end=+date+DAY;
+export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1);
  const monthly=Array.from({length:6},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m-1,1)).toISOString().slice(0,7),start:Date.UTC(y,m-1,1),end:Date.UTC(y,m,1),previousStart:Date.UTC(y,m-2,1)};});
- const weekly=Array.from({length:8},(_,i)=>({id:`w${i}`,label:new Date(end-i*7*DAY-DAY).toISOString().slice(0,10),start:end-(i*7+28)*DAY,end:end-i*7*DAY,previousStart:end-(i*7+56)*DAY}));return {monthly,weekly};}
+ return {monthly};}
