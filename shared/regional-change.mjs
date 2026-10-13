@@ -14,7 +14,7 @@ export function regionalChange(items,period,names={},samples=null){
  const previous=[],current=[],changes=[];let previousTrades=0,currentTrades=0;
  for(const [key,now] of buckets[1]){const old=buckets[0].get(key);if(!old)continue;previous.push(average(old));current.push(average(now));changes.push((average(now)/average(old)-1)*100);previousTrades+=old.length;currentTrades+=now.length;}
  const previousPrice=previous.length?average(previous):null,currentPrice=current.length?average(current):null;
- return {rate:changes.length?(Math.round(average(changes)*100)/100||0):null,groups:previous.length,sampleCount:samples?.length??previous.length,previousTrades,currentTrades,previousPrice,currentPrice};
+ return {rate:changes.length>=3?(Math.round(average(changes)*100)/100||0):null,groups:previous.length,sampleCount:samples?.length??previous.length,previousTrades,currentTrades,previousPrice,currentPrice};
 }
 export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1);
  const monthly=Array.from({length:6},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m-1,1)).toISOString().slice(0,7),start:Date.UTC(y,m-1,1),end:Date.UTC(y,m,1),previousStart:Date.UTC(y,m-2,1)};});
