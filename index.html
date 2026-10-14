@@ -460,6 +460,7 @@ try {
   .rgitem.sel .tick{display:inline}
   .rgitem.rgcityall{border-style:dashed;border-color:var(--teal);background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800}
   .rgitem.rgcityall:active{background:var(--teal-light)}
+  .rgitem.rgstandalonecity{border-color:var(--teal)}
   .rgft{flex:0 0 auto;display:flex;gap:7px;padding:8px 12px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:9px;padding:9px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -1983,7 +1984,7 @@ function buildRegionPicker(){
         }
       }
       const on = multi ? picked.has(c) : (cmpPickerRow ? cmpPickerRow.value===c : sel.value===c);
-      return prefix + `<button type="button" class="rgitem${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
+      return prefix + `<button type="button" class="rgitem${g==='경기' && !n.includes(' ') && n.endsWith('시')?' rgstandalonecity':''}${on?' sel':''}" onclick="pickRegion('${esc(c)}')"><span class="tick">✓</span>${esc(n)}</button>`;
     }).join('') + `</div>`;
   });
   body.innerHTML = html || '<div class="rng" style="padding:12px 4px">검색 결과가 없습니다</div>';
