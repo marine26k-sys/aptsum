@@ -301,6 +301,7 @@ try {
   .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
   .listing-trend-row .val{white-space:nowrap;color:var(--blue);font-size:13px}
   .listing-trend-row .val small{display:inline;color:inherit;font-size:10px;font-weight:700}
+  .listing-trend-peak{margin:2px 0 0 30px;max-width:calc(100% - 30px);white-space:nowrap;font-size:11px;line-height:1.3;color:var(--sub)}
   .listing-trend-change{margin-left:30px;max-width:calc(100% - 30px);display:flex;align-items:center;flex-wrap:nowrap;-webkit-text-size-adjust:100%;text-size-adjust:100%;gap:2px calc(4px * var(--history-scale,1));margin-top:4px;font-size:calc(11px * var(--history-scale,1));font-weight:700;color:var(--ink);line-height:1.3}
   .listing-trend-change .price{flex:none;white-space:nowrap;font-size:inherit;padding:2px calc(3px * var(--history-scale,1));border-radius:5px;background:var(--slate-bg)}
   .listing-trend-change button.price{border:0;font-family:inherit;font-weight:inherit;line-height:inherit;cursor:pointer}
@@ -7488,8 +7489,9 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down'){
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · <span style="display:inline-flex;align-items:baseline;gap:2px 5px;flex-wrap:wrap;max-width:100%">최근 3년 최고가 <b>${x.peak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML(x)}</span>`:""}</small></span>
+    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
     <span class="val" style="color:var(--${direction==='up'?'red':'blue'})">${direction==='up'?'▲':'▼'}${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
+    ${x.peak>0?`<div class="listing-trend-peak">최근 3년 최고가 <b>${x.peak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML(x)}</div>`:""}
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }
