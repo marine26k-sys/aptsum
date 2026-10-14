@@ -75,7 +75,7 @@ test('total failure stays retryable without showing a data warning', async () =>
   assert.doesNotMatch(html, /id="dataWarning"/);
   const start = html.indexOf('const CHUNK_CONCURRENCY =');
   const end = html.indexOf('async function ensureMonths(', start);
-  const ctx = vm.createContext({});
+  const ctx = vm.createContext({searchToken:1,mode:'compare'});
   vm.runInContext(html.slice(start,end), ctx);
   let fail = true;
   async function fetchMonth() { return fail ? allFailed : {items:[],failedMonths:[]}; }

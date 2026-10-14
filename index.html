@@ -1144,7 +1144,7 @@ try {
   <div class="chips" id="favs" style="margin:2px 0 6px"></div>
   <button id="favDashBtn" onclick="openFavDash()">📊 관심 단지 요약 보기</button>
 
-  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">실거래 데이터 조회 중…</div><div id="tradeLoadNote" class="loading-note" hidden><strong>실거래 자료 불러오는 중…</strong></div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
+  <div class="loading" id="loading"><div class="spinner"></div><div id="loadMsg">조회 중… 0%</div><div id="tradeLoadNote" class="loading-note" hidden><strong>실거래 자료 불러오는 중…</strong></div><button type="button" id="stopSearchBtn" onclick="stopSearch()" style="margin-top:14px;padding:9px 20px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-size:13px;font-weight:700;cursor:pointer">조회 중지</button></div>
   <div class="error" id="error"></div>
   <div id="result"></div>
 
@@ -1262,6 +1262,12 @@ function openNewHigh7(){
 // (한 화면에 렌더링은 항상 한 번만 일어나야 하므로, 렌더 직전 자신이 여전히 최신 요청인지 확인 후 아니면 조용히 폐기)
 let searchToken = 0;
 let searchAbortController=null;
+function lookupPercent(done,total){return Math.min(95,Math.floor(95*done/Math.max(1,total)));}
+function showLookupProgress(done,total){document.getElementById('loadMsg').textContent='조회 중… '+lookupPercent(done,total)+'%';}
+function lookupProgressMap(items,mapper){
+  const token=searchToken;let completed=0;showLookupProgress(0,items.length);
+  return items.map(async(item,index)=>{try{return await mapper(item,index);}finally{completed++;if(token===searchToken)showLookupProgress(completed,items.length);}});
+}
 function beginSearchRequests(){if(searchAbortController)searchAbortController.abort();searchAbortController=new AbortController();}
 function stopSearch(){
   searchToken++;
@@ -2787,10 +2793,11 @@ function applyMonthResults(cache, chunk, result, now) {
   }
 }
 async function fetchChunksLimited(chunks, fetchFn, lawd){
-  const results = [];
+  const results = [];const token=searchToken;
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
+    if(token===searchToken && mode!=='compare' && regionSel.length<=1 && !isAllScope(sel.value))showLookupProgress(Math.min(i+batch.length,chunks.length),chunks.length);
   }
   return results;
 }
@@ -4637,9 +4644,9 @@ function resolveAptName(allNames, name, umdOf){
   }
   return cand.length===1 ? cand[0] : looseName('partial');
 }
-function resolveSubwayTradeName(lawd, allNames, name, umdOf){
+function resolveSubwayTradeName(lawd, allNames, name, umdOf,naverIndex){
   const key = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
-  const byNaver = allNames.filter(n=>key(naverNameOf(lawd, n, umdOf.get(n)))===key(name));
+  const byNaver = naverIndex ? (naverIndex.get(key(name))||[]) : allNames.filter(n=>key(naverNameOf(lawd, n, umdOf.get(n)))===key(name));
   return byNaver.length===1 ? byNaver[0] : resolveAptName(allNames, name, umdOf);
 }
 async function subwayRowsForRegion(lawd,maxWalk){
@@ -4670,15 +4677,16 @@ async function subwayRowsForRegion(lawd,maxWalk){
     const bandMaps = {};
     let allAptNames = [], aptUmd = new Map();
     try{
-      document.getElementById('loadMsg').textContent = '평당가 데이터 조회 중…';
       const trades = await ensureMonths(lawd, 36);
       allAptNames = [...new Set(trades.map(t=>t.apt))];
       trades.forEach(t=>{ if(!aptUmd.has(t.apt)) aptUmd.set(t.apt, t.umd); });
       AREA_BANDS.forEach(b => { bandMaps[b.key] = peakByAreaLastYear(trades, b.min, b.max); });
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
+    const naverIndex=new Map();
+    for(const name of allAptNames){const key=String(naverNameOf(lawd,name,aptUmd.get(name))||'').replace(/\s/g,'').replace(/아파트$/,'');if(!naverIndex.has(key))naverIndex.set(key,[]);naverIndex.get(key).push(name);}
     rows = rows.map(x => {
-      const resolved = resolveSubwayTradeName(lawd, allAptNames, x.name, aptUmd); // 네이버 단지명 역매핑을 우선한다
+      const resolved = resolveSubwayTradeName(lawd, allAptNames, x.name, aptUmd,naverIndex); // 네이버 단지명 역매핑을 우선한다
       const rk = resolved ? resolved.replace(/\s/g,'') : null;
       const bandResults = rk==null ? [] : AREA_BANDS.map(b => ({ key: b.key, trade: bandMaps[b.key][rk] || null })).filter(r=>r.trade);
       // 정렬 기준(평당가)은 반드시 화면에 실제로 보여줄 후보(pickSubwayPriceCandidates)에서만 계산한다 —
@@ -4701,14 +4709,14 @@ async function searchSubway(){
   document.getElementById('error').classList.remove('on');
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   saveQueriedSliders();
-  document.getElementById('loadMsg').textContent = '지하철 데이터 조회 중…';
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
     const maxWalk=+document.getElementById('subwayWalkMax').value;
     const targets=regionSel.length?regionSel.slice():isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:regionNameByLawd(lawd)}];
     let rows=[];const failures=[];
-    for(let i=0;i<targets.length;i+=4){if(myToken!==searchToken)return;const got=await Promise.all(targets.slice(i,i+4).map(async t=>{try{return await subwayRowsForRegion(t.lawd,maxWalk);}catch{failures.push(t.name);return [];}}));rows.push(...got.flat());}
+    for(let i=0;i<targets.length;i+=4){if(myToken!==searchToken)return;showLookupProgress(i,targets.length);const got=await Promise.all(targets.slice(i,i+4).map(async t=>{try{return await subwayRowsForRegion(t.lawd,maxWalk);}catch{failures.push(t.name);return [];}}));rows.push(...got.flat());if(myToken===searchToken)showLookupProgress(Math.min(i+4,targets.length),targets.length);}
     if(failures.length===targets.length){showError('지하철 데이터를 불러오지 못했습니다. 다시 조회해 주세요.');return;}
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
@@ -4766,6 +4774,9 @@ function pickSubwayPriceCandidates(bandResults){
   return [...prioritized, ...rest].slice(0,2);
 }
 function renderSubway(d){
+  if(!d._subwayVisibleRows)d._subwayVisibleRows=d.rows.filter(x=>pickSubwayPriceCandidates(x.bandResults).length);
+  d=molitPageData(d,"_subwayVisibleRows",renderSubway);
+  d.rows=d._subwayVisibleRows;
   const priceBadges = x => {
     const candidates = pickSubwayPriceCandidates(x.bandResults).sort((a,b)=>a.area-b.area);
     // py(평형)는 실거래 데이터를 서버에서 받아올 때 이미 areaToPy()로 계산돼 있는 값을 그대로 재사용
@@ -4796,7 +4807,8 @@ function renderSubway(d){
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (전용면적 평당가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 // 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
@@ -4924,7 +4936,7 @@ async function search(opts){
   }
   let complexLookup=null;
   if(mode==='complex'&&multiTargets.length){
-    document.getElementById('loadMsg').textContent='단지 찾는 중…';document.getElementById('loading').classList.add('on');
+    showLookupProgress(0,1);document.getElementById('loading').classList.add('on');
     try{complexLookup=await complexSearchTargets(name,multiTargets);if(myToken!==searchToken)return;multiTargets=complexLookup.targets;if(!multiTargets.length){showError('선택한 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}}catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
   }
   const allScope = multiTargets.length > 0;
@@ -4933,7 +4945,7 @@ async function search(opts){
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
   saveQueriedSliders();
   document.getElementById('tradeLoadNote').hidden = false;
-  document.getElementById('loadMsg').textContent = effMN+'개월 실거래 조회·분석 중…';
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
 
@@ -4961,8 +4973,7 @@ async function search(opts){
       for(let i=0;i<targets.length;i+=CHUNK){
         if(myToken!==searchToken)return;
         const part = targets.slice(i, i+CHUNK);
-        document.getElementById('loadMsg').textContent =
-          `${targets.length}개 지역 조회 중… (${Math.min(i+CHUNK,targets.length)}/${targets.length})`;
+        showLookupProgress(i,targets.length);
         // 매매·분양권을 구별로 동시에 조회 — 이름 정규화 병합은 구 단위로 해야 한다(다른 구에 같은 단지명이
         // 존재할 수 있어, 전체를 한꺼번에 정규화하면 서로 다른 구의 단지가 잘못 합쳐질 수 있음)
         const needsRent = mode==='jeonselongtermrise'||mode==='complex'||mode==='gap';
@@ -4971,6 +4982,7 @@ async function search(opts){
           ensureMonthsP(t.lawd, effMN).catch(()=>[]),
           needsRent ? ensureMonthsJ(t.lawd, effMN).catch(()=>[]) : Promise.resolve([]),
         ])));
+        if(myToken===searchToken)showLookupProgress(Math.min(i+CHUNK,targets.length),targets.length);
         gotTriples.forEach(([tradeArr, presaleArr, rentArr], k)=>{
           const guName = part[k].name, guLawd = part[k].lawd;
           const mergedGu = unifyNaverSplit(mergeTradeAndPresaleForRanking(tradeArr, presaleArr), guLawd);
@@ -5055,11 +5067,17 @@ async function search(opts){
         }
       }
     } else if(mode==='compare'){
-      const expandedCmp=cmpItems.flatMap(x=>isAllScope(x.lawd)?lawdsOfScope(x.lawd).map(t=>({...x,lawd:t.lawd})): [x]);
+      const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
+        if(!isAllScope(x.lawd))return [x];
+        const lookup=await complexSearchTargets(x.name,lawdsOfScope(x.lawd));
+        return lookup.targets.map(t=>({...x,lawd:t.lawd}));
+      }));
+      if(myToken!==searchToken)return;
+      const expandedCmp=narrowedCmp.flat();
       const uniq = [...new Set(expandedCmp.map(x=>x.lawd))];
       // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
       const [fetched, fetchedP] = await Promise.all([
-        Promise.all(uniq.map(ld=>ensureMonths(ld, effMN))),
+        Promise.all(lookupProgressMap(uniq,ld=>ensureMonths(ld, effMN))),
         Promise.all(uniq.map(ld=>ensureMonthsP(ld, effMN).catch(()=>[]))),
       ]);
       const byLawd = {};
@@ -5067,7 +5085,7 @@ async function search(opts){
         const merged = mergeTradeAndPresaleForRanking(fetched[i], fetchedP[i]);
         byLawd[ld]=floorF(windowF(merged));
       });
-      await Promise.all(expandedCmp.map(x=>ensureNaverNames(x.lawd)));
+      await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
       d = analyzeCompare(byLawd, matchedCmp, months);
     } else {
@@ -6078,6 +6096,7 @@ function renderComplex(d){
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
@@ -6256,6 +6275,7 @@ function renderCompare(d){
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   drawCompare(d);
 }
@@ -6306,6 +6326,7 @@ function renderRegion(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6337,6 +6358,7 @@ function renderVolume(d){
 
   </div>
   <div class="src-note">${periodLabel} 회전율 = 조회기간 (${periodLabel}) 거래건수 ÷ 세대수 · 세대수가 확인된 단지만 표시${d.pyBand? ' · 선택한 평형 거래만 세므로 단지 전체 회전율보다 낮게 나옴':''} · 출처: 국토교통부 (해제거래 제외)</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6366,6 +6388,7 @@ function renderGap(d){
     </div>
   </div>
   <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가 (조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6407,6 +6430,7 @@ function renderNewHigh(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6437,6 +6461,7 @@ function renderNewLow(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~25% 하락 기준 · 직거래 제외</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6467,6 +6492,7 @@ function renderPricePerPyeong(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 공급면적 평형 기준 · 매칭 자료가 없으면 추정 평형 적용</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6523,6 +6549,7 @@ function renderLongTermRise(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계 (분양권·입주권 제외) · 직거래 제외</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
@@ -6560,6 +6587,7 @@ function renderPriceBandRise(d){
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매·분양권·입주권 포함 · 직거래 제외</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -6589,6 +6617,7 @@ function renderJeonseLongTermRise(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 전세만 집계 (분양권·입주권 제외) · 직거래 제외 · 전세가 급락은 역전세 위험 신호로 참고</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -6647,10 +6676,12 @@ ${uvSep(i)}
 
   </div>
   <div class="src-note">전용면적 기준 평당가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderShortUndervalue(d){
+  d=molitPageData(d,"divergence",renderShortUndervalue);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
   <div class="card">
@@ -6670,7 +6701,8 @@ function renderShortUndervalue(d){
 
   </div>
   <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function peakDivergenceHTML(list, prevLabel, recentLabel){
@@ -6699,6 +6731,7 @@ ${uvSep(i)}
 }
 
 function renderPeak(d){
+  d=molitPageData(d,"divergence",renderPeak);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
   <div class="card">
@@ -6718,7 +6751,8 @@ function renderPeak(d){
 
   </div>
   <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 // ═══ 저평가 실매물 (입주가능, 중층 이상) — 2026.09 신규, 구독 전용 ═══
@@ -6746,7 +6780,7 @@ async function searchListingFavorites(myToken){
   const result=document.getElementById('result');result.innerHTML='';result.classList.remove('on');
   document.getElementById('error').classList.remove('on');
   document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
-  document.getElementById('loadMsg').textContent='관심 단지 호가 불러오는 중…';
+  showLookupProgress(0,1);
   try{
     const favs=getFavs().slice(0,10),packs=new Map();
     const codes=[...new Set(favs.map(f=>f.lawd))].filter(code=>!isListingTrial()||code===LISTING_TRIAL_LAWD);
@@ -6855,19 +6889,19 @@ function analyzeListingGap(items, smallBand, largeBand){
   }
   return [...groups.values()].filter(g=>g.small && g.large && g.large.ex>g.small.ex && g.large.py>g.small.py)
     .map(({small,large})=>({ ...small, small, large, gap:+(large.ask-small.ask).toFixed(4) }))
-    .sort((a,b)=>a.gap-b.gap || a.large.ask-b.large.ask || String(a.apt).localeCompare(String(b.apt),'ko')).slice(0,100);
+    .sort((a,b)=>a.gap-b.gap || a.large.ask-b.large.ask || String(a.apt).localeCompare(String(b.apt),'ko'));
 }
 async function searchListingGap(myToken, lawd, silentScroll){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name:sel.options[sel.selectedIndex].textContent }]);
   const bands = listingGapBands();
-  document.getElementById('loadMsg').textContent = `${targets.length}개 지역 평형 간 가격차 불러오는 중…`;
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
     const failed=[], all=[];
     let asOf=null;
-    await Promise.all(targets.map(async t=>{
+    await Promise.all(lookupProgressMap(targets,async t=>{
       try{
         const d=await fetchListings(t.lawd);
         if(d.asOf && (!asOf || d.asOf>asOf)) asOf=d.asOf;
@@ -6957,7 +6991,7 @@ function listingTrendDirectionApply(){
 }
 async function searchListingTrend(myToken,lawd,silentScroll){
   const targets=regionSel.length?regionSel.slice():(isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:sel.options[sel.selectedIndex].textContent}]);
-  document.getElementById('loadMsg').textContent=`${targets.length}개 지역 최저 호가 이력 불러오는 중…`;
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
   const requestedUpload='';
   const direction=mode==='listingrise'?'up':'down';
@@ -6965,7 +6999,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   const continuous=false;
   try{
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
-    await Promise.all(targets.map(async t=>{try{
+    await Promise.all(lookupProgressMap(targets,async t=>{try{
       const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
       packs.push({t,current,history});
     }catch(e){if(e.auth)throw e;failed.push(t.name);}}));
@@ -6989,7 +7023,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
     // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
     lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
     for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls)||(belowPeak&&!listingTrendPeakMatch(rows[i])))rows.splice(i,1);
-    rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
+    rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct);
     const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,belowPeak,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
     lastData=d;renderListingTrend(d);
@@ -7027,19 +7061,19 @@ function analyzeListingUndervalue(all, priceFilter){
   });
   // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).slice(0,100).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
+  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
   const targets = regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
-  document.getElementById('loadMsg').textContent = `${targets.length}개 지역 실매물 불러오는 중…`;
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
     const failed = [], all = [];
     let asOf = null;
-    await Promise.all(targets.map(async t=>{
+    await Promise.all(lookupProgressMap(targets,async t=>{
       try{
         const d = await fetchListings(t.lawd);
         if(d.asOf && (!asOf || d.asOf > asOf)) asOf = d.asOf;
@@ -7078,6 +7112,7 @@ async function searchListingUndervalue(myToken, lawd){
 const peakYmLabel = ym => /^\d{6}$/.test(ym||'') ? `${ym.slice(2,4)}.${ym.slice(4)}` : '';
 
 function renderListingUndervalue(d){
+  d=molitPageData(d,"divergence",renderListingUndervalue);
   const list = d.divergence;
   const multiRegion = regionMulti(list);
   // 네이버 매물 링크 — 단지명 바로 옆 작은 외부 링크 아이콘(운영자 요청: 행마다 "네이버 매물" 글자가 반복되는 것보다 간결하게)
@@ -7122,7 +7157,8 @@ function renderListingUndervalue(d){
     </div>
   </div>
   <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 // ═══ 예산별 실매물 · 네이버 급매 — 2026.09 신규, 비공개 탭 ═══
@@ -7393,7 +7429,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   const nameSearch=tabMode==='listingbudget'&&listingNameActive();
   let targets=nameSearch?[]:regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
-  document.getElementById('loadMsg').textContent = nameSearch?'전 지역 단지 검색 중…':`${targets.length}개 지역 실매물 불러오는 중…`;
+  showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
@@ -7401,7 +7437,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
-    await Promise.all(targets.map(async t=>{
+    await Promise.all(lookupProgressMap(targets,async t=>{
       try{
         const d = nameSearch?{asOf:t.asOf,items:t.items}:await fetchListings(t.lawd);
         if(listingFloor()==='all'&&d.floorDataAvailable===false)throw new Error('저층 포함 자료가 없어 엑셀 재업로드가 필요합니다.');
@@ -7585,6 +7621,7 @@ function listingGapPriceHTML(x, large){
     : `<span class="price ${large?'large':''}">${content}</span>`;
 }
 function renderListingGap(d){
+  d=molitPageData(d,"rows",renderListingGap);
   const multi=regionMulti(d.rows);
   const body=!d.rows.length ? '<div class="rng" style="padding:10px 0">선택한 두 평형대의 매물이 모두 있는 단지가 없습니다.</div>'
     : d.rows.map((x,i)=>{
@@ -7600,9 +7637,10 @@ function renderListingGap(d){
     ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 큰 평형으로 넓히는 호가 차이 적은 순`)}
     <div class="rng" style="margin:6px 0;color:#036B31">평형·가격 옆 ↗를 누르면 해당 네이버 매물로 이동합니다.</div>
     ${body}</div></div><div class="src-note">각 평형대 안에서 가장 낮은 호가를 비교합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
-  const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 function renderListingTrend(d){
+  d=molitPageData(d,"rows",renderListingTrend);
   syncListingTrendBelowPeak(!!d.belowPeak);
   const rising=d.mode==='listingrise',word=rising?'상승':'하락';
   listingTrendUploadId=d.trendUpload||'';syncListingTrendUpload(d.trendChoices||[]);
@@ -7623,13 +7661,15 @@ function renderListingTrend(d){
       ${body}
     </div></div>
     <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 선택한 기준일까지 최근 3개 연속 기록의 첫 금액과 마지막 금액을 비교하며, 기록이 2개면 두 금액을 비교합니다. 비교 시작 금액 대비 변동률이 25% 이상인 항목은 상승·하락 모두 제외합니다. 항상 최신 업로드를 기준으로 조회하며, 가격 이력을 최대 12일 표시합니다.</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
   requestAnimationFrame(fitListingTrendPrices);
   if(document.fonts) document.fonts.ready.then(fitListingTrendPrices);
 }
 
 // 네이버 급매 — 탭 자체가 급매만 모은 것이라 행마다 급매 배지는 달지 않는다(운영자 요청)
 function renderListingUrgent(d){
+  d=molitPageData(d,"rows",renderListingUrgent);
   const list = d.rows;
   const multiRegion = regionMulti(list);
   const body = !list.length
@@ -7649,7 +7689,8 @@ function renderListingUrgent(d){
     </div>
   </div>
   <div class="src-note">급매: 네이버 부동산 매물의 '급매' 문구 기준 · 호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · 호가 ${URGENT_MIN_ASK}억 이상 · ${LISTING_MIN_HH}세대 이상 · 변동률: 최근 3년 실거래 최고가 (엑셀 기준) 대비 · 정렬: 호가 낮은 순 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function setListingBudgetBand(v){
@@ -7702,10 +7743,12 @@ function renderListingBudget(d,limit=100){
     </div>
   </div>
   <div class="src-note">호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
 function renderLongPeak(d){
+  d=molitPageData(d,"divergence",renderLongPeak);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
   <div class="card">
@@ -7725,7 +7768,8 @@ function renderLongPeak(d){
 
   </div>
   <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('loadMsg').textContent='조회 완료 100%';
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 </script>
