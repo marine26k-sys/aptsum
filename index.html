@@ -487,6 +487,7 @@ try {
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
 <script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 <script src="/assets/subscriber-session.js?v=1"></script>
+<script src="/shared/complex-identity.js?v=1"></script>
 <link rel="stylesheet" href="/assets/page-header.css">
 </head>
 <body>
@@ -1542,8 +1543,8 @@ async function renderFavDash(){
       const items = await ensureMonths(f.lawd, 12);
       let itemsP = [];
       try{ itemsP = await ensureMonthsP(f.lawd, 12); }catch(e){} // 매매 실거래가 없는 분양권 전용 즐겨찾기 단지도 요약에 반영
-      const merged = mergeTradeAndPresaleForRanking(items, itemsP);
       await ensureNaverNames(f.lawd);
+      const merged = mergeTradeAndPresaleForRanking(items,itemsP,f.lawd);
       const m = matchComplex(merged, f.name, f.lawd);
       if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
       const rows = buildRepRows(m.hits, months);
@@ -3272,7 +3273,7 @@ function ensureNaverNames(lawd){
     .then(j=>{ NAVER_NAMES[lawd] = (j && typeof j==='object') ? j : {}; delete naverNamesLoading[lawd]; return NAVER_NAMES[lawd]; });
 }
 const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
-function naverNameOf(lawd, apt, umd){ const m = lawd && NAVER_NAMES[lawd]; return (m && umd && m[`${apt}|${umd}`]) || null; }
+function naverNameOf(lawd,apt,umd){const name=aptsumComplexIdentity.canonical(apt,umd,NAVER_NAMES[lawd]||{},lawd);return name===apt?null:name;}
 // 화면 표시용 단지명 — 국토부 실거래 기준 목록(랭킹·저평가·신고가 등)에서 실거래 등록명 대신 네이버 단지명을
 // 보여준다. 데이터(t.apt)는 그대로 두므로 세대수·공급면적처럼 실거래명으로 연결되는 데이터는 영향 없음.
 // 통합(여러 지역) 조회 행은 o.lawd, 단일 지역 조회는 현재 선택 지역 기준.
@@ -3347,14 +3348,14 @@ function matchComplex(all, name, lawd){
   // (2026.08 발견). aptNameVariants()로 만든 이형 표기 후보도 exact 후보에 같이 넣어 이 경우를 substring
   // 단계까지 가기 전에 먼저 해결한다.
   const qnList = [...new Set(aptNameVariants(qn).flatMap(aliasesFor))]; // 검색어 본인(+이형 표기) + 알려진 개명 이력 별칭까지 함께 매칭
-  const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')));
+  const exact = all.filter(t=>qnList.includes(t.apt.replace(/\s/g,'')) || (t.sourceApt && qnList.includes(t.sourceApt.replace(/\s/g,''))));
   if(exact.length){
     if(new Set(exact.map(t=>t.umd)).size>1) return {multi:[...new Set(exact.map(t=>`${t.apt} [${t.umd}]`))]};
     // 실거래 등록명으로 찾았어도 같은 네이버 단지로 묶이는 다른 등록명이 있으면 함께(관악드림(삼성) → +관악드림(동아))
     const keyOf = t => JSON.stringify([t.apt, t.umd]);
     const groups = new Set(exact.map(keyOf));
     exact.forEach(t=>naverGroupNames(all, lawd, t.apt, t.umd).forEach(a=>groups.add(keyOf({apt:a, umd:t.umd}))));
-    return {hits: groups.size>new Set(exact.map(keyOf)).size ? all.filter(t=>groups.has(keyOf(t))) : exact};
+    return {hits: all.filter(t=>groups.has(keyOf(t)))};
   }
   // 네이버 단지명으로 검색한 경우("건영3차" → 실거래 "LIG대학마을(건영아파트3차)")
   if(lawd && NAVER_NAMES[lawd]){
@@ -4828,34 +4829,8 @@ function renderSubway(d){
 // 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
 // 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
 // (지역 복수 선택 통합 랭킹에서도 동일 로직을 써야 해서 2026.07 공용 함수로 분리)
-function mergeTradeAndPresaleForRanking(raw, rawP){
-  try{
-    const tradeNames = [...new Set(raw.map(t=>t.apt))];
-    const tradeNormMap = {};
-    tradeNames.forEach(n=>{ const norm=n.replace(/\s/g,''); if(!tradeNormMap[norm]) tradeNormMap[norm]=n; });
-
-    const presaleNames = [...new Set(rawP.map(t=>t.apt))];
-    const presaleCount = {}; rawP.forEach(t=>presaleCount[t.apt]=(presaleCount[t.apt]||0)+1);
-    const presaleNormRep = {};
-    presaleNames.forEach(n=>{
-      const norm = n.replace(/\s/g,'');
-      if(!presaleNormRep[norm] || presaleCount[n] > presaleCount[presaleNormRep[norm]]) presaleNormRep[norm] = n;
-    });
-
-    const nameMap = {};
-    presaleNames.forEach(pname=>{
-      const norm = pname.replace(/\s/g,'');
-      if(tradeNormMap[norm]){ nameMap[pname] = tradeNormMap[norm]; return; }
-      const matched = tradeNames.find(n=>{ const tn=n.replace(/\s/g,''); return tn.includes(norm)||norm.includes(tn); });
-      nameMap[pname] = matched || presaleNormRep[norm];
-    });
-
-    const convertedP = rawP.map(t=>({
-      apt:nameMap[t.apt], umd:t.umd, area:t.area, py:t.py, amt:t.amt, ym:t.ym, d:t.d,
-      floor:t.floor||'', build:'', direct:t.direct, kind:t.ownership||'분양권'
-    }));
-    return raw.concat(convertedP);
-  }catch(e){ return raw; }
+function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
+  return aptsumComplexIdentity.mergeSources(raw,rawP,NAVER_NAMES[lawd]||{},lawd);
 }
 
 let complexSearchIndex=null;
@@ -5001,7 +4976,7 @@ async function search(opts){
         if(myToken===searchToken)showLookupProgress(Math.min(i+CHUNK,targets.length),targets.length);
         gotTriples.forEach(([tradeArr, presaleArr, rentArr], k)=>{
           const guName = part[k].name, guLawd = part[k].lawd;
-          const mergedGu = unifyNaverSplit(mergeTradeAndPresaleForRanking(tradeArr, presaleArr), guLawd);
+          const mergedGu = unifyNaverSplit(mergeTradeAndPresaleForRanking(tradeArr,presaleArr,guLawd), guLawd);
           rentArr = unifyNaverSplit(rentArr, guLawd);
           // 통합 랭킹에서는 어느 구인지 표시해야 하므로 거래마다 구 이름과 법정동코드를 붙인다
           // (법정동코드는 세대수 API를 그 구로 정확히 라우팅하는 데도 쓰임 — 아래 attachAll 참조)
@@ -5017,7 +4992,7 @@ async function search(opts){
         : sel.options[sel.selectedIndex].textContent;
       if(mode==='complex'){
         await Promise.all(targets.map(t=>ensureNaverNames(t.lawd)));
-        const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd&&complexLookup.hits.some(h=>h.lawd===t.lawd&&h.umd===x.umd&&(h.names.includes(x.apt)||h.name===x.apt))),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
+        const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd&&complexLookup.hits.some(h=>h.lawd===t.lawd&&h.umd===x.umd&&(h.names.includes(x.apt)||h.name===x.apt||h.names.includes(x.sourceApt)))),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
         if(matches.length===1){lawd=matches[0].target.lawd;d=matches[0].result;const rent=windowF(floorF(mergedRent.filter(x=>x.lawd===lawd)));const dj=analyzeComplex(rent,name,months,undefined,lawd);d=includeJeonseOnlySaleAreas(d,dj);d.jeonse=dj.found?dj:null;}
         else d={found:false,note:matches.length?'여러 지역에 같은 단지가 있습니다. 지역을 좁혀서 조회해 주세요.':'선택한 지역에서 단지를 찾지 못했습니다.'};
       } else if(mode==='gap'){
@@ -5098,9 +5073,11 @@ async function search(opts){
         Promise.all(lookupProgressMap(uniq,ld=>ensureMonths(ld, effMN))),
         Promise.all(uniq.map(ld=>ensureMonthsP(ld, effMN).catch(()=>[]))),
       ]);
+      await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
+      if(myToken!==searchToken)return;
       const byLawd = {};
       uniq.forEach((ld,i)=>{
-        const merged = mergeTradeAndPresaleForRanking(fetched[i], fetchedP[i]);
+        const merged = mergeTradeAndPresaleForRanking(fetched[i],fetchedP[i],ld);
         byLawd[ld]=floorF(windowF(merged));
       });
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
@@ -5124,40 +5101,7 @@ async function search(opts){
       // 매매 데이터가 아예 없는 "분양권 전용" 신축 단지(예: 아직 준공 전)도 조회 가능해야 하므로,
       // 매매·분양권 양쪽에서 독립적으로 이름 매칭을 시도한 뒤 병합한다 (매매 매칭 성공 여부와 무관하게 분양권도 항상 시도).
       let rawMerged = raw;
-      if(mode==='complex'){
-        try{
-          const fuzzyMatch = (arr, nm) => {
-            const qn = nm.replace(/\s/g,'');
-            let hits = arr.filter(t=>t.apt.replace(/\s/g,'')===qn);
-            if(!hits.length) hits = arr.filter(t=>{ const an=t.apt.replace(/\s/g,''); return an && (an.includes(qn)||qn.includes(an)); });
-            if(!hits.length) return null;
-            const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
-            const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
-            return { hits, officialName };
-          };
-          const mTrade = fuzzyMatch(raw, name);
-          const mPresale = fuzzyMatch(rawP, name);
-          if(mTrade || mPresale){
-            // 매매 쪽 이름·준공년도를 우선 채택 (더 공식적인 등기명), 매매가 없으면 분양권 자체 표기 사용
-            const officialName = mTrade ? mTrade.officialName : mPresale.officialName;
-            const buildYear = mTrade ? mTrade.hits[0].build : '';
-            const pHits = mPresale ? mPresale.hits : [];
-            const converted = pHits.map(t=>({
-              apt: officialName, umd: t.umd || (mTrade ? mTrade.hits[0].umd : ''), area:t.area, py:t.py, amt:t.amt,
-              ym:t.ym, d:t.d, floor:t.floor||'', build:buildYear, direct:t.direct, kind:t.ownership||'분양권'
-            }));
-            rawMerged = raw.concat(converted);
-          }
-        }catch(e){ rawMerged = raw; }
-      } else {
-        // 단지 분석(위 분기)을 제외한 모든 랭킹·저평가 탭은 분양권·입주권을 매매와 병합해서 분석한다.
-        // ⚠️ 예전엔 여기에 탭 이름을 하나씩 나열했는데, 복수 지역 경로(allScope, 위쪽)는 모드와 무관하게
-        // 항상 병합하다 보니 목록에서 빠진 탭은 "지역 1개만 고르면 분양권이 빠지고, 2개 고르면 들어가는"
-        // 상태가 됐음(2026.09 발견 — boxrange·boxbreak·surge·inversion·turnover·shortval·gaptrend 7개 탭이
-        // 누락돼 있었고, 그 전엔 longtermrise도 같은 이유로 빠져 있었음). 두 경로의 동작을 맞추려면
-        // 나열이 아니라 "단지 분석만 예외"로 두는 게 맞아서 else로 뒤집음.
-        rawMerged = mergeTradeAndPresaleForRanking(raw, rawP);
-      }
+      rawMerged = mergeTradeAndPresaleForRanking(raw,rawP,lawd);
       let items = windowF(floorF(rawMerged));
       if(mode==='region' || mode==='volume'){
         items = pyBandMultiFilter(items);
@@ -6101,7 +6045,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
+      <h2 style="padding-right:70px;text-align:left">${esc(d.name)}</h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -6126,17 +6070,7 @@ function renderComplex(d){
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
   placeComplexSchools(schoolPanel.parentElement);
-  document.getElementById('complexMapButton').onclick=async event=>{
-    const button=event.currentTarget;button.disabled=true;
-    try{
-      schoolPanel.open=true;
-      await loadComplexSchools(schoolPanel,d,schoolLawd);
-      if(!schoolPanel.isConnected)return;
-      const mapButton=schoolPanel.querySelector('.nearby-school-body button');
-      if(mapButton&&mapButton.textContent!=='지도 접기')mapButton.click();
-      schoolPanel.scrollIntoView({behavior:'smooth',block:'start'});
-    }finally{button.disabled=false;}
-  };
+
 }
 
 
