@@ -28,7 +28,10 @@
   .stat-card .val span{font-size:12px;font-weight:700;color:var(--sub);margin-left:2px}
 
   .card{background:#fff;border-radius:16px;padding:14px 16px 16px;border:1.5px solid var(--line);margin-bottom:14px}
-  .card-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px}
+  .card-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;position:relative;padding-right:20px;overflow-wrap:anywhere}
+  .card-title-text{display:inline}
+  .card-badge{display:inline-block;max-width:100%;box-sizing:border-box;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+  #subCard .card-badge{display:block;width:fit-content;margin:6px 0 0!important}
 
   .chart{display:flex;align-items:flex-end;gap:4px;height:126px;margin-bottom:6px}
   .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
@@ -245,9 +248,13 @@ function setupCollapsible(){
     const body = document.createElement("div");
     while(title.nextSibling) body.appendChild(title.nextSibling);
     card.appendChild(body);
+    const label = document.createElement("span");
+    label.className = "card-title-text";
+    while(title.firstChild) label.appendChild(title.firstChild);
+    title.appendChild(label);
     const arrow = document.createElement("span");
     arrow.className = "fold-arrow";
-    arrow.style.cssText = "float:right;color:var(--sub);font-size:12px;transition:transform .15s";
+    arrow.style.cssText = "position:absolute;right:0;top:2px;color:var(--sub);font-size:12px;transition:transform .15s";
     arrow.textContent = "▾";
     title.appendChild(arrow);
     title.style.cursor = "pointer";
