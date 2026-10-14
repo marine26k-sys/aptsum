@@ -9,6 +9,8 @@ export function dashboardPath(kind,lawd){
  return null;
 }
 async function latestRevision(){
+ // Preview must keep its proposed calculation/data instead of replacing it with main.
+ if(process.env.CONTEXT==='deploy-preview'&&/^[a-f0-9]{40}$/.test(process.env.COMMIT_REF||''))return process.env.COMMIT_REF;
  if(cachedRevision&&expires>Date.now())return cachedRevision;
  const res=await fetch(`https://api.github.com/repos/${REPO}/commits/main`,{headers:{Accept:'application/vnd.github+json'},signal:AbortSignal.timeout(10000)});
  if(!res.ok)throw Error('revision unavailable');
