@@ -179,7 +179,8 @@ let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown:
 
 async function load(){
   try{
-    const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+    let res;try{res=await fetch("/api/dashboard-data?kind=tier",{cache:"no-store"});}catch{}
+    if(!res?.ok)res=await fetch("./data/tier-map.json",{cache:"no-store"});
     if(!res.ok) throw new Error("no data");
     tierData = await res.json();
     history.replaceState({ tier: tierSnapshot() }, "");
