@@ -3586,7 +3586,7 @@ function analyzeRegion(all, months){
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
     return {apt, umd, gu:gu||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?` (전용 ${mainArea})`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
-  }).sort((a,b)=>b.n-a.n).slice(0,100);
+  }).sort((a,b)=>b.n-a.n);
   const grouped = Object.entries(byApt).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
     const [apt,umd,gu] = k.split('|');
@@ -3651,7 +3651,7 @@ function analyzeNewHigh(all, months, weekOnly){
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: filtered.slice(0,100) };
+    newHigh: filtered };
 }
 
 // ═══ 신저가 탭 ═══
@@ -3849,8 +3849,8 @@ function analyzeInversion(all, months){
   const startDate2 = new Date(Date.now() - 210*24*3600*1000);
   return { found:true, mode:'inversion', total:all.length,
     period:`${fmtDate(startDate2)} ~ ${fmtDate(todayDate2)}`,
-    // 틀어진 폭 큰 50곳을 고른 뒤, 화면에는 저평가 평형의 최근 평균가 낮은 순(2026.09 운영자 요청 — 저평가 탭 전체 통일)
-    rows: results.slice(0,50).sort((a,b)=> a.underAvgAmt-b.underAvgAmt || b.deviationPct-a.deviationPct) };
+    // 조건을 충족하는 전체 단지를 저평가 평형의 최근 평균가 낮은 순으로 표시한다.
+    rows: results.sort((a,b)=> a.underAvgAmt-b.underAvgAmt || b.deviationPct-a.deviationPct) };
 }
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산
@@ -3931,7 +3931,7 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=
     period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
     pastPeriod:`${fmtDate(startDate)} ~ ${fmtDate(pastWindowEnd)}`,
     recentPeriod:`${fmtDate(recentWindowStart)} ~ ${fmtDate(todayDate)}`,
-    rows: includeAll ? results : results.slice(0,100) };
+    rows: results };
 }
 
 // 구독 전용 금액대 비교: 시작 시점 평균가가 선택한 1억원 구간에 속한 단지·평형만 모두 남긴다.
@@ -3944,7 +3944,7 @@ function setPriceBandBasis(value){const el=document.getElementById('priceBandBas
 function analyzePriceBandRise(all, months, periodM, band, basis='past'){
   const base = analyzeLongTermRise(all, months, periodM, true, 90);
   const matchedRows = filterPriceBandRows(base.rows, band, basis);
-  // 경기 전체처럼 조건 충족 단지가 많은 곳도 화면·공유 결과가 과도하게 길어지지 않도록 상승 금액 순 상위 100개만 표시한다.
+  // 비공개 금액대별 변동률은 기존 상위 100개 제한을 유지한다.
   const rows = matchedRows.slice(0,100);
   return { ...base, found:true, mode:'pricebandrise', rows, matchedCount:matchedRows.length, isLimited:matchedRows.length>rows.length, priceBand:band, priceBandBasis:basis,
     priceBandLabel:band===0?'1억 미만':(band===30?'30억 이상':`${band}억대`) };
@@ -3955,6 +3955,7 @@ function analyzePriceBandRise(all, months, periodM, band, basis='past'){
 // .amt(거래금액=매매가 또는 전세보증금)만 보고 동작하는 범용 로직이라 그대로 재사용 가능.
 function analyzeJeonseLongTermRise(all, months, periodM){
   const d = analyzeLongTermRise(all, months, periodM);
+  d.rows = d.rows.slice(0,100);
   d.mode = 'jeonselongtermrise';
   return d;
 }
@@ -4004,7 +4005,7 @@ function analyzeGapRanking(saleAll, rentAll, months){
   return { found:true, mode:'gap', total:saleAll.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    rows: rows.slice(0,100) };
+    rows: rows };
 }
 
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
@@ -5216,7 +5217,7 @@ async function search(opts){
         const map = await fetchHHCntBatch(lw, list.map(x=>x.apt));
         list.forEach(x=>{ x.hh = map[x.apt] || null; });
       }));
-      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300).slice(0,100);
+      d.newLow = d.newLow.filter(x=>x.hh && x.hh.hhcnt>=300);
     }
 
     // 평형 비교 저평가 탭: 세대수는 회전율처럼 계산에 쓰는 게 아니라 그냥 참고 정보로 붙인다(운영자 요청) —
@@ -6234,7 +6235,29 @@ function renderCompare(d){
   drawCompare(d);
 }
 
+const molitPageCounts = new WeakMap();
+function molitPageData(source,key,render){
+  const count=molitPageCounts.get(source)||100;
+  const all=source[key]||[];
+  const page={source,key,render,count,total:all.length};
+  return {...source,[key]:all.slice(0,count),_molitPage:page};
+}
+function appendMolitMore(d){
+  const page=d._molitPage;
+  if(page.count>=page.total)return;
+  const button=document.createElement('button');
+  button.type='button';button.className='btn';
+  button.style.cssText='display:block;width:100%;margin:12px 0;padding:12px';
+  button.textContent=`더 보기 (${Math.min(100,page.total-page.count)}개 · 남은 ${page.total-page.count}개)`;
+  button.onclick=()=>{
+    molitPageCounts.set(page.source,page.count+100);
+    page.render(page.source);
+  };
+  document.getElementById('result').appendChild(button);
+}
+
 function renderRegion(d){
+  d=molitPageData(d,"highDeals",renderRegion);
   const multiRegion = regionMulti(d.highDeals);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
@@ -6258,10 +6281,11 @@ function renderRegion(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderVolume(d){
+  d=molitPageData(d,"topVolume",renderVolume);
   const regionName = sel.options[sel.selectedIndex].textContent;
   // 회전율(2026.09 운영자 요청) = 조회기간 거래건수 ÷ 세대수 — 연 단위로 환산하지 않고 고른 기간 그대로(6개월이면 "6개월 회전율"), 청록색 정수 %.
   // 세대수(x.hh)는 렌더 뒤 attachHHCountsAsync가 채워 다시 그리므로, 세대수가 확인된 단지만 표시된다.
@@ -6288,12 +6312,13 @@ function renderVolume(d){
 
   </div>
   <div class="src-note">${periodLabel} 회전율 = 조회기간 (${periodLabel}) 거래건수 ÷ 세대수 · 세대수가 확인된 단지만 표시${d.pyBand? ' · 선택한 평형 거래만 세므로 단지 전체 회전율보다 낮게 나옴':''} · 출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 
 
 function renderGap(d){
+  d=molitPageData(d,"rows",renderGap);
   const regionName = sel.options[sel.selectedIndex].textContent;
   const multiRegion = regionMulti(d.rows);
   const rows = d.rows.length
@@ -6316,14 +6341,15 @@ function renderGap(d){
     </div>
   </div>
   <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가 (조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderNewHigh(d){
+  d=molitPageData(d,"newHigh",renderNewHigh);
   // "신고가 속보 (7일)" 탭(newHighWeekOnly)은 별도 수집 없이 같은 30일 창 결과에서 실제 계약일이
   // 최근 7일 이내인 것(fresh7)만 걸러서 보여준다 — 수집 창을 7일로 좁히면 아직 신고 안 된 신고가를
   // 놓치므로(analyzeNewHigh 참고) 표시 단계에서만 필터링. 7일 필터 자체는 이제 analyzeNewHigh가
-  // 가격 상위 100개로 자르기 전에 먼저 적용해서 넘겨주므로(2026.09 수정), d.newHigh를 그대로 쓴다.
+  // 조건 필터를 먼저 적용한 d.newHigh를 표시한다.
   const weekOnly = newHighWeekOnly;
   const list = d.newHigh;
   const multiRegion = regionMulti(list);
@@ -6356,10 +6382,11 @@ function renderNewHigh(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderNewLow(d){
+  d=molitPageData(d,"newLow",renderNewLow);
   const multiRegion = regionMulti(d.newLow);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
@@ -6385,11 +6412,12 @@ function renderNewLow(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 1년 내 최고가 대비 -10~25% 하락 기준 · 직거래 제외</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 
 function renderPricePerPyeong(d){
+  d=molitPageData(d,"pyPrice",renderPricePerPyeong);
   const multiRegion = regionMulti(d.pyPrice);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
@@ -6414,7 +6442,7 @@ function renderPricePerPyeong(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 최근 3년 내 최고가 기준 · 공급면적 평형 기준 · 매칭 자료가 없으면 추정 평형 적용</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 
@@ -6444,6 +6472,7 @@ ${uvSep(i)}
 }
 
 function renderLongTermRise(d){
+  d=molitPageData(d,"rows",renderLongTermRise);
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = (arr, fmt) => arr.length
@@ -6469,7 +6498,7 @@ function renderLongTermRise(d){
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외) · 매매만 집계 (분양권·입주권 제외) · 직거래 제외</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderPriceBandRise(d){
@@ -6539,6 +6568,7 @@ function renderJeonseLongTermRise(d){
 }
 
 function renderInversion(d){
+  d=molitPageData(d,"rows",renderInversion);
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const rows = d.rows.length ? d.rows.map((x,i)=>`
@@ -6592,7 +6622,7 @@ ${uvSep(i)}
 
   </div>
   <div class="src-note">전용면적 기준 평당가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
-  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
 function renderShortUndervalue(d){

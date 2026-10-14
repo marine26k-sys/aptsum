@@ -14,7 +14,7 @@ test('단지 랭킹은 100개를 넘겨도 가격순으로 모두 반환한다',
  assert.equal(result.highDeals.length,125);
  assert.equal(result.highDeals[0].amt,125);
  assert.equal(result.highDeals[124].amt,1);
- assert.equal(result.topVolume.length,100);
+ assert.equal(result.topVolume.length,125);
 });
 test('평당가 랭킹은 표본 조건을 충족하는 100개 초과 단지를 모두 반환한다',()=>{
  const result=context.analyzePricePerPyeong(rows.flatMap(row=>[row,{...row,d:'02'}]),['202609']);
