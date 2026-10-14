@@ -108,3 +108,9 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: split district liv
   assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===23));
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });
+test('2026-10-14 전체 갱신 표의 수정 평형을 실거래 소수 면적에도 적용한다',()=>{
+ for(const [lawd,apt,area,py] of [['41173','평촌래미안푸르지오',97.9024,39],['11260','성원',84.91,30],['41281','햇빛주공23',59.93,25],['11410','극동',84.98,31]]){
+  const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/'+lawd+'.json',import.meta.url),'utf8'));
+  assert.equal(applyNaverSupplyAreas([{apt,area,py:99}],records,lawd)[0].py,py);
+ }
+});

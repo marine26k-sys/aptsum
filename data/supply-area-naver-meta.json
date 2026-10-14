@@ -1,0 +1,8 @@
+{
+  "sourceUpdatedAt": "2026-10-14T08:21:20+09:00",
+  "sourceSha256": "517f0ca4e4c9f4082b403bab2196457b5eb1c51a905567f97fd7bce884309846",
+  "rule": "floor(supply_area * 0.3025)",
+  "regionFiles": 90,
+  "matchedTypes": 25372,
+  "confirmedOnly": true
+}
