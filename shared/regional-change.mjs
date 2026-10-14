@@ -5,7 +5,7 @@ export function regionalSupplyPy(t){return supplyPy(t);}
 const eligiblePy=py=>Number.isFinite(py)&&py>=REGIONAL_PY_MIN&&py<=REGIONAL_PY_MAX;
 export function median(values){const a=[...values].sort((a,b)=>a-b),n=a.length;return n?n%2?a[n>>1]:(a[n/2-1]+a[n/2])/2:null;}
 export function tradeDay(t){const y=Number(String(t.ym).slice(0,4)),m=Number(String(t.ym).slice(4)),d=Number(t.d);if(!y||!m||!d)return NaN;const time=Date.UTC(y,m-1,d),date=new Date(time);return date.getUTCMonth()===m-1&&date.getUTCDate()===d?time:NaN;}
-// 같은 단지·공급평형의 월평균을 비교하고 평형 → 단지 → 지역 순으로 동일 비중 평균한다.
+// 같은 단지·공급평형의 월평균을 비교하고 평형 가격은 각 달의 거래 건수로 가중하고, 지역은 단지별 동일 비중으로 평균한다.
 export function regionalChange(items,period,names={},samples=null){
  const buckets=[new Map(),new Map()],average=a=>a.reduce((sum,x)=>sum+x,0)/a.length;
  for(const t of items){if(t.direct||t.cancel||t.cancelled||!Number.isFinite(t.amt)||t.amt<=0||!Number.isFinite(t.area)||t.area<=0)continue;
@@ -19,7 +19,9 @@ export function regionalChange(items,period,names={},samples=null){
   for(const [py,prices] of now){const previous=old.get(py);if(!previous)continue;const previousPrice=average(previous),currentPrice=average(prices);matchedTypes.push({py,previousPrice,currentPrice,rate:(currentPrice/previousPrice-1)*100,previousTrades:previous.length,currentTrades:prices.length});}
   if(!matchedTypes.length)continue;matchedTypes.sort((a,b)=>a.py-b.py);
   const [umd,name]=JSON.parse(key),oldCount=matchedTypes.reduce((sum,x)=>sum+x.previousTrades,0),nowCount=matchedTypes.reduce((sum,x)=>sum+x.currentTrades,0);
-  comparisons.push({name,umd,matchedTypes,previousPrice:average(matchedTypes.map(x=>x.previousPrice)),currentPrice:average(matchedTypes.map(x=>x.currentPrice)),rate:average(matchedTypes.map(x=>x.rate)),previousTrades:oldCount,currentTrades:nowCount});previousTrades+=oldCount;currentTrades+=nowCount;
+  const monthPrice=side=>matchedTypes.reduce((sum,x)=>sum+x[side+'Price']*x[side+'Trades'],0)/(side==='previous'?oldCount:nowCount);
+  const previousPrice=monthPrice('previous'),currentPrice=monthPrice('current');
+  comparisons.push({name,umd,matchedTypes,previousPrice,currentPrice,rate:(currentPrice/previousPrice-1)*100,previousTrades:oldCount,currentTrades:nowCount});previousTrades+=oldCount;currentTrades+=nowCount;
  }
  const groups=comparisons.length;
  return {comparisons,rate:groups>=3?(Math.round(average(comparisons.map(x=>x.rate))*100)/100||0):null,groups,sampleCount:samples?.length??groups,previousTrades,currentTrades,previousPrice:groups?average(comparisons.map(x=>x.previousPrice)):null,currentPrice:groups?average(comparisons.map(x=>x.currentPrice)):null};

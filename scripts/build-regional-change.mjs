@@ -33,5 +33,5 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
  regions.push({province,name,lawd,metrics,allMetrics});
 }
 await writeFile('data/regional-samples.json',JSON.stringify(fixed));
-await writeFile('data/regional-change.json',JSON.stringify({asOf,supplyPyMin:REGIONAL_PY_MIN,supplyPyMax:REGIONAL_PY_MAX,priceBasis:'supply-pyeong',comparisonMethod:'same-supply-pyeong-equal-weight',priceUnit:'억원/평',sampleMethod:fixed.method,sampleSelectionStart:fixed.selectionStart,sampleSelectionEnd:fixed.selectionEnd,sampleSelectedAt:fixed.selectedAt,generatedAt:new Date().toISOString(),periods,regions}));
+await writeFile('data/regional-change.json',JSON.stringify({asOf,supplyPyMin:REGIONAL_PY_MIN,supplyPyMax:REGIONAL_PY_MAX,priceBasis:'supply-pyeong',comparisonMethod:'same-supply-pyeong-month-weight-complex-equal',priceUnit:'억원/평',sampleMethod:fixed.method,sampleSelectionStart:fixed.selectionStart,sampleSelectionEnd:fixed.selectionEnd,sampleSelectedAt:fixed.selectedAt,generatedAt:new Date().toISOString(),periods,regions}));
 console.log(`지역별 실거래 변동률 생성: ${regions.length}개 지역 (${asOf})`);
