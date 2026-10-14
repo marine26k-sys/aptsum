@@ -151,6 +151,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 
 let DATA = null;
 let activeLine = "";
+async function fetchLatestTier(){
+ let response;try{response=await fetch('/api/dashboard-data?kind=tier',{cache:'no-store'});}catch{}
+ return response?.ok?response:fetch('./data/tier-map.json',{cache:'no-store'});
+}
 let TIER = null; // data/tier-map.json — "이 지역 단지"를 처음 누를 때 딱 한 번만 불러와 캐싱
 let openStationKey = ""; // 지금 목록이 펼쳐진 역(라인id+역이름) — 하나만 펼쳐지게
 
@@ -184,7 +188,7 @@ async function load(){
     }
     if(openStationKey){
       try{
-        const r2 = await fetch("./data/tier-map.json", { cache: "no-store" });
+        const r2 = await fetchLatestTier();
         if(r2.ok) TIER = await r2.json();
       }catch(e){ /* 펼쳐진 패널은 그대로 두되 아래 empty 처리로 폴백 */ }
     }
@@ -208,7 +212,7 @@ window.addEventListener("popstate", async (e) => {
   openStationKey = snap.openStationKey;
   if(openStationKey && !TIER){
     try{
-      const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+      const res = await fetchLatestTier();
       if(res.ok) TIER = await res.json();
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
   }
@@ -251,7 +255,7 @@ async function toggleRegion(lineId, name){
   const myToken = ++toggleToken;
   if(!TIER){
     try{
-      const res = await fetch("./data/tier-map.json", { cache: "no-store" });
+      const res = await fetchLatestTier();
       if(res.ok) TIER = await res.json();
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
     if(myToken !== toggleToken) return; // 기다리는 동안 다른 역을 눌러 더 최신 요청이 발급됨 — 이 결과는 폐기

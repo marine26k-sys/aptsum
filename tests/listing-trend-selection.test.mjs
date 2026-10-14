@@ -110,3 +110,5 @@ test('newly appearing price filter compares identities rather than price changes
  assert.equal(c.listingBudgetNewKeys(current,[current]),null);
  assert.equal(c.listingBudgetNewKeys(current,[previous]),null);
 });
+
+test('exclude changes at or above 25 percent for both directions including two-record history',()=>{for(const [from,to,direction,want] of [[100,75,'down',0],[100,75.01,'down',1],[100,125,'up',0],[100,124.99,'up',1],[75,50,'down',0]]){const history=[from,to].map((ask,i)=>({uploadId:'boundary'+i,asOf:'2026.10.0'+(i+1),items:[item(ask)]}));assert.equal(ctx.listingTrendSnapshotRows(history[1],history,{},'11680','강남구',false,direction).length,want);}});
