@@ -1205,6 +1205,10 @@ const CITYALL_PREFIX = 'CITYALL:';
 // 구 단위를 유지하고, 이 함수는 화면 표시용으로만 묶는다 — 제거 시엔 묶인 구 lawd를 한 번에 지운다.
 function groupRegionChips(items){
   const presentLawds = new Set(items.map(x=>x.lawd));
+  const completeProvinces=REGIONS.filter(([,regions])=>regions.length&&regions.every(([,lawd])=>presentLawds.has(lawd)));
+  const provinceByLawd=new Map();
+  completeProvinces.forEach(([province,regions])=>regions.forEach(([,lawd])=>provinceByLawd.set(lawd,province)));
+  const emittedProvinces=new Set();
   const completeCities = GG_MULTI_CITIES.filter(city=>{
     const m = GG_CITY_MAP[city] || [];
     return m.length && m.every(([n,c])=>presentLawds.has(c));
@@ -1214,11 +1218,18 @@ function groupRegionChips(items){
   const groups = [];
   const emittedCities = new Set();
   items.forEach(x=>{
+    const province=provinceByLawd.get(x.lawd);
+    if(province){
+      if(emittedProvinces.has(province))return;
+      emittedProvinces.add(province);
+      groups.push({city:true,name:(PROVINCE_DISPLAY[province]||province)+' 전체',lawds:REGIONS.find(([p])=>p===province)[1].map(([,c])=>c)});
+      return;
+    }
     const city = lawdToCity.get(x.lawd);
     if(city){
       if(emittedCities.has(city)) return;
       emittedCities.add(city);
-      groups.push({city:true, name: city+'시', lawds: (GG_CITY_MAP[city]||[]).map(([n,c])=>c)});
+      groups.push({city:true, name: city+'시 전체', lawds: (GG_CITY_MAP[city]||[]).map(([n,c])=>c)});
     }else{
       groups.push({city:false, name:x.name, lawd:x.lawd});
     }
@@ -3599,7 +3610,7 @@ function analyzeRegion(all, months){
     const r3n = arr.filter(t=>r3set.has(t.ym)).length;
     const p3n = arr.filter(t=>p3set.has(t.ym)).length;
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
-    return {apt, umd, gu:gu||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?` (전용 ${mainArea})`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
+    return {apt, umd, gu:gu||null, lawd:sorted[0].lawd||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?` (전용 ${mainArea})`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).sort((a,b)=>b.n-a.n);
   const grouped = Object.entries(byApt).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
@@ -4379,7 +4390,7 @@ async function acShow(input){
   catch(e){ ac.innerHTML = '<div class="ac-msg">'+esc(e.message)+'</div>'; return; }
   const lw = acLawdOf(input);
   await ensureNaverNames(lw);
-  if(acInput !== input) return; // 입력창 바뀜
+  if(acInput !== input || input.value.trim().replace(/\s/g,'')!==q) return; // 이전 입력의 응답은 폐기
   // 네이버 단지명이 있는 단지는 그 이름으로 보여주고, 같은 네이버 단지로 묶이는 실거래 등록명은 한 줄로 합친다
   const disp = new Map();
   apts.forEach(a=>{
@@ -4401,7 +4412,7 @@ async function acShow(input){
   const mergedHits = await mergeSplitSuggestions(hits, acLawdOf(input), input.value.trim());
   const duplicateNames = new Set(mergedHits.filter(a=>mergedHits.some(b=>b!==a && b.name===a.name && b.umd!==a.umd)).map(a=>a.name));
   hits = mergedHits.slice(0,12);
-  if(acInput !== input) return;
+  if(acInput !== input || input.value.trim().replace(/\s/g,'')!==q) return;
   if(!hits.length){ ac.innerHTML = '<div class="ac-msg">매매·분양권 실거래 신고 내역이 없는 단지입니다. 단지명을 다시 확인해 주세요</div>'; return; }
   const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')');
   ac.innerHTML = hits.map(a=>
@@ -4807,7 +4818,7 @@ function renderSubway(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (전용면적 평당가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (공급면적 평당가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -5074,6 +5085,8 @@ async function search(opts){
         return lookup.targets.map(t=>({...x,lawd:t.lawd}));
       }));
       if(myToken!==searchToken)return;
+      const missingInput=cmpItems.filter((_,i)=>!narrowedCmp[i].length);
+      if(missingInput.length){showError('선택한 지역에서 찾지 못한 단지: '+missingInput.map(x=>esc(x.name)).join(', '));return;}
       const expandedCmp=narrowedCmp.flat();
       const uniq = [...new Set(expandedCmp.map(x=>x.lawd))];
       // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
@@ -5088,6 +5101,8 @@ async function search(opts){
       });
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
+      const missingTrade=cmpItems.filter(x=>!matchedCmp.some(t=>t.name===x.name));
+      if(missingTrade.length){showError('조회 조건에 맞는 거래가 없는 단지: '+missingTrade.map(x=>esc(x.name)).join(', '));return;}
       d = analyzeCompare(byLawd, matchedCmp, months);
     } else {
       // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
@@ -5372,8 +5387,12 @@ async function attachHHCountsAsync(d, myToken, lawd){
       if(myToken===searchToken) renderRegion(d); // 목록 화면이라 상태 유실 없이 전체 재렌더 가능
     } else if(d.mode==='volume'){
       if(d.topVolume && d.topVolume.length){
-        const map = await fetchHHCntBatch(lawd, d.topVolume.map(x=>x.apt));
-        d.topVolume.forEach(x=>{ x.hh = map[x.apt] || null; });
+        const byLawd={};
+        d.topVolume.forEach(x=>{const lw=x.lawd||lawd;(byLawd[lw] ||= []).push(x);});
+        await Promise.all(Object.entries(byLawd).map(async([lw,list])=>{
+          const map=await fetchHHCntBatch(lw,list.map(x=>x.apt));
+          list.forEach(x=>{x.hh=map[x.apt]||null;});
+        }));
       }
       if(myToken===searchToken) renderVolume(d);
     } else if(d.mode==='newhigh'){
@@ -6333,7 +6352,7 @@ function renderRegion(d){
 
 function renderVolume(d){
   d=molitPageData(d,"topVolume",renderVolume);
-  const regionName = sel.options[sel.selectedIndex].textContent;
+  const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   // 회전율(2026.09 운영자 요청) = 조회기간 거래건수 ÷ 세대수 — 연 단위로 환산하지 않고 고른 기간 그대로(6개월이면 "6개월 회전율"), 청록색 정수 %.
   // 세대수(x.hh)는 렌더 뒤 attachHHCountsAsync가 채워 다시 그리므로, 세대수가 확인된 단지만 표시된다.
   const periodLabel = d.monthsN >= 12 && d.monthsN % 12 === 0 ? `${d.monthsN/12}년` : `${d.monthsN}개월`;
