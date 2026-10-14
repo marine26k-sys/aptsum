@@ -7,7 +7,7 @@ const periods=changePeriods(asOf),regions=[];
 await mkdir('data/regional-change-details',{recursive:true});
 let fixed;try{fixed=JSON.parse(await readFile('data/regional-samples.json','utf8'));}catch(e){if(e.code!=='ENOENT')throw e;fixed={selectedAt:asOf,regions:{}};}
 const selectionEnd=periods.monthly[0].end,selectionDate=new Date(selectionEnd);selectionDate.setUTCFullYear(selectionDate.getUTCFullYear()-1);const selectionStart=+selectionDate;
-if(fixed.method!=='top50-supply-price-20-40-v1')fixed={method:'top50-supply-price-20-40-v1',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
+if(fixed.method!=='top30-supply-price-20-40-v1')fixed={method:'top30-supply-price-20-40-v1',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
 const allFixed=JSON.parse(await readFile('data/regional-all-samples.json','utf8'));
 const earliest=Math.min(...Object.values(periods).flat().map(p=>p.previousStart));
 for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
