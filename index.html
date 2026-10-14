@@ -6845,7 +6845,7 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
     const older=points[points.length-3];
     const baseline=older && older.uploadId===snapshots[idx-2]?.uploadId ? older : prev;
     const change=direction==='up'?now.ask-baseline.ask:baseline.ask-now.ask;
-    if(!(change>0))continue;
+    if(!(change>0)||!(baseline.ask>0)||change/baseline.ask>=0.25-1e-9)continue;
     if(continuous && (baseline===prev || !(direction==='up' ? baseline.ask<prev.ask && prev.ask<now.ask : baseline.ask>prev.ask && prev.ask>now.ask)))continue;
     rows.push({...item,lawd,gu,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100,points});
   }
@@ -7532,7 +7532,7 @@ function renderListingTrend(d){
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 선택한 기준일까지 최근 3개 연속 기록의 첫 금액과 마지막 금액을 비교하며, 기록이 2개면 두 금액을 비교합니다. 항상 최신 업로드를 기준으로 조회하며, 가격 이력을 최대 12일 표시합니다.</div>`;
+    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 선택한 기준일까지 최근 3개 연속 기록의 첫 금액과 마지막 금액을 비교하며, 기록이 2개면 두 금액을 비교합니다. 비교 시작 금액 대비 변동률이 25% 이상인 항목은 상승·하락 모두 제외합니다. 항상 최신 업로드를 기준으로 조회하며, 가격 이력을 최대 12일 표시합니다.</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   requestAnimationFrame(fitListingTrendPrices);
   if(document.fonts) document.fonts.ready.then(fitListingTrendPrices);
