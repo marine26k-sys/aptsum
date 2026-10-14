@@ -3593,7 +3593,7 @@ function analyzeRegion(all, months){
     return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, area:top.area, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
       floor:top.floor, build:top.build, kind:top.kind||null, isNew:isRecentDeal(top), n:arr.length};
   });
-  const highDeals = grouped.slice().sort((a,b)=>b.amt-a.amt).slice(0,100);
+  const highDeals = grouped.slice().sort((a,b)=>b.amt-a.amt);
   return { found:true, mode:'region', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -3747,7 +3747,7 @@ function analyzePricePerPyeong(all, months){
   return { found:true, mode:'pyprice', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    pyPrice: results.slice(0,100) };
+    pyPrice: results };
 }
 
 // ═══ 평형 비교 저평가 탭(2026.08 재설계 2차, 2026.09 전체 공개 전환 — 연간 저평가 옆으로 이동) ═══
