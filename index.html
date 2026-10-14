@@ -4711,7 +4711,7 @@ async function subwayRowsForRegion(lawd,maxWalk){
       const pricePerPy = subwaySupplyPrice(candidates);
       // 실거래 탭과 동일한 표시명. 네이버 대응표에 없더라도 K-apt 관리명 대신
       // 실제 가격 배지에 사용한 실거래명으로 표시해 탭마다 이름이 바뀌지 않게 한다.
-      return { ...x, lawd, gu:regionNameByLawd(lawd), pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
+      return { ...x, lawd, gu:regionNameByLawd(lawd), umd:resolved?aptUmd.get(resolved)||'':x.umd||'', pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
     });
     return rows;
 }
@@ -4787,6 +4787,10 @@ function pickSubwayPriceCandidates(bandResults){
   const rest = (bandResults||[]).filter(r=>!SUBWAY_PRICE_BAND_PRIORITY.includes(r.key)).map(r=>r.trade);
   return [...prioritized, ...rest].slice(0,2);
 }
+function subwayLocationLabel(row){
+  const gu=row.gu||(row.lawd?regionNameByLawd(row.lawd):'');
+  return [gu,row.umd].filter(Boolean).join(' ');
+}
 function renderSubway(d){
   if(!d._subwayVisibleRows)d._subwayVisibleRows=d.rows.filter(x=>pickSubwayPriceCandidates(x.bandResults).length);
   d=molitPageData(d,"_subwayVisibleRows",renderSubway);
@@ -4805,7 +4809,7 @@ function renderSubway(d){
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
     ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.naverName || stripAptSuffix(x.name))}','${esc(x.gu||'')}')">${esc(x.naverName || stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.naverName || stripAptSuffix(x.name))}','${esc(x.gu||'')}')">${esc(x.naverName || stripAptSuffix(x.name))}</span></span><small>${subwayLocationLabel(x)?`${esc(subwayLocationLabel(x))} · `:''}<b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
       </div>${rkSep(i,filtered.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
