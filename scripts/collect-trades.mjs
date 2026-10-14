@@ -185,6 +185,7 @@ async function pool(items, limit, worker) {
 }
 
 async function main() {
+  const startedAt = new Date().toISOString();
   const opt = parseArgs();
   const key = process.env.DATA_GO_KR_KEY;
   if (!key) { console.error("DATA_GO_KR_KEY 환경변수가 없습니다."); process.exit(1); }
@@ -246,7 +247,7 @@ async function main() {
     try { execFileSync(process.execPath, args, { stdio: "inherit" }); }
     catch { failedKinds.push(`${label} 생성 실패`); console.error(`${label} 생성 실패 — 기존 자료 유지`); }
   }
-  await writeFile('data/trade-batch-status.json',JSON.stringify({finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
+  await writeFile('data/trade-batch-status.json',JSON.stringify({startedAt,fullScope:!opt.only && ['analyze','presale','rent'].every(kind=>opt.kinds.includes(kind)) && opt.refresh>=4,finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
   commitProgress(`chore: 실거래 수집 후 급지·지역 변동률 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
