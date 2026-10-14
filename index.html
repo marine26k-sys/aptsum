@@ -1991,6 +1991,12 @@ function regionNameByLawd(code){
 // "지역 선택" 버튼에 옛 지역명이 계속 남아있게 됨 — URL 공유 복원(p.get('c'))·즐겨찾기 복원 양쪽에서 사용)
 function setCmpRowLawd(row, lawd){
   const selEl = row.querySelector('select');
+  // 비교 행에도 전체 지역 선택값을 실제 옵션으로 보관해야 브라우저가 빈 값으로 바꾸지 않는다.
+  if(isAllScope(lawd) && ![...selEl.options].some(o=>o.value===lawd)){
+    const option=document.createElement('option');
+    option.value=lawd;option.textContent=regionNameByLawd(lawd);option.dataset.scope='all';
+    selEl.appendChild(option);
+  }
   selEl.value = lawd;
   const label = row.querySelector('.rgpick-txt');
   if(label) label.textContent = lawd ? regionNameByLawd(lawd) : '지역 선택';
