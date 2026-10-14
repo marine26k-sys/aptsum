@@ -828,7 +828,7 @@ try {
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>단지 랭킹</a>
-          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평단가 랭킹</a>
+          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평당가 랭킹</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -1350,7 +1350,7 @@ async function initFromURL(){
   // 공유된 ?m=tier 링크가 여전히 돌고 있을 수 있어, 그런 링크로 들어오면 tier.html로 리다이렉트한다.
   if(m==='tier'){ location.replace('./tier.html'); return; }
   // 유효한 탭 목록(화이트리스트) — 모르는 값이면 단지 분석으로 폴백.
-  // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평단가·
+  // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평당가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
   const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap',
@@ -2514,7 +2514,7 @@ function setMode(m, fromRestore){
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
   // 평형 필터는 계산에 실제로 반영되는 탭에서만 노출 — 저평가(단기/반기/연간)는 항상 20~39평(20평대/30평대 평대별) 고정 계산이라 셀렉트를 아예 숨긴다(2026.07)
-  // '○○ 전체' 옵션 — 모든 복수선택 탭(지역 랭킹·저평가 3종·신고가·하락거래·전용면적 평단가)에서 노출(2026.08,
+  // '○○ 전체' 옵션 — 모든 복수선택 탭(지역 랭킹·저평가 3종·신고가·하락거래·전용면적 평당가)에서 노출(2026.08,
   // 운영자 요청으로 지역 랭킹 전용에서 확장). 저평가(상한 5)처럼 시/도 전체 개수보다 낮은 상한을 가진 탭에서는
   // addRegion()의 기존 over-limit 경고("지역은 최대 N개까지 선택할 수 있습니다")가 그대로 안내해주므로,
   // 상한을 넘는 시/도를 선택해도 조용히 잘리지 않고 명확히 알려짐 — 그래서 안전하게 전체 탭에 노출 가능.
@@ -3708,7 +3708,7 @@ function analyzeNewLow(all, months){
     newLow: results };
 }
 
-// ═══ 전용면적 평단가 탭 ═══
+// ═══ 전용면적 평당가 탭 ═══
 // 최근 3년 최고가를 공급면적 매칭이 적용된 표시 평형(t.py)으로 나눈다.
 // 미매칭 단지는 기존 공급면적 추정 평형을 사용하며 화면에 기준을 안내한다.
 const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (전용면적 → 전용평형 정밀 환산 상수, 보간 없음)
@@ -3720,7 +3720,7 @@ function analyzePricePerPyeong(all, months){
   const byPy = {};
   // pyCount: (단지|동|구|평형)별 표본 개수 — 딱 1건뿐인 평형은 뒤에서 이상치로 간주해 제외
   // (예: 국토부 원본 데이터에 단지 공식 평형과 무관한 소형 전용면적 1건이 섞여 들어오면, 분모가 작다는
-  //  이유만으로 평단가가 비정상적으로 튀어 "가장 높은 평단가" 대표로 잘못 뽑히는 문제가 있었음)
+  //  이유만으로 평당가가 비정상적으로 튀어 "가장 높은 평당가" 대표로 잘못 뽑히는 문제가 있었음)
   const pyCount = {};
   for(const t of all){
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}`;
@@ -3728,10 +3728,10 @@ function analyzePricePerPyeong(all, months){
     const cur = byPy[pk];
     if(!cur || t.amt > cur.amt || (t.amt===cur.amt && dkey(t) > dkey(cur))) byPy[pk] = t;
   }
-  // 2) 단지별로 전용면적 평단가(만원/전용평) 계산 후, 평단가가 가장 높은 평형 1개만 대표로 채택
+  // 2) 단지별로 전용면적 평당가(만원/전용평) 계산 후, 평당가가 가장 높은 평형 1개만 대표로 채택
   const byComplex = {};
   for(const t of Object.values(byPy)){
-    if(!t.area) continue; // 전용면적 정보 없는 거래는 평단가 계산 불가
+    if(!t.area) continue; // 전용면적 정보 없는 거래는 평당가 계산 불가
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}`;
     if((pyCount[pk]||0) < 2) continue; // 표본 1건뿐인 평형은 이상치 방지를 위해 대표 후보에서 제외
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
@@ -3745,7 +3745,7 @@ function analyzePricePerPyeong(all, months){
     apt:t.apt, umd:t.umd, gu:t.gu||null, lawd:t.lawd||null, py:`${t.py}평`, pyExact:t.pyExact, area:t.area, amt:t.amt,
     date:`${ymLabel(t.ym)}.${t.d}`, floor:t.floor, build:t.build, kind:t.kind||null, pricePerPy:t.pricePerPy,
   }));
-  results.sort((a,b)=> b.pricePerPy - a.pricePerPy); // 평단가 높은 순
+  results.sort((a,b)=> b.pricePerPy - a.pricePerPy); // 평당가 높은 순
   return { found:true, mode:'pyprice', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -3754,7 +3754,7 @@ function analyzePricePerPyeong(all, months){
 
 // ═══ 평형 비교 저평가 탭(2026.08 재설계 2차, 2026.09 전체 공개 전환 — 연간 저평가 옆으로 이동) ═══
 // 1차 설계(작은 vs 큰 평형, 6개월 대 6개월)도 운영자 지적으로 다시 갈아엎음 — 이번엔 "단지 안에서 거래량이
-// 가장 많은 두 평형의 평단가 비율을 이전 6개월로 기준선 삼고, 최근 1개월에 그 비율이 크게 틀어지면 어느
+// 가장 많은 두 평형의 평당가 비율을 이전 6개월로 기준선 삼고, 최근 1개월에 그 비율이 크게 틀어지면 어느
 // 한쪽이 상대적으로 저평가"라는 개념으로 재설계. 평형 크기가 아니라 "거래량 상위 2개"를 고르는 게
 // 핵심(표본이 두꺼운 페어라야 기준선이 신뢰할 만함). 최근 1개월에 두 평형 다 거래가 있어야만 집계(더
 // 엄격한 기준, 운영자 선택) — 한쪽만 거래된 달은 판단 재료 부족으로 스킵.
@@ -3798,7 +3798,7 @@ function analyzeInversion(all, months){
     if(priorA.length < 2 || priorB.length < 2) continue; // 기준선 표본 부족
     const recentA = byPy[t1].filter(t=>dayDiff(t)<=30), recentB = byPy[t2].filter(t=>dayDiff(t)<=30);
     if(!recentA.length || !recentB.length) continue; // 최근 30일에 둘 다 거래 있어야만 집계
-    // "기준(분모)"은 항상 평단가가 더 높은 쪽으로 고정한다(2026.09, 운영자 지적) — 그래야 평단가 비율이
+    // "기준(분모)"은 항상 평당가가 더 높은 쪽으로 고정한다(2026.09, 운영자 지적) — 그래야 평당가 비율이
     // 100%를 넘는 이상한 숫자가 안 나오고, "더 저렴한 평형이 기준 평형의 몇 %인지"로 자연스럽게 읽힘.
     // 기준은 이전 6개월(평소 상태) 기준으로 한 번만 정하고, 최근 구간에도 그대로 적용 — 최근에 실제로
     // 역전(더 저렴하던 쪽이 더 비싸짐)이 일어나면 그때는 비율이 100%를 넘는 게 오히려 정확한 신호.
@@ -3816,7 +3816,7 @@ function analyzeInversion(all, months){
     const underTrades = deviation < 0 ? recentLow : recentRef, otherTrades = deviation < 0 ? recentRef : recentLow;
     const baselineRatio = Math.round(baselineRatio0 * 100);
     const recentRatio = Math.round(recentRatio0 * 100);
-    // "안전마진" — 다른 평형의 지금 평단가에 평소(기준선) 비율을 그대로 적용했을 때 저평가 평형이
+    // "안전마진" — 다른 평형의 지금 평당가에 평소(기준선) 비율을 그대로 적용했을 때 저평가 평형이
     // 원래 받았어야 할 "적정가"를 역산하고, 실제 최근 평균가와의 차액(억)을 마진으로 제시한다.
     const underAvgArea = underTrades.reduce((s,t)=>s+t.area,0)/underTrades.length;
     const underPyExact = R1(underAvgArea / SQM_PER_PY);
@@ -4592,7 +4592,7 @@ function peakByAreaLastYear(trades, minA, maxA){
 // "안양동삼성래미안"엔 84㎡ 타입 자체가 없는데, 그 지역 84㎡ 밴드맵엔 완전히 다른 "삼성"이라는 단지가
 // 있었고 그게 유일하게 substring이 걸려서 엉뚱하게 4.9억이 33평(전용84) 배지로 붙어버림). 그래서 이름
 // 해석은 그 지역 "전체" 단지명 목록(allAptNames, 가장 정보가 많아 오매칭 여지가 적음) 기준으로 딱 한 번만
-// 하고, 일단 진짜 이름이 정해지면 그 이후엔 각 밴드맵·평단가맵에 정확일치로만 조회한다. 해석 자체가
+// 하고, 일단 진짜 이름이 정해지면 그 이후엔 각 밴드맵·평당가맵에 정확일치로만 조회한다. 해석 자체가
 // 모호하면(동명이인 단지가 실제로 있으면) null — 엉뚱한 단지 가격을 보여주는 것보다 배지를 안 보여주는
 // 게 안전하다는 판단.
 // umdOf(단지명 → 법정동, 선택)를 주면 법정동 접두어 차이까지 흡수한다. 표기 차이 폴백(looseMatchComplex)은
@@ -4641,7 +4641,7 @@ async function searchSubway(){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.walk && it.walk.max <= maxWalk);
 
-    // 평단가(전용면적 평단가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    // 평당가(전용면적 평당가 탭과 동일 로직) + 전용면적 구간별 최근 실거래가 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
     // "국민평형대"가 아닌 단지는 아무 가격도 안 뜨는 문제(예: 압구정미성2차, 전용74/118/140㎡) — 20~200㎡을
     // 빈틈없이 이어붙인 7구간으로 확장해서 어떤 평형대든 최소 하나는 걸리도록 함(운영자 요청)
@@ -4657,7 +4657,7 @@ async function searchSubway(){
     const bandMaps = {};
     let allAptNames = [], aptUmd = new Map();
     try{
-      document.getElementById('loadMsg').textContent = '평단가 데이터 조회 중…';
+      document.getElementById('loadMsg').textContent = '평당가 데이터 조회 중…';
       const trades = await ensureMonths(lawd, 36);
       allAptNames = [...new Set(trades.map(t=>t.apt))];
       trades.forEach(t=>{ if(!aptUmd.has(t.apt)) aptUmd.set(t.apt, t.umd); });
@@ -4668,10 +4668,10 @@ async function searchSubway(){
       const resolved = resolveSubwayTradeName(lawd, allAptNames, x.name, aptUmd); // 네이버 단지명 역매핑을 우선한다
       const rk = resolved ? resolved.replace(/\s/g,'') : null;
       const bandResults = rk==null ? [] : AREA_BANDS.map(b => ({ key: b.key, trade: bandMaps[b.key][rk] || null })).filter(r=>r.trade);
-      // 정렬 기준(평단가)은 반드시 화면에 실제로 보여줄 후보(pickSubwayPriceCandidates)에서만 계산한다 —
-      // "전용면적 평단가" 탭처럼 단지 전체 유닛 중 평단가 1위 유닛(화면엔 안 보이는 소형 특수평형일 수 있음)
-      // 으로 정렬하면, 화면엔 전혀 다른(더 낮은 평단가의) 국민평형 가격만 보이면서 순위가 안 맞아 보이는
-      // 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
+      // 정렬 기준(평당가)은 반드시 화면에 실제로 보여줄 후보(pickSubwayPriceCandidates)에서만 계산한다 —
+      // "전용면적 평당가" 탭처럼 단지 전체 유닛 중 평당가 1위 유닛(화면엔 안 보이는 소형 특수평형일 수 있음)
+      // 으로 정렬하면, 화면엔 전혀 다른(더 낮은 평당가의) 국민평형 가격만 보이면서 순위가 안 맞아 보이는
+      // 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평당가는 더 낮아 보이는데 왜 1위?").
       const candidates = pickSubwayPriceCandidates(bandResults);
       const pricePerPy = subwaySupplyPrice(candidates);
       // 실거래 탭과 동일한 표시명. 네이버 대응표에 없더라도 K-apt 관리명 대신
@@ -4682,7 +4682,7 @@ async function searchSubway(){
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
       if(a.pricePerPy == null) return 1; // 가격 정보 없는 단지는 뒤로
       if(b.pricePerPy == null) return -1;
-      return b.pricePerPy - a.pricePerPy; // 평단가 높은 순
+      return b.pricePerPy - a.pricePerPy; // 평당가 높은 순
     });
     // 2026.08 버그 수정 — 이전엔 이 아래서 renderSubway()만 부르고 lastData/pushView()를 빼먹어서, 역세권
     // 탭에서 단지명 클릭(quick()) → 단지 분석으로 이동 → 뒤로가기 하면 역세권 결과 화면이 히스토리에 아예
@@ -4718,10 +4718,10 @@ function formatWalkDisplay(raw){
 function stripAptSuffix(name){ return name.replace(/아파트$/, ''); }
 // 역세권 탭에서 화면에 실제로 보여줄 가격 배지 후보를 고른다 — 국민평형대(b3=55~65㎡, b5=80~95㎡) 우선,
 // 최대 2개까지만, 부족하면 나머지 구간(b1/b2/b4/b6/b7)으로 채움(운영자 요청, 2026.08 — 압구정미성2차처럼
-// 30/47/55평 등 국민평형이 아닌 단지도 최소 하나는 뜨도록). 정렬 기준(평단가)도 반드시 이 함수로 뽑은
-// 후보에서만 계산해야 한다 — 안 그러면 "전용면적 평단가" 탭 방식(단지 전체 유닛 중 평단가 1위, 화면엔
-// 안 보이는 소형 특수평형일 수 있음)으로 정렬 순위를 매기면서 화면엔 전혀 다른(더 낮은 평단가의) 국민평형
-// 가격만 보여주는 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
+// 30/47/55평 등 국민평형이 아닌 단지도 최소 하나는 뜨도록). 정렬 기준(평당가)도 반드시 이 함수로 뽑은
+// 후보에서만 계산해야 한다 — 안 그러면 "전용면적 평당가" 탭 방식(단지 전체 유닛 중 평당가 1위, 화면엔
+// 안 보이는 소형 특수평형일 수 있음)으로 정렬 순위를 매기면서 화면엔 전혀 다른(더 낮은 평당가의) 국민평형
+// 가격만 보여주는 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평당가는 더 낮아 보이는데 왜 1위?").
 const SUBWAY_PRICE_BAND_PRIORITY = ['b3','b5'];
 function subwaySupplyPrice(candidates){
  const values=candidates.filter(t=>Number.isFinite(t.py)&&t.py>0&&Number.isFinite(t.amt)&&t.amt>0).map(t=>t.amt/t.py);
@@ -4743,7 +4743,7 @@ function renderSubway(d){
   };
   const withBadges = d.rows.map(x=>({ x, badge: priceBadges(x) }));
   // 실거래 매칭이 안 돼 가격 뱃지가 비는 단지는 역세권 탭에서 아예 숨긴다(운영자 요청, 2026.08) —
-  // 이 탭은 "도보 N분 이내·평단가 높은 순" 랭킹이 핵심인데, 오른쪽 가격이 안 뜨는 항목은 랭킹 기준 자체를
+  // 이 탭은 "도보 N분 이내·평당가 높은 순" 랭킹이 핵심인데, 오른쪽 가격이 안 뜨는 항목은 랭킹 기준 자체를
   // 보여줄 수 없어 목록에 있어봐야 혼란만 줌.
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
@@ -4757,13 +4757,13 @@ function renderSubway(d){
     <div class="card-hd">
       ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">도보 ${d.maxWalk}분 이내 · 공급면적 평단가 높은 순</div>
+      <div class="meta">도보 ${d.maxWalk}분 이내 · 공급면적 평당가 높은 순</div>
     </div>
     <div class="sec">
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (전용면적 평단가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 실거래가 (전용면적 평당가·전용 20~200㎡ 최근 실거래가 중 최대 2개, 국민평형 (55~65·80~95㎡) 우선, 최근 3년)</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 
@@ -4954,7 +4954,7 @@ async function search(opts){
           d.failedRegions = failed;
         }
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longtermrise'||mode==='pricebandrise'){
-        // 신고가·신저가·전용면적 평단가·기간별 상승 랭킹은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
+        // 신고가·신저가·전용면적 평당가·기간별 상승 랭킹은 동일한 필터 UI 사용: 연식 필터 + 평형 다중 선택(pyBandMultiSel)
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         if(!items.length){
@@ -5316,7 +5316,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
     } else if(d.mode==='newlow'){
       // 신저가는 300세대 필터 적용을 위해 search() 단계에서 이미 세대수를 조회·부착해뒀으므로(위 참고) 여기선 재조회 불필요
     } else if(d.mode==='pyprice'){
-      // 평단가는 세대수를 표시하지 않는 탭이라 조회 자체를 생략(운영자 요청 범위 밖 — 필요해지면 newhigh 분기처럼 추가하면 됨)
+      // 평당가는 세대수를 표시하지 않는 탭이라 조회 자체를 생략(운영자 요청 범위 밖 — 필요해지면 newhigh 분기처럼 추가하면 됨)
     } else if(d.mode==='longtermrise' || d.mode==='jeonselongtermrise' || d.mode==='pricebandrise'){
       // 매매/전세 변동률도 pyprice와 동일한 이유로 세대수 미표시 — 생략
     } else if(d.mode==='gap') {
@@ -6369,15 +6369,15 @@ function renderPricePerPyeong(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('평단가 랭킹')}
+      ${hdTop('평당가 랭킹')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 기준${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
-      <h3>평단가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평단가 최고 평형만 대표 표시 · 평단가 = 3년 내 최고가 ÷ 공급면적 평형</div>
+      <h3>평당가 랭킹</h3>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">매매·분양권·입주권 포함 · 단지당 평당가 최고 평형만 대표 표시 · 평당가 = 3년 내 최고가 ÷ 공급면적 평형</div>
       ${rows(d.pyPrice, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/공급평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>`)}
@@ -6525,8 +6525,8 @@ ${uvSep(i)}
           <th colspan="2" class="th-teal" style="text-align:center">최근 1개월</th>
         </tr>
         <tr>
-          <th class="tr-r">평균가</th><th class="tr-r grp-td">평단가 비율</th>
-          <th class="tr-r">평균가</th><th class="tr-r">평단가 비율</th>
+          <th class="tr-r">평균가</th><th class="tr-r grp-td">평당가 비율</th>
+          <th class="tr-r">평균가</th><th class="tr-r">평당가 비율</th>
         </tr>
         <tr${x.isLowUnder?' style="background:var(--teal-soft)"':''}>
           <td><span style="font-weight:700;color:var(--navy)">${esc(x.lowPy)}</span> <span class="rng">(전용 ${x.lowArea})</span>${x.isLowUnder?'<br><span style="display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:9px;border-radius:20px;padding:1px 6px;margin-top:2px">저평가</span>':''}</td>
@@ -6557,12 +6557,12 @@ ${uvSep(i)}
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      ${hint('같은 단지 평형 간 평단가 차가 6개월새 5%↑ 벌어짐', '1~4층·직거래 제외')}
+      ${hint('같은 단지 평형 간 평당가 차가 6개월새 5%↑ 벌어짐', '1~4층·직거래 제외')}
       ${rows}
     </div>
 
   </div>
-  <div class="src-note">전용면적 기준 평단가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
+  <div class="src-note">전용면적 기준 평당가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 

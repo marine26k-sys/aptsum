@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>급지 분석 — 아파트썸</title>
 <link rel="canonical" href="https://aptsum.kr/tier.html">
-<meta name="description" content="서울·경기·인천·부산 아파트 단지를 평단가(공급면적 3.3㎡당 가격) 기준 6단계 급지로 나눠 한눈에 보는 지도">
+<meta name="description" content="서울·경기·인천·부산 아파트 단지를 평당가(공급면적 3.3㎡당 가격) 기준 6단계 급지로 나눠 한눈에 보는 지도">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -207,7 +207,7 @@ function tierRegionOptions(){
   }
   return html;
 }
-// 순위 번호 — 등급 필터를 빼고 나머지 조건(시·도·지역·동·검색)으로 거른 목록(평단가 내림차순) 기준으로 매긴다.
+// 순위 번호 — 등급 필터를 빼고 나머지 조건(시·도·지역·동·검색)으로 거른 목록(평당가 내림차순) 기준으로 매긴다.
 // 그래서 등급을 탭해도 번호가 1부터 다시 시작하지 않고 전체 순위가 이어진다(2026.09 운영자 요청 — 동별 분석과 동일).
 function tierFiltered(){
   const ranked = tierScoped().filter(c =>
@@ -245,7 +245,7 @@ function renderList(){
   fillAds();
 }
 // 지역(구/시)별 대장주 히트맵 — 칸 색은 그 단지의 급지 등급색을 그대로 재사용.
-// "전체" 탭(시·도 미선택)에서는 서울·경기·인천·부산 구분 없이 평단가 순으로 한 데 섞어 보여준다
+// "전체" 탭(시·도 미선택)에서는 서울·경기·인천·부산 구분 없이 평당가 순으로 한 데 섞어 보여준다
 // (운영자 요청, 2026.09 — 예전엔 시·도별로 그룹 나눠 보여줬음). 시·도가 같은 구 이름이 겹치는 경우
 // (중구·강서구 등 서울↔부산)가 있어, 이 통합 뷰에서만 칸에 시·도명을 함께 표시해 구분한다.
 function heatmapHTML(){
@@ -276,7 +276,7 @@ function scopedFlagshipCount(){
 // 동별 순위 — 서울·경기·인천·부산 통합(또는 시·도 탭 선택 시 그 시·도 안)에서 동 단위로 대장주를 뽑아
 // 그 동의 급지 등급(6분위)별로 묶어서 보여줌. 등급은 그 동 대장주 단지의 등급(g)을 그대로 씀 — 등급
 // 사다리(6단계)와 같은 기준. 전부 다 보여주고 자르지 않음(운영자 요청, 기존 TOP 30 제한 삭제).
-// 동별 순위 값 = 그 동 단지들 중 평단가 상위 10개(단지가 10개 미만이면 있는 만큼)의 평균 — 대장주
+// 동별 순위 값 = 그 동 단지들 중 평당가 상위 10개(단지가 10개 미만이면 있는 만큼)의 평균 — 대장주
 // 단지 1개만 보던 것보다 그 동 전체 수준을 더 잘 대표함(운영자 요청). 등급도 이 평균값 기준으로 새로 매김
 // (tierData.grades가 min 내림차순이라 첫 매치가 맞는 등급).
 function dongRankGroups(){
@@ -315,7 +315,7 @@ function dongRowHTML(c){
 // 예전엔 누른 등급 바로 밑에 아코디언으로 끼어 펼쳐져서 두 탭의 동작이 달랐음). 다시 누르면 전체 동.
 function setDongRankGrade(g){ tierState.dongRankGrade = tierState.dongRankGrade === g ? null : g; tierState.dongShown = 30; pushTierHistory(); renderDongRankArea(); }
 function showMoreDong(){ tierState.dongShown += 50; renderDongRankArea(); }
-// 동 검색 — 입력하면 등급 아코디언 대신 검색어가 포함된 동만 평단가순으로 쭉 보여줌(구/시 단위 검색도 가능).
+// 동 검색 — 입력하면 등급 아코디언 대신 검색어가 포함된 동만 평당가순으로 쭉 보여줌(구/시 단위 검색도 가능).
 function dongSearchResultsHTML(){
   const q = tierState.dongQ.trim();
   const all = dongRankGroups().flatMap(g => g.items);
@@ -363,7 +363,7 @@ function renderDongRankArea(){
   $("#dongRankArea").innerHTML = dongRankCardHTML();
   fillAds();
 }
-// 동별 평단가 히트맵 — 구/시를 선택했을 때만 노출. 동별 대장주(그 동에서 평단가가 가장 높은 단지) 1개씩 보여줌.
+// 동별 평당가 히트맵 — 구/시를 선택했을 때만 노출. 동별 대장주(그 동에서 평당가가 가장 높은 단지) 1개씩 보여줌.
 function dongHeatmapHTML(){
   if (!tierState.region) return "";
   const [province, gu] = tierState.region.split("::");
@@ -375,7 +375,7 @@ function dongHeatmapHTML(){
   const items = [...byDong.values()].sort((a,b) => b.ppy - a.ppy);
   if (!items.length) return "";
   return `
-    <div class="tier-section-hd"><h2>${esc(gu)} 동별 평단가</h2><span class="cnt">${items.length}개 동</span></div>
+    <div class="tier-section-hd"><h2>${esc(gu)} 동별 평당가</h2><span class="cnt">${items.length}개 동</span></div>
     <div class="tier-heatmap">
       ${items.map(c => {
         const grade = tierData.grades.find(g => g.g === c.g);
@@ -433,7 +433,7 @@ function render(){
 
     <div class="tier-disclaimer">
       ${esc(tierData.meta.basis)}.<br>
-      단지마다 여러 평형 (목록의 "○○평" 표기) 중 평단가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. ${Math.round(tierData.meta.months/12*10)/10}년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
+      단지마다 여러 평형 (목록의 "○○평" 표기) 중 평당가가 가장 높은 평형 하나를 대표로 골라 등급을 매긴 값이라, 그 단지의 다른 평형은 실제 체감 시세와 다를 수 있습니다. ${Math.round(tierData.meta.months/12*10)/10}년 내 같은 평형 거래가 2건 미만이면 이상치 방지를 위해 집계에서 제외되므로, 거래가 드문 단지는 목록에 없을 수 있습니다 — 참고용으로만 활용하세요.<br>
       <a href="./index.html">단지별 상세 분석 보기</a>
     </div>
   `;
