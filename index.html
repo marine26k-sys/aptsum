@@ -7473,7 +7473,7 @@ function listingTrendPrecision(points){
 function listingTrendPeakChangeHTML(x){
  if(!(Number.isFinite(x.peak)&&x.peak>0&&Number.isFinite(x.ask)&&x.ask>0))return '';
  const delta=x.ask-x.peak,pct=delta/x.peak*100;
- return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.abs(pct).toFixed(1)}%)</span>`;
+ return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.round(Math.abs(pct))}%)</span>`;
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   const precision=listingTrendPrecision([{ask:x.prevAsk},{ask:x.ask}]);

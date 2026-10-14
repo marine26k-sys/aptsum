@@ -1,3 +1,3 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
 const s=readFileSync(new URL('../index.html',import.meta.url),'utf8'),c=vm.createContext({});vm.runInContext(s.slice(s.indexOf('function listingTrendPeakChangeHTML('),s.indexOf('function listingTrendRowHTML(')),c);
-test('peak comparison is separate from history change and handles missing peaks',()=>{assert.match(c.listingTrendPeakChangeHTML({peak:98,ask:50}),/▼48.0억 \(49.0%\)/);assert.match(c.listingTrendPeakChangeHTML({peak:10,ask:11}),/▲1.0억 \(10.0%\)/);assert.equal(c.listingTrendPeakChangeHTML({peak:0,ask:11}),'');});
+test('peak comparison is separate from history change and handles missing peaks',()=>{assert.match(c.listingTrendPeakChangeHTML({peak:98,ask:50}),/▼48.0억 \(49%\)/);assert.match(c.listingTrendPeakChangeHTML({peak:10,ask:11}),/▲1.0억 \(10%\)/);assert.equal(c.listingTrendPeakChangeHTML({peak:0,ask:11}),'');});
