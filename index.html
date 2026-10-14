@@ -4673,7 +4673,7 @@ async function searchSubway(){
       // 으로 정렬하면, 화면엔 전혀 다른(더 낮은 평단가의) 국민평형 가격만 보이면서 순위가 안 맞아 보이는
       // 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
       const candidates = pickSubwayPriceCandidates(bandResults);
-      const pricePerPy = candidates.length ? Math.max(...candidates.map(c => c.amt / (c.area / SQM_PER_PY))) : null;
+      const pricePerPy = subwaySupplyPrice(candidates);
       // 실거래 탭과 동일한 표시명. 네이버 대응표에 없더라도 K-apt 관리명 대신
       // 실제 가격 배지에 사용한 실거래명으로 표시해 탭마다 이름이 바뀌지 않게 한다.
       return { ...x, pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
@@ -4723,6 +4723,10 @@ function stripAptSuffix(name){ return name.replace(/아파트$/, ''); }
 // 안 보이는 소형 특수평형일 수 있음)으로 정렬 순위를 매기면서 화면엔 전혀 다른(더 낮은 평단가의) 국민평형
 // 가격만 보여주는 모순이 생김(2026.08, 운영자 리포트 — "1위 단지가 화면상 평단가는 더 낮아 보이는데 왜 1위?").
 const SUBWAY_PRICE_BAND_PRIORITY = ['b3','b5'];
+function subwaySupplyPrice(candidates){
+ const values=candidates.filter(t=>Number.isFinite(t.py)&&t.py>0&&Number.isFinite(t.amt)&&t.amt>0).map(t=>t.amt/t.py);
+ return values.length?Math.max(...values):null;
+}
 function pickSubwayPriceCandidates(bandResults){
   const byKey = Object.fromEntries((bandResults||[]).map(r=>[r.key, r.trade]));
   const prioritized = SUBWAY_PRICE_BAND_PRIORITY.map(k=>byKey[k]).filter(Boolean);
@@ -4753,7 +4757,7 @@ function renderSubway(d){
     <div class="card-hd">
       ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">도보 ${d.maxWalk}분 이내 · 전용면적 평단가 높은 순</div>
+      <div class="meta">도보 ${d.maxWalk}분 이내 · 공급면적 평단가 높은 순</div>
     </div>
     <div class="sec">
       ${rows}
