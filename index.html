@@ -4865,6 +4865,9 @@ async function complexSearchTargets(name,targets,includePartial=false){
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
  return {targets:targets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
+function missingCompareInputs(inputs,narrowed,matched){
+  return inputs.filter((input,i)=>!matched.some(hit=>hit.name===input.name && narrowed[i].some(target=>target.lawd===hit.lawd)));
+}
 async function search(opts){
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
@@ -5100,8 +5103,9 @@ async function search(opts){
         byLawd[ld]=floorF(windowF(merged));
       });
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
+      if(myToken!==searchToken)return;
       const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
-      const missingTrade=cmpItems.filter(x=>!matchedCmp.some(t=>t.name===x.name));
+      const missingTrade=missingCompareInputs(cmpItems,narrowedCmp,matchedCmp);
       if(missingTrade.length){showError('조회 조건에 맞는 거래가 없는 단지: '+missingTrade.map(x=>esc(x.name)).join(', '));return;}
       d = analyzeCompare(byLawd, matchedCmp, months);
     } else {
