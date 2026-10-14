@@ -271,7 +271,7 @@ function regionPanelHTML(st, lineId){
   if(!items.length) return `<div class="region-panel"><div class="region-empty">이 지역에서 조회되는 단지가 없습니다.</div></div>`;
   const dongLabel = st.dong ? (Array.isArray(st.dong) ? st.dong.join("·") : st.dong) : "";
   const scopeLabel = (!fellBack && dongLabel) ? `${esc(st.si)} ${esc(st.gu)} ${esc(dongLabel)}` : `${esc(st.si)} ${esc(st.gu)}`;
-  const countLabel = all.length > items.length ? `평단가 상위 ${items.length}개 (총 ${all.length}개 중)` : `평단가 상위 ${items.length}개`;
+  const countLabel = all.length > items.length ? `평당가 상위 ${items.length}개 (총 ${all.length}개 중)` : `평당가 상위 ${items.length}개`;
   return `
     <div class="region-panel">
       <div class="region-panel-note">최근 3년간 20~39평 거래가 2건 이상인 단지만 표시됩니다 — 거래가 드문 단지는 실제로 있어도 빠질 수 있어요.</div>

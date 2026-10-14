@@ -1,8 +1,8 @@
 name: 청약 공고 자동 갱신
 on:
   schedule:
-    - cron: '30 21 * * *'
-    - cron: '30 9 * * *'
+    # 한국시간 00:30 · 06:30 · 12:30 · 18:30 (UTC 기준 cron)
+    - cron: '30 3,9,15,21 * * *'
   workflow_dispatch:
 permissions:
   contents: write

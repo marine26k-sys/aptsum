@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
+const s=readFileSync(new URL('../index.html',import.meta.url),'utf8'),c=vm.createContext({});vm.runInContext(s.slice(s.indexOf('function subwaySupplyPrice('),s.indexOf('function pickSubwayPriceCandidates(')),c);
+test('subway rank uses supply pyeong, which may reverse exclusive area rank',()=>{const a=c.subwaySupplyPrice([{amt:10,area:59,py:30}]),b=c.subwaySupplyPrice([{amt:12,area:84,py:32}]);assert.ok(b>a);assert.equal(a,10/30);assert.equal(c.subwaySupplyPrice([{amt:10,py:0}]),null);});
