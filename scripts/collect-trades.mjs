@@ -48,7 +48,7 @@ function commitProgress(message) {
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json", "data/regional-all-samples.json", "data/regional-change-details", "data/trade-batch-status.json"].filter((d) => existsSync(d));
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json", "data/regional-all-samples.json", "data/regional-change-details", "data/trade-batch-status.json", "data/complex-index.json"].filter((d) => existsSync(d));
     if (!paths.length) return;
     execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
@@ -238,6 +238,7 @@ async function main() {
   // 이미 중간 커밋했더라도 현재 작업 디렉터리의 최신 파일을 읽어 최종 커밋에 포함한다.
   // 한 대시보드 생성이 실패해도 다른 대시보드는 최신 수집 자료로 갱신한다.
   for (const [label, args] of [
+    ["단지 검색 목록", ["scripts/build-complex-index.mjs"]],
     ["급지 대시보드", ["scripts/build-tier-map.mjs", "--months=36"]],
     ["지역 변동률", ["scripts/build-regional-change.mjs"]],
   ]) {

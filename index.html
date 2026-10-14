@@ -1860,7 +1860,7 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = REGIONS.reduce((sum,[,regions])=>sum+regions.length,0); // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
+const REGION_MAX = REGIONS.find(([province])=>province==='경기')[1].length; // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
 // "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
@@ -1904,10 +1904,6 @@ function removeRegionGroup(lawds){
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
   saveRegionSel(); renderRegionChips();
 }
-function selectAllRegions(){
- regionSel=REGIONS.flatMap(([,rows])=>rows.map(([name,lawd])=>({name,lawd})));
- saveRegionSel();renderRegionChips();buildRegionPicker();syncRegionPickBtn();saveNativeRegionResult();
-}
 function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
@@ -1947,10 +1943,10 @@ function buildRegionPicker(){
   const multi = (mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
-  document.getElementById('rgTitle').textContent = multi ? '지역 선택' : '지역 선택';
+  document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
   document.getElementById('rgFt').style.display = multi ? '' : 'none';
   const picked = new Set(regionSel.map(x=>x.lawd));
-  let html = multi&&!cmpPickerRow?`<div style="padding:4px 0 8px"><button type="button" class="rgitem rgcityall" onclick="selectAllRegions()">+ 전체 지역 선택</button></div>`:'';
+  let html = '';
   REGIONS.forEach(([g,arr])=>{
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
@@ -4811,6 +4807,14 @@ function mergeTradeAndPresaleForRanking(raw, rawP){
   }catch(e){ return raw; }
 }
 
+let complexSearchIndex=null;
+async function complexSearchTargets(name,targets){
+ if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
+ const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(name),allowed=new Set(targets.map(t=>t.lawd));
+ const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
+ const hits=exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
+ return {targets:targets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
+}
 async function search(opts){
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
@@ -4886,11 +4890,16 @@ async function search(opts){
   // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
   // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
-  const multiTargets = !(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
+  let multiTargets = !(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   if(multiTargets.length > regionSelMax()){
     showError(`국토부 실거래 분석은 최대 ${REGION_MAX_RANK}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
     return;
+  }
+  let complexLookup=null;
+  if(mode==='complex'&&multiTargets.length){
+    document.getElementById('loadMsg').textContent='단지 찾는 중…';document.getElementById('loading').classList.add('on');
+    try{complexLookup=await complexSearchTargets(name,multiTargets);if(myToken!==searchToken)return;multiTargets=complexLookup.targets;if(!multiTargets.length){showError('선택한 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}}catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
   }
   const allScope = multiTargets.length > 0;
   const effMN = allScope
@@ -4954,7 +4963,7 @@ async function search(opts){
         : sel.options[sel.selectedIndex].textContent;
       if(mode==='complex'){
         await Promise.all(targets.map(t=>ensureNaverNames(t.lawd)));
-        const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
+        const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd&&complexLookup.hits.some(h=>h.lawd===t.lawd&&h.umd===x.umd&&(h.names.includes(x.apt)||h.name===x.apt))),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
         if(matches.length===1){lawd=matches[0].target.lawd;d=matches[0].result;const rent=windowF(floorF(mergedRent.filter(x=>x.lawd===lawd)));const dj=analyzeComplex(rent,name,months,undefined,lawd);d=includeJeonseOnlySaleAreas(d,dj);d.jeonse=dj.found?dj:null;}
         else d={found:false,note:matches.length?'여러 지역에 같은 단지가 있습니다. 지역을 좁혀서 조회해 주세요.':'선택한 지역에서 단지를 찾지 못했습니다.'};
       } else if(mode==='gap'){
