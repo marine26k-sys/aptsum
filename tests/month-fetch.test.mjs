@@ -58,7 +58,7 @@ for (const name of ['analyze','presale','rent']) {
     assert.equal(response.headers.get('Cache-Control'),'no-store');
     const ok = await ctx.handler(new Request('https://example.test/api/'+name+'?lawd=26110&yms=202601'));
     assert.deepEqual((await ok.json()).failedMonths, []);
-    assert.match(ok.headers.get('Netlify-CDN-Cache-Control'), /2592000/);
+    assert.match(ok.headers.get('Netlify-CDN-Cache-Control'), /max-age=300/);
   });
 }
 

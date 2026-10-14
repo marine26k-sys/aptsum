@@ -2,9 +2,8 @@ name: 실거래 데이터 배치 수집 (매매/분양권/전세)
 
 on:
   schedule:
-    # 한국 시간 월말 15:30(UTC 06:30). 월 전환 전에 수집을 끝낼 여유를 확보한다.
-    # 28~31일 중 마지막 날만 gate에서 실행. 평소 최근 4개월, 분기말 최근 12개월 재조회.
-    - cron: "30 6 28-31 * *"
+    # 한국시간 06:30 · 18:30, 최근 4개월 재조회
+    - cron: "30 9,21 * * *"
   workflow_dispatch:
     inputs:
       months:
@@ -38,25 +37,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
-      - name: 매월 마지막 날인지 확인 (schedule 실행에만 적용 — 28~31일 중 "내일이 1일"인 날만 진행)
+      - name: 수집 범위 결정 (자동·수동 공통)
         id: gate
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            tomorrow=$(date -u -d tomorrow +%d)
-            if [ "$tomorrow" != "01" ]; then
-              echo "오늘은 이번 달 마지막 날이 아님(내일=${tomorrow}일) — 이번 실행은 건너뜀"
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
           refresh="${{ github.event.inputs.refresh }}"
           if [ -z "$refresh" ]; then
             refresh=4
-            if [ "${{ github.event_name }}" = "schedule" ]; then
-              case "$(date -u +%m)" in
-                03|06|09|12) refresh=12 ;;
-              esac
-            fi
           fi
           echo "refresh=$refresh" >> "$GITHUB_OUTPUT"
           echo "run=true" >> "$GITHUB_OUTPUT"
@@ -125,13 +111,14 @@ jobs:
           done
           [ -f data/tier-map.json ] && git add data/tier-map.json
           [ -f data/regional-change.json ] && git add data/regional-change.json
+          [ -f data/trade-batch-status.json ] && git add data/trade-batch-status.json
           [ -d data/regional-change-details ] && git add data/regional-change-details
           [ -f data/regional-samples.json ] && git add data/regional-samples.json
           [ -f data/regional-all-samples.json ] && git add data/regional-all-samples.json
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
-            git commit -m "chore: 실거래 데이터 배치 수집 최종 커밋 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "chore: 실거래 데이터 배치 수집 최종 커밋 $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip netlify]"
           fi
           for i in 1 2 3 4 5; do
             if git push; then exit 0; fi
@@ -141,3 +128,15 @@ jobs:
           done
           echo "5회 재시도 후에도 푸시 실패"
           exit 1
+
+      - name: 수집 상태 보고서 보관
+        if: always() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trade-batch-status
+          path: data/trade-batch-status.json
+          if-no-files-found: warn
+      - name: 실패 안내
+        if: failure() && steps.gate.outputs.run == 'true'
+        run: |
+          echo "::error::실거래 수집 일부 실패. 기존 자료는 유지됩니다. trade-batch-status 보고서에서 실패 지역·월을 확인하세요. 다음 정기 배치에서 최근 4개월을 재시도합니다."

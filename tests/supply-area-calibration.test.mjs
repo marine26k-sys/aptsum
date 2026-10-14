@@ -104,7 +104,7 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: split district liv
    return new Response('',{status:404});
   };
   const {default:handler}=await import(`../netlify/functions/${kind}.mjs`);
-  const response=await handler(new Request(`https://${kind}-split-calibration.example/api/${kind}?lawd=HS-%EB%B3%91%EC%A0%90%EA%B5%AC&yms=202610&v=15`));
+  const response=await handler(new Request(`https://${kind}-split-calibration.example/api/${kind}?lawd=HS-%EB%B3%91%EC%A0%90%EA%B5%AC&yms=202610&v=15&live=1`));
   assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===23));
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });
