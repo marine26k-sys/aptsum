@@ -7488,7 +7488,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down'){
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · <span style="display:inline-flex;align-items:baseline;gap:5px;flex-wrap:nowrap;white-space:nowrap">최근 3년 최고가 ${x.peak.toFixed(1)}억 ${listingTrendPeakChangeHTML(x)}</span>`:""}</small></span>
+    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · <span style="display:inline-flex;align-items:baseline;gap:5px;flex-wrap:nowrap;white-space:nowrap">최근 3년 최고가 ${x.peak.toFixed(1)}억 대비 ${listingTrendPeakChangeHTML(x)}</span>`:""}</small></span>
     <span class="val" style="color:var(--${direction==='up'?'red':'blue'})">${direction==='up'?'▲':'▼'}${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
