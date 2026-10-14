@@ -1108,6 +1108,7 @@ try {
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">변동 방향
         <select id="listingTrendDirection" onchange="listingTrendDirectionApply()" style="flex:1"><option value="down" selected>하락</option><option value="up">상승</option></select>
       </label>
+      <button type="button" id="listingTrendBelowPeak" aria-pressed="false" onclick="listingTrendBelowPeakToggle()" style="margin-top:8px;padding:7px 12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal);font:inherit;font-size:12px;font-weight:700">전고점 이하만</button>
     </div>
     <details id="listingBudgetFavorites" class="ls-filters" style="display:none">
       <summary>★ 조건 즐겨찾기</summary>
@@ -6846,6 +6847,12 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
   }
   return rows;
 }
+function listingTrendPeakMatch(item){return Number.isFinite(item.peak)&&item.peak>0&&Number.isFinite(item.ask)&&item.ask>0&&item.ask<=item.peak;}
+function listingTrendBelowPeakToggle(){
+ const button=document.getElementById('listingTrendBelowPeak'),on=button.getAttribute('aria-pressed')!=='true';
+ button.setAttribute('aria-pressed',String(on));button.style.background=on?'var(--teal)':'#fff';button.style.color=on?'#fff':'var(--teal)';
+ if((lastData&&(lastData.mode==='listingtrend'||lastData.mode==='listingrise'))||document.getElementById('loading').classList.contains('on'))search({silentScroll:true});
+}
 function listingTrendDirectionApply(){
   const next = document.getElementById('listingTrendDirection').value==='up' ? 'listingrise' : 'listingtrend';
   if(next===mode) return;
@@ -6862,6 +6869,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
   const requestedUpload='';
   const direction=mode==='listingrise'?'up':'down';
+  const belowPeak=document.getElementById('listingTrendBelowPeak').getAttribute('aria-pressed')==='true';
   const continuous=false;
   try{
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
@@ -6888,9 +6896,9 @@ async function searchListingTrend(myToken,lawd,silentScroll){
     }
     // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
     lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
-    for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls))rows.splice(i,1);
+    for(let i=rows.length-1;i>=0;i--)if(!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls)||(belowPeak&&!listingTrendPeakMatch(rows[i])))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct).splice(100);
-    const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,
+    const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,belowPeak,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
     lastData=d;renderListingTrend(d);
     if(!silentScroll)window.scrollTo(0,0);pushView();saveLastRegionPref(lawd);
@@ -7510,7 +7518,7 @@ function renderListingTrend(d){
     ${listingHeaderHTML(d, `최저 호가 변동 · ${word}`, null, null)}
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">최근 3개 기록의 첫 금액 대비 마지막 최저 호가가 ${rising?'올라간':'내려간'} 단지·평형</div>
-      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.trendContinuous ? `연속 ${word}만 · ` : ''}${word} 금액 큰 순`)}
+      ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.belowPeak?'전고점 이하만 · ':''}${d.trendContinuous ? `연속 ${word}만 · ` : ''}${word} 금액 큰 순`)}
       ${listingLinkLegend()}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
