@@ -6852,9 +6852,13 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
   return rows;
 }
 function listingTrendPeakMatch(item){return Number.isFinite(item.peak)&&item.peak>0&&Number.isFinite(item.ask)&&item.ask>0&&item.ask<=item.peak;}
+function syncListingTrendBelowPeak(on){
+ const button=document.getElementById('listingTrendBelowPeak');
+ button.setAttribute('aria-pressed',String(!!on));button.style.background=on?'var(--teal)':'#fff';button.style.color=on?'#fff':'var(--teal)';
+}
 function listingTrendBelowPeakToggle(){
- const button=document.getElementById('listingTrendBelowPeak'),on=button.getAttribute('aria-pressed')!=='true';
- button.setAttribute('aria-pressed',String(on));button.style.background=on?'var(--teal)':'#fff';button.style.color=on?'#fff':'var(--teal)';
+ const on=document.getElementById('listingTrendBelowPeak').getAttribute('aria-pressed')!=='true';
+ syncListingTrendBelowPeak(on);
  if((lastData&&(lastData.mode==='listingtrend'||lastData.mode==='listingrise'))||document.getElementById('loading').classList.contains('on'))search({silentScroll:true});
 }
 function listingTrendDirectionApply(){
@@ -7509,6 +7513,7 @@ function renderListingGap(d){
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
 }
 function renderListingTrend(d){
+  syncListingTrendBelowPeak(!!d.belowPeak);
   const rising=d.mode==='listingrise',word=rising?'상승':'하락';
   listingTrendUploadId=d.trendUpload||'';syncListingTrendUpload(d.trendChoices||[]);
   document.getElementById('listingTrendContinuous').checked=!!d.trendContinuous;
