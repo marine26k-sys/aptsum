@@ -20,7 +20,10 @@ export function shouldCollectTrades(report, now = Date.now()) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let report;
   try { report = JSON.parse(readFileSync('data/trade-batch-status.json', 'utf8')); } catch {}
-  const run = process.env.GITHUB_EVENT_NAME !== 'schedule' || shouldCollectTrades(report);
+  // 지정한 하루만 실제 수집을 강제하여 예약 이벤트부터 수집 완료까지 검증한다.
+  const scheduledTest = process.env.TRADE_BATCH_SCHEDULE === '10 0 15 10 *'
+    && new Date().toISOString().slice(0, 10) === '2026-10-15';
+  const run = process.env.GITHUB_EVENT_NAME !== 'schedule' || scheduledTest || shouldCollectTrades(report);
   console.log(`run=${run}`);
   console.error(run ? '전체 수집 미완료: 수집을 실행합니다.' : '현재 회차 전체 수집 완료: 중복 수집을 건너뜁니다.');
 }
