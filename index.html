@@ -1619,7 +1619,7 @@ function isFavRegion(code){ return getFavRegions().some(x=>x.code===code); }
 function toggleFavRegion(){
   // 지역 랭킹에서 칩(복수 선택)이 쌓여 있으면 그 조합 전체를 즐겨찾기 대상으로 삼는다.
   // 전부 이미 즐겨찾기 상태면 전부 해제, 하나라도 아니면 전부 추가(누락분만 채움).
-  const useMulti = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
+  const useMulti = ((mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0);
   const targets = useMulti
     ? regionSel.map(x=>({code:x.lawd, label:x.name}))
     : [{code: sel.value, label: [...sel.options].find(o=>o.value===sel.value)?.textContent || sel.value}];
@@ -1642,7 +1642,7 @@ function toggleFavRegion(){
 function updateRegionFavBtn(){
   const btn = document.getElementById('regionFavBtn');
   if(!btn) return;
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
+  if((mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length>0){
     const favs = getFavRegions();
     btn.textContent = regionSel.every(x=>favs.some(f=>f.code===x.lawd)) ? '★' : '☆';
   } else {
@@ -1653,11 +1653,11 @@ function renderFavRegions(){
   const favs = getFavRegions();
   const el = document.getElementById('favRegions');
   // 지역 랭킹은 칩(regionSel)이 실제 선택 기준 — sel.value는 예전 조작의 잔여값일 수 있어 하이라이트 판단에 못 씀
-  const activeCodes = ((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
+  const activeCodes = ((mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length) ? new Set(regionSel.map(x=>x.lawd)) : new Set([sel.value]);
   el.innerHTML = favs.map(x=>`<span class="chip${activeCodes.has(x.code)?' on':''}" onclick="favRegionGo('${esc(x.code)}')">${esc(x.label)}</span>`).join('');
 }
 function favRegionGo(code){
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 지역 랭킹·저평가(단기/반기/연간)는 칩(regionSel)이 선택 상태의 유일한 기준 — 즐겨찾기도 칩에 추가해야
     // 패널을 다시 열었을 때 체크 표시가 맞게 나온다(sel.value만 바꾸면 패널 표시와 어긋남)
     // addRegion()이 sel.value까지 함께 맞춰주므로 싱글 탭들도 이 지역으로 바로 갱신됨(2026.08)
@@ -1860,15 +1860,12 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
-const REGION_MAX = Math.max(45, ...REGIONS.map(([, regions])=>regions.length)); // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
-const REGION_MAX_RANK = 25; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
+const REGION_MAX = REGIONS.reduce((sum,[,regions])=>sum+regions.length,0); // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
+const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
 // "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
-function ggAllAllowed(){
-  return mode==='region' || (mode==='newhigh' && newHighWeekOnly) || mode==='pricebandrise'
-    || mode==='longpeaklisting' || mode==='listingbudget' || mode==='listingurgent'|| (mode==='listingtrend'||mode==='listingrise') || mode==='listinggap';
-}
+function ggAllAllowed(){return true;}
 function regionSelMax(){
   // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
@@ -1907,12 +1904,16 @@ function removeRegionGroup(lawds){
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
   saveRegionSel(); renderRegionChips();
 }
+function selectAllRegions(){
+ regionSel=REGIONS.flatMap(([,rows])=>rows.map(([name,lawd])=>({name,lawd})));
+ saveRegionSel();renderRegionChips();buildRegionPicker();syncRegionPickBtn();saveNativeRegionResult();
+}
 function clearRegions(){ regionSel = []; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
   const box = document.getElementById('regionChips');
-  if(!(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
+  if(!(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
@@ -1932,7 +1933,7 @@ loadRegionSel();
 // 목록을 직접 그린다. 단, 기존 코드가 전부 sel.value/sel.options를 참조하므로 select 요소 자체는
 // DOM에 그대로 두고(화면에서만 숨김) 여기서 값을 세팅한 뒤 change 이벤트를 발생시킨다.
 function regionPickerLabel(){
-  if((mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
+  if((mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') && regionSel.length){
     return regionScopeLabel(regionSel);
   }
   const o = sel.options[sel.selectedIndex];
@@ -1943,13 +1944,13 @@ function syncRegionPickBtn(){
   if(el) el.textContent = regionPickerLabel();
 }
 function buildRegionPicker(){
-  const multi = (mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
+  const multi = (mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise');
   const q = (document.getElementById('rgSearch').value||'').trim();
   const body = document.getElementById('rgBody');
-  document.getElementById('rgTitle').textContent = multi ? `지역 선택 (최대 ${regionSelMax()}개)` : '지역 선택';
+  document.getElementById('rgTitle').textContent = multi ? '지역 선택' : '지역 선택';
   document.getElementById('rgFt').style.display = multi ? '' : 'none';
   const picked = new Set(regionSel.map(x=>x.lawd));
-  let html = '';
+  let html = multi&&!cmpPickerRow?`<div style="padding:4px 0 8px"><button type="button" class="rgitem rgcityall" onclick="selectAllRegions()">+ 전체 지역 선택</button></div>`:'';
   REGIONS.forEach(([g,arr])=>{
     const hits = arr.filter(([n])=> !q || n.includes(q) || g.includes(q));
     if(!hits.length) return;
@@ -1963,7 +1964,7 @@ function buildRegionPicker(){
     let ggPickerLastCity = null;
     html += `<div class="rggrid">` + hits.map(([n,c], i)=>{
       let prefix = '';
-      if(multi && !q){
+      if((multi || cmpPickerRow) && !q){
         if(g==='경기'){
           // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 47개 시군구 일괄 추가 버튼을 노출한다.
           if(i===0 && ggAllAllowed()){
@@ -1988,7 +1989,7 @@ function buildRegionPicker(){
 let cmpPickerRow = null; // 단지 비교 탭에서 특정 행(cmp-row)의 지역을 고르는 중이면 그 행의 hidden select를 가리킴(2026.08 추가)
 function regionNameByLawd(code){
   for(const [,arr] of REGIONS){ const hit = arr.find(([,c])=>c===code); if(hit) return hit[0]; }
-  return code ? code : '지역 선택';
+  return isAllScope(code)?(code.startsWith(CITYALL_PREFIX)?code.slice(CITYALL_PREFIX.length)+'시 전체':(PROVINCE_DISPLAY[code.slice(ALL_PREFIX.length)]||code.slice(ALL_PREFIX.length))+' 전체'):code ? code : '지역 선택';
 }
 // 단지 비교 탭 각 행의 hidden select 값 + 눈에 보이는 버튼 라벨을 함께 맞춘다(값만 바꾸고 라벨을 안 맞추면
 // "지역 선택" 버튼에 옛 지역명이 계속 남아있게 됨 — URL 공유 복원(p.get('c'))·즐겨찾기 복원 양쪽에서 사용)
@@ -2004,7 +2005,7 @@ function pickRegion(v){
     closeRegionPicker(); // cmpPickerRow=null 리셋은 closeRegionPicker 안에서 처리
     return;
   }
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     // 복수 선택: 이미 담긴 지역을 다시 누르면 해제(토글). 패널은 계속 열어둔다.
     if(!isAllScope(v) && regionSel.some(x=>x.lawd===v)) removeRegion(v);
     else addRegion(v);
@@ -2143,7 +2144,7 @@ sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
-  if(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
+  if(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise'){
     addRegion(sel.value);
   } else if(sel.value){
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락)에서 지역을 바꾸면, 멀티 탭 칩도 이 지역 하나로 맞춰서
@@ -2523,7 +2524,7 @@ function setMode(m, fromRestore){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
+  const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -2535,7 +2536,7 @@ function setMode(m, fromRestore){
   // 칩(regionSel)으로 복수 지역을 고르는 탭 전체 — useMulti/renderRegionChips/multiTargets 등이 쓰는 목록과
   // 같은 집합이어야 한다. 예전엔 6개(longpeakdong·surge·inversion·turnover·jeonseupdown·gaptrend)가 빠져 있어
   // 그 탭들만 이전 탭에서 고른 지역을 칩으로 이어받지 못했음(2026.09 수정).
-  const multiModes = ['region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
+  const multiModes = ['complex','volume','gap','subway','region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   if(multiModes.includes(m)){
@@ -4486,7 +4487,7 @@ function quick(n, guName){
   setMode('complex');
   if(guName){
     const opt = [...sel.options].find(o=>o.textContent===guName);
-    if(opt){ sel.value = opt.value; if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); } // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
+    if(opt){ sel.value = opt.value; regionSel=[{lawd:opt.value,name:opt.textContent}];saveRegionSel();renderRegionChips(); if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); } // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
   }
   document.getElementById('q').value=n;
   search();
@@ -4619,20 +4620,9 @@ function resolveSubwayTradeName(lawd, allNames, name, umdOf){
   const byNaver = allNames.filter(n=>key(naverNameOf(lawd, n, umdOf.get(n)))===key(name));
   return byNaver.length===1 ? byNaver[0] : resolveAptName(allNames, name, umdOf);
 }
-async function searchSubway(){
-  document.getElementById('tradeLoadNote').hidden = true;
-  const myToken=++searchToken;beginSearchRequests();
-  const lawd = sel.value;
-  if(!lawd){ showError('지역을 선택해 주세요.'); return; }
-  document.getElementById('error').classList.remove('on');
-  const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
-  saveQueriedSliders();
-  document.getElementById('loadMsg').textContent = '지하철 데이터 조회 중…';
-  document.getElementById('loading').classList.add('on');
-  document.getElementById('btn').disabled = true;
-  try{
+async function subwayRowsForRegion(lawd,maxWalk){
     const [items] = await Promise.all([loadSubwayData(lawd), ensureNaverNames(lawd)]);
-    const maxWalk = +document.getElementById('subwayWalkMax').value;
+
     // "역세권 여부" 판정을 subwayLines(호선) 유무가 아니라 subwayWalk(도보시간)만으로 한다(2026.09,
     // 운영자 요청). subwayLines는 K-apt 원본에 반복적으로 오기입돼 있어(경춘선·의정부경전철 등 — 단지
     // 분석 탭도 2026.08부터 같은 이유로 호선/역명 표시를 중단함, subwayMetaHTML 참고) 이 필드가 비어
@@ -4677,8 +4667,27 @@ async function searchSubway(){
       const pricePerPy = subwaySupplyPrice(candidates);
       // 실거래 탭과 동일한 표시명. 네이버 대응표에 없더라도 K-apt 관리명 대신
       // 실제 가격 배지에 사용한 실거래명으로 표시해 탭마다 이름이 바뀌지 않게 한다.
-      return { ...x, pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
+      return { ...x, lawd, gu:regionNameByLawd(lawd), pricePerPy, bandResults, naverName: resolved ? aptLabel({ lawd, apt:resolved, umd:aptUmd.get(resolved) }) : null };
     });
+    return rows;
+}
+async function searchSubway(){
+  document.getElementById('tradeLoadNote').hidden = true;
+  const myToken=++searchToken;beginSearchRequests();
+  const lawd = sel.value;
+  if(!lawd){ showError('지역을 선택해 주세요.'); return; }
+  document.getElementById('error').classList.remove('on');
+  const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
+  saveQueriedSliders();
+  document.getElementById('loadMsg').textContent = '지하철 데이터 조회 중…';
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('btn').disabled = true;
+  try{
+    const maxWalk=+document.getElementById('subwayWalkMax').value;
+    const targets=regionSel.length?regionSel.slice():isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:regionNameByLawd(lawd)}];
+    let rows=[];const failures=[];
+    for(let i=0;i<targets.length;i+=4){if(myToken!==searchToken)return;const got=await Promise.all(targets.slice(i,i+4).map(async t=>{try{return await subwayRowsForRegion(t.lawd,maxWalk);}catch{failures.push(t.name);return [];}}));rows.push(...got.flat());}
+    if(failures.length===targets.length){showError('지하철 데이터를 불러오지 못했습니다. 다시 조회해 주세요.');return;}
     rows.sort((a,b) => {
       if(a.pricePerPy == null && b.pricePerPy == null) return (a.walk.max-b.walk.max) || (a.walk.min-b.walk.min) || a.name.localeCompare(b.name,'ko');
       if(a.pricePerPy == null) return 1; // 가격 정보 없는 단지는 뒤로
@@ -4691,7 +4700,7 @@ async function searchSubway(){
     // 결과를 히스토리에 쌓는다 — mode:'subway'를 같이 저장해서 restoreView()가 되돌아올 때 renderSubway로
     // 분기할 수 있게 함.
     if(myToken!==searchToken)return;
-    const subwayData = { mode:'subway', regionName: sel.options[sel.selectedIndex].textContent, maxWalk, rows };
+    const subwayData = { mode:'subway', regionName:regionScopeLabel(targets), maxWalk, rows };
     renderSubway(subwayData);
     window.scrollTo(0, 0);
     lastData = subwayData;
@@ -4749,7 +4758,7 @@ function renderSubway(d){
   const filtered = withBadges.filter(({badge})=>badge);
   const rows = filtered.length
     ? filtered.map(({x,badge},i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.naverName || stripAptSuffix(x.name))}')">${esc(x.naverName || stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.naverName || stripAptSuffix(x.name))}','${esc(x.gu||'')}')">${esc(x.naverName || stripAptSuffix(x.name))}</span></span><small><b style="color:var(--teal-dark)">${esc(formatWalkDisplay(x.subwayWalk))}</b>${x.useDate? ` · ${buildAgeLabel(x.useDate.slice(0,4))}`:''}${x.hhcnt? ` · ${x.hhcnt.toLocaleString()}세대`:''}</small></span>
         ${badge}
       </div>${rkSep(i,filtered.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 단지가 없습니다</div>';
@@ -4829,7 +4838,7 @@ async function search(opts){
   updateRegionFavBtn();
   renderFavRegions();
   const name = document.getElementById('q').value.trim();
-  const lawd = sel.value;
+  let lawd = sel.value;
   let cmpItems = [];
   if(mode==='compare'){
     const filledCmpItems = [...document.querySelectorAll('.cmp-row')].map(r=>({
@@ -4877,7 +4886,7 @@ async function search(opts){
   // '○○ 전체' 통합 조회는 지역 수(서울 25 / 경기 39 / 인천 10)만큼 조회량이 배가되므로
   // 24개월 하한(탭 간 캐시 공유 목적)을 적용하지 않고 선택한 기간만 조회한다.
   // 지역 랭킹·저평가(단기/반기/연간) 복수 선택: 칩이 하나라도 있으면 그 목록으로, 없고 셀렉트가 '○○ 전체'면 그 시·도 전체로 조회
-  const multiTargets = !(mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
+  const multiTargets = !(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   if(multiTargets.length > regionSelMax()){
     showError(`국토부 실거래 분석은 최대 ${REGION_MAX_RANK}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
@@ -4921,7 +4930,7 @@ async function search(opts){
           `${targets.length}개 지역 조회 중… (${Math.min(i+CHUNK,targets.length)}/${targets.length})`;
         // 매매·분양권을 구별로 동시에 조회 — 이름 정규화 병합은 구 단위로 해야 한다(다른 구에 같은 단지명이
         // 존재할 수 있어, 전체를 한꺼번에 정규화하면 서로 다른 구의 단지가 잘못 합쳐질 수 있음)
-        const needsRent = mode==='jeonselongtermrise';
+        const needsRent = mode==='jeonselongtermrise'||mode==='complex'||mode==='gap';
         const gotTriples = await Promise.all(part.map(t => Promise.all([
           ensureMonths(t.lawd, effMN).catch(()=>{ failed.push(t.name); return []; }),
           ensureMonthsP(t.lawd, effMN).catch(()=>[]),
@@ -4943,7 +4952,14 @@ async function search(opts){
       const scopeLabel = regionSel.length
         ? regionScopeLabel(targets)
         : sel.options[sel.selectedIndex].textContent;
-      if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
+      if(mode==='complex'){
+        await Promise.all(targets.map(t=>ensureNaverNames(t.lawd)));
+        const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
+        if(matches.length===1){lawd=matches[0].target.lawd;d=matches[0].result;const rent=windowF(floorF(mergedRent.filter(x=>x.lawd===lawd)));const dj=analyzeComplex(rent,name,months,undefined,lawd);d=includeJeonseOnlySaleAreas(d,dj);d.jeonse=dj.found?dj:null;}
+        else d={found:false,note:matches.length?'여러 지역에 같은 단지가 있습니다. 지역을 좁혀서 조회해 주세요.':'선택한 지역에서 단지를 찾지 못했습니다.'};
+      } else if(mode==='gap'){
+        d=analyzeGapRanking(pyBandMultiFilter(items),windowF(mergedRent),months);d.scopeLabel=scopeLabel;
+      } else if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
         // 이 세 탭은 평형(20~39평 고정, 20평대/30평대 평대별)·연식 필터 UI가 없어 items를 그대로 각자의 분석 함수에 넘긴다(단일 지역 조회와 동일한 방식)
         if(!items.length){
           d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간을 조정해 보세요.'};
@@ -4996,6 +5012,7 @@ async function search(opts){
           d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간이나 평형을 조정해 보세요.'};
         } else {
           d = analyzeRegion(items, months);
+          if(mode==='volume')d.mode='volume';
           d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
           d.buildYear = buildYearLabel();
           d.scopeLabel = scopeLabel;
@@ -5003,7 +5020,8 @@ async function search(opts){
         }
       }
     } else if(mode==='compare'){
-      const uniq = [...new Set(cmpItems.map(x=>x.lawd))];
+      const expandedCmp=cmpItems.flatMap(x=>isAllScope(x.lawd)?lawdsOfScope(x.lawd).map(t=>({...x,lawd:t.lawd})): [x]);
+      const uniq = [...new Set(expandedCmp.map(x=>x.lawd))];
       // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
       const [fetched, fetchedP] = await Promise.all([
         Promise.all(uniq.map(ld=>ensureMonths(ld, effMN))),
@@ -5014,8 +5032,9 @@ async function search(opts){
         const merged = mergeTradeAndPresaleForRanking(fetched[i], fetchedP[i]);
         byLawd[ld]=floorF(windowF(merged));
       });
-      await Promise.all(cmpItems.map(x=>ensureNaverNames(x.lawd)));
-      d = analyzeCompare(byLawd, cmpItems, months);
+      await Promise.all(expandedCmp.map(x=>ensureNaverNames(x.lawd)));
+      const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
+      d = analyzeCompare(byLawd, matchedCmp, months);
     } else {
       // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
       // 전세는 단지 분석 탭에서만 쓰므로, 다른 탭(지역/거래량/등락 랭킹 등)에서는 호출 자체를 하지 않는다.
