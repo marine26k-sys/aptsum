@@ -7557,7 +7557,6 @@ function renderListingUrgent(d){
   <div class="card">
     ${listingHeaderHTML(d, '급매 선별', '최근 3년 최고가', '현재 급매 호가')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가보다 싸게 나온 급매 (낮은 가격순)</div>
       <div class="rng" style="margin-bottom:4px">급매 = 네이버 부동산 매물에 '급매' 문구가 있는 매물</div>
       ${hint(`호가 ${URGENT_MIN_ASK}억↑ · ${(d.hhMin||LISTING_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
