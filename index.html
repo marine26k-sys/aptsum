@@ -629,7 +629,7 @@ try {
       document.addEventListener('DOMContentLoaded', function(){
       // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 무료 체험으로 조회할 수 있어 항상 노출 —
       // 여기(인증 시에만 노출·해지 시 숨김) 목록에서 뺐다. 지역 제한은 listingTrialBlocked()와 서버(/api/listings)가 건다.
-      const subTabs = ['tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabINV', 'tabNH7', 'tabPBR', 'tabLFAV'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabNH7', 'tabPBR', 'tabLFAV'].map(id => document.getElementById(id)).filter(Boolean);
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
       if (!subTabs.length) { resolveReady(false); return; }
 
@@ -844,6 +844,7 @@ try {
       <div class="tab-grp-tabs">
           <a class="tab" id="tabSU" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기</a>
           <a class="tab" id="tabLP" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간</a>
+          <a class="tab" id="tabINV" href="./index.html?m=inversion"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</a>
       </div>
     </div>
     <!-- 네이버 실매물 기준 그룹(2026.09, 운영자 요청 — 같은 달 비공개 탭 묶음보다 위로 이동) — 운영자가 stats.html에서 올린 네이버 매물 엑셀 요약(/api/listings)만
@@ -889,7 +890,6 @@ try {
     <a class="tab subscriber" id="tabP" style="display:none" href="./index.html?m=peak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>반기 저평가</a>
     <a class="tab subscriber" id="tabNL" style="display:none" href="./index.html?m=newlow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</a>
     <a class="tab subscriber" id="tabLPD" style="display:none" href="./index.html?m=longpeakdong"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</a>
-    <a class="tab subscriber" id="tabINV" style="display:none" href="./index.html?m=inversion"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</a>
     <a class="tab subscriber" id="tabNH7" style="display:none" href="./index.html?m=newhigh&amp;nh7=1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</a>
     <a class="tab subscriber" id="tabPBR" style="display:none" href="./index.html?m=pricebandrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</a>
     <a class="tab subscriber" id="tabLFAV" style="display:none" href="./index.html?m=listingfavorites">관심 단지</a>
@@ -2437,7 +2437,7 @@ function pyBandMultiFilter(items){
 
 // 게이트
 function needsSubscriberSession(m){
-  return ['volume','gap','jeonselongtermrise','peak','listingfavorites','inversion'].includes(m)||m==='newlow'||m==='longpeakdong'||m==='pricebandrise'||(m==='newhigh'&&newHighWeekOnly);
+  return ['volume','gap','jeonselongtermrise','peak','listingfavorites'].includes(m)||m==='newlow'||m==='longpeakdong'||m==='pricebandrise'||(m==='newhigh'&&newHighWeekOnly);
 }
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
