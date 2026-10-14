@@ -30,8 +30,8 @@ export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!N
  const monthly=Array.from({length:6},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m-1,1)).toISOString().slice(0,7),start:Date.UTC(y,m-1,1),end:Date.UTC(y,m,1),previousStart:Date.UTC(y,m-2,1)};});
  return {monthly};}
 
-// 최근 완료된 12개월의 공급평당 평균 가격 상위 30개. 선정 후 목록은 고정한다.
-export function selectRegionalSamples(items,names={},start,end,limit=30){
+// 최근 완료된 12개월의 공급평당 평균 가격 상위 50개. 선정 후 목록은 고정한다.
+export function selectRegionalSamples(items,names={},start,end,limit=50){
  const groups=new Map();
  for(const t of items){const date=tradeDay(t);if(!(date>=start&&date<end)||t.direct||t.cancel||t.cancelled||!t.apt||!t.umd||!Number.isFinite(t.amt)||t.amt<=0||!Number.isFinite(t.area)||t.area<=0)continue;
   if(!eligiblePy(supplyPy(t)))continue;
