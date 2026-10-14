@@ -1,3 +1,4 @@
+import {latestTradeMonth} from '../../shared/latest-trade-data.mjs';
 import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 아파트 분양권전매 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
@@ -247,10 +248,8 @@ async function fetchShardLive(key, lawd, yms, origin) {
 
 async function fetchStaticMonth(origin, lawd, ym) {
   try {
-    const r = await fetch(`${origin}/data/presale/${encodeURIComponent(lawd)}/${ym}.json`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    if (!j || !Array.isArray(j.items)) return null;
+    const j = await latestTradeMonth(origin, 'presale', lawd, ym);
+    if (!j) return null;
     // area는 그대로, py만 지금 코드의 PY_ANCHORS로 다시 계산(2026.08 — analyze.mjs와 동일한 이유)
     return await hubPyOverride(j.items.map((it) => ({ ...it, py: areaToPy(Math.round(it.area)) })), lawd, origin);
   } catch (e) { return null; }
@@ -259,37 +258,8 @@ async function fetchStaticMonth(origin, lawd, ym) {
 
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) return fetchShardLive(key, lawd, yms);
-
-  const { cur, prev } = currentAndPrevYm();
-  const isRecent = (ym) => ym === cur || ym === prev;
-  const historicalYms = yms.filter((ym) => !isRecent(ym));
-  const recentYms = yms.filter(isRecent);
-
-  // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
-  // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
-  // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가, analyze.mjs와 동일)
-  const [staticHits, recentLive] = await Promise.all([
-    historicalYms.length
-      ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
-      : [],
-    recentYms.length ? fetchShardLive(key, lawd, recentYms) : { items: [], anyFailed: false },
-  ]);
-  const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null);
-  const staticItems = staticHits.filter((h) => h !== null).flat();
-
-  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
-
-  if (!missingHistorical.length) {
-    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
-  }
-
-  const missingLive = await fetchShardLive(key, lawd, missingHistorical);
-  if (missingLive.error) {
-    const items = [...staticItems, ...recentLive.items];
-    return items.length ? { items, anyFailed: true } : missingLive;
-  }
-  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
+ const hits=await Promise.all(yms.map(ym=>fetchStaticMonth(origin,lawd,ym)));
+ return {items:hits.filter(x=>x!==null).flat(),anyFailed:hits.some(x=>x===null)};
 }
 
 export default async (req) => {
@@ -308,23 +278,23 @@ export default async (req) => {
   }
 
   const key = process.env.DATA_GO_KR_KEY;
-  if (!key) return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
+  if (!key && url.searchParams.get("live")==="1") return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
 
   if (!/^\d{5}$/.test(lawd) && !Object.keys(SPLIT_REGIONS).some((p) => lawd.startsWith(p)))
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
   if (!yms.length) return Response.json({ error: "조회 월 없음" }, { status: 400 });
 
-  const r = await collectMonths(yms, (ym) => fetchShard(key, lawd, [ym], url.origin));
+  const r = await collectMonths(yms, (ym) => url.searchParams.get("live")==="1"?fetchShardLive(key,lawd,[ym],url.origin):fetchShard(key, lawd, [ym], url.origin));
   if (r.error) return Response.json({ error: r.error }, { status: 502 });
 
   const { cur, prev } = currentAndPrevYm();
-  const stable = yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
+  const stable = false; // batch data can revise historical months too
   return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
       "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
         ? "public, durable, max-age=2592000"
-        : "public, max-age=1800",
+        : "public, max-age=300",
       "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });

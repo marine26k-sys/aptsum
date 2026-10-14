@@ -9,11 +9,11 @@
 //
 // - months: 오늘 기준 과거 몇 개월치를 확보할지 (기본 60 = 5년, 사이트 조회 기간 최대값)
 // - refresh: 최근 N개월은 이미 파일이 있어도 항상 다시 조회 (실거래 신고 지연으로 뒤늦게 채워지는 값을 잡기 위함,
-//   정기 배치는 월말에 최근 4개월, 분기말에는 최근 12개월을 다시 확인한다)
+//   정기 배치는 하루 두 번 최근 4개월을 다시 확인한다)
 // - force: 전체를 무조건 재수집 (최초 백필 재실행 등)
 // - only: 특정 지역 코드만 (콤마 구분) — 디버그/부분 재수집용
 
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, access, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
@@ -44,10 +44,11 @@ function pushWithRetry() {
 }
 
 function commitProgress(message) {
+  message += " [skip netlify]";
   try {
     // 아직 한 건도 성공 못 해서 폴더 자체가 없는 kind가 섞여 있으면 git add가 그 경로에서
     // "pathspec did not match any files"로 죽어버리므로(exit 128), 존재하는 디렉토리만 add
-    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json", "data/regional-all-samples.json", "data/regional-change-details"].filter((d) => existsSync(d));
+    const paths = ["data/analyze", "data/presale", "data/rent", "data/tier-map.json", "data/regional-change.json", "data/regional-samples.json", "data/regional-all-samples.json", "data/regional-change-details", "data/trade-batch-status.json", "data/complex-index.json"].filter((d) => existsSync(d));
     if (!paths.length) return;
     execSync(`git add ${paths.join(" ")}`, { stdio: "inherit" });
     const diff = execSync("git diff --cached --name-only").toString().trim();
@@ -191,6 +192,7 @@ async function main() {
   const lawds = opt.only || ALL_LAWDS;
   const yms = recentYms(opt.months);
   const refreshSet = new Set(yms.slice(0, opt.refresh)); // 최신 N개월
+  const failedMonths=[];
   const failedKinds = []; // 실패가 한 건이라도 있었던 kind — 끝에서 실행 결과를 실패로 표시하는 데 씀
 
   for (const kind of opt.kinds) {
@@ -214,10 +216,16 @@ async function main() {
       if (!opt.force && !refreshSet.has(ym) && (await exists(file))) return; // 과거월 + 이미 있음 → 스킵
 
       // 실패 사유(resultCode 등)를 그대로 던져 로그에 남긴다 — 실패는 파일을 안 남겨서 다음 실행 때 재시도됨
-      const items = await fetchMergedMonth(cfg, key, lawd, ym);
+      let items;
+      for(let attempt=0;attempt<2;attempt++){
+        try{items=await fetchMergedMonth(cfg,key,lawd,ym);break;}
+        catch(error){if(attempt===1){failedMonths.push({kind,lawd,ym});throw error;}console.warn(`${kind} ${lawd} ${ym}: 30초 후 재시도`);await new Promise(resolve=>setTimeout(resolve,30000));}
+      }
 
       await mkdir(dir, { recursive: true });
-      await writeFile(file, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));
+      const temp=file+".tmp";
+      await writeFile(temp, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));
+      await rename(temp,file);
     });
     console.log(`${kind}: 성공 ${ok}건, 실패 ${fail}건 (총 ${tasks.length}건 중 스킵 제외)`);
     if (fail > 0) failedKinds.push(`${kind} ${fail}건`);
@@ -230,6 +238,7 @@ async function main() {
   // 이미 중간 커밋했더라도 현재 작업 디렉터리의 최신 파일을 읽어 최종 커밋에 포함한다.
   // 한 대시보드 생성이 실패해도 다른 대시보드는 최신 수집 자료로 갱신한다.
   for (const [label, args] of [
+    ["단지 검색 목록", ["scripts/build-complex-index.mjs"]],
     ["급지 대시보드", ["scripts/build-tier-map.mjs", "--months=36"]],
     ["지역 변동률", ["scripts/build-regional-change.mjs"]],
   ]) {
@@ -237,6 +246,7 @@ async function main() {
     try { execFileSync(process.execPath, args, { stdio: "inherit" }); }
     catch { failedKinds.push(`${label} 생성 실패`); console.error(`${label} 생성 실패 — 기존 자료 유지`); }
   }
+  await writeFile('data/trade-batch-status.json',JSON.stringify({finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
   commitProgress(`chore: 실거래 수집 후 급지·지역 변동률 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부

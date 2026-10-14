@@ -1,3 +1,4 @@
+import {latestTradeMonth} from '../../shared/latest-trade-data.mjs';
 import {fetchAllRtmsPages} from '../../shared/rtms-pages.mjs';
 import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
@@ -281,10 +282,8 @@ async function fetchShardLive(key, lawd, yms, origin) {
 // 없거나(아직 배치가 못 돈 최신월 등) 읽기 실패 시 조용히 기존 라이브 조회로 폴백(동작 자체엔 영향 없음).
 async function fetchStaticMonth(origin, lawd, ym) {
   try {
-    const r = await fetch(`${origin}/data/analyze/${encodeURIComponent(lawd)}/${ym}.json`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    if (!j || !Array.isArray(j.items)) return null;
+    const j = await latestTradeMonth(origin, 'analyze', lawd, ym);
+    if (!j) return null;
     // 저장된 py는 그 시점의 PY_ANCHORS로 계산된 값이라, 보간표를 나중에 고쳐도 이미 커밋된 정적 파일엔
     // 옛 값이 그대로 남아있음 — area(전용면적)는 그대로 두고 py만 지금 코드 기준으로 다시 계산해서
     // 돌려준다(2026.08 PY_ANCHORS 개편 때 발견 — 안 그러면 전체 배치를 재수집해야 값이 반영됨).
@@ -297,39 +296,8 @@ async function fetchStaticMonth(origin, lawd, ym) {
 
 
 async function fetchShard(key, lawd, yms, origin) {
-  if (!origin) return fetchShardLive(key, lawd, yms, origin);
-
-  const { cur, prev } = currentAndPrevYm();
-  const isRecent = (ym) => ym === cur || ym === prev;
-  const historicalYms = yms.filter((ym) => !isRecent(ym)); // 2개월 이전 — static 우선
-  const recentYms = yms.filter(isRecent); // 최근 2개월 — 무조건 실시간
-
-  // recentYms는 static을 아예 확인하지 않고 무조건 live이므로, static 조회(historicalYms) 완료를
-  // 기다렸다가 순차로 live를 쏘면 그만큼 불필요하게 늦어진다 — 캐시 미스(30분 만료 직후) 시
-  // 체감 지연의 주 원인이라 static 조회와 동시에 바로 병렬로 쏜다 (2026.07 추가)
-  const [staticHits, recentLive] = await Promise.all([
-    historicalYms.length
-      ? Promise.all(historicalYms.map((ym) => fetchStaticMonth(origin, lawd, ym)))
-      : [],
-    recentYms.length ? fetchShardLive(key, lawd, recentYms, origin) : { items: [], anyFailed: false },
-  ]);
-  const missingHistorical = historicalYms.filter((_, i) => staticHits[i] === null); // static 배치가 아직 못 받은 과거월
-  const staticItems = staticHits.filter((h) => h !== null).flat();
-
-  // 최근월 live 자체가 실패하면(키 오류·한도 초과 등) 기존과 동일하게 처리 — static이라도 있으면 그거라도 반환
-  if (recentLive.error) return staticItems.length ? { items: staticItems, anyFailed: true } : recentLive;
-
-  if (!missingHistorical.length) {
-    return { items: [...staticItems, ...recentLive.items], anyFailed: recentLive.anyFailed };
-  }
-
-  // static에서 못 찾은 과거월만 추가로 live 조회 (recentYms와는 별개 호출 — recentYms는 위에서 이미 끝났음)
-  const missingLive = await fetchShardLive(key, lawd, missingHistorical, origin);
-  if (missingLive.error) {
-    const items = [...staticItems, ...recentLive.items]; // 최근월 live는 이미 성공했으니 그 데이터는 살리고 과거 누락분만 에러 취급
-    return items.length ? { items, anyFailed: true } : missingLive;
-  }
-  return { items: [...staticItems, ...recentLive.items, ...missingLive.items], anyFailed: recentLive.anyFailed || missingLive.anyFailed };
+ const hits=await Promise.all(yms.map(ym=>fetchStaticMonth(origin,lawd,ym)));
+ return {items:hits.filter(x=>x!==null).flat(),anyFailed:hits.some(x=>x===null)};
 }
 
 export default async (req) => {
@@ -348,7 +316,7 @@ export default async (req) => {
   }
 
   const key = process.env.DATA_GO_KR_KEY;
-  if (!key) return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
+  if (!key && url.searchParams.get("live")==="1") return Response.json({ error: "서버에 DATA_GO_KR_KEY가 설정되지 않았습니다." }, { status: 500 });
 
   if (!/^\d{5}$/.test(lawd) && !Object.keys(SPLIT_REGIONS).some((p) => lawd.startsWith(p)))
     return Response.json({ error: "지역 코드 오류" }, { status: 400 });
@@ -360,13 +328,13 @@ export default async (req) => {
   // 캐시 전략: 최신 2개월이 섞이거나 재시도까지 실패한 달이 있으면 30분, 전부 과거월이고 완전 성공이면 30일 (CDN 캐시)
   // (재시도해도 실패한 달이 섞인 응답을 30일씩 박제해버리면, 그 사이 국토부 API가 정상화돼도 CDN이 계속 빈 데이터를 돌려주게 됨)
   const { cur, prev } = currentAndPrevYm();
-  const stable = url.searchParams.get("live")!=="1" && yms.every((ym) => ym !== cur && ym !== prev) && !r.anyFailed;
+  const stable = false; // batch data can revise historical months too
   return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
       "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
         ? "public, durable, max-age=2592000"
-        : "public, max-age=1800",
+        : "public, max-age=300",
       "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });
