@@ -1,3 +1,4 @@
+import { excludeConfirmedPublicRental } from "./public-rental-exclusions.mjs";
 // 실거래 단지명으로 저장된 보정표만 조회한다. 이름 추정은 로컬 가져오기에서
 // naver의 비교 규칙 + 법정동 + K-apt 세대수 검증을 통과한 뒤 수행한다.
 const norm = s => String(s || '').replace(/\s/g,'');
@@ -47,6 +48,7 @@ async function load(origin,lawd) {
   const data={map,naver};caches.set(key,{data,expires:Date.now()+60_000});return data;
 }
 export async function applySupplyAreaOverrides(items,lawd,origin) {
+  items=excludeConfirmedPublicRental(items,lawd);
   if(!origin||!lawd)return items;
   const {map,naver}=await load(origin,lawd);
   const hubItems=items.map(t=>{
