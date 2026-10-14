@@ -328,12 +328,19 @@ function subRow(s){
       </div>
     </div>`;
 }
+function subscriberCounts(subscribers, now = Date.now()){
+  const revoked = subscribers.filter(s=>s.revoked).length;
+  const expired = subscribers.filter(s=>!s.revoked && s.expiresAt && s.expiresAt<=now).length;
+  return { total:subscribers.length, active:subscribers.length-revoked-expired, expired, revoked };
+}
 async function loadSubscribers(msg = ""){
   const box = $("#subList");
   if(!box) return;
   try{
     const d = await subApi();
-    box.innerHTML = (d.subscribers.length
+    const counts = subscriberCounts(d.subscribers);
+    setCardBadge("subCard", `발급 ${counts.total}개 · 사용 중 ${counts.active}개`);
+    box.innerHTML = `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#DDF2F2;color:var(--teal-dark);font-weight:800">현재 발급 ${counts.total}개 · 사용 중 ${counts.active}개 · 만료 ${counts.expired}개 · 해지 ${counts.revoked}개</div><div style="font-size:10px;margin-bottom:8px">삭제한 코드는 개수에서 제외됩니다.</div>` + (d.subscribers.length
       ? d.subscribers.map(subRow).join("")
       : `<div style="padding:8px 0">아직 발급한 코드가 없습니다.</div>`)
       + `<div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">`
