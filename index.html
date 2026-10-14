@@ -7473,7 +7473,7 @@ function listingTrendPrecision(points){
 function listingTrendPeakChangeHTML(x){
  if(!(Number.isFinite(x.peak)&&x.peak>0&&Number.isFinite(x.ask)&&x.ask>0))return '';
  const delta=x.ask-x.peak,pct=delta/x.peak*100;
- return `<small style="color:var(--${delta>0?'red':delta<0?'blue':'sub'})">최고가 대비 ${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.abs(pct).toFixed(1)}%)</small>`;
+ return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.abs(pct).toFixed(1)}%)</span>`;
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   const precision=listingTrendPrecision([{ask:x.prevAsk},{ask:x.ask}]);
@@ -7488,7 +7488,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down'){
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · 최근 3년 최고가 ${x.peak.toFixed(1)}억`:""}</small>${listingTrendPeakChangeHTML(x)}</span>
+    <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}${x.peak>0?` · <span style="display:inline-flex;align-items:baseline;gap:5px;flex-wrap:nowrap;white-space:nowrap">최근 3년 최고가 ${x.peak.toFixed(1)}억 ${listingTrendPeakChangeHTML(x)}</span>`:""}</small></span>
     <span class="val" style="color:var(--${direction==='up'?'red':'blue'})">${direction==='up'?'▲':'▼'}${x.drop.toFixed(precision)}억 <small>(${Math.round(x.dropPct)}%)</small></span></div>
     <span class="listing-trend-change">${prices}</span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
