@@ -85,3 +85,10 @@ test('total failure stays retryable without showing a data warning', async () =>
   const retried = await ctx.fetchChunksLimited([['202601','202602']], fetchMonth, '26110');
   assert.deepEqual(JSON.parse(JSON.stringify(retried[0].items.failedMonths)), []);
 });
+test('중지된 조회는 다음 청크를 새 조회의 연결로 다시 요청하지 않는다',async()=>{
+ const start=html.indexOf('const CHUNK_CONCURRENCY ='),end=html.indexOf('async function ensureMonths(',start);
+ const ctx=vm.createContext({searchToken:1,mode:'compare'});vm.runInContext(html.slice(start,end),ctx);
+ let calls=0;const chunks=Array.from({length:9},(_,i)=>[String(i)]);
+ await ctx.fetchChunksLimited(chunks,async()=>{calls++;ctx.searchToken=2;return {items:[],failedMonths:[]};},'11620');
+ assert.equal(calls,4);
+});

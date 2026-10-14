@@ -2807,6 +2807,7 @@ function applyMonthResults(cache, chunk, result, now) {
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];const token=searchToken;
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
+    if(token!==searchToken)break;
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
     if(token===searchToken && mode!=='compare' && regionSel.length<=1 && !isAllScope(sel.value))showLookupProgress(Math.min(i+batch.length,chunks.length),chunks.length);
