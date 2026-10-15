@@ -1456,7 +1456,7 @@ async function shareCurrent(){
 
 // ── 즐겨찾기 ──
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,10):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,5):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
   if(!lawd||!d.name)return;
@@ -1464,7 +1464,7 @@ function rememberRecentComplex(lawd,d){
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
-  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,10)));}catch{}
+  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,5)));}catch{}
   renderRecentComplexes();
 }
 function renderRecentComplexes(){
