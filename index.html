@@ -1456,7 +1456,7 @@ async function shareCurrent(){
 
 // ── 즐겨찾기 ──
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,10):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,5):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
   if(!lawd||!d.name)return;
@@ -1464,7 +1464,7 @@ function rememberRecentComplex(lawd,d){
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
-  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,10)));}catch{}
+  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,5)));}catch{}
   renderRecentComplexes();
 }
 function renderRecentComplexes(){
@@ -3497,6 +3497,12 @@ function complexSuggestionNames(all, candidates, lawd){
   return [...new Set(choices.map(({name, umd})=>
     dongsByName.get(name).size>1 && umd ? `${name} [${umd}]` : name))];
 }
+function complexTradeBuild(hits){
+  const valid=value=>/^\d{4}$/.test(String(value||'')) && Number(value)>=1800 && Number(value)<=2200;
+  if(valid(hits[0]?.build))return hits[0].build;
+  const years=[...new Set(hits.filter(x=>valid(x.build)).map(x=>Number(x.build)))];
+  return years.length===1?years[0]:'';
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
@@ -3566,7 +3572,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>a.sizeKey-b.sizeKey);
-  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:hits[0].build,
+  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:complexTradeBuild(hits),
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -4453,8 +4459,17 @@ function acPick(name,lawd){
     acInput.value = name;
     if(lawd){
       const row=acInput.closest('.cmp-row');
-      if(row)setCmpRowLawd(row,lawd);
-      else {sel.value=lawd;regionSel=[{lawd,name:regionNameByLawd(lawd)}];saveRegionSel();renderRegionChips();}
+      if(row){
+        acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(!isAllScope(row.querySelector('select').value))setCmpRowLawd(row,lawd);
+      }
+      else {
+        // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.
+        acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(regionSel.length<=1 && !isAllScope(sel.value)){
+          sel.value=lawd;regionSel=[{lawd,name:regionNameByLawd(lawd)}];saveRegionSel();renderRegionChips();
+        }
+      }
     }
   }
   acHide();
@@ -4841,7 +4856,10 @@ let complexSearchIndex=null;
 async function complexSearchTargets(name,targets,includePartial=false){
  if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
  const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(String(name).replace(/\s*\[[^\]]+\]\s*$/,'')),allowed=new Set(targets.map(t=>t.lawd));
- const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
+ const picked=typeof document==='undefined'?null:document.getElementById('q');
+ const selectedLawd=!includePartial && typeof mode!=='undefined' && mode==='complex' && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
+ const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
+ const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
  return {targets:targets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
@@ -4880,7 +4898,8 @@ async function search(opts){
   if(mode==='compare'){
     const filledCmpItems = [...document.querySelectorAll('.cmp-row')].map(r=>({
       lawd: r.querySelector('select').value,
-      name: r.querySelector('input').value.trim()
+      name: r.querySelector('input').value.trim(),
+      pickedLawd:r.querySelector('input').dataset.pickedName===r.querySelector('input').value.trim()?r.querySelector('input').dataset.pickedLawd:null
     })).filter(x=>x.name.length>=2);
     if(filledCmpItems.length<2){ showError('비교할 단지를 2개 이상 입력해 주세요.'); return; }
     if(filledCmpItems.some(x=>!x.lawd)){ showError('비교할 각 단지의 지역을 선택해 주세요.'); return; }
@@ -4930,9 +4949,18 @@ async function search(opts){
     return;
   }
   let complexLookup=null;
-  if(mode==='complex'&&multiTargets.length){
+  if(mode==='complex'){
     showLookupProgress(0,1);document.getElementById('loading').classList.add('on');
-    try{complexLookup=await complexSearchTargets(name,multiTargets);if(myToken!==searchToken)return;multiTargets=complexLookup.targets;if(!multiTargets.length){showError('선택한 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}}catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
+    try{
+      complexLookup=await complexSearchTargets(name,multiTargets.length?multiTargets:[{lawd,name:regionNameByLawd(lawd)}]);
+      if(myToken!==searchToken)return;
+      if(!complexLookup.targets.length){showError('선택한 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}
+      if(complexLookup.hits.length>1){
+        showError('여러 단지가 일치합니다. 검색 목록에서 조회할 단지를 선택해 주세요.');
+        await acShow(document.getElementById('q'));return;
+      }
+      if(multiTargets.length)multiTargets=complexLookup.targets;
+    }catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
   }
   const allScope = multiTargets.length > 0;
   const effMN = allScope
@@ -5065,7 +5093,7 @@ async function search(opts){
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
         if(!isAllScope(x.lawd))return [x];
         const lookup=await complexSearchTargets(x.name,lawdsOfScope(x.lawd));
-        return lookup.targets.map(t=>({...x,lawd:t.lawd}));
+        return lookup.targets.filter(t=>!x.pickedLawd||t.lawd===x.pickedLawd).map(t=>({...x,lawd:t.lawd}));
       }));
       if(myToken!==searchToken)return;
       const missingInput=cmpItems.filter((_,i)=>!narrowedCmp[i].length);
@@ -5272,6 +5300,7 @@ async function search(opts){
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
       d.hh = await fetchHHCnt(d.lawd, d.name);
+      await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
     }
     lastData = d;
@@ -5310,11 +5339,38 @@ function subwayMetaHTML(hh){
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
+function complexBuildLabel(build){
+  const year=parseInt(build,10);
+  if(!year)return '';
+  const age=new Date().getFullYear()-year+1;
+  return age<1 ? `${year}년 준공 예정` : `${year}년 (${age}년차)`;
+}
+function complexCompletionYear(d){
+  const build=parseInt(d.build,10);
+  if(build>=1800 && build<=2200)return build;
+  const date=String(d.hh?.useDate||'').replace(/[-.]/g,'');
+  if(!/^\d{8}$/.test(date))return null;
+  const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
+  const check=new Date(Date.UTC(year,month-1,day));
+  return year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day?year:null;
+}
+let complexCompletionFallbackPromise=null;
+async function loadCompletionFallback(d,lawd){
+ if(complexCompletionYear(d))return;
+ try{
+  const {matchCompletionFallback,completionFallbackLabel}=await import('/shared/complex-completion-fallback.mjs');
+  if(!complexCompletionFallbackPromise)complexCompletionFallbackPromise=fetch('/data/complex-completion-fallback.json').then(r=>{if(!r.ok)throw Error();return r.json();}).catch(e=>{complexCompletionFallbackPromise=null;throw e;});
+  const data=await complexCompletionFallbackPromise;
+  d.completionFallbackLabel=completionFallbackLabel(matchCompletionFallback(data.entries||[],d,lawd));
+ }catch{}
+}
 function complexMetaHTML(d){
   // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
   // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
+  const completionYear=complexCompletionYear(d);
+  const completionLabel=completionYear?complexBuildLabel(completionYear):d.completionFallbackLabel||'';
   const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
-  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${completionLabel? ` · ${esc(completionLabel)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
@@ -5326,6 +5382,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
       d.hh = await fetchHHCnt(d.lawd, d.name);
+      await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
       if(el) el.innerHTML = complexMetaHTML(d);
@@ -5831,7 +5888,7 @@ function complexDynamicHTML(){
         <span class="chip on" onclick="selectPy(-1)">전체</span>
         ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
-      <h3>평형별 요약 — 최근 ${priceLabel} (억)</h3>
+      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — 최근 ${priceLabel} (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
     </div>
 
@@ -5857,6 +5914,42 @@ function complexDynamicHTML(){
       <h3>최근 ${priceLabel} 거래 내역</h3>
       <div id="tradesBox">${tradesHTML(d, isSale?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT)}</div>
     </div>`;
+}
+
+let complexLiveBusy=false,complexLiveTapCount=0,complexLiveLastTap=0,complexLiveTapOwner=null;
+async function tapComplexLiveRefresh(){
+ const now=Date.now();
+ if(complexLiveTapOwner!==lastData){complexLiveTapCount=0;complexLiveTapOwner=lastData;}
+ complexLiveTapCount=now-complexLiveLastTap>2500?1:complexLiveTapCount+1; complexLiveLastTap=now;
+ if(complexLiveTapCount<3 || complexLiveBusy)return;
+ complexLiveTapCount=0;
+ const original=lastData,token=searchToken;
+ if(mode!=='complex'||!original?.found)return;
+ const lawd=String(original.lawd||original.splitLawd||'');
+ const status=document.getElementById('complexLiveStatus');
+ complexLiveBusy=true;
+ if(status)status.textContent='최근 2개월 실시간 조회 중…';
+ try{
+  const {fetchComplexLiveMonths}=await import('/shared/complex-live-refresh.mjs');
+  const results=await fetchComplexLiveMonths(lawd,fetch,searchAbortController?.signal);
+  if(lastData!==original||searchToken!==token||mode!=='complex')return;
+  const caches={analyze:monthCache,presale:monthCacheP,rent:monthCacheJ};
+  for(const result of results){const cache=caches[result.kind][lawd] ||= {};applyMonthResults(cache,result.months,result,Date.now());}
+  lsSave(lawd);lsSaveP(lawd);lsSaveJ(lawd);
+  const months=lastMonthsYm(original.monthsN||36);
+  const read=cache=>months.flatMap(ym=>cache[lawd]?.[ym]?.items||[]);
+  const merged=mergeTradeAndPresaleForRanking(read(monthCache),read(monthCacheP),lawd);
+  const query=original.name+(original.umd?' ['+original.umd+']':'');
+  let updated=analyzeComplex(merged,query,months,merged,lawd);
+  const rent=analyzeComplex(read(monthCacheJ),query,months,undefined,lawd);
+  updated=includeJeonseOnlySaleAreas(updated,rent);
+  if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
+  const view=complexView;
+  lastData={...original,...updated,jeonse:rent.found?rent:null};
+  renderComplex(lastData);if(view==='jeonse')setComplexView(view);
+  document.getElementById('complexLiveStatus').textContent='최근 2개월 실시간 조회 완료';
+ }catch(error){if(lastData===original&&searchToken===token&&status?.isConnected)status.textContent=error.name==='AbortError'?'조회가 중지됐습니다.':error.message;}
+ finally{complexLiveBusy=false;}
 }
 
 function setComplexView(v){
@@ -5924,6 +6017,10 @@ function loadComplexMapSDK(){
   })().catch(error=>{complexMapSDKPromise=null;throw error;});
   return complexMapSDKPromise;
 }
+function complexExternalMapURL(point){
+  if(!validSchoolCoordinate(point))return '';
+  return `https://map.kakao.com/link/map/${encodeURIComponent(point.name||'단지')},${point.lat},${point.lng}`;
+}
 function addComplexSchoolMap(body,matched){
   if(!validSchoolCoordinate(matched))return;
   const section=document.createElement('div');section.style.cssText='margin:12px 0';
@@ -5934,12 +6031,13 @@ function addComplexSchoolMap(body,matched){
   const expand=document.createElement('button');expand.type='button';expand.textContent='지도 크게 보기';expand.style.cssText='padding:8px;border:1px solid var(--teal);border-radius:8px;background:#fff;color:var(--teal-dark);cursor:pointer';
   const nearby=document.createElement('button');nearby.type='button';nearby.textContent='주변 단지 보기';nearby.setAttribute('aria-pressed','false');nearby.style.cssText=expand.style.cssText+';margin-left:6px';controls.append(expand,nearby);
   const neighbors=document.createElement('div');neighbors.hidden=true;neighbors.style.marginTop='10px';
-  section.append(button,status,controls,container,neighbors);body.prepend(section);
+  const external=document.createElement('a');external.href=complexExternalMapURL(matched);external.target='_blank';external.rel='noopener noreferrer';external.textContent='카카오맵에서 단지 위치 보기 ↗';external.hidden=true;external.style.cssText='display:none;margin-top:8px;padding:10px;border:1px solid var(--teal);border-radius:10px;color:var(--teal-dark);font-weight:800;text-align:center;text-decoration:none';
+  section.append(button,status,external,controls,container,neighbors);body.prepend(section);
   let map=null,loading=false;
   button.onclick=async()=>{
     if(loading)return;
     if(map){container.hidden=!container.hidden;controls.hidden=container.hidden;neighbors.hidden=container.hidden||nearby.getAttribute('aria-pressed')!=='true';button.textContent=container.hidden?'단지·학교 지도 보기':'지도 접기';if(!container.hidden)map.relayout();return;}
-    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';
+    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';external.hidden=true;external.style.display='none';
     try{
       const maps=await loadComplexMapSDK();if(!section.isConnected)return;
       container.hidden=false;
@@ -5978,7 +6076,7 @@ function addComplexSchoolMap(body,matched){
       status.textContent='두 손가락으로 확대·축소 · 표시를 누르면 이름 확인';
       button.textContent='지도 접기';
       const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!section.isConnected){closeExpandedComplexMap();observer.disconnect();}});observer.observe(container);
-    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
+    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='내장 지도를 불러오지 못했습니다. 카카오맵에서 단지 위치를 확인할 수 있습니다.';external.hidden=false;external.style.display='block';button.textContent='지도 다시 보기';}
     finally{loading=false;button.disabled=false;}
   };
 }

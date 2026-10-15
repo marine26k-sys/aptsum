@@ -7,3 +7,11 @@ test('자동완성은 정확한 이름이 있어도 같은 검색어를 포함�
  const r=await c.complexSearchTargets('서울대입구',[{lawd:'11620'},{lawd:'11650'}],true);
  assert.equal(r.hits.length,3);assert.ok(r.hits.every(x=>x.lawd!=='41173'));
 });
+test('아르테 부분 검색의 모든 후보를 유지하고 동을 선택하면 해당 단지만 남긴다',async()=>{
+ const c=vm.createContext({complexSearchIndex:entries});vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
+ const targets=REGIONS.filter(([name])=>name==='서울').flatMap(([,r])=>r.map(([name,lawd])=>({name,lawd})));
+ const result=await c.complexSearchTargets('아르테',targets);assert.equal(result.hits.length,3);
+ const sample=[{lawd:'11680',name:'가상단지',umd:'동1',names:['가상단지']},{lawd:'11680',name:'가상단지',umd:'동2',names:['가상단지']}];
+ c.complexSearchIndex=sample;const selected=await c.complexSearchTargets('가상단지 [동2]',[{lawd:'11680'}]);assert.equal(selected.hits.length,1);assert.equal(selected.hits[0].umd,'동2');
+ assert.ok(html.indexOf('if(complexLookup.hits.length>1)')<html.indexOf('const allScope = multiTargets.length > 0',html.indexOf('let complexLookup=null')));
+});

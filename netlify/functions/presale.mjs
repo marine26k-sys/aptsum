@@ -292,10 +292,10 @@ export default async (req) => {
   return new Response(JSON.stringify({ items: await hubPyOverride(r.items, lawd, url.origin), failedMonths: r.failedMonths }), {
     headers: {
       "Content-Type": "application/json",
-      "Netlify-CDN-Cache-Control": r.anyFailed ? "no-store" : stable
+      "Netlify-CDN-Cache-Control": (r.anyFailed || url.searchParams.get("live")==="1") ? "no-store" : stable
         ? "public, durable, max-age=2592000"
         : "public, max-age=300",
-      "Cache-Control": r.anyFailed ? "no-store" : "public, max-age=0, must-revalidate",
+      "Cache-Control": (r.anyFailed || url.searchParams.get("live")==="1") ? "no-store" : "public, max-age=0, must-revalidate",
     },
   });
 };
