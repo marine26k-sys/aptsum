@@ -5318,11 +5318,17 @@ function subwayMetaHTML(hh){
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
+function complexBuildLabel(build){
+  const year=parseInt(build,10);
+  if(!year)return '';
+  const age=new Date().getFullYear()-year+1;
+  return age<1 ? `${year}년 준공 예정` : `${year}년 (${age}년차)`;
+}
 function complexMetaHTML(d){
   // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
   // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
   const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
-  return `${esc(d.umd)}${d.build? ` · ${buildAgeLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${d.build? ` · ${complexBuildLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · ${esc(d.period)}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
