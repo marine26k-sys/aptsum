@@ -3497,6 +3497,12 @@ function complexSuggestionNames(all, candidates, lawd){
   return [...new Set(choices.map(({name, umd})=>
     dongsByName.get(name).size>1 && umd ? `${name} [${umd}]` : name))];
 }
+function complexTradeBuild(hits){
+  const valid=value=>/^\d{4}$/.test(String(value||'')) && Number(value)>=1800 && Number(value)<=2200;
+  if(valid(hits[0]?.build))return hits[0].build;
+  const years=[...new Set(hits.filter(x=>valid(x.build)).map(x=>Number(x.build)))];
+  return years.length===1?years[0]:'';
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
@@ -3566,7 +3572,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>a.sizeKey-b.sizeKey);
-  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:hits[0].build,
+  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:complexTradeBuild(hits),
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
