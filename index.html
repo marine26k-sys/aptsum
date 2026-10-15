@@ -4454,7 +4454,13 @@ function acPick(name,lawd){
     if(lawd){
       const row=acInput.closest('.cmp-row');
       if(row)setCmpRowLawd(row,lawd);
-      else {sel.value=lawd;regionSel=[{lawd,name:regionNameByLawd(lawd)}];saveRegionSel();renderRegionChips();}
+      else {
+        // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.
+        acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(regionSel.length<=1 && !isAllScope(sel.value)){
+          sel.value=lawd;regionSel=[{lawd,name:regionNameByLawd(lawd)}];saveRegionSel();renderRegionChips();
+        }
+      }
     }
   }
   acHide();
@@ -4841,7 +4847,9 @@ let complexSearchIndex=null;
 async function complexSearchTargets(name,targets,includePartial=false){
  if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
  const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(String(name).replace(/\s*\[[^\]]+\]\s*$/,'')),allowed=new Set(targets.map(t=>t.lawd));
- const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
+ const picked=typeof document==='undefined'?null:document.getElementById('q');
+ const selectedLawd=!includePartial && typeof mode!=='undefined' && mode==='complex' && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
+ const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&(!selectedLawd||x.lawd===selectedLawd)),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
  return {targets:targets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
