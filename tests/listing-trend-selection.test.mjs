@@ -22,7 +22,7 @@ test('direction changes preserve selected filters and refresh existing results',
 test('older selected uploads restore old declines even when newest upload rose or removed the apartment',()=>{
  assert.equal(ctx.listingTrendSnapshotRows(snapshots[3],snapshots,{},'11680','강남구').length,0);
  const previous=ctx.listingTrendSnapshotRows(snapshots[2],snapshots,{},'11680','강남구')[0];
- assert.equal(previous.drop,2);assert.equal(previous.ask,10);assert.equal(previous.apt,'옛 단지');assert.equal(previous.points.length,3);
+ assert.equal(previous.drop,1);assert.equal(previous.ask,10);assert.equal(previous.apt,'옛 단지');assert.equal(previous.points.length,3);
  const twoBefore=ctx.listingTrendSnapshotRows(snapshots[1],snapshots,{},'11680','강남구')[0];
  assert.equal(twoBefore.drop,1);assert.equal(twoBefore.points.length,2);
  assert.equal(ctx.listingTrendSnapshotRows({...snapshots[3],items:[]},snapshots,{},'11680','강남구').length,0);
@@ -43,10 +43,9 @@ test('history metadata uses historical values and filters occupancy without modi
  assert.equal(data.items.length,2);
 });
 
-test('recent three records retain a decline when newest price is unchanged',()=>{
+test('직전 대비 동일 가격은 하락 목록에서 제외한다',()=>{
  const history=[4.5,4.2,4.2].map((ask,i)=>({uploadId:`u${i}`,asOf:`2026.10.0${i+1}`,items:[item(ask)]}));
- const row=ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구')[0];
- assert.equal(row.drop,0.3);assert.equal(row.prevAsk,4.5);assert.equal(row.ask,4.2);
+ assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구').length,0);
  for(const prices of [[4.2,4,4.2],[4.2,4,4.5]]){
   const h=history.map((s,i)=>({...s,items:[item(prices[i])]}));
   assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구').length,0);
@@ -82,8 +81,8 @@ test('rise compares the same complex and exclusive area across the latest record
  const history=[4.2,4.4,4.6].map((ask,i)=>({uploadId:`u${i}`,items:[item(ask),item(8,{ex:59})]}));
  const rows=ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'up');
  assert.equal(rows.length,1);
- assert.equal(rows[0].drop,0.4);
- assert.equal(rows[0].prevAsk,4.2);
+ assert.equal(rows[0].drop,0.2);
+ assert.equal(rows[0].prevAsk,4.4);
  assert.equal(rows[0].ask,4.6);
  assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',true,'up').length,1);
  assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'down').length,0);
@@ -91,7 +90,7 @@ test('rise compares the same complex and exclusive area across the latest record
 
 test('rise rejects rebounds, flat endpoints, and missing immediately previous records',()=>{
  for(const [prices,expected,continuous] of [
-  [[4.2,4.5,4.4],1,0],[[4.2,4.5,4.2],0,0],[[4.2,4.2,4.4],1,0],[[4.2,4.4,4.4],1,0]
+  [[4.2,4.5,4.4],0,0],[[4.2,4.5,4.2],0,0],[[4.2,4.2,4.4],1,0],[[4.2,4.4,4.4],0,0]
  ]){
   const h=prices.map((ask,i)=>({uploadId:`u${i}`,items:[item(ask)]}));
   assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',false,'up').length,expected);
