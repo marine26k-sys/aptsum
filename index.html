@@ -5286,6 +5286,7 @@ async function search(opts){
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
       d.hh = await fetchHHCnt(d.lawd, d.name);
+      await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
     }
     lastData = d;
@@ -5339,12 +5340,23 @@ function complexCompletionYear(d){
   const check=new Date(Date.UTC(year,month-1,day));
   return year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day?year:null;
 }
+let complexCompletionFallbackPromise=null;
+async function loadCompletionFallback(d,lawd){
+ if(complexCompletionYear(d))return;
+ try{
+  const {matchCompletionFallback,completionFallbackLabel}=await import('/shared/complex-completion-fallback.mjs');
+  if(!complexCompletionFallbackPromise)complexCompletionFallbackPromise=fetch('/data/complex-completion-fallback.json').then(r=>{if(!r.ok)throw Error();return r.json();}).catch(e=>{complexCompletionFallbackPromise=null;throw e;});
+  const data=await complexCompletionFallbackPromise;
+  d.completionFallbackLabel=completionFallbackLabel(matchCompletionFallback(data.entries||[],d,lawd));
+ }catch{}
+}
 function complexMetaHTML(d){
   // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
   // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
   const completionYear=complexCompletionYear(d);
+  const completionLabel=completionYear?complexBuildLabel(completionYear):d.completionFallbackLabel||'';
   const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
-  return `${esc(d.umd)}${completionYear? ` · ${complexBuildLabel(completionYear)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${completionLabel? ` · ${esc(completionLabel)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
@@ -5356,6 +5368,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
       d.hh = await fetchHHCnt(d.lawd, d.name);
+      await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
       if(el) el.innerHTML = complexMetaHTML(d);
