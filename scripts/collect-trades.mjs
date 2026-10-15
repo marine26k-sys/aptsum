@@ -9,7 +9,7 @@
 //
 // - months: 오늘 기준 과거 몇 개월치를 확보할지 (기본 60 = 5년, 사이트 조회 기간 최대값)
 // - refresh: 최근 N개월은 이미 파일이 있어도 항상 다시 조회 (실거래 신고 지연으로 뒤늦게 채워지는 값을 잡기 위함,
-//   정기 배치는 하루 두 번 최근 4개월을 다시 확인한다)
+//   정기 배치는 하루 세 번(한국시간 05:00·12:00·18:00) 최근 4개월을 다시 확인한다)
 // - force: 전체를 무조건 재수집 (최초 백필 재실행 등)
 // - only: 특정 지역 코드만 (콤마 구분) — 디버그/부분 재수집용
 
@@ -17,6 +17,7 @@ import { mkdir, writeFile, access, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
+import { recentTradeMonths, coversFullTradeBatch } from "../shared/trade-batch-policy.mjs";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
 
@@ -84,16 +85,7 @@ function parseArgs() {
   };
 }
 
-function recentYms(n) {
-  const out = [];
-  const d = new Date();
-  d.setDate(1); // 월말일 오버플로 방지
-  for (let i = 0; i < n; i++) {
-    out.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
-    d.setMonth(d.getMonth() - 1);
-  }
-  return out; // 최신월 → 과거월 순
-}
+const recentYms = recentTradeMonths;
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -247,7 +239,7 @@ async function main() {
     try { execFileSync(process.execPath, args, { stdio: "inherit" }); }
     catch { failedKinds.push(`${label} 생성 실패`); console.error(`${label} 생성 실패 — 기존 자료 유지`); }
   }
-  await writeFile('data/trade-batch-status.json',JSON.stringify({startedAt,fullScope:!opt.only && ['analyze','presale','rent'].every(kind=>opt.kinds.includes(kind)) && opt.refresh>=4,finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
+  await writeFile('data/trade-batch-status.json',JSON.stringify({startedAt,fullScope:coversFullTradeBatch(opt),finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
   commitProgress(`chore: 실거래 수집 후 급지·지역 변동률 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
