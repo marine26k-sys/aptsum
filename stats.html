@@ -466,7 +466,7 @@ function renderApplications(d){
   const box = $("#appList");
   const prices = [9900,4900];
   if(d.applications.some(a=>!prices.includes(Number(a.price)))) prices.push(0);
-  box.innerHTML = `<div role="tablist" aria-label="이용권 금액" style="display:flex;gap:8px;margin-bottom:12px">${prices.map(price=>`<button type="button" role="tab" aria-selected="${appPriceTab===price}" data-app-price="${price}" style="padding:8px 14px;border-radius:8px;border:1px solid var(--teal);background:${appPriceTab===price?'var(--teal)':'white'};color:${appPriceTab===price?'white':'var(--teal-dark)'};font-weight:800">${price?price.toLocaleString()+'원':'기타 금액'}</button>`).join('')}</div><div role="tabpanel" id="appPricePanel"></div>`;
+  box.innerHTML = `<div role="tablist" aria-label="이용권 금액" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${prices.map(price=>`<button type="button" role="tab" aria-selected="${appPriceTab===price}" data-app-price="${price}" style="padding:8px 14px;border-radius:8px;border:1px solid var(--teal);background:${appPriceTab===price?'var(--teal)':'white'};color:${appPriceTab===price?'white':'var(--teal-dark)'};font-weight:800">${price?price.toLocaleString()+'원':'기타 금액'}</button>`).join('')}</div><div role="tabpanel" id="appPricePanel"></div>`;
   renderApplicationPanel(d);
 }
 function renderApplicationPanel(d){

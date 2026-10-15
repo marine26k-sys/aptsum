@@ -17,6 +17,7 @@ import { mkdir, writeFile, access, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
+import { recentTradeMonths, coversFullTradeBatch } from "../shared/trade-batch-policy.mjs";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
 
@@ -84,16 +85,7 @@ function parseArgs() {
   };
 }
 
-function recentYms(n) {
-  const out = [];
-  const d = new Date();
-  d.setDate(1); // 월말일 오버플로 방지
-  for (let i = 0; i < n; i++) {
-    out.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
-    d.setMonth(d.getMonth() - 1);
-  }
-  return out; // 최신월 → 과거월 순
-}
+const recentYms = recentTradeMonths;
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -247,7 +239,7 @@ async function main() {
     try { execFileSync(process.execPath, args, { stdio: "inherit" }); }
     catch { failedKinds.push(`${label} 생성 실패`); console.error(`${label} 생성 실패 — 기존 자료 유지`); }
   }
-  await writeFile('data/trade-batch-status.json',JSON.stringify({startedAt,fullScope:!opt.only && ['analyze','presale','rent'].every(kind=>opt.kinds.includes(kind)) && opt.refresh>=4,finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
+  await writeFile('data/trade-batch-status.json',JSON.stringify({startedAt,fullScope:coversFullTradeBatch(opt),finishedAt:new Date().toISOString(),status:failedKinds.length?'partial_failure':'success',failedMonths,failedSteps:failedKinds}));
   commitProgress(`chore: 실거래 수집 후 급지·지역 변동률 대시보드 갱신 ${new Date().toISOString()}`);
 
   // 2026.09 추가 — 예전엔 요청이 전부 실패해도(예: run 35799731728, 양주시 180건 전부
