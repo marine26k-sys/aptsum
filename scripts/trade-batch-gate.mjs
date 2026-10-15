@@ -1,13 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-// 최근 한국시간 06:30/18:30 회차. 예약 누락/실패는 다음 확인에서 복구한다.
+// 최근 한국시간 05:00/12:00/18:00 회차. 예약 누락/실패는 다음 확인에서 복구한다.
 export function latestTradeSlot(now = Date.now()) {
   const kst = new Date(now + 9 * 3600000);
   const midnight = Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - 9 * 3600000;
-  const morning = midnight + 6.5 * 3600000;
-  const evening = midnight + 18.5 * 3600000;
-  return now >= evening ? evening : now >= morning ? morning : morning - 12 * 3600000;
+  const hours = [5, 12, 18];
+  const slots = hours.map(hour => midnight + hour * 3600000);
+  return slots.filter(slot => slot <= now).at(-1) ?? midnight - 6 * 3600000;
 }
 export function shouldCollectTrades(report, now = Date.now()) {
   const started = Date.parse(report?.startedAt);
