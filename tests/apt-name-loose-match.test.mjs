@@ -5,8 +5,9 @@ import vm from 'node:vm';
 
 // 단지 분석 이름 매칭(matchComplex) — K-apt·검색어 표기와 국토부 실거래 등록명이 다른 경우(2026.10)
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const identitySource=readFileSync(new URL('../shared/complex-identity.js',import.meta.url),'utf8');
 const ctx = vm.createContext({});
-vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex;', ctx);
+vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex;', ctx);
 const names = m => JSON.parse(JSON.stringify((m.multi ? m.multi.slice() : [...new Set(m.hits.map(t => t.apt))]).sort()));
 const T = (apt, umd, build) => ({ apt, umd, build });
 
@@ -43,7 +44,7 @@ test('번호가 다른 단지는 부분 일치로 섞지 않는다', () => {
 
 test('역세권 탭 이름 해석(resolveAptName)도 같은 표기 차이 폴백을 쓰고, 여러 단지면 null', () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
     html.slice(html.indexOf('function resolveAptName('), html.indexOf('async function searchSubway(')) + '\nthis.resolveAptName = resolveAptName;', c);
   const all = ['관악', '관악드림(삼성)', '관악드림(동아)', '성내동삼성아파트'];
   const umd = new Map(all.map(n => [n, n.startsWith('성내') ? '성내동' : '봉천동']));
@@ -55,7 +56,7 @@ test('역세권 탭 이름 해석(resolveAptName)도 같은 표기 차이 폴백
 
 test('시공사별로 합친 단지는 K-apt 공식 단지명(세대수 최다)으로 표시한다', async () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
     html.slice(html.indexOf('async function kaptNameForSplit('), html.indexOf('async function loadSubwayData(')) +
     '\nthis.kaptNameForSplit = kaptNameForSplit; this.looseAptKey = looseAptKey;', c);
   c.loadSubwayData = async () => [{name:'관악드림타운제2', hhcnt:1843}, {name:'관악드림타운', hhcnt:3544}, {name:'관악', hhcnt:200}];
@@ -67,7 +68,7 @@ test('시공사별로 합친 단지는 K-apt 공식 단지명(세대수 최다)�
 
 test('자동완성: 시공사별로 나뉜 등록명은 K-apt 공식 단지명 한 줄로 묶는다', async () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
     html.slice(html.indexOf('async function kaptNameForSplit('), html.indexOf('async function loadSubwayData(')) + '\n' +
     html.slice(html.indexOf('async function mergeSplitSuggestions('), html.indexOf('function acPick(')) +
     '\nthis.mergeSplitSuggestions = mergeSplitSuggestions;', c);
@@ -80,7 +81,7 @@ test('자동완성: 시공사별로 나뉜 등록명은 K-apt 공식 단지명 �
 
 test('네이버 단지명 매핑: 네이버 이름으로 검색되고, 같은 네이버 단지의 실거래 등록명은 함께 묶는다', () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex; this.NAVER_NAMES = NAVER_NAMES;', c);
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\nthis.matchComplex = matchComplex; this.NAVER_NAMES = NAVER_NAMES;', c);
   c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)|신림동': '건영3차', '관악드림(삼성)|봉천동': '관악드림타운', '관악드림(동아)|봉천동': '관악드림타운' };
   const all = [T('LIG대학마을(건영아파트3차)','신림동'), T('관악드림(삼성)','봉천동'), T('관악드림(동아)','봉천동'), T('건영4차','신림동')];
   assert.deepEqual(names(c.matchComplex(all, '건영3차', '11620')), ['LIG대학마을(건영아파트3차)']);
@@ -92,7 +93,7 @@ test('네이버 단지명 매핑: 네이버 이름으로 검색되고, 같은 �
 
 test('목록형 탭: 네이버 단지명으로 표시하고, 나뉘어 등록된 같은 네이버 단지는 한 줄로 합친다', () => {
   const c = vm.createContext({ sel: { value: '11620' } });
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES = NAVER_NAMES; this.aptLabel = aptLabel; this.unifyNaverSplit = unifyNaverSplit;', c);
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES = NAVER_NAMES; this.aptLabel = aptLabel; this.unifyNaverSplit = unifyNaverSplit;', c);
   c.NAVER_NAMES['11620'] = { 'LIG대학마을(건영아파트3차)|신림동': '건영3차', '관악드림(삼성)|봉천동': '관악드림타운', '관악드림(동아)|봉천동': '관악드림타운' };
   assert.equal(c.aptLabel({ apt: 'LIG대학마을(건영아파트3차)', umd:'신림동' }), '건영3차');
   assert.equal(c.aptLabel({ apt: '관악' }), '관악');
@@ -103,7 +104,7 @@ test('목록형 탭: 네이버 단지명으로 표시하고, 나뉘어 등록된
 
 test('같은 네이버 이름이라도 법정동이 다르면 거래를 합치지 않고 선택지를 준다', () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
     '\nthis.matchComplex = matchComplex; this.unifyNaverSplit = unifyNaverSplit; this.NAVER_NAMES = NAVER_NAMES;', c);
   c.NAVER_NAMES['11680'] = { '현대3차(61~64동)|압구정동':'현대3차', '현대아파트3|개포동':'현대3차' };
   const all = [T('현대3차(61~64동)', '압구정동', '1976'), T('현대아파트3', '개포동', '1986')];
@@ -125,7 +126,7 @@ test('같은 실거래명도 법정동별로 다른 네이버 이름을 표시�
   assert.equal(map['우성'], undefined);
   assert.equal(map['우성|천호동'], '천호우성');
   const c = vm.createContext({sel:{value:'11680'}});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES=NAVER_NAMES;this.aptLabel=aptLabel;', c);
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('const APT_ALIASES')) + '\nthis.NAVER_NAMES=NAVER_NAMES;this.aptLabel=aptLabel;', c);
   c.NAVER_NAMES['11680'] = JSON.parse(readFileSync(new URL('../data/naver-names/11680.json', import.meta.url), 'utf8'));
   assert.equal(c.aptLabel({apt:'동양파라곤', umd:'논현동'}), '논현동양파라곤');
   assert.equal(c.aptLabel({apt:'동양파라곤', umd:'청담동'}), '청담동양파라곤');
@@ -188,7 +189,7 @@ test('동안구 은하수·샛별 5,6단지는 2,3단지와 분리해 네이버 
   assert.equal(map['은하수벽산|비산동'], '은하수(벽산)');
 
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) +
     '\nthis.matchComplex=matchComplex;this.complexSuggestionNames=complexSuggestionNames;this.NAVER_NAMES=NAVER_NAMES;', c);
   c.NAVER_NAMES['41173'] = map;
   const trades = [...fifthSixth, ...secondThird, '은하수벽산'].map(apt => T(apt, '비산동', '1993'));
@@ -215,13 +216,13 @@ test('자동완성 원본도 같은 실거래명의 다른 법정동 단지를 �
     ensureMonths: async () => [T('우성', '길동'), T('우성', '천호동'), T('우성', '천호동')],
     ensureMonthsP: async () => [],
   });
-  vm.runInContext(html.slice(html.indexOf('async function getApts('), html.indexOf('function acHide(')) + '\nthis.getApts = getApts;', c);
+  vm.runInContext(identitySource + html.slice(html.indexOf('async function getApts('), html.indexOf('function acHide(')) + '\nthis.getApts = getApts;', c);
   assert.deepEqual(JSON.parse(JSON.stringify((await c.getApts('11740')).map(a=>[a.umd, a.n]))), [['천호동', 2], ['길동', 1]]);
 });
 
 test('K-apt 별도 관리단지는 역세권 순위에서 중복 제거하고 임대 거래는 일반 단지명에 합치지 않는다', () => {
   const c = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('function collapseSubwayManagementUnits('), html.indexOf('function parseSubwayWalk(')) + '\nthis.collapseSubwayManagementUnits=collapseSubwayManagementUnits;', c);
+  vm.runInContext(identitySource + html.slice(html.indexOf('function collapseSubwayManagementUnits('), html.indexOf('function parseSubwayWalk(')) + '\nthis.collapseSubwayManagementUnits=collapseSubwayManagementUnits;', c);
   const hh = JSON.parse(readFileSync(new URL('../data/hhcnt/11620.json', import.meta.url), 'utf8')).items;
   const kept = c.collapseSubwayManagementUnits(hh);
   const codes = new Set(kept.map(x=>x.kaptCode));
@@ -235,7 +236,7 @@ test('K-apt 별도 관리단지는 역세권 순위에서 중복 제거하고 �
   assert.equal(names['봉천우성|봉천동'], '관악우성');
   assert.equal(names['두산|봉천동'], '두산');
   const c2 = vm.createContext({});
-  vm.runInContext(html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
+  vm.runInContext(identitySource + html.slice(html.indexOf('const NAVER_NAMES = {}'), html.indexOf('function analyzeComplex(')) + '\n' +
     html.slice(html.indexOf('function resolveAptName('), html.indexOf('async function searchSubway(')) +
     '\nthis.NAVER_NAMES=NAVER_NAMES;this.resolveSubwayTradeName=resolveSubwayTradeName;', c2);
   c2.NAVER_NAMES['11620'] = names;

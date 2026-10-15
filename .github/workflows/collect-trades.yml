@@ -2,8 +2,11 @@ name: 실거래 데이터 배치 수집 (매매/분양권/전세)
 
 on:
   schedule:
-    # 한국시간 06:30 · 18:30, 최근 4개월 재조회
-    - cron: "30 9,21 * * *"
+    # 한국시간 06:30 · 18:30 수집. 예약 누락·실패 시 30분마다 복구 확인.
+    # 같은 회차의 전체 수집이 성공했으면 수집 없이 종료한다.
+    - cron: "0,30 * * * *"
+    # 2026-10-15 한국시간 09:10 자동 실행 검증 (UTC 00:10)
+    - cron: "10 0 15 10 *"
   workflow_dispatch:
     inputs:
       months:
@@ -37,20 +40,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
       - name: 수집 범위 결정 (자동·수동 공통)
         id: gate
+        env:
+          TRADE_BATCH_SCHEDULE: ${{ github.event.schedule }}
         run: |
           refresh="${{ github.event.inputs.refresh }}"
           if [ -z "$refresh" ]; then
             refresh=4
           fi
           echo "refresh=$refresh" >> "$GITHUB_OUTPUT"
-          echo "run=true" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@v4
-        if: steps.gate.outputs.run == 'true'
-        with:
-          ref: main
+          node scripts/trade-batch-gate.mjs >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
@@ -140,4 +144,4 @@ jobs:
       - name: 실패 안내
         if: failure() && steps.gate.outputs.run == 'true'
         run: |
-          echo "::error::실거래 수집 일부 실패. 기존 자료는 유지됩니다. trade-batch-status 보고서에서 실패 지역·월을 확인하세요. 다음 정기 배치에서 최근 4개월을 재시도합니다."
+          echo "::error::실거래 수집 일부 실패. 기존 자료는 유지됩니다. trade-batch-status 보고서에서 실패 지역·월을 확인하세요. 다음 30분 주기 복구 확인에서 최근 4개월을 재시도합니다."
