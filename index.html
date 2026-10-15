@@ -4459,7 +4459,10 @@ function acPick(name,lawd){
     acInput.value = name;
     if(lawd){
       const row=acInput.closest('.cmp-row');
-      if(row)setCmpRowLawd(row,lawd);
+      if(row){
+        acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(!isAllScope(row.querySelector('select').value))setCmpRowLawd(row,lawd);
+      }
       else {
         // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
@@ -4895,7 +4898,8 @@ async function search(opts){
   if(mode==='compare'){
     const filledCmpItems = [...document.querySelectorAll('.cmp-row')].map(r=>({
       lawd: r.querySelector('select').value,
-      name: r.querySelector('input').value.trim()
+      name: r.querySelector('input').value.trim(),
+      pickedLawd:r.querySelector('input').dataset.pickedName===r.querySelector('input').value.trim()?r.querySelector('input').dataset.pickedLawd:null
     })).filter(x=>x.name.length>=2);
     if(filledCmpItems.length<2){ showError('비교할 단지를 2개 이상 입력해 주세요.'); return; }
     if(filledCmpItems.some(x=>!x.lawd)){ showError('비교할 각 단지의 지역을 선택해 주세요.'); return; }
@@ -5089,7 +5093,7 @@ async function search(opts){
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
         if(!isAllScope(x.lawd))return [x];
         const lookup=await complexSearchTargets(x.name,lawdsOfScope(x.lawd));
-        return lookup.targets.map(t=>({...x,lawd:t.lawd}));
+        return lookup.targets.filter(t=>!x.pickedLawd||t.lawd===x.pickedLawd).map(t=>({...x,lawd:t.lawd}));
       }));
       if(myToken!==searchToken)return;
       const missingInput=cmpItems.filter((_,i)=>!narrowedCmp[i].length);
