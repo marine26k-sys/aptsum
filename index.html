@@ -5831,7 +5831,7 @@ function complexDynamicHTML(){
         <span class="chip on" onclick="selectPy(-1)">전체</span>
         ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
-      <h3>평형별 요약 — 최근 ${priceLabel} (억)</h3>
+      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — 최근 ${priceLabel} (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
     </div>
 
@@ -5857,6 +5857,42 @@ function complexDynamicHTML(){
       <h3>최근 ${priceLabel} 거래 내역</h3>
       <div id="tradesBox">${tradesHTML(d, isSale?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT)}</div>
     </div>`;
+}
+
+let complexLiveBusy=false,complexLiveTapCount=0,complexLiveLastTap=0,complexLiveTapOwner=null;
+async function tapComplexLiveRefresh(){
+ const now=Date.now();
+ if(complexLiveTapOwner!==lastData){complexLiveTapCount=0;complexLiveTapOwner=lastData;}
+ complexLiveTapCount=now-complexLiveLastTap>2500?1:complexLiveTapCount+1; complexLiveLastTap=now;
+ if(complexLiveTapCount<3 || complexLiveBusy)return;
+ complexLiveTapCount=0;
+ const original=lastData,token=searchToken;
+ if(mode!=='complex'||!original?.found)return;
+ const lawd=String(original.lawd||original.splitLawd||'');
+ const status=document.getElementById('complexLiveStatus');
+ complexLiveBusy=true;
+ if(status)status.textContent='최근 2개월 실시간 조회 중…';
+ try{
+  const {fetchComplexLiveMonths}=await import('/shared/complex-live-refresh.mjs');
+  const results=await fetchComplexLiveMonths(lawd,fetch,searchAbortController?.signal);
+  if(lastData!==original||searchToken!==token||mode!=='complex')return;
+  const caches={analyze:monthCache,presale:monthCacheP,rent:monthCacheJ};
+  for(const result of results){const cache=caches[result.kind][lawd] ||= {};applyMonthResults(cache,result.months,result,Date.now());}
+  lsSave(lawd);lsSaveP(lawd);lsSaveJ(lawd);
+  const months=lastMonthsYm(original.monthsN||36);
+  const read=cache=>months.flatMap(ym=>cache[lawd]?.[ym]?.items||[]);
+  const merged=mergeTradeAndPresaleForRanking(read(monthCache),read(monthCacheP),lawd);
+  const query=original.name+(original.umd?' ['+original.umd+']':'');
+  let updated=analyzeComplex(merged,query,months,merged,lawd);
+  const rent=analyzeComplex(read(monthCacheJ),query,months,undefined,lawd);
+  updated=includeJeonseOnlySaleAreas(updated,rent);
+  if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
+  const view=complexView;
+  lastData={...original,...updated,jeonse:rent.found?rent:null};
+  renderComplex(lastData);if(view==='jeonse')setComplexView(view);
+  document.getElementById('complexLiveStatus').textContent='최근 2개월 실시간 조회 완료';
+ }catch(error){if(lastData===original&&searchToken===token&&status?.isConnected)status.textContent=error.name==='AbortError'?'조회가 중지됐습니다.':error.message;}
+ finally{complexLiveBusy=false;}
 }
 
 function setComplexView(v){
