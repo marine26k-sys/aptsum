@@ -5324,11 +5324,21 @@ function complexBuildLabel(build){
   const age=new Date().getFullYear()-year+1;
   return age<1 ? `${year}년 준공 예정` : `${year}년 (${age}년차)`;
 }
+function complexCompletionYear(d){
+  const build=parseInt(d.build,10);
+  if(build>=1800 && build<=2200)return build;
+  const date=String(d.hh?.useDate||'').replace(/[-.]/g,'');
+  if(!/^\d{8}$/.test(date))return null;
+  const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
+  const check=new Date(Date.UTC(year,month-1,day));
+  return year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day?year:null;
+}
 function complexMetaHTML(d){
   // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
   // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
+  const completionYear=complexCompletionYear(d);
   const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
-  return `${esc(d.umd)}${d.build? ` · ${complexBuildLabel(d.build)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${completionYear? ` · ${complexBuildLabel(completionYear)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.hh)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
@@ -5974,6 +5984,10 @@ function loadComplexMapSDK(){
   })().catch(error=>{complexMapSDKPromise=null;throw error;});
   return complexMapSDKPromise;
 }
+function complexExternalMapURL(point){
+  if(!validSchoolCoordinate(point))return '';
+  return `https://map.kakao.com/link/map/${encodeURIComponent(point.name||'단지')},${point.lat},${point.lng}`;
+}
 function addComplexSchoolMap(body,matched){
   if(!validSchoolCoordinate(matched))return;
   const section=document.createElement('div');section.style.cssText='margin:12px 0';
@@ -5984,12 +5998,13 @@ function addComplexSchoolMap(body,matched){
   const expand=document.createElement('button');expand.type='button';expand.textContent='지도 크게 보기';expand.style.cssText='padding:8px;border:1px solid var(--teal);border-radius:8px;background:#fff;color:var(--teal-dark);cursor:pointer';
   const nearby=document.createElement('button');nearby.type='button';nearby.textContent='주변 단지 보기';nearby.setAttribute('aria-pressed','false');nearby.style.cssText=expand.style.cssText+';margin-left:6px';controls.append(expand,nearby);
   const neighbors=document.createElement('div');neighbors.hidden=true;neighbors.style.marginTop='10px';
-  section.append(button,status,controls,container,neighbors);body.prepend(section);
+  const external=document.createElement('a');external.href=complexExternalMapURL(matched);external.target='_blank';external.rel='noopener noreferrer';external.textContent='카카오맵에서 단지 위치 보기 ↗';external.hidden=true;external.style.cssText='display:none;margin-top:8px;padding:10px;border:1px solid var(--teal);border-radius:10px;color:var(--teal-dark);font-weight:800;text-align:center;text-decoration:none';
+  section.append(button,status,external,controls,container,neighbors);body.prepend(section);
   let map=null,loading=false;
   button.onclick=async()=>{
     if(loading)return;
     if(map){container.hidden=!container.hidden;controls.hidden=container.hidden;neighbors.hidden=container.hidden||nearby.getAttribute('aria-pressed')!=='true';button.textContent=container.hidden?'단지·학교 지도 보기':'지도 접기';if(!container.hidden)map.relayout();return;}
-    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';
+    loading=true;button.disabled=true;status.textContent='지도를 불러오는 중…';external.hidden=true;external.style.display='none';
     try{
       const maps=await loadComplexMapSDK();if(!section.isConnected)return;
       container.hidden=false;
@@ -6028,7 +6043,7 @@ function addComplexSchoolMap(body,matched){
       status.textContent='두 손가락으로 확대·축소 · 표시를 누르면 이름 확인';
       button.textContent='지도 접기';
       const observer=new ResizeObserver(()=>{if(container.isConnected&&!container.hidden&&container.clientWidth)map.relayout();else if(!section.isConnected){closeExpandedComplexMap();observer.disconnect();}});observer.observe(container);
-    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='지도를 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.';button.textContent='지도 다시 보기';}
+    }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='내장 지도를 불러오지 못했습니다. 카카오맵에서 단지 위치를 확인할 수 있습니다.';external.hidden=false;external.style.display='block';button.textContent='지도 다시 보기';}
     finally{loading=false;button.disabled=false;}
   };
 }
