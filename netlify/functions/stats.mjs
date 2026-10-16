@@ -1,13 +1,12 @@
 // Netlify Function — 상세 방문자 통계 조회 (stats.html 전용)
 // 관리자 세션이 확인된 요청만 Netlify Blobs의 집계 데이터를 읽을 수 있다.
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { hasValidStatsSession as hasValidSession } from "../../shared/sessions.mjs";
 import { getStore } from "@netlify/blobs";
 
 export const config = {
   path: "/api/stats",
 };
 
-const COOKIE_NAME = "__Host-aptsum_stats";
 const PAGES = [
   { page: "index", label: "메인 (실거래 분석)" },
   { page: "tier", label: "급지 분석" },
@@ -24,39 +23,6 @@ function json(data, { status = 200 } = {}) {
       vary: "Cookie",
     },
   });
-}
-
-function getCookie(request, name) {
-  const prefix = `${name}=`;
-  return (request.headers.get("cookie") || "")
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix))
-    ?.slice(prefix.length);
-}
-
-function equal(left, right) {
-  const a = Buffer.from(left || "");
-  const b = Buffer.from(right || "");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-function hasValidSession(request, secret) {
-  const value = getCookie(request, COOKIE_NAME);
-  if (!value) return false;
-
-  const [payload, signature, extra] = value.split(".");
-  if (!payload || !signature || extra) return false;
-
-  const expected = createHmac("sha256", secret).update(payload).digest("base64url");
-  if (!equal(signature, expected)) return false;
-
-  try {
-    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return Number.isInteger(exp) && exp > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
 }
 
 function ymd(date) {

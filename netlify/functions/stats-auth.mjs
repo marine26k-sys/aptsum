@@ -1,6 +1,7 @@
 // Netlify Function — 방문자 통계 관리자 인증
 // STATS_ACCESS_CODE는 서버에서만 비교하고, 성공하면 서명된 HttpOnly 쿠키만 내려준다.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { hasValidStatsSession as hasValidSession } from "../../shared/sessions.mjs";
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 
 export const config = {
@@ -8,7 +9,8 @@ export const config = {
 };
 
 const COOKIE_NAME = "__Host-aptsum_stats";
-const MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+// 서버 인증에는 만료일을 두지 않고, 브라우저 쿠키는 최대 400일 보관 후 사용 시 갱신한다.
+const MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 
 function json(data, { status = 200, headers = {} } = {}) {
   return new Response(JSON.stringify(data), {
@@ -43,24 +45,9 @@ function sign(payload, secret) {
 
 function createSession(secret) {
   const payload = Buffer.from(
-    JSON.stringify({ exp: Math.floor(Date.now() / 1000) + MAX_AGE_SECONDS })
+    JSON.stringify({ kind: "stats", version: 1 })
   ).toString("base64url");
   return `${payload}.${sign(payload, secret)}`;
-}
-
-function hasValidSession(request, secret) {
-  const value = getCookie(request, COOKIE_NAME);
-  if (!value) return false;
-
-  const [payload, signature, extra] = value.split(".");
-  if (!payload || !signature || extra || !equal(signature, sign(payload, secret))) return false;
-
-  try {
-    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return Number.isInteger(exp) && exp > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
 }
 
 function sessionCookie(value) {
@@ -76,7 +63,8 @@ export default async (request, context) => {
   }
 
   if (request.method === "GET") {
-    return json({ authenticated: hasValidSession(request, secret) });
+    const authenticated = hasValidSession(request, secret);
+    return json({ authenticated }, authenticated ? { headers: { "set-cookie": sessionCookie(createSession(secret)) } } : {});
   }
 
   if (request.method !== "POST") {
