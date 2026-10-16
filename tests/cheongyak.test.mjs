@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {kstToday,noticeStatus,filterNotices,officialURL,daysUntil} from '../shared/cheongyak.mjs';
+import {kstToday,noticeStatus,filterNotices,officialURL,daysUntil,uniqueScheduleDates} from '../shared/cheongyak.mjs';
 import handler,{validData,updatedTime} from '../netlify/functions/cheongyak.mjs';
 const item={name:'검증 공고',category:'apt',pblancNo:'1',region:'서울',apply_start:'2026-10-13',apply_end:'2026-10-14'};
 test('active notices sort by newest publication date across open and upcoming states',()=>{
@@ -54,4 +54,10 @@ test('stored notices contain only requested regions and safe official links',()=
  const data=JSON.parse(readFileSync(new URL('../data/cheongyak.json',import.meta.url)));
  assert.equal(data.count,data.items.length);assert(data.items.length>0);
  for(const row of data.items){assert(['서울','경기','인천','부산'].includes(row.region));assert(officialURL(row.detail_url));assert(!('score' in row));assert(['apt','remainder'].includes(row.category));}
+});
+
+test('동일 접수 날짜는 한 번만 표시하고 서로 다른 날짜와 기간은 유지한다',()=>{
+ assert.deepEqual(uniqueScheduleDates(['2026-10-26','2026-10-26',' 2026-10-26 ']),['2026-10-26']);
+ assert.deepEqual(uniqueScheduleDates(['2026-10-27','2026-10-28','2026-10-27']),['2026-10-27','2026-10-28']);
+ assert.deepEqual(uniqueScheduleDates(['2026-10-26 ~ 2026-10-28','2026-10-26 ~ 2026-10-28']),['2026-10-26 ~ 2026-10-28']);
 });

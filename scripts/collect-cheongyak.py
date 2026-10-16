@@ -145,7 +145,7 @@ def parse_detail(page_html, category):
                 if label.startswith("계약일"):
                     d["contract_period"] = " ".join(r[1:]).strip()
                     continue
-                dates = [c for c in r[1:] if re.search(r"\d{4}-\d{2}-\d{2}", c)]
+                dates = list(dict.fromkeys(c.strip() for c in r[1:] if re.search(r"\d{4}-\d{2}-\d{2}", c)))
                 if dates:
                     d["schedule"].append({"label": label, "dates": dates})
             continue

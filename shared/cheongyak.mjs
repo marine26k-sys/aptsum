@@ -41,3 +41,7 @@ export function filterNotices(items,{status='active',category='',region='',query
     return (a[key]||'9999').localeCompare(b[key]||'9999')||String(a.name).localeCompare(String(b.name),'ko');
   });
 }
+
+export function uniqueScheduleDates(dates){
+  return [...new Set((Array.isArray(dates)?dates:[]).filter(x=>typeof x==='string').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean))];
+}

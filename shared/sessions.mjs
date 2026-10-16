@@ -67,7 +67,7 @@ export function hasValidSession(request, secret, code) {
   }
 }
 
-// stats-auth.mjs가 발급하는 관리자 세션({exp} 서명 쿠키) 확인 — 발급 규칙은 stats-auth.mjs가 원본이다.
+// 관리자 세션은 kind/version으로 구분하며 서버 만료일이 없다. 기존 exp 세션은 유효기간 내 호환한다.
 // 구독자 쿠키와 비밀키는 같지만 페이로드 형식(version/expiresAt vs exp)과 쿠키 이름이 달라 서로 대신 쓸 수 없다.
 export const STATS_COOKIE_NAME = "__Host-aptsum_stats";
 export function hasValidStatsSession(request, secret) {
@@ -78,8 +78,9 @@ export function hasValidStatsSession(request, secret) {
   if (!payload || !signature || extra || !sameValue(signature, sign(payload, secret))) return false;
 
   try {
-    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return Number.isInteger(exp) && exp > Math.floor(Date.now() / 1000);
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (data.kind === "stats" && data.version === 1) return true;
+    return data.kind == null && Number.isInteger(data.exp) && data.exp > Math.floor(Date.now() / 1000);
   } catch {
     return false;
   }
