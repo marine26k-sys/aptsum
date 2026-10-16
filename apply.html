@@ -343,6 +343,7 @@ async function checkClaim(claim, tries = 0){
   try{
     const r = await fetch('/api/apply', { method:'POST', cache:'no-store', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'claim', claim }) });
     d = await r.json().catch(() => ({}));
+    if(r.status === 401 && d.error === 'claim_expired'){ store.clear(); waiting=false; showResult('<div class="title">코드 확인 기간이 끝났습니다</div><div class="hint">현재 로그인은 유지됩니다. 코드 재확인이 필요하면 운영자에게 문의해 주세요.</div><a class="btn" href="./index.html">홈으로</a>'); return; }
     if(r.status === 400 || r.status === 404){ store.clear(); $('#resultCard').hidden = true; return; }
   }catch(e){ d = { status:'pending' }; }
   waiting = d.status === 'pending';

@@ -17,6 +17,11 @@ test('유효한 기존 세션 확인 시 만료 없는 관리자 세션과 보�
   assert.equal((await result.json()).authenticated,true);
   const cookie=result.headers.get('set-cookie');assert.match(cookie,/Max-Age=34560000/);assert.match(cookie,/HttpOnly; Secure; SameSite=Strict/);
   const payload=JSON.parse(Buffer.from(cookie.split('=')[1].split('.')[0],'base64url').toString());
-  assert.deepEqual(payload,{kind:'stats',version:1});
+  assert.equal(payload.kind,'stats');assert.equal(payload.version,2);
+  const renewed=new Request('https://example.test',{headers:{cookie:cookie.split(';')[0]}});
+  assert.equal(hasValidStatsSession(renewed,secret),true);
+  process.env.STATS_ACCESS_CODE='synthetic-changed-code';
+  assert.equal(hasValidStatsSession(renewed,secret),false);
+  assert.equal(hasValidStatsSession(request({kind:'stats',version:1}),secret),true);
  }finally{for(const[key,value]of[['STATS_ACCESS_CODE',saved.code],['SUBSCRIBER_SESSION_SECRET',saved.secret]])value===undefined?delete process.env[key]:process.env[key]=value;}
 });

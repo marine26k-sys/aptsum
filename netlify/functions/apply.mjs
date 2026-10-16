@@ -10,7 +10,7 @@ import { hasValidStatsSession, subscriberCookie } from "../../shared/sessions.mj
 import { createLoginThrottle, tooManyAttempts } from "../../shared/login-throttle.mjs";
 import { getSubscriber, isActive, createPersonalSession, touchDevice } from "../../shared/subscribers.mjs";
 import {
-  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim, readPaymentRef, applicationPayUrl, createPaymentParameters,
+  applicationStore, applyConfig, applyProducts, includesSelectionMail, validateApplication, newApplication, saveApplication, createClaim, readClaim, claimCanRevealCode, readPaymentRef, applicationPayUrl, createPaymentParameters,
 } from "../../shared/applications.mjs";
 
 export const config = { path: "/api/apply" };
@@ -103,6 +103,7 @@ export default async (request, context) => {
     if (app.status !== "paid") return json({ status: app.status === "canceled" ? "pending" : app.status, phone: app.paymentMode!=="order" && app.phone ? `${app.phone.slice(0, 3)}-****-${app.phone.slice(-4)}` : "", product: app.product || "selection", payUrl: applicationPayUrl(app,secret,origin) || applyProducts().find(p => p.id === (app.product || "selection"))?.payUrl || "" });
     const sub = await getSubscriber(app.subId);
     if (!isActive(sub)) return json({ status: "ended" });
+    if (!claimCanRevealCode(app, sub)) return json({ error: "claim_expired" }, { status: 401 });
     const { token, did, maxAge } = createPersonalSession(secret, sub);
     await touchDevice(sub.id, did, true);
     return json(

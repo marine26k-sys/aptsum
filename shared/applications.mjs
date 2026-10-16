@@ -84,13 +84,22 @@ export function validateApplication(body) {
 function claimSig(secret, id) {
   return createHmac("sha256", secret).update(`apply-claim:${id}`).digest("base64url").slice(0, 22);
 }
-export function createClaim(secret, id) {
-  return `${id}.${claimSig(secret, id)}`;
+export const CLAIM_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export function createClaim(secret, id, now = Date.now()) {
+  const expires = String(now + CLAIM_MAX_AGE_MS);
+  return `${id}.${expires}.${claimSig(secret, `${id}.${expires}`)}`;
 }
-export function readClaim(secret, claim) {
-  const [id, sig, extra] = String(claim || "").split(".");
-  if (!id || !sig || extra || id.length > 32) return null;
-  return sameValue(sig, claimSig(secret, id)) ? id : null;
+export function readClaim(secret, claim, now = Date.now()) {
+  const parts = String(claim || "").split(".");
+  const [id, second, third] = parts;
+  if (!id || id.length > 32) return null;
+  if (parts.length === 2) return sameValue(second, claimSig(secret, id)) ? id : null;
+  if (parts.length !== 3 || !/^\d+$/.test(second) || Number(second) <= now) return null;
+  return sameValue(third, claimSig(secret, `${id}.${second}`)) ? id : null;
+}
+// 기존 토큰도 신청 후 7일까지만 허용한다. 개인 로그인 세션은 변경하지 않는다.
+export function claimCanRevealCode(app, sub, now = Date.now()) {
+  return Number.isFinite(app?.createdAt) && now < app.createdAt + CLAIM_MAX_AGE_MS && (sub?.gen || 1) === 1;
 }
 
 // 결제 연결 토큰은 결과 확인 토큰과 별도로 서명한다. 결제창에 결과 조회 권한을 전달하지 않는다.

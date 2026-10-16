@@ -79,6 +79,10 @@ export function hasValidStatsSession(request, secret) {
 
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (data.kind === "stats" && data.version === 2) {
+      return !!process.env.STATS_ACCESS_CODE && sameValue(data.credential, sign("stats-credential:v2", process.env.STATS_ACCESS_CODE));
+    }
+    // 기존 로그인은 그대로 허용한다. stats-auth GET에서 새 형식으로 전환한다.
     if (data.kind === "stats" && data.version === 1) return true;
     return data.kind == null && Number.isInteger(data.exp) && data.exp > Math.floor(Date.now() / 1000);
   } catch {
