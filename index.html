@@ -1480,7 +1480,8 @@ function openRelatedComplex(lawd,name){
   if(![...sel.options].some(o=>o.value===lawd))return;
   closeExpandedComplexMap();setMode('complex');sel.value=lawd;
   regionSel=[{lawd,name:[...sel.options].find(o=>o.value===lawd).textContent}];saveRegionSel();renderRegionChips();syncRegionPickBtn();
-  document.getElementById('q').value=name;search();
+  const input=document.getElementById('q');input.value=name;
+  input.dataset.pickedLawd=lawd;input.dataset.pickedName=name;search();
 }
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
 function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
@@ -1579,11 +1580,7 @@ async function renderFavDash(){
   }).join('');
 }
 function favGo(lawd, name){
-  setMode('complex');
-  sel.value = lawd;
-  if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value를 코드로 바꾸면 change 이벤트가 안 나서 화면 라벨을 직접 갱신해야 함
-  document.getElementById('q').value = name;
-  search();
+  openRelatedComplex(lawd, name);
   favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
 }
 // ── 즐겨찾기 "신규 거래" 배지: 최근 12개월 거래건수를 마지막 확인 시점과 비교 ──
