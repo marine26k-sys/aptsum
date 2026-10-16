@@ -1,8 +1,8 @@
 name: 청약 공고 자동 갱신
 on:
   schedule:
-    # 한국시간 00·03·06·09·12·15·18·21시 17분, 하루 8회.
-    - cron: '17 */3 * * *'
+    # 한국시간 00·04·08·12·16·20시 17분, 하루 6회.
+    - cron: '17 3,7,11,15,19,23 * * *'
   workflow_dispatch:
 permissions:
   contents: write
