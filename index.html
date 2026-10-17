@@ -7625,14 +7625,14 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
       d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 31)) };
     }
     if(individual){
-      d.individual=true;d.rows=d.rows.map(x=>({...x,twoWeekPeak:null}));d.complexName=targets[0].apt;d.complexRegion=`${targets[0].name} ${targets[0].umd}`.trim();d.pyBand=null;d.filterLabel='';d.askRangeSelected=false;d.hhMin=LISTING_BUDGET_MIN_HH;
+      d.individual=true;d.rows=d.rows.map(x=>({...x,previousPricePoint:null}));d.complexName=targets[0].apt;d.complexRegion=`${targets[0].name} ${targets[0].umd}`.trim();d.pyBand=null;d.filterLabel='';d.askRangeSelected=false;d.hhMin=LISTING_BUDGET_MIN_HH;
       try{
         const history=await fetchListingHistory(targets[0].lawd);
         if(myToken!==searchToken)return;
         const current=await fetchListings(targets[0].lawd);
         if(myToken!==searchToken)return;
         const snapshots=history.snapshots||[];
-        d.rows=d.rows.map(x=>({...x,twoWeekPeak:twoWeekListingPeak(x,snapshots)}));
+        d.rows=d.rows.map(x=>({...x,previousPricePoint:previousListingPricePoint(x,snapshots)}));
         const selectedId=targets[0].items[0]?.nid;
         d.individualTrend=listingTrendSnapshotRows(current,snapshots,null,targets[0].lawd,targets[0].name,false,'all',LISTING_BUDGET_MIN_HH).filter(x=>x.nid===selectedId);
       }catch(error){if(error.auth)throw error;d.individualTrendError=true;}
@@ -7656,7 +7656,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
 
 // 네이버 매물 링크 범례 — 단지명 옆 작은 아이콘이 네이버 실매물로 연결된다는 걸 눈에 띄게(2026.09 운영자 요청).
 // 네이버 실매물 기준 탭 3종(저평가 실매물·예산별 실매물·급매 선별) 공통.
-function listingTrendGraphLegend(individual=false){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.'+(individual?'<br>가격 변동은 최근 2주 최고 호가 대비입니다.':'')+'</div>';}
+function listingTrendGraphLegend(individual=false){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.'+(individual?'<br>가격 변동은 최근 2주 중 현재 가격 구간 이전의 최저 호가와 최신 호가를 비교합니다.':'')+'</div>';}
 function listingLinkLegend(){
   return `<div style="display:flex;align-items:center;gap:6px;margin:6px 0 6px;padding:6px 9px;border:1.5px solid #03C75A;border-radius:10px;background:#F0FBF4;font-size:11.5px;font-weight:700;color:#036B31;line-height:1.35"><span style="flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#03C75A;color:#fff;font-size:11px;font-weight:900">N</span><span>단지명 옆 <span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;width:18px;height:18px;border:1px solid #03C75A;border-radius:4px;background:#fff;color:var(--teal-dark)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span> 누르면 네이버 실매물 바로 보기</span></div>`;
 }
@@ -7752,16 +7752,24 @@ function listingTrendPriceDigits(points, i, baselineAsk){
 function listingTrendPrecision(points){
   return points.some((p,i)=>i>0 && p.ask!==points[i-1].ask && (Math.abs(p.ask-points[i-1].ask)<0.05 || p.ask.toFixed(1)===points[i-1].ask.toFixed(1))) ? 2 : 1;
 }
-function twoWeekListingPeak(item,snapshots,now=Date.now()){
+function previousListingPricePoint(item,snapshots,now=Date.now()){
   const end=Date.parse(new Date(now+9*3600000).toISOString().slice(0,10)+'T00:00:00Z'),start=end-13*86400000;
-  const prices=[];
+  const points=[];
   for(const snapshot of snapshots||[]){
     const digits=String(snapshot.asOf||'').replace(/[^0-9]/g,'');
     const day=digits.length===8?Date.parse(`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}T00:00:00Z`):NaN;
     if(!(day>=start&&day<=end))continue;
-    for(const x of snapshot.items||[])if(String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&Number.isFinite(x.ask)&&x.ask>0)prices.push(x.ask);
+    const x=(snapshot.items||[]).find(x=>String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&Number.isFinite(x.ask)&&x.ask>0);
+    if(x)points.push({date:snapshot.asOf,ask:x.ask,day});
   }
-  return prices.length?Math.max(...prices):null;
+  points.sort((a,b)=>a.day-b.day);
+  if(points.length<2||points.at(-1).ask!==item.ask)return null;
+  let endPrevious=points.length-1;
+  while(endPrevious>=0&&points[endPrevious].ask===item.ask)endPrevious--;
+  const previous=points.slice(0,endPrevious+1);
+  if(!previous.length)return points[points.length-2];
+  // 같은 최저가가 여러 번 기록됐으면 마지막 기록 날짜를 사용한다.
+  return previous.reduce((best,p)=>p.ask<=best.ask?p:best);
 }
 function listingTrendPeakChangeHTML(x){
  if(!(Number.isFinite(x.peak)&&x.peak>0&&Number.isFinite(x.ask)&&x.ask>0))return '';
@@ -7770,7 +7778,7 @@ function listingTrendPeakChangeHTML(x){
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   const comparisonPeak=x.peak,comparisonLabel='최근 3년 최고가';
-  const peakPoint=x.twoWeekPeak>0?[...x.points.slice(0,-1)].reverse().find(p=>p.ask===x.twoWeekPeak)||x.points.find(p=>p.ask===x.twoWeekPeak):null;
+  const peakPoint=x.previousPricePoint||null;
   if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
   const precision=listingTrendPrecision([{ask:x.prevAsk},{ask:x.ask}]);
