@@ -7650,7 +7650,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
 
 // 네이버 매물 링크 범례 — 단지명 옆 작은 아이콘이 네이버 실매물로 연결된다는 걸 눈에 띄게(2026.09 운영자 요청).
 // 네이버 실매물 기준 탭 3종(저평가 실매물·예산별 실매물·급매 선별) 공통.
-function listingTrendGraphLegend(){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.</div>';}
+function listingTrendGraphLegend(individual=false){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.'+(individual?'<br>가격 변동은 최근 2주 최고 호가 대비입니다.':'')+'</div>';}
 function listingLinkLegend(){
   return `<div style="display:flex;align-items:center;gap:6px;margin:6px 0 6px;padding:6px 9px;border:1.5px solid #03C75A;border-radius:10px;background:#F0FBF4;font-size:11.5px;font-weight:700;color:#036B31;line-height:1.35"><span style="flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#03C75A;color:#fff;font-size:11px;font-weight:900">N</span><span>단지명 옆 <span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;width:18px;height:18px;border:1px solid #03C75A;border-radius:4px;background:#fff;color:var(--teal-dark)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span> 누르면 네이버 실매물 바로 보기</span></div>`;
 }
@@ -7922,7 +7922,7 @@ function renderListingBudget(d,limit=100){
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
-      ${d.individual?listingTrendGraphLegend():''}
+      ${d.individual?listingTrendGraphLegend(true):''}
       ${body}
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
