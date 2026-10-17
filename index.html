@@ -1103,16 +1103,16 @@ try {
       </div>
     </div>
     <div id="listingNameSearch" style="display:none;margin:8px 0">
-      <button type="button" onclick="openListingNameSearch()" style="width:100%;padding:12px;border:1px solid var(--teal);border-radius:12px;background:white;color:var(--teal);font:inherit;font-weight:800">단지 개별 검색</button>
+      <a id="listingNameSearchLink" href="?m=listingbudget&amp;individual=1" target="_blank" rel="noopener" style="display:inline-block;text-align:center;text-decoration:none;padding:7px 11px;border:1px solid var(--teal);border-radius:9px;background:white;color:var(--teal);font-size:12px;font-weight:700">단지 개별 검색 ↗</a>
     </div>
-    <dialog id="listingNameDialog" aria-labelledby="listingNameDialogTitle" style="width:calc(100% - 32px);max-width:580px;max-height:85dvh;overflow:auto;box-sizing:border-box;padding:20px;border:1px solid var(--teal);border-radius:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><button type="button" onclick="document.getElementById('listingNameDialog').close()" aria-label="단지 검색 닫기">닫기 ×</button></div>
+    <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b></div>
       <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
       <div class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
       <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
-    </dialog>
+    </section>
     <div id="listingTrendDirectionFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">변동 방향
         <select id="listingTrendDirection" onchange="listingTrendDirectionApply()" style="flex:1"><option value="all">전체</option><option value="down" selected>하락</option><option value="up">상승</option></select>
@@ -1337,6 +1337,7 @@ function pushView(){
 }
 function buildShareURL(inp){
   const p = new URLSearchParams();
+  if(new URLSearchParams(location.search).get('individual')==='1'&&['listingbudget','listingtrend','listingrise'].includes(inp.mode))p.set('individual','1');
   p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
   if(['listingbudget','listingurgent'].includes(inp.mode)&&inp.listingFloor==='all')p.set('lf','all');
   if(['listingbudget','listingtrend','listingrise'].includes(inp.mode)&&inp.listingNameQuery){p.set('lnq',inp.listingNameQuery);if(inp.listingNameKey)p.set('lnk',inp.listingNameKey);}
@@ -2603,7 +2604,11 @@ function setMode(m, fromRestore){
   listingFloorScope='mid';syncListingFloor();
   document.getElementById('listingNameQuery').placeholder='단지명 2자 이상 입력';
   document.getElementById('listingNameQuery').setAttribute('aria-label','전 지역 단지명 검색');
-  document.getElementById('listingNameSearch').style.display=['listingbudget','listingtrend','listingrise'].includes(m)?'':'none';
+  const individualListing=new URLSearchParams(location.search).get('individual')==='1';
+  const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
+  document.getElementById('listingNameSearch').style.display=nameSupported&&!individualListing?'':'none';
+  document.getElementById('listingIndividualSearch').style.display=nameSupported&&individualListing?'':'none';
+  document.getElementById('listingNameSearchLink').href='?m='+encodeURIComponent(m)+'&individual=1';
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -7098,7 +7103,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   const continuous=false;
   try{
     let selectedComplex=null;
-    if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){if(!document.getElementById('listingNameDialog').open)openListingNameSearch();return;}targets=[selectedComplex];}
+    if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch();return;}targets=[selectedComplex];}
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
       const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
@@ -7496,8 +7501,8 @@ function listingBudgetNewKeys(current,snapshots){
   return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
 }
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
-function openListingNameSearch(){document.getElementById('listingNameDialog').showModal();document.getElementById('listingNameQuery').focus();}
-function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();document.getElementById('listingNameDialog').close();}
+function openListingNameSearch(){document.getElementById('listingIndividualSearch').style.display='';document.getElementById('listingNameQuery').focus();}
+function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
 function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
 function listingNameChanged(){
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
@@ -7506,7 +7511,7 @@ function listingNameChanged(){
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
-  if(listingNameSelected){document.getElementById('listingNameDialog').close();search({silentScroll:true});}
+  if(listingNameSelected){search({silentScroll:true});}
 }
 async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
@@ -7536,7 +7541,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
-    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){if(!document.getElementById('listingNameDialog').open)openListingNameSearch();return;}targets=[selected];}
+    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){openListingNameSearch();return;}targets=[selected];}
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
