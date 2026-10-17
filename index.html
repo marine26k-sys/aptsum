@@ -7623,6 +7623,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
 
 // 네이버 매물 링크 범례 — 단지명 옆 작은 아이콘이 네이버 실매물로 연결된다는 걸 눈에 띄게(2026.09 운영자 요청).
 // 네이버 실매물 기준 탭 3종(저평가 실매물·예산별 실매물·급매 선별) 공통.
+function listingTrendGraphLegend(){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.</div>';}
 function listingLinkLegend(){
   return `<div style="display:flex;align-items:center;gap:6px;margin:6px 0 6px;padding:6px 9px;border:1.5px solid #03C75A;border-radius:10px;background:#F0FBF4;font-size:11.5px;font-weight:700;color:#036B31;line-height:1.35"><span style="flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#03C75A;color:#fff;font-size:11px;font-weight:900">N</span><span>단지명 옆 <span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;width:18px;height:18px;border:1px solid #03C75A;border-radius:4px;background:#fff;color:var(--teal-dark)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span> 누르면 네이버 실매물 바로 보기</span></div>`;
 }
@@ -7784,6 +7785,7 @@ function renderListingTrend(d){
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">최근 3개 기록의 첫 금액 대비 마지막 최저 호가가 ${all?'변화를 비교하는':rising?'올라간':'내려간'} 단지·평형</div>
       ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.belowPeak?'전고점 이하만 · ':''}${d.trendContinuous ? `연속 ${word}만 · ` : ''}${all?'변동':word} 금액 큰 순${d.nameQuery?' · 단지명: '+esc(d.nameQuery):''}`)}
       ${listingLinkLegend()}
+      ${listingTrendGraphLegend()}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
@@ -7869,7 +7871,7 @@ function renderListingBudget(d,limit=100){
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
   </div>
-  ${d.individual?`<div class="card"><div class="sec"><h3>호가 변동 · 상승·하락·보합 전체</h3>${d.individualTrendError?'<p>호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.</p>':d.individualTrend?.length?d.individualTrend.map((x,i)=>listingTrendRowHTML(x,i,false,'all')).join(''):'<p>비교 가능한 직전 호가 이력이 없습니다.</p>'}</div></div>`:''}
+  ${d.individual?`<div class="card"><div class="sec"><h3>호가 변동 · 상승·하락·보합 전체</h3>${listingTrendGraphLegend()}${d.individualTrendError?'<p>호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.</p>':d.individualTrend?.length?d.individualTrend.map((x,i)=>listingTrendRowHTML(x,i,false,'all')).join(''):'<p>비교 가능한 직전 호가 이력이 없습니다.</p>'}</div></div>`:''}
   <div class="src-note">호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
