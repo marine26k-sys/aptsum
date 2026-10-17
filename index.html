@@ -38,8 +38,10 @@ try {
 } catch(e) {}
 </script>
 <script>if(/Instagram|Threads|Barcelona/i.test(navigator.userAgent))document.documentElement.classList.add('app-native-selects');</script>
-<script>document.documentElement.classList.add(new URLSearchParams(location.search).has('m')?'analysis-page':'analysis-menu');</script>
+<script>const hasInitialAnalysis=new URLSearchParams(location.search).has('m');document.documentElement.classList.add(hasInitialAnalysis?'analysis-page':'analysis-menu');if(hasInitialAnalysis)document.documentElement.classList.add('analysis-view-loading');</script>
 <style>
+  html.analysis-view-loading #searchBox,html.analysis-view-loading #result,html.analysis-view-loading #favRegions,html.analysis-view-loading #recentComplexes,html.analysis-view-loading #favs,html.analysis-view-loading #favDashBtn{visibility:hidden!important}
+  html.analysis-view-loading .brand-description{visibility:hidden}
   html.analysis-menu #searchBox,html.analysis-menu #result,html.analysis-menu #favRegions,html.analysis-menu #favs,html.analysis-menu #favDashBtn{display:none!important}
   html:not(.complex-analysis) #recentComplexes,html:not(.complex-analysis) #favs,html:not(.complex-analysis) #favDashBtn{display:none!important}
   html.analysis-page #mainUtilityBar,html.analysis-page .channels-links{display:none!important}
@@ -2118,9 +2120,9 @@ async function initializeAptsumPage(){
       openRegionPicker(row);saveNativeRegionResult();return;
     }
     if(readNativeRegion(NATIVE_REGION_RESULT)){await aptsumSubscriberGate.ready;if(applyNativeRegionReturn())return;}
-    initFromURL();
+    await initFromURL();
   } finally {
-    document.documentElement.classList.remove('region-view-loading');
+    document.documentElement.classList.remove('region-view-loading','analysis-view-loading');
   }
 }
 
