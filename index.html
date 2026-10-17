@@ -856,6 +856,7 @@ try {
     <div class="tab-grp">
       <div class="tab-grp-name">실매물</div>
       <div class="tab-grp-tabs">
+        <a class="tab subscriber" id="tabLIC" href="./index.html?m=listingbudget&amp;individual=1">개별 단지</a>
         <a class="tab subscriber" id="tabLBG" href="./index.html?m=listingbudget"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>금액대별</a>
         <a class="tab subscriber" id="tabLUR" href="./index.html?m=listingurgent"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>급매물</a>
       </div>
@@ -1101,9 +1102,6 @@ try {
         <button type="button" id="listingFloorMid" onclick="setListingFloor('mid')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:12px">중층 이상</button>
         <button type="button" id="listingFloorAll" onclick="setListingFloor('all')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:12px">저층 포함</button>
       </div>
-    </div>
-    <div id="listingNameSearch" style="display:none;margin:8px 0">
-      <a id="listingNameSearchLink" href="?m=listingbudget&amp;individual=1" target="_blank" rel="noopener" style="display:inline-block;text-align:center;text-decoration:none;padding:7px 11px;border:1px solid var(--teal);border-radius:9px;background:white;color:var(--teal);font-size:12px;font-weight:700">단지 개별 검색 ↗</a>
     </div>
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b></div>
@@ -2512,7 +2510,7 @@ function setMode(m, fromRestore){
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
   for(const id of ['adArea','staticAdArea'])document.getElementById(id).replaceChildren();
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
-  const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===(m==='listingrise'?'listingtrend':m)&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
+  const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===(m==='listingrise'?'listingtrend':m)&&(m!=='listingbudget'||(p.get('individual')==='1')===isIndividualListing())&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
   document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 · 아파트 분석';
 
   document.getElementById('searchBox').style.display = '';
@@ -2534,7 +2532,8 @@ function setMode(m, fromRestore){
   document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabLPL').classList.toggle('on', m==='longpeaklisting');
   document.getElementById('tabLFAV').classList.toggle('on', m==='listingfavorites');
-  document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget');
+  document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget'&&!isIndividualListing());
+  document.getElementById('tabLIC').classList.toggle('on', m==='listingbudget'&&isIndividualListing());
   document.getElementById('tabLUR').classList.toggle('on', m==='listingurgent');
   document.getElementById('tabLTRD').classList.toggle('on', m==='listingtrend'||m==='listingrise');
   document.getElementById('tabLGAP').classList.toggle('on', m==='listinggap');
@@ -2606,9 +2605,8 @@ function setMode(m, fromRestore){
   document.getElementById('listingNameQuery').setAttribute('aria-label','전 지역 단지명 검색');
   const individualListing=new URLSearchParams(location.search).get('individual')==='1';
   const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
-  document.getElementById('listingNameSearch').style.display=nameSupported&&!individualListing?'':'none';
   document.getElementById('listingIndividualSearch').style.display=nameSupported&&individualListing?'':'none';
-  document.getElementById('listingNameSearchLink').href='?m='+encodeURIComponent(m)+'&individual=1';
+  if(m==='listingbudget'&&individualListing)document.querySelector('.brand-description').textContent='개별 단지';
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -7501,6 +7499,7 @@ function listingBudgetNewKeys(current,snapshots){
   return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
 }
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
+function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
 function openListingNameSearch(){document.getElementById('listingIndividualSearch').style.display='';document.getElementById('listingNameQuery').focus();}
 function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
 function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
@@ -7534,6 +7533,8 @@ async function resolveListingName(myToken){
   return listingNameSelected;
 }
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
+  const individual=tabMode==='listingbudget'&&isIndividualListing();
+  if(individual&&!listingNameActive()){openListingNameSearch();showError('단지명을 입력하고 검색해 주세요.');return;}
   const nameSearch=tabMode==='listingbudget'&&listingNameActive();
   let targets=nameSearch?[]:regionSel.length ? regionSel.slice()
     : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{ lawd, name: sel.options[sel.selectedIndex].textContent }]);
@@ -7587,6 +7588,18 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     } else {
       // 전고점보다 31% 이상 높은 호가(화면 표기 정수 % 기준)는 제외 — 비현실적 호가·입력 오류 가능성(운영자 요청, 2026.09)
       d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 31)) };
+    }
+    if(individual){
+      d.individual=true;
+      try{
+        const history=await fetchListingHistory(targets[0].lawd);
+        if(myToken!==searchToken)return;
+        const current=await fetchListings(targets[0].lawd);
+        if(myToken!==searchToken)return;
+        const snapshots=history.snapshots||[];
+        const selectedId=targets[0].items[0]?.nid;
+        d.individualTrend=listingTrendSnapshotRows(current,snapshots,null,targets[0].lawd,targets[0].name,false,'all').filter(x=>x.nid===selectedId);
+      }catch(error){if(error.auth)throw error;d.individualTrendError=true;}
     }
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
@@ -7841,9 +7854,9 @@ function renderListingBudget(d,limit=100){
       </div>${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
-    ${listingHeaderHTML(d, '금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
+    ${listingHeaderHTML(d, d.individual?'개별 단지 · 현재 매물':'금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">금액대별 매물 (낮은 가격순)</div>
+      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':'금액대별 매물'} (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
@@ -7852,6 +7865,7 @@ function renderListingBudget(d,limit=100){
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
   </div>
+  ${d.individual?`<div class="card"><div class="sec"><h3>호가 변동 · 상승·하락·보합 전체</h3>${d.individualTrendError?'<p>호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.</p>':d.individualTrend?.length?d.individualTrend.map((x,i)=>listingTrendRowHTML(x,i,false,'all')).join(''):'<p>비교 가능한 직전 호가 이력이 없습니다.</p>'}</div></div>`:''}
   <div class="src-note">호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');

@@ -11,9 +11,10 @@ test('호가 전체는 상승 하락 보합을 포함하고 단지명은 공백 
  assert.equal(c.listingTrendNameMatch(item('1',10),'테스트래미안'),true);
  assert.equal(c.listingTrendNameMatch(item('1',10),'다른단지'),false);
 });
-test('단지 개별 검색 링크는 새 탭을 열고 검색 화면에는 모달이 없다',()=>{
- assert.match(html,/id="listingNameSearchLink"[^>]*target="_blank"[^>]*rel="noopener"/);
- assert.match(html,/id="listingIndividualSearch"/);
- assert.doesNotMatch(html,/listingNameDialog['"]\)\.(?:close|showModal)/);
- assert.match(html,/individual=1/);
+test('실매물 메뉴의 개별 단지 탭에서 현재 매물과 호가 이력을 함께 표시한다',()=>{
+ assert.match(html,/id="tabLIC"[^>]*individual=1/);
+ assert.doesNotMatch(html,/id="listingNameSearchLink"/);
+ assert.match(html,/d.individualTrend=listingTrendSnapshotRows/);
+ assert.match(html,/개별 단지 · 현재 매물/);
+ assert.match(html,/호가 변동 · 상승·하락·보합 전체/);
 });
