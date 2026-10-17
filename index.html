@@ -964,7 +964,7 @@ try {
       <button id="regionFavBtn" onclick="toggleFavRegion()" title="이 지역 즐겨찾기" style="flex:0 0 auto;width:38px;background:#fff;border:1.5px solid var(--line);border-radius:12px;color:#D97706;font-size:15px;cursor:pointer">☆</button>
     </div>
     <div id="regionChips" style="display:none"></div>
-    <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
+    <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
@@ -1115,7 +1115,7 @@ try {
     </div>
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><span id="listingNameTrialBadge" hidden style="flex:none;padding:3px 9px;border-radius:10px;background:#39FF14;color:#0B3D02;font-size:11px;font-weight:800;white-space:nowrap">강남구 무료체험</span></div>
-      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
+      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
       <div id="listingNameSearchHelp" class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
@@ -2684,7 +2684,7 @@ function addCmpRow(){
   // 기존 코드(search()·URL 공유 복원·즐겨찾기 복원 등)가 전부 `.cmp-row select`.value를 읽으므로,
   // 그 select는 그대로 두되 화면엔 안 보이게 숨기고 버튼만 노출한다.
   div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
-    <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter')search()" autocomplete="off">
+    <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
   setCmpRowLawd(div, sel.value); // 기본: 현재 선택 지역(값+버튼 라벨 함께 설정)
   document.getElementById('cmpRows').appendChild(div);
@@ -4505,6 +4505,7 @@ function acPick(name,lawd){
       }
     }
   }
+  acInput?.blur?.();
   acHide();
 }
 

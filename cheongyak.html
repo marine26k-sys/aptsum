@@ -20,7 +20,7 @@
 <section class="panel" aria-label="청약 공고 필터">
 <div class="filter"><label for="category">공급 유형</label><select id="category"><option value="">전체</option><option value="apt">아파트</option><option value="remainder">무순위·잔여세대</option></select></div>
 <div class="filter"><label for="region">지역</label><select id="region"><option value="">전체</option><option>서울</option><option>경기</option><option>인천</option><option>부산</option></select></div>
-<input class="search" id="query" type="search" placeholder="공고명·주소 검색" aria-label="공고명·주소 검색">
+<input class="search" id="query" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();this.blur()}" type="search" placeholder="공고명·주소 검색" aria-label="공고명·주소 검색">
 <div class="tools"><label><input id="favoritesOnly" type="checkbox"> ★ 관심 공고만</label><button class="reset" id="reset">↺ 필터 초기화</button></div>
 </section>
 <div class="summary"><span id="resultCount" role="status">공고 불러오는 중…</span><span id="sortOrder">최신 공고일 순</span></div>
