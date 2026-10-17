@@ -43,9 +43,9 @@ test('history metadata uses historical values and filters occupancy without modi
  assert.equal(data.items.length,2);
 });
 
-test('직전 대비 동일 가격은 하락 목록에서 제외한다',()=>{
+test('최신 가격이 유지돼도 이전 가격 구간보다 낮으면 하락 목록에 포함한다',()=>{
  const history=[4.5,4.2,4.2].map((ask,i)=>({uploadId:`u${i}`,asOf:`2026.10.0${i+1}`,items:[item(ask)]}));
- assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구').length,0);
+ assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구').length,1);
  for(const prices of [[4.2,4,4.2],[4.2,4,4.5]]){
   const h=history.map((s,i)=>({...s,items:[item(prices[i])]}));
   assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구').length,0);
@@ -81,16 +81,16 @@ test('rise compares the same complex and exclusive area across the latest record
  const history=[4.2,4.4,4.6].map((ask,i)=>({uploadId:`u${i}`,items:[item(ask),item(8,{ex:59})]}));
  const rows=ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'up');
  assert.equal(rows.length,1);
- assert.equal(rows[0].drop,0.2);
- assert.equal(rows[0].prevAsk,4.4);
+ assert.equal(rows[0].drop,0.4);
+ assert.equal(rows[0].prevAsk,4.2);
  assert.equal(rows[0].ask,4.6);
  assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',true,'up').length,1);
  assert.equal(ctx.listingTrendSnapshotRows(history[2],history,{},'11680','강남구',false,'down').length,0);
 });
 
-test('rise rejects rebounds, flat endpoints, and missing immediately previous records',()=>{
+test('상승은 이전 구간 최저가를 기준으로 분류하고 연속 조건은 엄격하게 유지한다',()=>{
  for(const [prices,expected,continuous] of [
-  [[4.2,4.5,4.4],0,0],[[4.2,4.5,4.2],0,0],[[4.2,4.2,4.4],1,0],[[4.2,4.4,4.4],0,0]
+  [[4.2,4.5,4.4],1,0],[[4.2,4.5,4.2],0,0],[[4.2,4.2,4.4],1,0],[[4.2,4.4,4.4],1,0]
  ]){
   const h=prices.map((ask,i)=>({uploadId:`u${i}`,items:[item(ask)]}));
   assert.equal(ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',false,'up').length,expected);
@@ -111,3 +111,11 @@ test('newly appearing price filter compares identities rather than price changes
 });
 
 test('exclude changes at or above 25 percent for both directions including two-record history',()=>{for(const [from,to,direction,want] of [[100,75,'down',0],[100,75.01,'down',1],[100,125,'up',0],[100,124.99,'up',1],[75,50,'down',0]]){const history=[from,to].map((ask,i)=>({uploadId:'boundary'+i,asOf:'2026.10.0'+(i+1),items:[item(ask)]}));assert.equal(ctx.listingTrendSnapshotRows(history[1],history,{},'11680','강남구',false,direction).length,want);}});
+
+test('호가 변동 탭도 단지 분석의 세 예시와 날짜·분류가 일치한다',()=>{
+ for(const [prices,from,to,direction,date] of [[[15.8,16.5,15.5],15.8,15.5,'down','2026.10.04'],[[25,24,23.8],24,23.8,'down','2026.10.05'],[[28.5,29,29],28.5,29,'up','2026.10.04']]){
+  const h=prices.map((ask,i)=>({uploadId:'example'+i,asOf:'2026.10.0'+(i+4),items:[item(ask)]}));
+  const rows=ctx.listingTrendSnapshotRows(h[2],h,{},'11680','강남구',false,direction);
+  assert.equal(rows.length,1);assert.equal(rows[0].prevAsk,from);assert.equal(rows[0].ask,to);assert.equal(rows[0].previousPricePoint.date,date);assert.equal(rows[0].drop,+Math.abs(to-from).toFixed(2));
+ }
+});
