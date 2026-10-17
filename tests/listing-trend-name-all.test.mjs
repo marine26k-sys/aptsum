@@ -11,3 +11,11 @@ test('호가 전체는 상승 하락 보합을 포함하고 단지명은 공백 
  assert.equal(c.listingTrendNameMatch(item('1',10),'테스트래미안'),true);
  assert.equal(c.listingTrendNameMatch(item('1',10),'다른단지'),false);
 });
+test('단지 개별 검색은 별도 창에서 열고 후보 선택 후 닫아 조회한다',()=>{
+ const dialog={open:false,showModal(){this.open=true},close(){this.open=false}};let focused=false,searched=false;
+ const c=vm.createContext({document:{getElementById:id=>id==='listingNameDialog'?dialog:{focus(){focused=true}}},mode:'listingtrend',search(){searched=true}});
+ vm.runInContext(html.slice(html.indexOf('let listingNameSelected='),html.indexOf('async function resolveListingName(')),c);
+ c.openListingNameSearch();assert.equal(dialog.open,true);assert.equal(focused,true);
+ vm.runInContext("listingNameChoices=[{key:'synthetic',lawd:'11680'}]",c);
+ c.chooseListingName(0);assert.equal(dialog.open,false);assert.equal(searched,true);
+});

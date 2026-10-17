@@ -1103,10 +1103,16 @@ try {
       </div>
     </div>
     <div id="listingNameSearch" style="display:none;margin:8px 0">
-      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 · 전 지역" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter')search()" style="width:100%" autocomplete="off">
-      <div class="rng" style="margin-top:5px">검색어를 입력하면 지역 선택과 관계없이 전 지역에서 찾습니다.</div>
-      <div id="listingNameCandidates"></div>
+      <button type="button" onclick="openListingNameSearch()" style="width:100%;padding:12px;border:1px solid var(--teal);border-radius:12px;background:white;color:var(--teal);font:inherit;font-weight:800">단지 개별 검색</button>
     </div>
+    <dialog id="listingNameDialog" aria-labelledby="listingNameDialogTitle" style="width:calc(100% - 32px);max-width:580px;max-height:85dvh;overflow:auto;box-sizing:border-box;padding:20px;border:1px solid var(--teal);border-radius:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><button type="button" onclick="document.getElementById('listingNameDialog').close()" aria-label="단지 검색 닫기">닫기 ×</button></div>
+      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
+      <div class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
+      <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
+      <div id="listingNameCandidates" aria-live="polite"></div>
+      <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
+    </dialog>
     <div id="listingTrendDirectionFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">변동 방향
         <select id="listingTrendDirection" onchange="listingTrendDirectionApply()" style="flex:1"><option value="all">전체</option><option value="down" selected>하락</option><option value="up">상승</option></select>
@@ -2595,8 +2601,8 @@ function setMode(m, fromRestore){
   document.getElementById('listingTrendContinuousHelp').textContent = `최근 3개 기록에서 두 번 연속 ${m==='listingrise'?'상승':'하락'}한 단지·평형만 표시합니다.`;
   document.getElementById('listingFloorFilters').style.display=(m==='listingbudget'||m==='listingurgent')?'':'none';
   listingFloorScope='mid';syncListingFloor();
-  document.getElementById('listingNameQuery').placeholder=m==='listingbudget'?'단지명 검색 · 전 지역':'단지명 검색 · 선택 지역';
-  document.getElementById('listingNameQuery').setAttribute('aria-label',m==='listingbudget'?'전 지역 단지명 검색':'선택 지역 단지명 검색');
+  document.getElementById('listingNameQuery').placeholder='단지명 2자 이상 입력';
+  document.getElementById('listingNameQuery').setAttribute('aria-label','전 지역 단지명 검색');
   document.getElementById('listingNameSearch').style.display=['listingbudget','listingtrend','listingrise'].includes(m)?'':'none';
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
@@ -7082,7 +7088,7 @@ function listingTrendDirectionApply(){
   if(hadResults||wasLoading) search({silentScroll:true});
 }
 async function searchListingTrend(myToken,lawd,silentScroll){
-  const targets=regionSel.length?regionSel.slice():(isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:sel.options[sel.selectedIndex].textContent}]);
+  let targets=regionSel.length?regionSel.slice():(isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:sel.options[sel.selectedIndex].textContent}]);
   showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');document.getElementById('btn').disabled=true;
   const requestedUpload='';
@@ -7091,6 +7097,8 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   const belowPeak=document.getElementById('listingTrendBelowPeak').getAttribute('aria-pressed')==='true';
   const continuous=false;
   try{
+    let selectedComplex=null;
+    if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){if(!document.getElementById('listingNameDialog').open)openListingNameSearch();return;}targets=[selectedComplex];}
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
       const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
@@ -7115,7 +7123,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
     }
     // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
     lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
-    for(let i=rows.length-1;i>=0;i--)if(!listingTrendNameMatch(rows[i],nameQuery)||!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls)||(belowPeak&&!listingTrendPeakMatch(rows[i])))rows.splice(i,1);
+    for(let i=rows.length-1;i>=0;i--)if((selectedComplex&&(rows[i].nid!==selectedComplex.items[0]?.nid||rows[i].lawd!==selectedComplex.lawd))||!listingTrendNameMatch(rows[i],nameQuery)||!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls)||(belowPeak&&!listingTrendPeakMatch(rows[i])))rows.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct);
     const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,belowPeak,direction,nameQuery,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
@@ -7488,7 +7496,9 @@ function listingBudgetNewKeys(current,snapshots){
   return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
 }
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
-function listingNameActive(){return mode==='listingbudget'&&document.getElementById('listingNameQuery').value.trim().length>0;}
+function openListingNameSearch(){document.getElementById('listingNameDialog').showModal();document.getElementById('listingNameQuery').focus();}
+function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();document.getElementById('listingNameDialog').close();}
+function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
 function listingNameChanged(){
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
@@ -7496,7 +7506,7 @@ function listingNameChanged(){
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
-  if(listingNameSelected)search({silentScroll:true});
+  if(listingNameSelected){document.getElementById('listingNameDialog').close();search({silentScroll:true});}
 }
 async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
@@ -7526,7 +7536,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
-    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected)return;targets=[selected];}
+    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){if(!document.getElementById('listingNameDialog').open)openListingNameSearch();return;}targets=[selected];}
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
