@@ -114,7 +114,7 @@ export default async (request) => {
     const floorScope=q.get("floorScope")||"mid";
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
-      const trial=!isAdmin && !(await getSubscriberSession(request, secret));
+      const trial=q.get("trial")==="1" || (!isAdmin && !(await getSubscriberSession(request, secret)));
       if(trial && q.get("trial")!=="1")return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).replace(/\s/g,"").toLowerCase();
       if(query.length<2)return json({error:"query_too_short"},400);

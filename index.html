@@ -665,6 +665,7 @@ try {
         if(issueGroup) issueGroup.style.display='';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
         subDividers.forEach(d => { d.style.display = 'none'; });
+        if(typeof lastData==='object'&&lastData&&isListingMode(lastData.mode)){lastData=null;const result=document.getElementById('result');if(result){result.replaceChildren();result.classList.remove('on');}}
         if (typeof listingMem === 'object') Object.keys(listingMem).forEach(k => { delete listingMem[k]; });
         if (typeof listingHistoryMem === 'object') Object.keys(listingHistoryMem).forEach(k => { delete listingHistoryMem[k]; });
       };
@@ -1785,6 +1786,7 @@ function restoreView(vi){
   document.getElementById('listingNameQuery').value=inp.listingNameQuery||'';
   listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';
   listingFloorScope=inp.listingFloor==='all'?'all':'mid';syncListingFloor();
+  if(isListingMode(v.data.mode)&&isListingTrial()){search({silentScroll:true});return;}
   lastData = v.data;
   updateRegionFavBtn();
   renderFavRegions();
@@ -4912,6 +4914,7 @@ async function search(opts){
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
   const requestMode=mode, myToken=++searchToken;
+  if(isListingMode(requestMode)){await aptsumSubscriberGate.recheck();if(myToken!==searchToken||mode!==requestMode)return;}
   if(needsSubscriberSession(requestMode)){
     const authorized=await aptsumSubscriberGate.recheck();
     // 인증 대기 중 탭 전환·중지·다른 조회가 있었다면 이전 요청은 여기서 끝낸다.
@@ -6967,7 +6970,9 @@ function listingOccupancyApply(){
   listingNameChoices=[];
   lastData=null;
 }
+function enforceListingTrialLawd(lawd){if(isListingTrial()&&lawd!==LISTING_TRIAL_LAWD)throw Object.assign(new Error('무료 체험은 강남구만 조회할 수 있습니다.'),{auth:true});}
 async function fetchListings(lawd){
+  enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}:${listingFloor()}`;
   if(listingMem[key]) return listingMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
@@ -6976,6 +6981,7 @@ async function fetchListings(lawd){
   return (listingMem[key] = await r.json());
 }
 async function fetchListingHistory(lawd){
+  enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
   if(listingHistoryMem[key]) return listingHistoryMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=${occupancy}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
@@ -7551,7 +7557,7 @@ async function resolveListingName(myToken){
   const data=await response.json();if(myToken!==searchToken)return null;
   if(data.floorMissing?.length){showError('저층 포함 자료가 없어 엑셀 재업로드가 필요합니다. ('+esc(data.floorMissing.join(', '))+')');return null;}
   const grouped=new Map();
-  for(const x of data.items||[]){const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
+  for(const x of data.items||[]){if(isListingTrial()&&x.lawd!==LISTING_TRIAL_LAWD)continue;const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
   listingNameChoices=[...grouped.values()].sort((a,b)=>a.apt.localeCompare(b.apt,'ko')||a.name.localeCompare(b.name,'ko')||a.umd.localeCompare(b.umd,'ko'));
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;

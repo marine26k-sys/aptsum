@@ -11,7 +11,7 @@ test('익명 체험 검색은 지역 인자를 조작해도 강남구 자료만 
  const {c,reads}=setup(false);const r=await c.handler({method:'GET',url:'https://example.test/api/listings?search=같은단지&trial=1&lawd=41173'});
  const d=await r.json();assert.equal(r.status,200);assert.equal(d.trial,true);assert.equal(reads(),1);assert.deepEqual(d.items.map(x=>x.lawd),['11680']);
 });
-test('회원은 체험 검색 인자가 있어도 전 지역 검색을 유지한다',async()=>{
+test('회원 쿠키가 있어도 명시적인 체험 요청은 강남구로 제한한다',async()=>{
  const {c}=setup(true);const d=await (await c.handler({method:'GET',url:'https://example.test/api/listings?search=같은단지&trial=1'})).json();
- assert.equal(d.trial,false);assert.equal(d.items.length,2);
+ assert.equal(d.trial,true);assert.equal(d.items.length,1);assert.equal(d.items[0].lawd,'11680');
 });
