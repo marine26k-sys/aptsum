@@ -15,3 +15,14 @@ test('회원 쿠키가 있어도 명시적인 체험 요청은 강남구로 제�
  const {c}=setup(true);const d=await (await c.handler({method:'GET',url:'https://example.test/api/listings?search=같은단지&trial=1'})).json();
  assert.equal(d.trial,true);assert.equal(d.items.length,1);assert.equal(d.items[0].lawd,'11680');
 });
+test('지역·동·단지명을 공백으로 조합하고 순서를 바꿔 검색한다',()=>{
+ const {c}=setup(true),item={apt:'동아아파트',umd:'성수동1가'};
+ assert.equal(c.listingSearchMatch(item,'서울 성동구','성수동 동아'),true);
+ assert.equal(c.listingSearchMatch(item,'서울 성동구','동아 성수동'),true);
+ assert.equal(c.listingSearchMatch(item,'서울 성동구','광진구 동아'),false);
+ assert.equal(c.listingSearchMatch({apt:'동아',umd:'광장동'},'서울 광진구','광진구 동아'),true);
+ assert.equal(c.listingSearchMatch({apt:'평촌 래미안 푸르지오',umd:'비산동'},'경기 안양 동안구','동안구 평촌래미안'),true);
+});
+test('API는 지역과 단지명을 함께 검색해 해당 지역만 반환한다',async()=>{
+ const {c}=setup(true);const d=await (await c.handler({method:'GET',url:'https://example.test/api/listings?search='+encodeURIComponent('동안구 같은단지')})).json();assert.equal(d.items.length,1);assert.equal(d.items[0].lawd,'41173');
+});

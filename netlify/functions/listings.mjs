@@ -71,6 +71,12 @@ export async function saveSnapshot(store, lawd, data) {
 }
 
 // 클라이언트가 보낸 항목을 필요한 필드만 남겨 정리한다(엉뚱한 값·과대 문자열이 저장되지 않도록).
+export function listingSearchMatch(item,region,query){
+  const norm=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').toLowerCase();
+  const fields=[item?.apt,item?.umd,region].map(norm);
+  return String(query||'').trim().split(/\s+/).filter(Boolean).every(word=>fields.some(field=>field.includes(norm(word))));
+}
+
 export function cleanItem(x) {
   const peak = num(x?.peak), ask = num(x?.ask), ex = num(x?.ex);
   if ((!(peak > 0) && x?.occupancy !== "presale") || !(ask > 0) || !(ex > 0)) return null;
@@ -116,8 +122,8 @@ export default async (request) => {
     if(q.has("search")) {
       const trial=q.get("trial")==="1" || (!isAdmin && !(await getSubscriberSession(request, secret)));
       if(trial && q.get("trial")!=="1")return json({error:"subscriber_required"},401);
-      const query=str(q.get("search"),80).replace(/\s/g,"").toLowerCase();
-      if(query.length<2)return json({error:"query_too_short"},400);
+      const query=str(q.get("search"),80).normalize("NFKC").trim();
+      if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
       const items=[],failed=[],floorMissing=[];
@@ -125,8 +131,8 @@ export default async (request) => {
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
         try{
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
-          if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&String(x.apt||'').replace(/\s/g,'').toLowerCase().includes(query)))floorMissing.push(t.gu);
-          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(String(x.apt||"").replace(/\s/g,"").toLowerCase().includes(query))items.push({...x,...t,asOf:data.asOf});
+          if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&listingSearchMatch(x,t.gu,query)))floorMissing.push(t.gu);
+          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query))items.push({...x,...t,asOf:data.asOf});
         }catch(e){failed.push(t.gu);}
       }));
       return json({items,failedRegions:failed,floorMissing,trial});
