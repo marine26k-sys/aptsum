@@ -30,3 +30,10 @@ test('현재 매물과 이력은 같은 지역·단지·전용면적·현재 금
  assert.equal(c.individualListingTrend(item,[{...valid,ask:20}]),null);
  assert.equal(c.individualListingTrend(item,[]),null);
 });
+test('이력 없는 평형도 같은 행 배치로 현재 호가와 전고점 차이를 표시하며 보합을 만들지 않는다',()=>{
+ const c=vm.createContext({listingNameHTML:()=> '가상 단지',listingInfoHTML:()=> '51평',listingTrendPeakChangeHTML:()=> '▼5.0억',listingTrendDate:x=>x,esc:String});
+ vm.runInContext(html.slice(html.indexOf('function listingWithoutHistoryHTML('),html.indexOf('function individualListingTrend(')),c);
+ const result=c.listingWithoutHistoryHTML({ask:50,peak:55},8,false,'2026.10.17');
+ assert.match(result,/listing-trend-row/);assert.match(result,/listing-trend-peak/);assert.match(result,/50.0억/);assert.match(result,/직전 이력 없음/);
+ assert.doesNotMatch(result,/보합|aria-expanded|toggleListingTrendHistory/);
+});
