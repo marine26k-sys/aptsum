@@ -10,7 +10,7 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 // 원본 엑셀·요약 데이터 모두 GitHub(=정적 배포 루트)에 올리지 않기 위한 구조다.
 //
 //   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
-//   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 12회 업로드의 최저 호가 이력 조회
+//   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 2주의 최저 호가 이력 조회
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
@@ -47,6 +47,17 @@ export function dailyHistoryIndex(index) {
     days.set(key, x);
   }
   return [...days.values()];
+}
+
+export function recentListingHistory(index, now = Date.now()) {
+  const day = new Date(now + 9 * 3600000).toISOString().slice(0,10);
+  const end=Date.parse(day+'T00:00:00Z'), start=end-13*86400000;
+  return dailyHistoryIndex(index).filter(x=>{
+    const digits=String(x.asOf||'').replace(/[^0-9]/g,'');
+    if(digits.length!==8)return false;
+    const time=Date.parse(`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}T00:00:00Z`);
+    return time>=start&&time<=end;
+  });
 }
 
 export async function saveSnapshot(store, lawd, data) {
@@ -128,8 +139,8 @@ export default async (request) => {
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
-      // 기준일별 마지막 업로드에서 최신 12일분만 전송한다. 저장된 스냅샷은 삭제하지 않는다.
-      const recent = dailyHistoryIndex(index).slice(-12);
+      // 한국시간 오늘 포함 최근 14일. 저장된 스냅샷은 삭제하지 않는다.
+      const recent = recentListingHistory(index);
       const recentIds = new Set(recent.map(x => x.uploadId));
       const detailIds = new Set(index.filter(x => recentIds.has(x.uploadId)).slice(-3).map(x => x.uploadId));
       const snapshots = await Promise.all(recent.map(async x => {

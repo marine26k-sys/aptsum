@@ -7686,7 +7686,9 @@ function toggleListingTrendHistory(button){
 }
 function listingTrendHistoryHTML(points, id){
   if(points.length <= 2) return '';
-  const recent=points.slice(-12).filter(p=>Number.isFinite(p.ask)&&p.ask>0);
+  const today=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  const end=Date.parse(today+'T00:00:00Z'),start=end-13*86400000;
+  const recent=points.filter(p=>{const digits=String(p.date||'').replace(/[^0-9]/g,'');const day=digits.length===8?Date.parse(`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}T00:00:00Z`):NaN;return day>=start&&day<=end&&Number.isFinite(p.ask)&&p.ask>0;});
   if(!recent.length)return '';
   const values=recent.map(p=>p.ask),min=Math.min(...values),max=Math.max(...values);
   const padding=Math.max((max-min)*0.15,max*0.005,0.05),lo=Math.max(0,min-padding),hi=max+padding;
@@ -7706,7 +7708,7 @@ function listingTrendHistoryHTML(points, id){
       <text x="8" y="15">단위: 억원</text>${grid}
       <polyline points="${coords}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
       ${markers}${ends}${labels}
-    </svg><p class="chart-note">기준일별 최저 호가 · 최근 ${recent.length}개 기록</p></div></div>`;
+    </svg><p class="chart-note">기준일별 최저 호가 · 최근 2주 · ${recent.length}개 기록</p></div></div>`;
 }
 function listingTrendPriceDigits(points, i, baselineAsk){
   const p=points[i];
@@ -7789,7 +7791,7 @@ function renderListingTrend(d){
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 직전 자료와 최신 자료의 최저 호가를 비교합니다. 비교 시작 금액 대비 변동률이 25% 이상인 항목은 상승·하락 모두 제외합니다. 항상 최신 업로드를 기준으로 조회하며, 기본 화면에는 최근 자료 2개를 표시하며, 펼치면 가격 이력을 최대 12개 표시합니다.</div>`;
+    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 직전 자료와 최신 자료의 최저 호가를 비교합니다. 비교 시작 금액 대비 변동률이 25% 이상인 항목은 상승·하락 모두 제외합니다. 항상 최신 업로드를 기준으로 조회하며, 기본 화면에는 최근 자료 2개를 표시하며, 펼치면 최근 2주(오늘 포함 14일)의 가격 이력을 표시합니다.</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
   requestAnimationFrame(fitListingTrendPrices);
