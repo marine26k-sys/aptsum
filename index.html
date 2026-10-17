@@ -7604,7 +7604,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
       d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 31)) };
     }
     if(individual){
-      d.individual=true;d.pyBand=null;d.filterLabel='';d.askRangeSelected=false;d.hhMin=LISTING_BUDGET_MIN_HH;
+      d.individual=true;d.complexName=targets[0].apt;d.complexRegion=`${targets[0].name} ${targets[0].umd}`.trim();d.pyBand=null;d.filterLabel='';d.askRangeSelected=false;d.hhMin=LISTING_BUDGET_MIN_HH;
       try{
         const history=await fetchListingHistory(targets[0].lawd);
         if(myToken!==searchToken)return;
@@ -7662,7 +7662,8 @@ function listingInfoHTML(x, multiRegion){
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
-      <h2>${esc(title || shortRegionLabel(d.scopeLabel||''))}</h2>
+      <h2>${esc(d.individual?d.complexName:(title || shortRegionLabel(d.scopeLabel||'')))}</h2>
+      ${d.individual?`<div style="text-align:center;font-size:13px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${esc(d.complexRegion||'')}</div>`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
         ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
