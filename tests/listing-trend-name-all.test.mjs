@@ -37,3 +37,18 @@ test('이력 없는 평형도 같은 행 배치로 현재 호가와 전고점 �
  assert.match(result,/listing-trend-row/);assert.match(result,/listing-trend-peak/);assert.match(result,/50.0억/);assert.match(result,/직전 이력 없음/);
  assert.doesNotMatch(result,/보합|aria-expanded|toggleListingTrendHistory/);
 });
+test('단지 분석은 금액대별 최소 세대수와 같은 기준으로 이력을 합친다',()=>{
+ const c=vm.createContext({LISTING_MIN_HH:300});
+ vm.runInContext(html.slice(html.indexOf('function listingTrendSnapshotRows('),html.indexOf('function syncListingTrendBelowPeak(')),c);
+ const item={nid:'small-complex',ex:59,hh:150,ask:10};
+ const snapshots=[{uploadId:'a',items:[{...item,ask:11}]},{uploadId:'b',items:[item]}];
+ assert.equal(c.listingTrendSnapshotRows(snapshots[1],snapshots,null,'11680','강남구',false,'all',100).length,1);
+ assert.equal(c.listingTrendSnapshotRows(snapshots[1],snapshots,null,'11680','강남구',false,'all').length,0);
+});
+test('입주 조건을 바꾸면 이전 요청과 후보 버튼을 함께 무효화한다',()=>{
+ let cleared=false,aborted=false;
+ const element={classList:{remove(){}},replaceChildren(){cleared=true},innerHTML:'old',disabled:true};
+ const c=vm.createContext({searchToken:7,searchAbortController:{abort(){aborted=true}},listingNameChoices:[{key:'old'}],lastData:{},document:{getElementById:()=>element}});
+ vm.runInContext(html.slice(html.indexOf('function listingOccupancyApply('),html.indexOf('async function fetchListings(')),c);
+ c.listingOccupancyApply();assert.equal(c.searchToken,8);assert.equal(cleared,true);assert.equal(aborted,true);assert.equal(c.listingNameChoices.length,0);assert.equal(c.lastData,null);
+});

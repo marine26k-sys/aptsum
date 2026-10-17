@@ -651,10 +651,14 @@ try {
       const activate = () => {
         verified = true;
         reveal();
+        const badge=document.getElementById('listingNameTrialBadge');if(badge)badge.hidden=true;
+        const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='전 지역에서 검색한 뒤 단지를 선택해 주세요.';
       };
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
         verified = false; master = false;
+        const badge=document.getElementById('listingNameTrialBadge');if(badge)badge.hidden=false;
+        const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.';
         if (applyCta) applyCta.style.display = '';
         if(issueGroup) issueGroup.style.display='';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
@@ -6942,6 +6946,8 @@ function listingOccupancyApply(){
   document.getElementById('loading').classList.remove('on');
   document.getElementById('btn').disabled=false;
   const result=document.getElementById('result');result.classList.remove('on');result.innerHTML='';
+  const candidates=document.getElementById('listingNameCandidates');if(candidates)candidates.replaceChildren();
+  listingNameChoices=[];
   lastData=null;
 }
 async function fetchListings(lawd){
@@ -7049,7 +7055,7 @@ function syncListingTrendUpload(choices){
   el.value=listingTrendUploadId;
 
 }
-function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down'){
+function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down',minHouseholds=LISTING_MIN_HH){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
   if(idx<1)return [];
   const previousUploadId=snapshots[idx-1].uploadId,byType=new Map();
@@ -7061,7 +7067,7 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
   const rows=[];
   for(const item of current.items||[]){
     const points=byType.get(`${item.nid}|${item.ex}`)||[];
-    if(points.length<2 || item.hh<LISTING_MIN_HH || (ls && !lsPyMatch(item,ls)))continue;
+    if(points.length<2 || item.hh<minHouseholds || (ls && !lsPyMatch(item,ls)))continue;
     const prev=points[points.length-2],now=points[points.length-1];
     if(prev.uploadId!==previousUploadId || now.uploadId!==current.uploadId || now.ask!==item.ask)continue;
     const older=points[points.length-3];
@@ -7604,9 +7610,10 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
         if(myToken!==searchToken)return;
         const snapshots=history.snapshots||[];
         const selectedId=targets[0].items[0]?.nid;
-        d.individualTrend=listingTrendSnapshotRows(current,snapshots,null,targets[0].lawd,targets[0].name,false,'all').filter(x=>x.nid===selectedId);
+        d.individualTrend=listingTrendSnapshotRows(current,snapshots,null,targets[0].lawd,targets[0].name,false,'all',LISTING_BUDGET_MIN_HH).filter(x=>x.nid===selectedId);
       }catch(error){if(error.auth)throw error;d.individualTrendError=true;}
     }
+    if(myToken!==searchToken)return;
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
     if(!silentScroll) window.scrollTo(0, 0);
