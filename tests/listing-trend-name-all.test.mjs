@@ -18,3 +18,7 @@ test('실매물 메뉴의 개별 단지 탭에서 현재 매물과 호가 이력
  assert.match(html,/개별 단지 · 현재 매물/);
  assert.match(html,/호가 변동 · 상승·하락·보합 전체/);
 });
+test('개별 단지는 검색과 입주 조건을 유지하고 숨긴 슬라이더를 적용하지 않는다',()=>{
+ assert.match(html,/#searchBox\[data-individual="true"\] > :not\(#listingIndividualSearch\):not\(#listingOccupancyFilters\)/);
+ assert.match(html,/const items=individual\?cohort:cohort.filter/);
+});

@@ -483,6 +483,9 @@ try {
 #searchBox[data-mode="listingfavorites"] #sliderFilterResetRow,
 #searchBox[data-mode="listingfavorites"] #regionChips,
 #searchBox[data-mode="listingfavorites"] #favRegions{display:none!important}
+/* 개별 단지 전용 화면은 검색과 입주 조건만 표시한다. */
+#searchBox[data-individual="true"] > :not(#listingIndividualSearch):not(#listingOccupancyFilters){display:none!important}
+#searchBox[data-individual="true"] ~ #favRegions{display:none!important}
 </style>
 <!-- Google AdSense(2026.09) — 사이트 연결·자동 광고용 코드. 광고 표시 여부·위치는 애드센스 관리 화면(광고 → 자동 광고)에서 켜고 끈다. -->
 <script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
@@ -2604,6 +2607,7 @@ function setMode(m, fromRestore){
   document.getElementById('listingNameQuery').placeholder='단지명 2자 이상 입력';
   document.getElementById('listingNameQuery').setAttribute('aria-label','전 지역 단지명 검색');
   const individualListing=new URLSearchParams(location.search).get('individual')==='1';
+  document.getElementById('searchBox').dataset.individual=String(m==='listingbudget'&&individualListing);
   const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
   document.getElementById('listingIndividualSearch').style.display=nameSupported&&individualListing?'':'none';
   if(m==='listingbudget'&&individualListing)document.querySelector('.brand-description').textContent='개별 단지';
@@ -7573,7 +7577,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     const ls=lsGet();
     const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
-    const items=cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
+    const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       nameSearch,askRangeSelected:lsAskText(ls)!=='전체',
       scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
@@ -7590,7 +7594,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
       d = { ...base, rows: items.filter(x => x.hh >= LISTING_BUDGET_MIN_HH && !(x.peak > 0 && Math.round((x.ask - x.peak) / x.peak * 100) >= 31)) };
     }
     if(individual){
-      d.individual=true;
+      d.individual=true;d.pyBand=null;d.filterLabel='';d.askRangeSelected=false;d.hhMin=LISTING_BUDGET_MIN_HH;
       try{
         const history=await fetchListingHistory(targets[0].lawd);
         if(myToken!==searchToken)return;
