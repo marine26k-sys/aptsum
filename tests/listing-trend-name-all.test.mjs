@@ -16,9 +16,17 @@ test('실매물 메뉴의 개별 단지 탭에서 현재 매물과 호가 이력
  assert.doesNotMatch(html,/id="listingNameSearchLink"/);
  assert.match(html,/d.individualTrend=listingTrendSnapshotRows/);
  assert.match(html,/단지 분석 · 현재 매물/);
- assert.match(html,/호가 변동 · 상승·하락·보합 전체/);
+ assert.match(html,/단지 분석 · 현재 매물과 호가 변동/);
 });
 test('개별 단지는 검색과 입주 조건을 유지하고 숨긴 슬라이더를 적용하지 않는다',()=>{
  assert.match(html,/#searchBox\[data-individual="true"\] > :not\(#listingIndividualSearch\):not\(#listingOccupancyFilters\)/);
  assert.match(html,/const items=individual\?cohort:cohort.filter/);
+});
+test('현재 매물과 이력은 같은 지역·단지·전용면적·현재 금액일 때만 합친다',()=>{
+ const c=vm.createContext({});vm.runInContext(html.slice(html.indexOf('function individualListingTrend('),html.indexOf('function renderListingBudget(')),c);
+ const item={lawd:'11710',nid:'synthetic',ex:39,ask:18.5};
+ const valid={...item,prevAsk:19,points:[]};
+ assert.equal(c.individualListingTrend(item,[{...valid,ex:59},valid]),valid);
+ assert.equal(c.individualListingTrend(item,[{...valid,ask:20}]),null);
+ assert.equal(c.individualListingTrend(item,[]),null);
 });

@@ -7833,6 +7833,9 @@ function showMoreListingBudget(){
   renderListingBudget(lastData,listingBudgetVisibleCount+100);
 }
 let listingBudgetVisibleCount=100;
+function individualListingTrend(item, trends){
+  return (trends||[]).find(x=>String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&x.lawd===item.lawd&&x.ask===item.ask)||null;
+}
 function renderListingBudget(d,limit=100){
 
   const presale=listingOccupancy()==='presale';
@@ -7854,26 +7857,28 @@ function renderListingBudget(d,limit=100){
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·${listingFloorLabel()} 매물)</div>`
     : list.map((x,i)=>{
+        if(d.individual){const trend=individualListingTrend(x,d.individualTrend);if(trend)return listingTrendRowHTML({...trend,...x,points:trend.points,prevAsk:trend.prevAsk,drop:trend.drop},i,multiRegion,'all');}
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion)}</small></span>
         <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${drop===null ? '<small>실거래 전고점 없음</small>' : `<small>전고점 ${x.peak.toFixed(1)}억${x.peakYm?` (${peakYmLabel(x.peakYm)})`:''}</small><small>${chgHTML(x.ask - x.peak, drop)}</small>`}</span>
-      </div>${rkSep(i,list.length)}`; }).join('');
+      </div>${d.individual?`<div class="rng" style="margin:4px 0 10px">${d.individualTrendError?'호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.':'비교 가능한 직전 호가 이력이 없습니다.'}</div>`:''}${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
-    ${listingHeaderHTML(d, d.individual?'단지 분석 · 현재 매물':'금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
+    ${listingHeaderHTML(d, d.individual?'단지 분석 · 현재 매물과 호가 변동':'금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':'금액대별 매물'} (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
+      ${d.individual?listingTrendGraphLegend():''}
       ${body}
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
   </div>
-  ${d.individual?`<div class="card"><div class="sec"><h3>호가 변동 · 상승·하락·보합 전체</h3>${listingTrendGraphLegend()}${d.individualTrendError?'<p>호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.</p>':d.individualTrend?.length?d.individualTrend.map((x,i)=>listingTrendRowHTML(x,i,false,'all')).join(''):'<p>비교 가능한 직전 호가 이력이 없습니다.</p>'}</div></div>`:''}
+
   <div class="src-note">호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
