@@ -26,3 +26,12 @@ test('지역·동·단지명을 공백으로 조합하고 순서를 바꿔 검�
 test('API는 지역과 단지명을 함께 검색해 해당 지역만 반환한다',async()=>{
  const {c}=setup(true);const d=await (await c.handler({method:'GET',url:'https://example.test/api/listings?search='+encodeURIComponent('동안구 같은단지')})).json();assert.equal(d.items.length,1);assert.equal(d.items[0].lawd,'41173');
 });
+
+test('단지명 중간 단어를 생략해도 입력한 글자 순서로 검색된다',()=>{
+ const {c}=setup(true),item={apt:'롯데캐슬골드파크',umd:'독산동'};
+ assert.equal(c.listingSearchMatch(item,'서울 금천구','롯데골드'),true);
+ assert.equal(c.listingSearchMatch(item,'서울 금천구','금천구 롯데골드'),true);
+ assert.equal(c.listingSearchMatch(item,'서울 금천구','롯데 골드'),true);
+ assert.equal(c.listingSearchMatch(item,'서울 금천구','골드롯데'),false);
+ assert.equal(c.listingSearchMatch(item,'서울 금천구','광진구 롯데골드'),false);
+});
