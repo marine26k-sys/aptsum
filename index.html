@@ -1108,11 +1108,12 @@ try {
     </div>
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b></div>
-      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
+      <div style="position:relative">
+      <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="listingNameKeydown(event)" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="listingNameCandidates" style="width:100%;box-sizing:border-box" autocomplete="off">
+      <div id="listingNameCandidates" role="listbox" hidden style="position:absolute;top:100%;left:0;right:0;z-index:60;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 8px 20px #102f4422" aria-live="polite"></div>
+      </div>
       <div class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
-      <div id="listingNameCandidates" aria-live="polite"></div>
-      <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
     </section>
     <div id="listingTrendDirectionFilters" class="ls-filters" style="display:none">
       <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">변동 방향
@@ -7507,14 +7508,19 @@ function isIndividualListing(){return new URLSearchParams(location.search).get('
 function openListingNameSearch(){document.getElementById('listingIndividualSearch').style.display='';document.getElementById('listingNameQuery').focus();}
 function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
 function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
+let listingNameTimer;
+function hideListingNameCandidates(){document.getElementById('listingNameCandidates').hidden=true;document.getElementById('listingNameQuery').setAttribute('aria-expanded','false');}
+function listingNameKeydown(event){if(event.key==='Escape'){hideListingNameCandidates();return;}if(event.key==='ArrowDown'){event.preventDefault();document.querySelector('#listingNameCandidates button')?.focus();}if(event.key==='Enter'){event.preventDefault();search();}}
 function listingNameChanged(){
+  clearTimeout(listingNameTimer);
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
-  listingOccupancyApply();
+  hideListingNameCandidates();listingOccupancyApply();
+  if(document.getElementById('listingNameQuery').value.trim().length>=2){const token=searchToken;listingNameTimer=setTimeout(()=>resolveListingName(token).catch(error=>{if(token!==searchToken)return;const box=document.getElementById('listingNameCandidates');box.textContent=error.auth?'실매물 이용권 로그인 후 검색해 주세요.':'검색 목록을 불러오지 못했습니다. 다시 입력해 주세요.';box.hidden=false;}),300);}
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
-  if(listingNameSelected){search({silentScroll:true});}
+  if(listingNameSelected){clearTimeout(listingNameTimer);document.getElementById('listingNameQuery').value=listingNameSelected.apt;hideListingNameCandidates();search({silentScroll:true});}
 }
 async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
@@ -7523,7 +7529,7 @@ async function resolveListingName(myToken){
   const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=${listingOccupancy()}&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
   if(response.status===401)throw Object.assign(new Error('전 지역 단지 검색은 실매물 이용권이 필요합니다.'),{auth:true});
   if(!response.ok)throw new Error(`HTTP ${response.status}`);
-  const data=await response.json();if(myToken!==searchToken)return null;
+  const data=await response.json();if(myToken!==searchToken||query!==document.getElementById('listingNameQuery').value.trim())return null;
   if(data.floorMissing?.length){showError('저층 포함 자료가 없어 엑셀 재업로드가 필요합니다. ('+esc(data.floorMissing.join(', '))+')');return null;}
   const grouped=new Map();
   for(const x of data.items||[]){const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
@@ -7531,9 +7537,11 @@ async function resolveListingName(myToken){
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
   const box=document.getElementById('listingNameCandidates');box.replaceChildren();
+  if(listingNameSelected){hideListingNameCandidates();return listingNameSelected;}
+  box.hidden=false;document.getElementById('listingNameQuery').setAttribute('aria-expanded','true');
   const info=document.createElement('div');info.className='rng';info.textContent=listingNameSelected?'선택한 단지 · '+listingNameSelected.apt:listingNameChoices.length?'단지를 선택해 주세요.':'검색 결과가 없습니다.';box.append(info);
   if(data.failedRegions?.length){const warning=document.createElement('div');warning.className='rng';warning.textContent='조회 실패 지역: '+data.failedRegions.join(', ');box.append(warning);}
-  listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';button.textContent=`${x.apt} · ${x.name} ${x.umd}`;button.style.cssText=`display:block;width:100%;text-align:left;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
+  listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';button.setAttribute('role','option');button.onkeydown=event=>{if(event.key==='ArrowDown'){event.preventDefault();button.nextElementSibling?.focus();}if(event.key==='ArrowUp'){event.preventDefault();(button.previousElementSibling?.tagName==='BUTTON'?button.previousElementSibling:document.getElementById('listingNameQuery')).focus();}if(event.key==='Escape'){hideListingNameCandidates();document.getElementById('listingNameQuery').focus();}};button.textContent=`${x.apt} · ${x.name} ${x.umd}`;button.style.cssText=`display:block;width:100%;text-align:left;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
   return listingNameSelected;
 }
 async function searchListingTab(myToken, lawd, tabMode, silentScroll){
