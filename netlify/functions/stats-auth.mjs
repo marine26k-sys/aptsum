@@ -45,7 +45,7 @@ function sign(payload, secret) {
 
 function createSession(secret) {
   const payload = Buffer.from(
-    JSON.stringify({ kind: "stats", version: 1 })
+    JSON.stringify({ kind: "stats", version: 2, credential: sign("stats-credential:v2", process.env.STATS_ACCESS_CODE) })
   ).toString("base64url");
   return `${payload}.${sign(payload, secret)}`;
 }

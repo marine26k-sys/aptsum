@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter, createPaymentRef, readPaymentRef, createPaymentParameters,
+  CLAIM_MAX_AGE_MS, claimCanRevealCode, validateApplication, createClaim, readClaim, newApplication, saveApplication, handleFeedback, applyConfig, applyProducts, expiryDateAfter, createPaymentRef, readPaymentRef, createPaymentParameters,
 } from '../shared/applications.mjs';
 
 function fakeStore() {
@@ -258,3 +258,13 @@ test('refund overlapping code issuance retries and then revokes the issued code'
   assert.equal((await feed({pay_state:'9'})).result,'refunded');
   assert.equal(subStore.m.get(`sub:${result.subId}`).revoked,true);
 });
+
+ test('결제 확인 토큰 만료와 재발급 차단은 개인 세션을 변경하지 않는다',()=>{
+ const now=Date.now(), app={createdAt:now};
+ const token=createClaim('synthetic-secret','test-id',now);
+ assert.equal(readClaim('synthetic-secret',token,now),'test-id');
+ assert.equal(readClaim('synthetic-secret',token,now+CLAIM_MAX_AGE_MS),null);
+ assert.equal(claimCanRevealCode(app,{gen:1},now),true);
+ assert.equal(claimCanRevealCode(app,{gen:2},now),false);
+ assert.equal(claimCanRevealCode(app,{gen:1},now+CLAIM_MAX_AGE_MS),false);
+ });
