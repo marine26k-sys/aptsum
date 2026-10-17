@@ -7764,9 +7764,11 @@ function listingTrendPeakChangeHTML(x){
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   const comparisonPeak='twoWeekPeak' in x?x.twoWeekPeak:x.peak,comparisonLabel='twoWeekPeak' in x?'최근 2주 호가 최고가':'최근 3년 최고가';
+  const peakPoint=x.twoWeekPeak>0?[...x.points.slice(0,-1)].reverse().find(p=>p.ask===x.twoWeekPeak)||x.points.find(p=>p.ask===x.twoWeekPeak):null;
+  if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
   const precision=listingTrendPrecision([{ask:x.prevAsk},{ask:x.ask}]);
-  const recent = x.points.slice(-2), historyId=`listing-history-${i}`;
+  const recent = peakPoint?[peakPoint,x.points[x.points.length-1]]:x.points.slice(-2), historyId=`listing-history-${i}`;
   const prices=recent.map((p,j)=>{
     const latest=j===recent.length-1, expandable=latest && x.points.length>2;
     const priceDigits=listingTrendPriceDigits(recent,j,x.prevAsk);
@@ -7920,7 +7922,7 @@ function renderListingBudget(d,limit=100){
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
-      ${d.individual?listingTrendGraphLegend()+'<div class="rng">비교 기준: 최근 2주간 날짜별 최저 호가 중 최고 금액</div>':''}
+      ${d.individual?listingTrendGraphLegend()+'<div class="rng">비교 기준: 최근 2주 최고 호가 시점 → 최신 호가 · 변동 금액도 같은 기준</div>':''}
       ${body}
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>

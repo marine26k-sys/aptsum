@@ -8,3 +8,10 @@ test('호가 이력은 최근 두 자료와 변동 금액을 한 줄에 표시�
  assert.match(s,/listing-trend-change[^]*class="val"[^]*▼1\.0억<\/span><\/span>/);
  assert.match(s,/aria-expanded="false"/);
 });
+
+test('개별 단지는 최고 호가 날짜와 최신 날짜 및 그 차액을 같은 기준으로 표시한다',()=>{
+ const c=vm.createContext({esc:String,listingNameHTML:()=> '가상 단지',listingInfoHTML:()=>'',listingTrendPrecision:()=>1,listingTrendPriceDigits:()=>1,listingTrendDate:x=>x,listingTrendHistoryHTML:()=>'',listingTrendPeakChangeHTML:()=>''});
+ vm.runInContext(html.slice(html.indexOf('function listingTrendRowHTML('),html.indexOf('function listingGapPriceHTML(')),c);
+ const result=c.listingTrendRowHTML({apt:'가상 단지',ask:11.5,prevAsk:11.5,drop:0,twoWeekPeak:11.9,points:[{date:'10/9',ask:11.9},{date:'10/16',ask:11.5},{date:'10/17',ask:11.5}]},0,false,'all');
+ assert.match(result,/10\/9/);assert.match(result,/11.9억/);assert.match(result,/10\/17/);assert.match(result,/▼0.4억/);assert.doesNotMatch(result,/10\/16|보합/);
+});
