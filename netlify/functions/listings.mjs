@@ -114,13 +114,14 @@ export default async (request) => {
     const floorScope=q.get("floorScope")||"mid";
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
-      if(!isAdmin && !(await getSubscriberSession(request, secret)))return json({error:"subscriber_required"},401);
+      const trial=!isAdmin && !(await getSubscriberSession(request, secret));
+      if(trial && q.get("trial")!=="1")return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).replace(/\s/g,"").toLowerCase();
       if(query.length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
       const items=[],failed=[],floorMissing=[];
-      const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd})));
+      const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd}))).filter(t=>!trial||TRIAL_LAWDS.has(t.lawd));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
         try{
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
@@ -128,7 +129,7 @@ export default async (request) => {
           for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(String(x.apt||"").replace(/\s/g,"").toLowerCase().includes(query))items.push({...x,...t,asOf:data.asOf});
         }catch(e){failed.push(t.gu);}
       }));
-      return json({items,failedRegions:failed,floorMissing});
+      return json({items,failedRegions:failed,floorMissing,trial});
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);

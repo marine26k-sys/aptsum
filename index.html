@@ -1109,7 +1109,7 @@ try {
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b></div>
       <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 2자 이상 입력" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
-      <div class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
+      <div id="listingNameSearchHelp" class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
       <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
@@ -2606,6 +2606,7 @@ function setMode(m, fromRestore){
   listingFloorScope='mid';syncListingFloor();
   document.getElementById('listingNameQuery').placeholder='단지명 2자 이상 입력';
   document.getElementById('listingNameQuery').setAttribute('aria-label','전 지역 단지명 검색');
+  document.getElementById('listingNameSearchHelp').textContent=isListingTrial()?'무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.':'전 지역에서 검색한 뒤 단지를 선택해 주세요.';
   const individualListing=new URLSearchParams(location.search).get('individual')==='1';
   document.getElementById('searchBox').dataset.individual=String(m==='listingbudget'&&individualListing);
   const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
@@ -7520,7 +7521,7 @@ async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
   if(query.length<2){showError('단지명을 2자 이상 입력해 주세요.');return null;}
   const selected=listingNameSelected;
-  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=${listingOccupancy()}&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
+  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=${listingOccupancy()}&floorScope=${listingFloor()}${isListingTrial()?'&trial=1':''}`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
   if(response.status===401)throw Object.assign(new Error('전 지역 단지 검색은 실매물 이용권이 필요합니다.'),{auth:true});
   if(!response.ok)throw new Error(`HTTP ${response.status}`);
   const data=await response.json();if(myToken!==searchToken)return null;
@@ -7531,7 +7532,7 @@ async function resolveListingName(myToken){
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
   const box=document.getElementById('listingNameCandidates');box.replaceChildren();
-  const info=document.createElement('div');info.className='rng';info.textContent=listingNameSelected?'선택한 단지 · '+listingNameSelected.apt:listingNameChoices.length?'아래 단지를 눌러 분석 결과를 확인하세요.':'검색 결과가 없습니다.';info.style.cssText='margin:12px 0 8px;padding:10px 12px;border-radius:10px;background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800;line-height:1.5';box.append(info);
+  const info=document.createElement('div');info.className='rng';info.textContent=listingNameSelected?'선택한 단지 · '+listingNameSelected.apt:listingNameChoices.length?(data.trial?'무료 체험 · 강남구 — 아래 단지를 눌러 분석 결과를 확인하세요.':'아래 단지를 눌러 분석 결과를 확인하세요.'):(data.trial?'강남구 체험 검색 결과가 없습니다. 다른 지역은 실매물 이용권이 필요합니다.':'검색 결과가 없습니다.');info.style.cssText='margin:12px 0 8px;padding:10px 12px;border-radius:10px;background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800;line-height:1.5';box.append(info);
   if(data.failedRegions?.length){const warning=document.createElement('div');warning.className='rng';warning.textContent='조회 실패 지역: '+data.failedRegions.join(', ');box.append(warning);}
   listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';const label=document.createElement('span');label.textContent=`${x.apt} · ${x.name} ${x.umd}`;label.style.cssText='min-width:0;overflow-wrap:anywhere';const action=document.createElement('span');action.textContent=listingNameSelected?.key===x.key?'선택됨 ✓':'선택하여 조회 ›';action.style.cssText='flex:none;font-size:12px;font-weight:800;color:var(--teal)';button.append(label,action);button.setAttribute('aria-label',`${x.apt} ${x.name} ${x.umd} 선택하여 조회`);button.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:14px;margin-top:8px;border:1.5px solid var(--teal-light);border-radius:12px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
   return listingNameSelected;
