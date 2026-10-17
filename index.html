@@ -653,13 +653,13 @@ try {
       const activate = () => {
         verified = true;
         reveal();
-        const badge=document.getElementById('listingNameTrialBadge');if(badge)badge.hidden=true;
+        if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(false);
         const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='전 지역에서 검색한 뒤 단지를 선택해 주세요.';
       };
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
         verified = false; master = false;
-        const badge=document.getElementById('listingNameTrialBadge');if(badge)badge.hidden=false;
+        if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(true);
         const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.';
         if (applyCta) applyCta.style.display = '';
         if(issueGroup) issueGroup.style.display='';
@@ -957,6 +957,7 @@ try {
   </div>
 
   <div class="search-box" id="searchBox">
+    <div id="listingSearchTrial" hidden style="text-align:right;margin:0 0 8px"><span style="display:inline-block;padding:3px 9px;border-radius:10px;background:#39FF14;color:#0B3D02;font-size:11px;font-weight:800">강남구 무료체험</span></div>
     <div class="row2" id="singleRow">
       <select id="lawd" style="flex:1;min-width:0"></select>
       <button type="button" class="rgpick" id="rgPick" onclick="openRegionPicker()"><span id="rgPickTxt">지역 선택</span><b>▼</b></button>
@@ -2482,6 +2483,13 @@ function needsSubscriberSession(m){
 const LISTING_TRIAL_LAWD = '11680';
 function isListingMode(m){ return m==='listingfavorites'||m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
+function syncListingSearchTrialBadge(trial){
+  const box=document.getElementById('searchBox'),badge=document.getElementById('listingSearchTrial');
+  if(!box||!badge)return;
+  const m=box.dataset.mode,individual=box.dataset.individual==='true';
+  badge.hidden=!trial||!isListingMode(m)||m==='listingfavorites'||individual;
+  const individualBadge=document.getElementById('listingNameTrialBadge');if(individualBadge)individualBadge.hidden=!trial;
+}
 // 무료 체험 사용자가 강남구 외 지역(복수 지역·전체 포함)을 고른 경우 true
 function listingTrialBlocked(lawd){
   if(!isListingTrial()) return false;
@@ -2616,6 +2624,7 @@ function setMode(m, fromRestore){
   document.getElementById('listingNameSearchHelp').textContent=isListingTrial()?'무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.':'전 지역에서 검색한 뒤 단지를 선택해 주세요.';
   const individualListing=new URLSearchParams(location.search).get('individual')==='1';
   document.getElementById('searchBox').dataset.individual=String(m==='listingbudget'&&individualListing);
+  syncListingSearchTrialBadge(isListingTrial());
   const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
   document.getElementById('listingIndividualSearch').style.display=nameSupported&&individualListing?'':'none';
   if(m==='listingbudget'&&individualListing)document.querySelector('.brand-description').textContent='단지 분석';
