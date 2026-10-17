@@ -413,7 +413,7 @@ function render(){
       ${provTabsHTML}
       ${analysisTabsHTML}
       <div class="tier-filters">
-        <input id="dongQInput" type="text" placeholder="동 이름 검색 (예: 반포동, 강남구)" value="${esc(tierState.dongQ)}" oninput="setDongQuery(this.value)">
+        <input id="dongQInput" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();this.blur()}" type="text" placeholder="동 이름 검색 (예: 반포동, 강남구)" value="${esc(tierState.dongQ)}" oninput="setDongQuery(this.value)">
       </div>
       <div id="dongRankArea"></div>
     `;
@@ -427,7 +427,7 @@ function render(){
 
     <div class="tier-filters">
       <select id="tierRegionSel" onchange="setRegion(this.value)">${tierRegionOptions()}</select>
-      <input id="tierQInput" type="text" placeholder="단지명·구·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
+      <input id="tierQInput" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();this.blur()}" type="text" placeholder="단지명·구·동 이름 검색" value="${esc(tierState.q)}" oninput="setQuery(this.value)">
     </div>
 
     <div id="tierBodyArea"></div>
