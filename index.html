@@ -1120,6 +1120,7 @@ try {
       <div id="listingNameSearchHelp" class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
+      <div id="listingRecentComplexes" style="margin-top:12px"></div>
       <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
     </section>
     <div id="listingTrendDirectionFilters" class="ls-filters" style="display:none">
@@ -2629,7 +2630,7 @@ function setMode(m, fromRestore){
   syncListingSearchTrialBadge(isListingTrial());
   const nameSupported=['listingbudget','listingtrend','listingrise'].includes(m);
   document.getElementById('listingIndividualSearch').style.display=nameSupported&&individualListing?'':'none';
-  if(m==='listingbudget'&&individualListing)document.querySelector('.brand-description').textContent='단지 분석';
+  if(m==='listingbudget'&&individualListing){document.querySelector('.brand-description').textContent='단지 분석';renderListingRecentComplexes();}
   document.getElementById('listingBudgetFavorites').style.display = m==='listingbudget' ? '' : 'none';
   if(m==='listingbudget')renderListingBudgetFavorites();
   document.getElementById('listingOccupancyFilters').style.display = isListingMode(m) ? '' : 'none';
@@ -7533,6 +7534,28 @@ function listingBudgetNewKeys(current,snapshots){
   const previous=new Set((snapshots[idx-1].items||[]).map(x=>`${x.nid}|${x.ex}`));
   return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
 }
+function getListingRecentComplexes(){
+  try{const rows=JSON.parse(localStorage.getItem('aptsum:listing-recent-complexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.key==='string'&&x.key.length<=150&&/^\d{5}$/.test(x.lawd)&&typeof x.apt==='string'&&x.apt.length<=100&&typeof x.region==='string'&&x.region.length<=100).slice(0,5):[];}catch{return [];}
+}
+function rememberListingRecentComplex(selected){
+  const entry={key:selected.key,lawd:selected.lawd,apt:selected.apt,region:[selected.name,selected.umd].filter(Boolean).join(' ')};
+  const rows=[entry,...getListingRecentComplexes().filter(x=>x.key!==entry.key)].slice(0,5);
+  try{localStorage.setItem('aptsum:listing-recent-complexes',JSON.stringify(rows));}catch{}
+  renderListingRecentComplexes();
+}
+function renderListingRecentComplexes(){
+  const box=document.getElementById('listingRecentComplexes');if(!box)return;box.replaceChildren();
+  const rows=getListingRecentComplexes();if(!rows.length)return;
+  const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;color:var(--sub);font-size:11px';
+  const title=document.createElement('span');title.textContent='최근 검색한 단지 · 이 브라우저에 저장';
+  const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);font:inherit;cursor:pointer';clear.onclick=()=>{try{localStorage.removeItem('aptsum:listing-recent-complexes');}catch{}renderListingRecentComplexes();};header.append(title,clear);box.append(header);
+  const chips=document.createElement('div');chips.className='chips';
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';button.textContent=x.apt+' · '+x.region;button.style.cssText='max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere';button.onclick=()=>openListingRecentComplex(x);chips.append(button);});box.append(chips);
+}
+function openListingRecentComplex(entry){
+  if(isListingTrial()&&entry.lawd!==LISTING_TRIAL_LAWD){showError(LISTING_TRIAL_MSG);return;}
+  document.getElementById('listingNameQuery').value=entry.apt;listingNameChanged();listingNameRestoreKey=entry.key;search({silentScroll:true});
+}
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
 function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
 function openListingNameSearch(focusInput=true){document.getElementById('listingIndividualSearch').style.display='';if(focusInput)document.getElementById('listingNameQuery').focus();}
@@ -7638,6 +7661,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
       }catch(error){if(error.auth)throw error;d.individualTrendError=true;}
     }
     if(myToken!==searchToken)return;
+    if(individual&&d.rows.length)rememberListingRecentComplex(targets[0]);
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
     if(!silentScroll) window.scrollTo(0, 0);
