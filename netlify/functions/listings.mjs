@@ -79,7 +79,7 @@ export function listingSearchMatch(item,region,query){
 }
 
 export function cleanItem(x) {
-  const peak = num(x?.peak), ask = num(x?.ask), ex = num(x?.ex);
+  const peak = num(x?.peak), ask = num(x?.ask), ex = Math.floor(num(x?.ex));
   if ((!(peak > 0) && x?.occupancy !== "presale") || !(ask > 0) || !(ex > 0)) return null;
   const url = str(x.url, 300);
   return {

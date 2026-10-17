@@ -86,3 +86,9 @@ test('floor scopes keep separate minimums, matching links and low-only types',()
  assert.equal(snapshotForHistory({items},'available').items.length,1);
  assert.equal(listingItemsForFloor([{ask:10,occupancy:'available'}],'available','all').length,0);
 });
+
+test('전용면적은 소수점을 버려 그룹화하고 원본 반올림으로 인접 면적에 합치지 않는다',()=>{
+ const d=summarize([{...base,'전용면적(㎡)':84.23,'매매가(억)':15},{...base,'전용면적(㎡)':84.99,'매매가(억)':14},{...base,'전용면적(㎡)':85.01,'매매가(억)':16}]);
+ const rows=d.regions['서울시|강남구'];assert.equal(rows.length,2);assert.equal(rows.find(x=>x.ex===84).n,2);assert.equal(rows.find(x=>x.ex===84).ask,14);assert.equal(rows.find(x=>x.ex===85).n,1);
+ assert.equal(cleanItem({nid:'1',ex:84.99,peak:20,ask:15}).ex,84);
+});

@@ -637,7 +637,7 @@ function summarizeListings(rows){
     const region = `${String(r["시"]).trim()}|${String(r["구"]).trim()}`;
     const d = String(r["확인일"] ?? "").trim();
     if(d > asOf) asOf = d;
-    const ex = Math.round(+r["전용면적(㎡)"]);
+    const ex = Math.floor(+r["전용면적(㎡)"]);
     if(!(ex > 0)) continue;
     const g = groups.get(region) || new Map();
     groups.set(region, g);
