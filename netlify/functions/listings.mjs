@@ -74,7 +74,7 @@ export async function saveSnapshot(store, lawd, data) {
 export function listingSearchMatch(item,region,query){
   const norm=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').toLowerCase();
   const fields=[item?.apt,item?.umd,region].map(norm);
-  const abbreviated=word=>{let offset=0;for(const letter of word){const at=fields[0].indexOf(letter,offset);if(at<0)return false;offset=at+letter.length;}return true;};
+  const abbreviated=word=>{if([...word].length<4)return false;let offset=0;for(const letter of word){const at=fields[0].indexOf(letter,offset);if(at<0)return false;offset=at+letter.length;}return true;};
   return String(query||'').trim().split(/\s+/).filter(Boolean).every(word=>{const key=norm(word);return fields.some(field=>field.includes(key))||abbreviated(key);});
 }
 

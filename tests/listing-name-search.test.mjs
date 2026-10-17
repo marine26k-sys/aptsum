@@ -35,3 +35,11 @@ test('단지명 중간 단어를 생략해도 입력한 글자 순서로 검색�
  assert.equal(c.listingSearchMatch(item,'서울 금천구','골드롯데'),false);
  assert.equal(c.listingSearchMatch(item,'서울 금천구','광진구 롯데골드'),false);
 });
+
+test('짧은 단지명은 떨어진 글자를 연결하지 않는다',()=>{
+ const {c}=setup(true);
+ assert.equal(c.listingSearchMatch({apt:'광교호반베르디움트라엘',umd:'이의동'},'경기 수원 영통구','르엘'),false);
+ assert.equal(c.listingSearchMatch({apt:'잠실르엘',umd:'신천동'},'서울 송파구','르엘'),true);
+ assert.equal(c.listingSearchMatch({apt:'대치르엘',umd:'대치동'},'서울 강남구','르엘'),true);
+ assert.equal(c.listingSearchMatch({apt:'롯데캐슬골드파크'},'서울 금천구','롯데골드'),true);
+});
