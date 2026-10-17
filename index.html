@@ -4899,7 +4899,12 @@ async function complexSearchTargets(name,targets,includePartial=false){
 function missingCompareInputs(inputs,narrowed,matched){
   return inputs.filter((input,i)=>!matched.some(hit=>hit.name===input.name && narrowed[i].some(target=>target.lawd===hit.lawd)));
 }
+function dismissSearchKeyboard(){
+  const active=document.activeElement;
+  if(active?.matches('input.q, #q, .cmp-row input, #listingNameQuery'))active.blur();
+}
 async function search(opts){
+  dismissSearchKeyboard();
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
@@ -7124,7 +7129,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   const continuous=false;
   try{
     let selectedComplex=null;
-    if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch();return;}targets=[selectedComplex];}
+    if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch(false);return;}targets=[selectedComplex];}
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
       const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
@@ -7523,7 +7528,7 @@ function listingBudgetNewKeys(current,snapshots){
 }
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
 function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
-function openListingNameSearch(){document.getElementById('listingIndividualSearch').style.display='';document.getElementById('listingNameQuery').focus();}
+function openListingNameSearch(focusInput=true){document.getElementById('listingIndividualSearch').style.display='';if(focusInput)document.getElementById('listingNameQuery').focus();}
 function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
 function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
 function listingNameChanged(){
@@ -7565,7 +7570,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('loading').classList.add('on');
   document.getElementById('btn').disabled = true;
   try{
-    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){openListingNameSearch();return;}targets=[selected];}
+    if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){openListingNameSearch(false);return;}targets=[selected];}
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
