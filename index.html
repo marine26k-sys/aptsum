@@ -4908,6 +4908,14 @@ function dismissSearchKeyboard(){
   if(active?.matches('input.q, #q, .cmp-row input, #listingNameQuery'))active.blur();
 }
 async function search(opts){
+  const requestId=search.requestId=(search.requestId||0)+1;
+  const result=document.getElementById('result'),previousResult=result.firstChild,requestedMode=mode;
+  await runSearch(opts);
+  if(requestId===search.requestId&&(!opts?.silentScroll||opts?.scrollToListingResult)&&mode===requestedMode&&result?.classList?.contains('on')&&result.firstChild!==previousResult){
+    result.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+async function runSearch(opts){
   dismissSearchKeyboard();
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
@@ -6201,7 +6209,7 @@ function renderComplex(d){
   <div class="card">
     <div class="card-hd">
       <div style="position:absolute;top:12px;right:14px;display:flex;gap:6px">
-        <button id="favBtn" onclick="toggleFav(sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(sel.value,d.name)?'★':'☆'}</button>
+        <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
       <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
@@ -7577,7 +7585,7 @@ function listingNameChanged(){
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
-  if(listingNameSelected){search({silentScroll:true});}
+  if(listingNameSelected){search({silentScroll:true,scrollToListingResult:true});}
 }
 async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
@@ -7804,7 +7812,7 @@ function listingTrendPeakChangeHTML(x){
  return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.round(Math.abs(pct))}%)</span>`;
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
-  const comparisonPeak=x.peak,comparisonLabel='최근 3년 최고가';
+  const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
   const peakPoint=x.previousPricePoint||null;
   if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
@@ -7917,7 +7925,7 @@ function showMoreListingBudget(){
 }
 let listingBudgetVisibleCount=100;
 function listingWithoutHistoryHTML(x,i,multiRegion,asOf,failed=false){
-  const comparisonPeak=x.peak,comparisonLabel='최근 3년 최고가';
+  const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x,true)}<small>${listingInfoHTML(x,multiRegion)}</small></span></div>
     ${comparisonPeak>0?`<div class="listing-trend-peak">${comparisonLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:''}
