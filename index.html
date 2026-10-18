@@ -7804,7 +7804,7 @@ function listingTrendPeakChangeHTML(x){
  return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.round(Math.abs(pct))}%)</span>`;
 }
 function listingTrendRowHTML(x, i, multiRegion, direction='down'){
-  const comparisonPeak=x.peak,comparisonLabel='최근 3년 최고가';
+  const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
   const peakPoint=x.previousPricePoint||null;
   if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
@@ -7917,7 +7917,7 @@ function showMoreListingBudget(){
 }
 let listingBudgetVisibleCount=100;
 function listingWithoutHistoryHTML(x,i,multiRegion,asOf,failed=false){
-  const comparisonPeak=x.peak,comparisonLabel='최근 3년 최고가';
+  const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x,true)}<small>${listingInfoHTML(x,multiRegion)}</small></span></div>
     ${comparisonPeak>0?`<div class="listing-trend-peak">${comparisonLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:''}
