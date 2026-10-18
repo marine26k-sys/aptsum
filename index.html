@@ -4963,7 +4963,7 @@ async function search(opts){
   if((mode==='listingtrend'||mode==='listingrise')) return searchListingTrend(myToken, lawd, silentScroll);
   if(mode==='listinggap') return searchListingGap(myToken, lawd, silentScroll);
   // 예산별 실매물·네이버 급매(2026.09 신규) — 같은 실매물 요약을 쓰는 비공개 탭
-  if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll);
+  if(mode==='listingbudget'||mode==='listingurgent') return searchListingTab(myToken, lawd, mode, silentScroll, !!opts?.scrollToListingResult);
   const mN = +analysisMonthsForMode(mode, document.getElementById('monthsN').value);
   if(mode==='region') document.getElementById('monthsN').value = String(mN);
   const fM = (mode==='complex'||mode==='compare'||mode==='region'||mode==='volume'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='shortval'||mode==='gap'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? 0 : +document.getElementById('floorMin').value; // 층수 필터를 숨긴 탭에서는 이전 선택값도 계산에 적용하지 않음
@@ -7577,7 +7577,7 @@ function listingNameChanged(){
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
-  if(listingNameSelected){search({silentScroll:true});}
+  if(listingNameSelected){search({silentScroll:true,scrollToListingResult:true});}
 }
 async function resolveListingName(myToken){
   const query=document.getElementById('listingNameQuery').value.trim();
@@ -7599,7 +7599,7 @@ async function resolveListingName(myToken){
   listingNameChoices.forEach((x,i)=>{const button=document.createElement('button');button.type='button';const label=document.createElement('span');label.textContent=`${x.apt} · ${x.name} ${x.umd}`;label.style.cssText='min-width:0;overflow-wrap:anywhere';const action=document.createElement('span');action.textContent=listingNameSelected?.key===x.key?'선택됨 ✓':'선택하여 조회 ›';action.style.cssText='flex:none;font-size:12px;font-weight:800;color:var(--teal)';button.append(label,action);button.setAttribute('aria-label',`${x.apt} ${x.name} ${x.umd} 선택하여 조회`);button.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:14px;margin-top:8px;border:1.5px solid var(--teal-light);border-radius:12px;background:${listingNameSelected?.key===x.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);cursor:pointer`;button.onclick=()=>chooseListingName(i);box.append(button);});
   return listingNameSelected;
 }
-async function searchListingTab(myToken, lawd, tabMode, silentScroll){
+async function searchListingTab(myToken, lawd, tabMode, silentScroll, scrollToResult=false){
   const individual=tabMode==='listingbudget'&&isIndividualListing();
   if(individual&&!listingNameActive()){openListingNameSearch();showError('단지명을 입력하고 검색해 주세요.');return;}
   const nameSearch=tabMode==='listingbudget'&&listingNameActive();
@@ -7673,7 +7673,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     if(individual&&d.rows.length)rememberListingRecentComplex(targets[0]);
     lastData = d;
     if(tabMode === 'listingbudget') renderListingBudget(d); else renderListingUrgent(d);
-    if(!silentScroll) window.scrollTo(0, 0);
+    if(scrollToResult&&individual){document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});}
+    else if(!silentScroll) window.scrollTo(0, 0);
     pushView();
     saveLastRegionPref(lawd);
   }catch(err){
