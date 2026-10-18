@@ -4908,6 +4908,13 @@ function dismissSearchKeyboard(){
   if(active?.matches('input.q, #q, .cmp-row input, #listingNameQuery'))active.blur();
 }
 async function search(opts){
+  const result=document.getElementById('result'),previousResult=result.firstChild,requestedMode=mode;
+  await runSearch(opts);
+  if((!opts?.silentScroll||opts?.scrollToListingResult)&&mode===requestedMode&&result?.classList?.contains('on')&&result.firstChild!==previousResult){
+    result.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+async function runSearch(opts){
   dismissSearchKeyboard();
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
