@@ -3570,6 +3570,17 @@ function complexTradeBuild(hits){
   const years=[...new Set(hits.filter(x=>valid(x.build)).map(x=>Number(x.build)))];
   return years.length===1?years[0]:'';
 }
+// 거래가 없는 달은 직전 거래월 평균을 그래프에만 이어 표시한다.
+function fillMonthlyChartGaps(monthly, monthsAsc){
+  const byMonth=new Map(monthly.map(m=>[m.ym,m]));
+  let previous=null;
+  return monthsAsc.flatMap(ym=>{
+    const label=ymLabel(ym), actual=byMonth.get(label);
+    if(actual){previous=actual;return [{...actual}];}
+    return previous?[{ym:label,avg:previous.avg,n:0,carriedFrom:previous.ym}]:[];
+  });
+}
+
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
@@ -3618,10 +3629,10 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const arrTrend = arr.filter(t=>parseInt(t.floor,10)>=5);
     const avg3t = periodAvg(arrTrend,m3), pv3t = periodAvg(arrTrend,p3v);
     const trend = avg3t&&pv3t? {pct:Math.round((avg3t.v-pv3t.v)/pv3t.v*100), recentAvg:avg3t.v, prevAvg:pv3t.v} : null;
-    const monthly = monthsAsc.map(ym=>{
+    const monthly = fillMonthlyChartGaps(monthsAsc.map(ym=>{
       const mA = arr.filter(t=>t.ym===ym);
       return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
-    }).filter(Boolean);
+    }).filter(Boolean), monthsAsc);
     // 층별 프리미엄: 층수 필터 이전(raw) 데이터 전체에서 같은 단지·평형 거래를 다시 모아 계산
     let floorBand = null;
     if(rawAll){
@@ -5699,7 +5710,8 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   priceLabel = priceLabel || '매매가';
   const tipFor = m => {
     let s = `<b>20${m.ym}</b> · 평균 <b>${m.avg.toFixed(1)}억</b> · 거래 ${m.n}건`;
-    if(pyLabel && dataRef && dataRef.trades){
+    if(m.carriedFrom) s += `<br>거래 없음 · ${esc(m.carriedFrom)} 평균가 유지`;
+    if(!m.carriedFrom && pyLabel && dataRef && dataRef.trades){
       const deals = dataRef.trades.filter(t=>t.sizeKey===sizeKey && t.date.startsWith(m.ym) && !t.ex).map(t=>t.amt);
       if(deals.length>1) s += `<br>범위 ${Math.min(...deals).toFixed(1)}~${Math.max(...deals).toFixed(1)}억`;
       s += '<br><span style="opacity:.7">한 번 더 탭하면 개별 거래 보기</span>';
