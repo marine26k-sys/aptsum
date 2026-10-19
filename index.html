@@ -306,7 +306,9 @@ try {
   .listing-ref-price{font-variant-numeric:tabular-nums}
   .listing-ref-date{white-space:nowrap}
   .listing-trend-heading{display:flex;align-items:baseline;gap:5px;min-width:0}
-  .rk .nm .listing-trend-heading .nm-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk .nm .listing-trend-heading .nm-title{display:inline-flex;align-items:baseline;min-width:0;white-space:nowrap}
+  .listing-trend-heading .nm-title>span{min-width:0;white-space:nowrap}
+  .listing-trend-heading .nm-title>.lnk{flex:none}
   .listing-trend-heading .listing-pyeong{flex:none;color:var(--teal-dark);white-space:nowrap}
   .listing-trend-row .val{white-space:nowrap;color:var(--blue);font-size:13px}
   .listing-trend-row .val small{display:inline;color:inherit;font-size:10px;font-weight:700}
@@ -7750,7 +7752,18 @@ function listingTrendDate(date){
   const parts = String(date || '').split(/[.\-/]/).filter(Boolean);
   return parts.length >= 3 ? `${Number(parts[1])}/${Number(parts[2])}` : String(date || '-');
 }
+function fitListingHeadingNames(){
+  document.querySelectorAll('.listing-trend-heading .nm-title').forEach(title=>{
+    const name=title.firstElementChild;if(!name)return;
+    name.style.fontSize='';
+    const fontSize=parseFloat(getComputedStyle(name).fontSize);
+    const reserved=[...title.children].slice(1).reduce((sum,el)=>sum+el.getBoundingClientRect().width+parseFloat(getComputedStyle(el).marginLeft||0)+parseFloat(getComputedStyle(el).marginRight||0),0);
+    const available=title.clientWidth-reserved-1,natural=name.scrollWidth;
+    if(available>0&&natural>available)name.style.fontSize=`${fontSize*available/natural}px`;
+  });
+}
 function fitListingTrendPrices(){
+  fitListingHeadingNames();
   document.querySelectorAll('.listing-trend-change').forEach(row=>{
     row.style.setProperty('--history-scale','1');
     if(row.clientWidth && row.scrollWidth>row.clientWidth){
@@ -7990,6 +8003,7 @@ function renderListingBudget(d,limit=100){
   <div class="src-note">호가: ${listingOccupancyLabel()} · ${listingFloorLabel()} 매물 중 단지·전용면적별 최저가 · ${LISTING_BUDGET_MIN_HH}세대 이상 · 전고점보다 31% 이상 높은 호가 제외 · 정렬: 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  if(d.individual){requestAnimationFrame(fitListingTrendPrices);if(document.fonts)document.fonts.ready.then(fitListingTrendPrices);}
 }
 
 function renderLongPeak(d){
