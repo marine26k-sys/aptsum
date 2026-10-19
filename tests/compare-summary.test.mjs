@@ -19,7 +19,7 @@ test('comparison statistics use the selected exclusive area and actual contract 
 test('summary renders side-by-side fields, exact school details and missing values safely',()=>{
  const c=setup();const a={name:'가상<A>',umd:'가상동',count:4,build:'2020',hh:{hhcnt:1000,far:250,bcr:20,dongCnt:10,subwayWalk:'10분이내'},schoolInfo:{schools:[{name:'가상초',level:'초',distance:123,type:'공립'}]},pys:[{area:84,py:'34평',n:4,avg3:{v:19,n:3},max:20,latest:{price:20,ym:'202610',day:15,floor:12}}]};
  const b={name:'가상B',pys:[],count:0};const result=c.compareSummaryHTML({complexes:[a,b],period:'26.05 ~ 26.10'});
- assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,16);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
+ assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,17);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
  c.cmpPyMap[0]=59;assert.doesNotMatch(c.compareSummaryHTML({complexes:[a,b]}),/20.0억/);
 });
 
@@ -48,4 +48,12 @@ test('recent averages roll back from KST today across month and year boundaries 
  const result=c.analyzeCompare({'11111':records},[{lawd:'11111',name:'가상단지'}],['202610'],Date.parse('2026-10-18T15:30:00Z')).complexes[0].pys[0];
  for(const [key,price,n] of [['avg1',20,2],['avg3',25,4],['avg6',35,6],['avg12',45,8],['avg24',50,9]]){assert.equal(result[key].v,price,key);assert.equal(result[key].n,n,key);}
  assert.equal(result.monthly.length,1);assert.equal(result.monthly[0].avg,30);assert.equal(result.monthly[0].n,1);
+});
+
+test('short-term trend compares consecutive non-overlapping ninety-day windows at floor five and above',()=>{
+ const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,floor:5,direct:0};
+ const records=[{...base,ym:'202610',d:1,amt:20},{...base,ym:'202607',d:21,amt:20},{...base,ym:'202607',d:20,amt:10},{...base,ym:'202606',d:1,amt:10},{...base,ym:'202609',d:1,amt:100,floor:4}];
+ const get=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606'],Date.parse('2026-10-19T00:00:00Z')).complexes[0].pys[0];
+ const trend=get(records).trend;assert.equal(trend.prevAvg,10);assert.equal(trend.recentAvg,20);assert.equal(trend.pct,100);assert.equal(trend.prevN,2);assert.equal(trend.recentN,2);
+ assert.equal(get(records.filter(t=>t.ym!=='202606'&&!(t.ym==='202607'&&t.d===20))).trend,null);
 });
