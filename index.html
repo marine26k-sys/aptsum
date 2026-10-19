@@ -7811,8 +7811,9 @@ function listingTrendPeakChangeHTML(x){
  const delta=x.ask-x.peak,pct=delta/x.peak*100;
  return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.round(Math.abs(pct))}%)</span>`;
 }
-function listingTrendRowHTML(x, i, multiRegion, direction='down'){
+function listingTrendRowHTML(x, i, multiRegion, direction='down', showSaleAverage=false){
   const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
+  const peakLabel=showSaleAverage?`${peakYmLabel(x.peakYm)?`<span style="font-size:.85em">(${peakYmLabel(x.peakYm)})</span> `:''}전고점`:comparisonLabel;
   const peakPoint=x.previousPricePoint||null;
   if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
@@ -7830,7 +7831,8 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down'){
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
     </div>
-    ${comparisonPeak>0?`<div class="listing-trend-peak">${comparisonLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
+    ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
+    ${showSaleAverage?`<div class="listing-trend-peak">최근 3개월 평균 ${x.saleAvg>0&&x.saleCount>0?`<b>${x.saleAvg.toFixed(1)}억</b> · ${x.saleCount}건`:"자료 없음"}</div>`:""}
     <span class="listing-trend-change">${prices}<span class="val" style="margin-left:auto;color:var(--${direction==='up'?'red':direction==='flat'?'sub':'blue'})">${direction==='up'?'▲':direction==='flat'?'보합 ':'▼'}${x.drop.toFixed(precision)}억</span></span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }
@@ -7871,7 +7873,7 @@ function renderListingTrend(d){
     ? `<div class="rng" style="padding:10px 0">비교할 최저 호가 이력이 아직 없습니다.</div>`
     : !d.rows.length
       ? `<div class="rng" style="padding:10px 0">${d.trendContinuous ? `최근 3개 기록에서 두 번 연속 ${word}한 단지·평형이 없습니다.` : `${all?'조건에 맞는 단지·평형이 없습니다.':`최근 2주 이전 가격 구간의 최저 호가 대비 최신 호가가 ${rising?'오른':'내린'} 단지·평형이 없습니다.`}`}</div>`
-      : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion,all?'all':rising?'up':'down')).join('');
+      : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion,all?'all':rising?'up':'down',true)).join('');
   const html = `<div class="card">
     ${listingHeaderHTML(d, `최저 호가 변동 · ${word}`, null, null)}
     <div class="sec">

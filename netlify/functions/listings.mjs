@@ -87,6 +87,7 @@ export function cleanItem(x) {
     midAvailable:x.midAvailable!==false,
     ...(x.allFloors && num(x.allFloors.ask)>0 ? {allFloors:{ask:num(x.allFloors.ask),n:num(x.allFloors.n)||1,fl:str(x.allFloors.fl,12),dong:str(x.allFloors.dong,20),d:str(x.allFloors.d,8),urgent:x.allFloors.urgent?1:0,url:/^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(str(x.allFloors.url,300))?str(x.allFloors.url,300):""}}:{}),
     occupancy: ["tenant", "presale"].includes(x.occupancy) ? x.occupancy : "available",
+    ...(num(x.saleAvg)>0 && Number.isInteger(num(x.saleCount)) && num(x.saleCount)>0 ? {saleAvg:num(x.saleAvg),saleCount:num(x.saleCount)} : {}),
     ex, py: num(x.py), peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
     url: /^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(url) ? url : "",
