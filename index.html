@@ -305,6 +305,7 @@ try {
   .listing-ref-label{display:inline-block;width:3em;text-align:right;white-space:nowrap}
   .listing-ref-price{font-variant-numeric:tabular-nums}
   .listing-ref-date{white-space:nowrap}
+  .cmp-sale-price{color:var(--teal);font-weight:700}
   .cmp-legend-name{font-size:14px;font-weight:700}
   .cmp-summary-scroll{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
   .cmp-summary-table{border-collapse:separate;border-spacing:0;min-width:100%;width:max-content;table-layout:fixed;font-size:11px}
@@ -6428,20 +6429,22 @@ function syncCompareSummarySticky(){
   const wrapper=table.parentElement,head=table.querySelector('thead');
   if(!head)return;
   const rect=wrapper.getBoundingClientRect(),headRect=head.getBoundingClientRect();
-  if(headRect.top>=0||rect.bottom<=headRect.height){if(floating)floating.hidden=true;return;}
+  const cardHeader=table.closest('.card')?.querySelector('.card-hd')?.getBoundingClientRect();
+  const top=cardHeader&&cardHeader.top<=1&&cardHeader.bottom>0?cardHeader.bottom:0;
+  if(headRect.top>=top||rect.bottom<=top+headRect.height){if(floating)floating.hidden=true;return;}
   if(!floating){floating=document.createElement('div');floating.id='cmpSummaryFloatingHead';floating.setAttribute('aria-hidden','true');floating.style.cssText='position:fixed;top:0;z-index:60;overflow:hidden;background:#fff;pointer-events:none;box-shadow:0 2px 5px #0002';document.body.append(floating);}
   if(syncCompareSummarySticky.source!==table){
     const copy=document.createElement('table');copy.className='cmp-summary-table';copy.append(table.querySelector('colgroup').cloneNode(true),head.cloneNode(true));floating.replaceChildren(copy);syncCompareSummarySticky.source=table;
   }
   const copy=floating.firstElementChild;copy.style.width=table.style.width;
   const widths=table.querySelectorAll('col');copy.querySelectorAll('col').forEach((col,i)=>{col.style.width=widths[i].style.width;});
-  floating.style.left=rect.left+'px';floating.style.width=wrapper.clientWidth+'px';floating.style.height=headRect.height+'px';floating.hidden=false;floating.scrollLeft=wrapper.scrollLeft;
+  floating.style.top=top+'px';floating.style.left=rect.left+'px';floating.style.width=wrapper.clientWidth+'px';floating.style.height=headRect.height+'px';floating.hidden=false;floating.scrollLeft=wrapper.scrollLeft;
 }
 
 function compareSummaryHTML(d){
   const chosen=d.complexes.map((c,i)=>({c,p:c.pys.find(p=>p.area===cmpPyMap[i])}));
   const value=x=>x===null||x===undefined||x===''?'—':esc(x);
-  const money=x=>Number.isFinite(x)?`${x.toFixed(1)}억`:'—';
+  const money=x=>Number.isFinite(x)?`<span class="cmp-sale-price">${x.toFixed(1)}억</span>`:'—';
   const period=x=>x?`${money(x.v)} · ${x.n}건`:'—';
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)}<br><span style="color:var(--sub)">${esc(date(t))}${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?` · ${esc(t.floor)}층`:''}</span>`:'—';
