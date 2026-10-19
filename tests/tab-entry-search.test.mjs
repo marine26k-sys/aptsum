@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const start=html.indexOf('async function initFromURL(');
+const start=html.indexOf('function parseCmpShareItems(');
 const source=html.slice(start,html.indexOf('// 공유 링크는 접속한 주소',start));
 function page(search){
   const elements=new Map(),rows=[];

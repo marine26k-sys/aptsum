@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');const c=vm.createContext({});vm.runInContext(html.slice(html.indexOf('function parseCmpShareItems('),html.indexOf('async function initFromURL(')),c);
+test('compare links restore complete province and city scope codes',()=>{const result=c.parseCmpShareItems('ALL:경기:가상A [가상동]|CITYALL:안양:가상B|41173:가상:C');assert.deepEqual(JSON.parse(JSON.stringify(result)),[{lawd:'ALL:경기',name:'가상A [가상동]'},{lawd:'CITYALL:안양',name:'가상B'},{lawd:'41173',name:'가상:C'}]);});
+test('empty or malformed compare entries are ignored',()=>{assert.equal(c.parseCmpShareItems('').length,0);assert.equal(c.parseCmpShareItems('invalid|41173:').length,0);});

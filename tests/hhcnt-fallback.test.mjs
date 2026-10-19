@@ -8,14 +8,14 @@ test('GET and batch preserve K-apt households and walking time while adding veri
  try{
   process.env.DATA_GO_KR_KEY='test-only';
   globalThis.fetch=async url=>url.includes('/hhcnt-naver/')
-   ? Response.json({items:{one:{name:'평촌래미안푸르지오',hh:1199,far:307}}})
-   : Response.json({items:[{name:'평촌래미안푸르지오아파트',kaptCode:'A10024077',hhcnt:1199,dongCnt:10,subwayWalk:'15~20분이내',subwayLines:['1호선','4호선']}]});
+   ? Response.json({items:{one:{name:'평촌래미안푸르지오',hh:1199,far:307,bcr:18,built:'2022.03',dongCnt:99}}})
+   : Response.json({items:[{name:'평촌래미안푸르지오아파트',kaptCode:'A10024077',kaptAddr:'가상시 가상동 1',hhcnt:1199,dongCnt:10,subwayWalk:'15~20분이내',subwayLines:['1호선','4호선']}]});
   const {default:handler}=await import('../netlify/functions/hhcnt.mjs');
   const name='평촌래미안푸르지오';
   const single=await (await handler(new Request(`https://header-info.test/api/hhcnt?lawd=41173&name=${encodeURIComponent(name)}`))).json();
   const batch=await (await handler(new Request('https://header-info.test/api/hhcnt',{method:'POST',body:JSON.stringify({lawd:'41173',names:[name]})}))).json();
   for(const result of [single,batch.results[name]]){
-   assert.equal(result.hhcnt,1199);assert.equal(result.subwayWalk,'15~20분이내');assert.equal(result.far,307);
+   assert.equal(result.hhcnt,1199);assert.equal(result.subwayWalk,'15~20분이내');assert.equal(result.far,307);assert.equal(result.bcr,18);assert.equal(result.built,'2022.03');assert.equal(result.dongCnt,10);assert.equal(result.kaptCode,'A10024077');assert.equal(result.kaptAddr,'가상시 가상동 1');
   }
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });
