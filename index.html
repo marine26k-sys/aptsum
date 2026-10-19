@@ -3308,16 +3308,20 @@ function markOutliers(arr, months){
 // arr: 이미 이상치(직거래·저가)가 제외된 동일 단지·평형 거래 배열
 // 필터로 설정한 floorMin과 무관하게 "관측된 최저~최고 층"을 5등분해 나누므로,
 // 층수 필터를 걸어도(예: 10층 이상) 저층 구간이 사라지지 않도록 raw(필터 이전) 데이터로 계산한다.
-function floorBands(arr){
+function floorBands(arr,months){
   const pts = arr.map(t=>({t, f:parseInt(t.floor,10)})).filter(x=>Number.isFinite(x.f) && x.f>0);
-  if(pts.length < 6) return null; // 표본 부족
-  const fs = pts.map(x=>x.f);
+  const observed=months?pts.filter(x=>months.includes(x.t.ym)):pts;
+  if(observed.length < 6) return null; // 실제 조회 기간 표본 부족
+  const fs = observed.map(x=>x.f);
   const min = Math.min(...fs), max = Math.max(...fs);
   if(max===min) return null; // 전 거래가 같은 층 → 비교 불가
   const b1 = min + (max-min)/5, b2 = min + (max-min)*4/5; // 관측 층 범위를 5등분: 1구간=저층, 2~4구간=중층, 5구간=고층
   const low = pts.filter(x=>x.f<=b1), mid = pts.filter(x=>x.f>b1 && x.f<=b2), high = pts.filter(x=>x.f>b2);
-  const band = list => list.length? { v:R1(avgA(list.map(x=>x.t))), n:list.length,
-    fmin:Math.min(...list.map(x=>x.f)), fmax:Math.max(...list.map(x=>x.f)) } : null;
+  const band = list => {
+    if(!list.length)return null;
+    const price=monthlyPriceAverage(list.map(x=>x.t),months||priceHistoryMonths(arr));
+    return price?{v:price.v,n:price.n,fmin:Math.min(...list.map(x=>x.f)),fmax:Math.max(...list.map(x=>x.f))}:null;
+  };
   const L=band(low), M=band(mid), H=band(high);
   if(!L || !H || L.n<2 || H.n<2) return null; // 저층·고층 각 2건 이상 필요
   return { low:L, mid:M, high:H, premiumPct:Math.round((H.v-L.v)/L.v*100) };
@@ -3570,6 +3574,40 @@ function complexTradeBuild(hits){
   const years=[...new Set(hits.filter(x=>valid(x.build)).map(x=>Number(x.build)))];
   return years.length===1?years[0]:'';
 }
+// 기간 평균의 공통 기준: 월별 동일 비중, 무거래월은 직전 월평균 유지.
+function calendarMonths(count, offset=0, now=Date.now()){
+  const kst=new Date(now+9*3600000);
+  return Array.from({length:count},(_,i)=>{
+    const d=new Date(Date.UTC(kst.getUTCFullYear(),kst.getUTCMonth()-offset-i,1));
+    return d.toISOString().slice(0,7).replace('-','');
+  });
+}
+function priceHistoryMonths(trades,months=[]){
+  const keys=[...months,...trades.map(t=>String(t.ym||''))].filter(ym=>/^\d{6}$/.test(ym)).sort();
+  if(!keys.length)return [];
+  const first=keys[0],last=keys.at(-1),count=(+last.slice(0,4)-+first.slice(0,4))*12+(+last.slice(4)-+first.slice(4))+1;
+  return calendarMonths(count,0,Date.UTC(+last.slice(0,4),+last.slice(4)-1,1));
+}
+function monthlyPriceAverage(trades, selectedMonths){
+  const months=[...new Set(selectedMonths)].sort();
+  if(!months.length)return null;
+  const groups=new Map();
+  for(const t of trades){
+    if(t.direct||t.ex||!/^\d{6}$/.test(String(t.ym))||!Number.isFinite(t.amt)||t.ym>months.at(-1))continue;
+    if(!groups.has(t.ym))groups.set(t.ym,[]);
+    groups.get(t.ym).push(t.amt);
+  }
+  const actual=[...groups.keys()].sort();
+  let index=0,previous=null,total=0,n=0,covered=0;
+  for(const month of months){
+    while(index<actual.length&&actual[index]<=month){const values=groups.get(actual[index++]);previous=Math.round(values.reduce((a,b)=>a+b,0)/values.length*10)/10;}
+    if(previous===null)continue;
+    total+=previous;covered++;n+=(groups.get(month)||[]).length;
+  }
+  // 첫 거래 이전은 채우지 않는다. 대상 월 전체에 기준값이 있어야 기간 평균이 성립한다.
+  return covered===months.length?{v:Math.round(total/covered*10)/10,n}:null;
+}
+
 // 거래가 없는 달은 직전 거래월 평균을 그래프에만 이어 표시한다.
 function fillMonthlyChartGaps(monthly, monthsAsc){
   const byMonth=new Map(monthly.map(m=>[m.ym,m]));
@@ -3585,7 +3623,8 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
   if(m.multi) return {found:false, multi:true, suggest:complexSuggestionNames(all, m.multi, lawd).slice(0,8)};
-  const hits = m.hits;
+  const historyHits=m.hits||[];
+  const hits=historyHits.filter(t=>months.includes(t.ym));
   if(!hits.length){
     const names = [...new Set(all.map(t=>t.apt))];
     const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
@@ -3610,7 +3649,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const groups={}; for(const t of hits){ const key=exclusiveAreaKey(t); (groups[key]=groups[key]||[]).push(t); }
   const monthsAsc = months.slice().reverse();
   const m3=months.slice(0,3), p3v=months.slice(3,6);
-  const periodAvg=(arr,ms)=>{ const a=arr.filter(t=>ms.includes(t.ym)); return a.length? {v:R1(avgA(a)), n:a.length} : null; };
+  const periodAvg=(arr,ms)=>monthlyPriceAverage(arr,ms);
   // 평형별 요약표: 최근 4개 "역법 분기"(달력 기준 1~3월/4~6월/7~9월/10~12월) 평균 — 롤링 기간이 아니라 실제 분기 단위
   const qKeyOf = ym => { const y=+ym.slice(0,4), mo=+ym.slice(4,6); return `${y}Q${Math.ceil(mo/3)}`; };
   const qLabelOf = key => { const [y,qn]=key.split('Q'); return `${y.slice(2)}년\n${qn}분기`; };
@@ -3618,30 +3657,31 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   months.forEach(ym=>{ const k=qKeyOf(ym); (qMap[k]=qMap[k]||[]).push(ym); });
   const last4Q = [...new Set(months.map(qKeyOf))].slice(0,4).reverse(); // 오래된→최신 순
   const byPy = Object.entries(groups).map(([sizeKey, arrRaw])=>{
-    const clean = markOutliers(arrRaw, months);
+    const clean = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months));
     const arr = clean.length? clean : arrRaw;
     const max = Math.max(...arr.map(t=>t.amt));
     const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
     const maxDate = `${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`;
     const recent = arr[0];
-    const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(arr, qMap[qk]) }));
+    const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
+    const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
     // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
-    const arrTrend = arr.filter(t=>parseInt(t.floor,10)>=5);
+    const arrTrend = priceHistory.filter(t=>parseInt(t.floor,10)>=5);
     const avg3t = periodAvg(arrTrend,m3), pv3t = periodAvg(arrTrend,p3v);
     const trend = avg3t&&pv3t? {pct:Math.round((avg3t.v-pv3t.v)/pv3t.v*100), recentAvg:avg3t.v, prevAvg:pv3t.v} : null;
-    const monthly = fillMonthlyChartGaps(monthsAsc.map(ym=>{
-      const mA = arr.filter(t=>t.ym===ym);
+    const historyMonths=[...new Set([...monthsAsc,...priceHistory.map(t=>t.ym)])].sort();
+    const monthly = fillMonthlyChartGaps(historyMonths.map(ym=>{
+      const mA = priceHistory.filter(t=>t.ym===ym);
       return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
-    }).filter(Boolean), monthsAsc);
+    }).filter(Boolean), historyMonths).filter(m=>monthsAsc.some(ym=>ymLabel(ym)===m.ym));
     // 층별 프리미엄: 층수 필터 이전(raw) 데이터 전체에서 같은 단지·평형 거래를 다시 모아 계산
     let floorBand = null;
     if(rawAll){
       // 층별 프리미엄은 조회 기간과 무관하게 최근 6개월 고정 — 기간이 길면 시세 상승분이 층 프리미엄에 섞여 왜곡되므로
       const recentMonths = months.slice(0,6);
-      const recentSet = new Set(recentMonths);
-      const rawMatch = rawAll.filter(t=>nameCnt[t.apt] && String(exclusiveAreaKey(t))===sizeKey && recentSet.has(t.ym)); // 별칭·시공사별 분할 등록으로 합쳐진 이름 전부
-      const rawClean = markOutliers(rawMatch, recentMonths);
-      floorBand = floorBands(rawClean);
+      const rawMatch = rawAll.filter(t=>nameCnt[t.apt] && String(exclusiveAreaKey(t))===sizeKey); // 직전 평균가 시드용 과거 거래도 포함
+      const rawClean = markOutliers(rawMatch, priceHistoryMonths(rawMatch,recentMonths));
+      floorBand = floorBands(rawClean,recentMonths);
     }
     return { py:`${representativePy(arr)}평`, sizeKey:+sizeKey, area:`(전용 ${sizeKey})`, n:arr.length,
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
@@ -3867,11 +3907,7 @@ function analyzePricePerPyeong(all, months){
 // 한쪽이 상대적으로 저평가"라는 개념으로 재설계. 평형 크기가 아니라 "거래량 상위 2개"를 고르는 게
 // 핵심(표본이 두꺼운 페어라야 기준선이 신뢰할 만함). 최근 1개월에 두 평형 다 거래가 있어야만 집계(더
 // 엄격한 기준, 운영자 선택) — 한쪽만 거래된 달은 판단 재료 부족으로 스킵.
-// "최근 1개월"은 달력상의 월(9월/8월 같은 버킷)이 아니라 오늘 기준 실제 날짜로 최근 30일을 말한다는
-// 걸 운영자가 명확히 함(2026.09) — isRecentDeal()과 동일한 날짜 계산 방식 재사용. 이전 6개월(운영자 요청,
-// 2026.09 3개월→6개월로 확대)도 마찬가지로
-// "31~120일 전" 구간(날짜 기준)으로 계산 — 달 경계(매달 1일 등)에 걸려 최근 구간이 텅 비는 문제 자체가
-// 날짜 기준이면 애초에 안 생김(월초에도 지난 30일치 데이터가 항상 있음).
+// 월별 동일 비중 평균을 사용하며 무거래월은 직전 평균가를 유지한다.
 function analyzeInversion(all, months){
   all = all.filter(t=>!t.direct && !t.kind && t.area && parseInt(t.floor,10)>=5 && t.py>=20 && t.py<=39); // 분양권/입주권은 매매와 가격 형성 구조가 달라 제외 · 20~39평만(운영자 요청)
   const dayDiff = t=>{
@@ -3879,12 +3915,14 @@ function analyzeInversion(all, months){
     if(!y||!mo||!da) return Infinity;
     return Math.floor((Date.now() - new Date(y, mo-1, da).getTime()) / (24*3600*1000));
   };
+  const recentMonths=calendarMonths(1),priorMonths=calendarMonths(6,1);
+  const meanArea=trades=>trades.length?trades.reduce((n,t)=>n+t.area,0)/trades.length:trades.referenceArea;
   const byComplex = {};
   for(const t of all){ const ck = `${t.apt}|${t.umd}|${t.gu||''}`; (byComplex[ck]=byComplex[ck]||[]).push(t); }
   const DEV_MIN = 0.05; // 기준선 대비 5% 이상 틀어져야 신호로 인정
   const ppOf = trades => {
-    const avgArea = trades.reduce((s,t)=>s+t.area,0)/trades.length;
-    return avgA(trades)*10000/(avgArea/SQM_PER_PY);
+    const avgArea=meanArea(trades);
+    return trades.price.v*10000/(avgArea/SQM_PER_PY);
   };
   const areaOf = trades => { // 평형 표시용 전용면적(㎡) — 가장 흔한 값을 대표값으로(buildRepRows와 동일 방식)
     const areaCnt={}; trades.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
@@ -3895,18 +3933,21 @@ function analyzeInversion(all, months){
     const byPyRaw = {};
     for(const t of arr){ const key=exclusiveAreaKey(t); (byPyRaw[key]=byPyRaw[key]||[]).push(t); }
     const byPy = {};
-    for(const [py, list] of Object.entries(byPyRaw)){ byPy[py] = markOutliers(list, months); } // 저가 이상치 제외(다른 랭킹 탭들과 동일 로직, 평형별로 적용 — 평형이 섞이면 가격 스케일이 달라 이상치 판정이 왜곡됨)
+    for(const [py, list] of Object.entries(byPyRaw)){ byPy[py] = markOutliers(list, priceHistoryMonths(list,months)); } // 저가 이상치 제외(다른 랭킹 탭들과 동일 로직, 평형별로 적용 — 평형이 섞이면 가격 스케일이 달라 이상치 판정이 왜곡됨)
     const pyKeys = Object.keys(byPy);
     if(pyKeys.length < 2) continue;
     // 거래량(전체 표본수) 상위 2개 평형을 고정 페어로 선택 — 표본 두꺼운 페어라야 기준선이 신뢰할 만함
     const top2 = pyKeys.map(py=>({py, n:byPy[py].length})).sort((a,b)=> b.n - a.n).slice(0,2);
     if(top2.length < 2) continue;
     const [t1, t2] = top2.map(x=>x.py).sort((a,b)=> parseInt(a,10)-parseInt(b,10)); // 표시용으로 평형 크기순 정렬
-    const priorA = byPy[t1].filter(t=>{ const d=dayDiff(t); return d>30 && d<=210; });
-    const priorB = byPy[t2].filter(t=>{ const d=dayDiff(t); return d>30 && d<=210; });
-    if(priorA.length < 2 || priorB.length < 2) continue; // 기준선 표본 부족
-    const recentA = byPy[t1].filter(t=>dayDiff(t)<=30), recentB = byPy[t2].filter(t=>dayDiff(t)<=30);
-    if(!recentA.length || !recentB.length) continue; // 최근 30일에 둘 다 거래 있어야만 집계
+    const bucket=(key,ms)=>{
+      const source=byPy[key],list=source.filter(t=>ms.includes(t.ym));
+      list.price=monthlyPriceAverage(source,ms);list.referenceArea=source.length?source.reduce((n,t)=>n+t.area,0)/source.length:0;
+      return list;
+    };
+    const priorA=bucket(t1,priorMonths),priorB=bucket(t2,priorMonths);
+    const recentA=bucket(t1,recentMonths),recentB=bucket(t2,recentMonths);
+    if(!priorA.price||!priorB.price||!recentA.price||!recentB.price)continue;
     // "기준(분모)"은 항상 평당가가 더 높은 쪽으로 고정한다(2026.09, 운영자 지적) — 그래야 평당가 비율이
     // 100%를 넘는 이상한 숫자가 안 나오고, "더 저렴한 평형이 기준 평형의 몇 %인지"로 자연스럽게 읽힘.
     // 기준은 이전 6개월(평소 상태) 기준으로 한 번만 정하고, 최근 구간에도 그대로 적용 — 최근에 실제로
@@ -3927,7 +3968,7 @@ function analyzeInversion(all, months){
     const recentRatio = Math.round(recentRatio0 * 100);
     // "안전마진" — 다른 평형의 지금 평당가에 평소(기준선) 비율을 그대로 적용했을 때 저평가 평형이
     // 원래 받았어야 할 "적정가"를 역산하고, 실제 최근 평균가와의 차액(억)을 마진으로 제시한다.
-    const underAvgArea = underTrades.reduce((s,t)=>s+t.area,0)/underTrades.length;
+    const underAvgArea = meanArea(underTrades);
     const underPyExact = R1(underAvgArea / SQM_PER_PY);
     // baselineRatio0 = pp(lowPy)/pp(refPy) 관계이므로, underPy가 lowPy면 그대로 곱하고 refPy면 나눠야 함
     const fairPricePerPy = deviation < 0 ? ppOf(otherTrades) * baselineRatio0 : ppOf(otherTrades) / baselineRatio0; // 만원/평
@@ -3937,9 +3978,9 @@ function analyzeInversion(all, months){
     // 이미 그 가격대를 경험해본 적 있다는 뜻이라, 그냥 평범한 시세 등락이지 특별한 저평가 신호가 아님.
     const underYearMax = Math.max(...byPy[underPy].filter(t=>dayDiff(t)<=365).map(t=>t.amt));
     if(fairAmt <= underYearMax) continue;
-    const underAvgAmt = R1(avgA(underTrades)), otherAvgAmt = R1(avgA(otherTrades));
+    const underAvgAmt = underTrades.price.v, otherAvgAmt = otherTrades.price.v;
     const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
-    const lowPriorAmt = R1(avgA(priorLow)), refPriorAmt = R1(avgA(priorRef)); // 기준선(이전 6개월) 쪽 평균가격도 같이 제시
+    const lowPriorAmt = priorLow.price.v, refPriorAmt = priorRef.price.v; // 기준선(이전 6개월) 쪽 평균가격도 같이 제시
     const [apt,umd,gu] = ck.split('|');
     results.push({
       apt, umd, gu:gu||null, lawd:(arr.find(t=>t.lawd)||{}).lawd || null, build:(arr.find(t=>t.build)||{}).build || '',
@@ -3959,7 +4000,7 @@ function analyzeInversion(all, months){
   const todayDate2 = new Date();
   const startDate2 = new Date(Date.now() - 210*24*3600*1000);
   return { found:true, mode:'inversion', total:all.length,
-    period:`${fmtDate(startDate2)} ~ ${fmtDate(todayDate2)}`,
+    period:`${ymLabel(priorMonths.at(-1))} ~ ${ymLabel(recentMonths[0])}`,
     // 조건을 충족하는 전체 단지를 저평가 평형의 최근 평균가 낮은 순으로 표시한다.
     rows: results.sort((a,b)=> a.underAvgAmt-b.underAvgAmt || b.deviationPct-a.deviationPct) };
 }
@@ -3971,54 +4012,38 @@ function buildRepRows(all, months, windowMonths=2){
   for(const t of eligible){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   const r3set = new Set(months.slice(0,windowMonths)), p3set = new Set(months.slice(windowMonths,windowMonths*2));
   const pyRows = Object.entries(byAptPy).map(([k,arrRaw])=>{
-    const arr = markOutliers(arrRaw, months);
+    const arr = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months));
     const [apt,umd,areaKey,gu] = k.split('|');
     const py = representativePy(arr);
     const r3 = arr.filter(t=>r3set.has(t.ym));
     const p3 = arr.filter(t=>p3set.has(t.ym));
-    if(r3.length<2 || p3.length<2) return null;
-    const r3avg = avgA(r3), p3avg = avgA(p3);
+    const recentPrice=monthlyPriceAverage(arr,[...r3set]),previousPrice=monthlyPriceAverage(arr,[...p3set]);
+    if(!recentPrice||!previousPrice)return null;
+    const r3avg = recentPrice.v, p3avg = previousPrice.v;
     if(!p3avg) return null;
     const pct = Math.round((r3avg-p3avg)/p3avg*100);
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, pct, r3avg:R1(r3avg), p3avg:R1(p3avg), n:arr.length, r3n:r3.length, p3n:p3.length };
+    return { apt, umd, py, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, pct, r3avg:R1(r3avg), p3avg:R1(p3avg), n:arr.filter(t=>months.includes(t.ym)).length, r3n:r3.length, p3n:p3.length };
   }).filter(Boolean);
   // 2026.08: 단지당 거래량 최다 평형 하나만 남기던 로직 제거 — 평형마다 독립적으로 등락/저평가 판정(다른 평형에 가려 누락되는 문제 방지)
   return pyRows.map(r=>({ ...r, mainPy:`${r.py}평 (전용 ${r.area})` }));
 }
 
 // ═══ 기간별 상승 랭킹(2026.09 신규, 구독 전용) ═══
-// "N개월 전 평균가"가 무엇을 뜻하는지가 핵심 설계 포인트 — "오늘부터 누적된 최근 N개월 평균"이 아니라
-// "정확히 그 시점 하나의 스냅샷"을 말한다(다른 탭들의 "최근 N개월 평균"과는 다른 개념). 예를 들어
-// "3개월 전"은 지금부터 61~90일 전 30일짜리 구간의 평균가 — 오늘부터 90일 전까지 전부 합친 누적
-// 평균이 아니다. "최근 1개월"도 마찬가지로 달력상의 월이 아니라 오늘 기준 최근 30일(day-based).
-// 비교 시점(3/6/9/12/24개월 전)과 평형(20평대/30평대 등)은 화면에서 사용자가 직접 고름(운영자 요청) —
-// 다른 저평가 탭들처럼 20~37평 고정 범위나 특정 평대 강제가 아니라 pyBandMultiFilter를 그대로 재사용.
-// 정렬은 changePct(%)가 아니라 changeAmt(변동 금액) 내림차순 — %로 정렬하면 저가 단지의 작은 금액
-// 변동이 퍼센트로는 과장돼 상위로 뜨는 왜곡이 있어 금액 기준으로 변경(운영자 요청, 2026.09).
-// 최대 100개까지 노출(기존 50개에서 확대).
-// 최소 표본 1건 이상(기존 2건에서 완화)·매매+분양권+입주권 포함(기존 매매만이었음, 운영자 요청, 2026.09
-// — 모수가 너무 좁게 잡히는 문제 보완). 단, 단일 지역 조회 시 rawMerged 병합 대상 모드 목록에도
-// longtermrise를 추가해야 분양권이 실제로 섞여 들어옴(검색 파이프라인 쪽, search() 함수 참고).
+// 월 단위 시점 평균과 최근 월별 평균을 비교한다. 무거래월은 직전 월평균을 유지한다.
 function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=30){
-  // months(neededMN=periodM+2)는 달력상의 월 단위 후보군일 뿐 — 실제 "periodM개월 전" 판정은 아래 dayDiff()로
-  // 일 단위 정확히 계산한다(달력 월 경계와 무관). +2개월 여유를 준 건 12월→1월→2월처럼 짧은 달이 이어지는
-  // 최악의 경우에도 필요한 날짜 범위가 통째로 후보군에 다 들어오게 하기 위함(+1개월로는 하루이틀 모자랄 수 있음).
   const byAptPy = {};
   for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
-  const dayDiff = t=>{ // analyzeInversion()과 동일한 날짜 계산 방식(오늘 기준 실제 경과일)
-    const y=+t.ym.slice(0,4), mo=+t.ym.slice(4,6), da=+t.d;
-    if(!y||!mo||!da) return Infinity;
-    return Math.floor((Date.now() - new Date(y, mo-1, da).getTime()) / (24*3600*1000));
-  };
+  const recentMonths=calendarMonths(Math.max(1,Math.round(recentDays/30)));
+  const pastMonths=calendarMonths(1,periodM);
   const results = [];
   for(const [k, arrRaw] of Object.entries(byAptPy)){
-    const arr = markOutliers(arrRaw, months); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
-    const recent = arr.filter(t=> dayDiff(t) >= 0 && dayDiff(t) <= recentDays); // 현재 가격 평균 구간
-    const past = arr.filter(t=> { const d=dayDiff(t); return d > (periodM-1)*30 && d <= periodM*30; }); // 정확히 "periodM개월 전" 그 30일짜리 구간
-    if(recent.length < 1 || past.length < 1) continue; // 두 구간 다 표본 1건 이상(운영자 요청, 2026.09 — 기존 2건에서 완화, 표본이 너무 좁게 잡히는 문제 보완)
-    const recentAvg = avgA(recent), pastAvg = avgA(past);
+    const arr = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months)); // 직거래·저가 이상치 제외(다른 랭킹 탭들과 동일 로직)
+    const recent=arr.filter(t=>recentMonths.includes(t.ym));
+    const recentPrice=monthlyPriceAverage(arr,recentMonths),pastPrice=monthlyPriceAverage(arr,pastMonths);
+    if(!recentPrice||!pastPrice)continue;
+    const recentAvg=recentPrice.v,pastAvg=pastPrice.v;
     if(!pastAvg) continue;
     const changeAmt = R1(recentAvg - pastAvg);
     const changePct = Math.round((recentAvg-pastAvg)/pastAvg*100);
@@ -4026,23 +4051,14 @@ function analyzeLongTermRise(all, months, periodM, includeAll=false, recentDays=
     const py = representativePy(arr);
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0].kind||null,
-      recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.length, recentN:recent.length, pastN:past.length });
+    results.push({ apt, umd, py:`${py}평`, gu:gu||null, lawd:arr[0].lawd||null, area, build:arr[0].build, kind:recent[0]?.kind||arr.at(-1)?.kind||null,
+      recentAvg:R1(recentAvg), pastAvg:R1(pastAvg), changeAmt, changePct, n:arr.filter(t=>months.includes(t.ym)).length, recentN:recent.length, pastN:pastPrice.n });
   }
   results.sort((a,b)=> b.changeAmt - a.changeAmt); // 변동 금액(원화 기준) 많이 오른 순 — % 기준이면 저가 단지의 변동폭이 과대평가돼 왜곡될 수 있음(운영자 요청)
-  // 이 탭은 달력 월이 아니라 일 단위(day-based)로 비교 구간을 정하므로, 화면에 보여줄 기간도 "YY.MM ~ YY.MM
-  // 중 N개월"(달력 월 뭉뚱그림)이 아니라 실제 계산에 쓰인 정확한 날짜로 표시한다 — 시작일은 정확히
-  // periodM*30일 전, 종료일은 오늘.
-  const fmtDate = dt => `${String(dt.getFullYear()).slice(2)}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
-  const todayDate = new Date();
-  const startDate = new Date(Date.now() - periodM*30*24*3600*1000);
-  const pastWindowEnd = new Date(Date.now() - ((periodM-1)*30+1)*24*3600*1000);
-  const recentWindowStart = new Date(Date.now() - recentDays*24*3600*1000);
-  return { found:true, mode:'longtermrise', total:all.length, periodM,
-    period:`${fmtDate(startDate)} ~ ${fmtDate(todayDate)}`,
-    pastPeriod:`${fmtDate(startDate)} ~ ${fmtDate(pastWindowEnd)}`,
-    recentPeriod:`${fmtDate(recentWindowStart)} ~ ${fmtDate(todayDate)}`,
-    rows: results };
+  const label=ym=>ym.slice(2,4)+'.'+ym.slice(4);
+  return {found:true,mode:'longtermrise',total:all.length,periodM,
+    period:`${label(pastMonths.at(-1))} ~ ${label(recentMonths[0])}`,
+    pastPeriod:label(pastMonths[0]),recentPeriod:`${label(recentMonths.at(-1))} ~ ${label(recentMonths[0])}`,rows:results};
 }
 
 // 구독 전용 금액대 비교: 시작 시점 평균가가 선택한 1억원 구간에 속한 단지·평형만 모두 남긴다.
@@ -4078,22 +4094,21 @@ function analyzeJeonseLongTermRise(all, months, periodM){
 // (매매·전세 각 2건 미만) 극단치 왜곡이 크므로 그 그룹은 아예 제외. 1~4층은 저층 할인 왜곡 방지를 위해 매매 쪽만
 // 제외(전세는 원래도 표본이 얇아 층수까지 거르면 남는 그룹이 너무 적어짐).
 function avgGroupA(items, months, minN){
-  const ms = new Set(months);
   const byKey = {};
   for(const t of items){
-    if(!ms.has(t.ym)) continue;
     const k = `${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`;
     (byKey[k]=byKey[k]||[]).push(t);
   }
   const out = {};
   for(const [k,arrRaw] of Object.entries(byKey)){
-    const clean = markOutliers(arrRaw, months);
+    const clean = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months));
     const arr = clean.length ? clean : arrRaw;
-    if(arr.length < minN) continue;
+    const periodPrice=monthlyPriceAverage(arr,months);
+    if(!periodPrice)continue;
     // 그룹 내 가장 흔한 전용면적을 대표값으로(등락 랭킹 buildRepRows와 동일한 방식)
     const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
     const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    out[k] = { avg: R1(avgA(arr)), n: arr.length, area, py:representativePy(arr), build: arr[0].build, lawd: arr[0].lawd||null };
+    out[k] = { avg: periodPrice.v, n: periodPrice.n, area, py:representativePy(arr), build: arr[0].build, lawd: arr[0].lawd||null };
   }
   return out;
 }
@@ -4137,10 +4152,9 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
     return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
   };
   const divergence = [];
-  const MIN_PEER_N = 2; // 비교군은 최근·이전 3개월 구간 각각 최소 2건 이상 거래된 단지만 인정 (직거래·저가 이상치는 이미 markOutliers에서 제외된 뒤라 완화, 전체 단지 기준 최소치와 동일)
   rowsAll.forEach(r=>{
     const nearest = rowsAll
-      .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && pyBand(o.py)===pyBand(r.py) && o.r3n>=MIN_PEER_N && o.p3n>=MIN_PEER_N && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
+      .filter(o=> o!==r && o.apt!==r.apt && o.gu===r.gu && pyBand(o.py)===pyBand(r.py) && o.r3avg>0 && o.p3avg>0 && Math.abs(o.p3avg - r.p3avg) / r.p3avg <= 0.02)
       .sort((a,b)=> Math.abs(a.p3avg-r.p3avg) - Math.abs(b.p3avg-r.p3avg))
       .slice(0,5); // 가격이 제일 가까운 단지 최대 5개까지 (o.apt!==r.apt: 2026.09 버그 수정 — 같은 단지 다른 평형이 자기 비교군으로 잡히던 문제, longpeak 쪽 주석 참고 / o.gu===r.gu: 2026.09 추가 — 여러 지역(구) 동시 선택 시 비교군이 다른 구 단지까지 섞이지 않도록, 항상 같은 구 안에서만 비교)
     const group = [r, ...nearest]; // groupN 표시용(본인 포함 표본수) — 중앙값 계산에는 본인 제외
@@ -4342,30 +4356,32 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
       const clean = markOutliers(arrRaw, months);
       const arr = clean.length? clean : arrRaw;
       const averageTrades=clean.filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
-      const monthly = monthsAsc.map(ym=>{
-        const mA = averageTrades.filter(t=>t.ym===ym);
+      const graphHistory=markOutliers((m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)).map(t=>({...t})),[...new Set([...months,...(m.hits||[]).map(t=>t.ym)])].sort().reverse()).filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
+      const graphMonths=[...new Set([...monthsAsc,...graphHistory.filter(t=>t.ym<=monthsAsc.at(-1)).map(t=>t.ym)])].sort();
+      const monthly = fillMonthlyChartGaps(graphMonths.map(ym=>{
+        const mA = graphHistory.filter(t=>t.ym===ym);
         return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
-      }).filter(Boolean);
+      }).filter(Boolean),graphMonths).filter(m=>monthsAsc.some(ym=>ymLabel(ym)===m.ym));
       const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
       const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
       const byDate=arr.slice().sort((a,b)=>String(a.ym||'').localeCompare(String(b.ym||''))||(Number(a.d)||0)-(Number(b.d)||0));
       const deal=t=>t?{price:t.amt,ym:t.ym,day:t.d,floor:t.floor}:null;
-      const referenceRaw=(m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)&&tradeDay(t)>=today-730*dayMs&&tradeDay(t)<=today);
+      const referenceRaw=(m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)&&referenceMonths.includes(t.ym)&&tradeDay(t)<=today);
       const reference=markOutliers(referenceRaw,referenceMonths).filter(t=>!t.direct);
-      const periodAvg=(days,offset=0)=>{const subset=reference.filter(t=>tradeDay(t)>=today-(days+offset)*dayMs&&tradeDay(t)<=today-offset*dayMs);return subset.length?{v:R1(avgA(subset)),n:subset.length}:null;};
+      const periodAvg=(count,offset=0)=>monthlyPriceAverage(reference,calendarMonths(count,offset,now));
       const trendTrades=reference.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=5);
-      const trendRecent=trendTrades.filter(t=>tradeDay(t)>=today-90*dayMs);
-      const trendPrevious=trendTrades.filter(t=>tradeDay(t)>=today-180*dayMs&&tradeDay(t)<today-90*dayMs);
-      const recentAvg=trendRecent.length?R1(avgA(trendRecent)):null,prevAvg=trendPrevious.length?R1(avgA(trendPrevious)):null;
-      const trend=recentAvg!==null&&prevAvg>0?{recentAvg,prevAvg,pct:Math.round((recentAvg-prevAvg)/prevAvg*100),recentN:trendRecent.length,prevN:trendPrevious.length}:null;
+      const recentPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,0,now));
+      const previousPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,3,now));
+      const recentAvg=recentPrice?.v??null,prevAvg=previousPrice?.v??null;
+      const trend=recentAvg!==null&&prevAvg>0?{recentAvg,prevAvg,pct:Math.round((recentAvg-prevAvg)/prevAvg*100),recentN:recentPrice.n,prevN:previousPrice.n}:null;
       const prices=arr.map(t=>t.amt).sort((a,b)=>a-b),mid=prices.length>>1;
       const high=byDate.reduce((a,t)=>!a||t.amt>=a.amt?t:a,null),low=byDate.reduce((a,t)=>!a||t.amt<=a.amt?t:a,null);
       return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
         trend,latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
-        avg1:periodAvg(30),avg6:periodAvg(180),avg12:periodAvg(365),avg24:periodAvg(730),prev3:periodAvg(90,90),
-        avgAll:averageTrades.length?R1(avgA(averageTrades)):null,median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
-        min:prices[0],activeMonths:monthly.length,
-        avg3:periodAvg(90),
+        avg1:periodAvg(1),avg6:periodAvg(6),avg12:periodAvg(12),avg24:periodAvg(24),prev3:periodAvg(3,3),
+        avgAll:monthlyPriceAverage(reference,months)?.v??null,median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
+        min:prices[0],activeMonths:monthly.filter(m=>m.n>0).length,
+        avg3:periodAvg(3),
         max: Math.max(...arr.map(t=>t.amt)), monthly };
     }).sort((a,b)=>a.area-b.area);
     if(!pys.length){ missing.push(tg.name); continue; }
@@ -5080,9 +5096,11 @@ async function runSearch(opts){
     }catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
   }
   const allScope = multiTargets.length > 0;
-  const effMN = allScope
+  const monthlyHistoryMode=['complex','compare','shortval','gap','inversion','longtermrise','jeonselongtermrise','pricebandrise'].includes(mode);
+  const baseFetchMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
+  const effMN=monthlyHistoryMode?Math.max(baseFetchMN,neededMN+12):baseFetchMN;
   saveQueriedSliders();
   document.getElementById('tradeLoadNote').hidden = false;
   showLookupProgress(0,1);
@@ -5095,8 +5113,7 @@ async function runSearch(opts){
     const months = lastMonthsYm(neededMN); // 분석 창(윈도우) 계산용 — effMN치로 받아온 원본 중 이 개월들만 실제 분석에 사용
     const neededSet = new Set(months);
     const floorF = arr => fM ? arr.filter(t=>parseInt(t.floor,10)>=fM) : arr;
-    // 모든 탭이 이제 effMN(≥24개월)치로 받아오므로, 실제 분석 창(neededMN)보다 더 받아온 만큼은 항상 걸러내야 한다
-    // (mN이 24 이상으로 선택된 경우엔 effMN===neededMN이라 필터링이 그대로 통과, 즉 no-op)
+    // 월평균 계산 탭은 직전 평균가 시드용 과거 거래를 유지하고, 실제 거래 기반 탭은 조회 기간으로 제한한다.
     const windowF = arr => arr.filter(t=>neededSet.has(t.ym));
     let d;
     let rawP = [];
@@ -5133,7 +5150,7 @@ async function runSearch(opts){
           for(const t of rentArr) mergedRent.push({ ...t, gu: guName, lawd: guLawd });
         });
       }
-      let items = floorF(windowF(merged));
+      let items = floorF(monthlyHistoryMode?merged:windowF(merged));
       // 헤더 제목: 4곳 이하면 이름을 나열, 5곳 이상이면 시/도 단위로 묶어서 표시 (2026.08 3→4개로 확대,
       // 2026.09 5곳+일 때 "강서구 외 15곳" 대신 "서울시, 경기도, 부산시, 인천시"처럼 규모를 보여주도록 변경)
       const scopeLabel = regionSel.length
@@ -5142,10 +5159,10 @@ async function runSearch(opts){
       if(mode==='complex'){
         await Promise.all(targets.map(t=>ensureNaverNames(t.lawd)));
         const matches=targets.map(t=>({target:t,result:analyzeComplex(items.filter(x=>x.lawd===t.lawd&&complexLookup.hits.some(h=>h.lawd===t.lawd&&h.umd===x.umd&&(h.names.includes(x.apt)||h.name===x.apt||h.names.includes(x.sourceApt)))),name,months,merged.filter(x=>x.lawd===t.lawd),t.lawd)})).filter(x=>x.result.found);
-        if(matches.length===1){lawd=matches[0].target.lawd;d=matches[0].result;const rent=windowF(floorF(mergedRent.filter(x=>x.lawd===lawd)));const dj=analyzeComplex(rent,name,months,undefined,lawd);d=includeJeonseOnlySaleAreas(d,dj);d.jeonse=dj.found?dj:null;}
+        if(matches.length===1){lawd=matches[0].target.lawd;d=matches[0].result;const rent=floorF(mergedRent.filter(x=>x.lawd===lawd));const dj=analyzeComplex(rent,name,months,undefined,lawd);d=includeJeonseOnlySaleAreas(d,dj);d.jeonse=dj.found?dj:null;}
         else d={found:false,note:matches.length?'여러 지역에 같은 단지가 있습니다. 지역을 좁혀서 조회해 주세요.':'선택한 지역에서 단지를 찾지 못했습니다.'};
       } else if(mode==='gap'){
-        d=analyzeGapRanking(pyBandMultiFilter(items),windowF(mergedRent),months);d.scopeLabel=scopeLabel;
+        d=analyzeGapRanking(pyBandMultiFilter(items),mergedRent,months);d.scopeLabel=scopeLabel;
       } else if(mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'){
         // 이 세 탭은 평형(20~39평 고정, 20평대/30평대 평대별)·연식 필터 UI가 없어 items를 그대로 각자의 분석 함수에 넘긴다(단일 지역 조회와 동일한 방식)
         if(!items.length){
@@ -5180,7 +5197,7 @@ async function runSearch(opts){
         if(!d.rows.length){ d = {found:false, note:'조건에 맞는 단지가 없습니다. 지역을 조정해 보세요.'}; }
       } else if(mode==='jeonselongtermrise'){
         // 전세 변동률: rentItems(전세)를 longtermrise와 동일한 평형/연식 필터 UI로 걸러 분석
-        let rentItems = floorF(windowF(mergedRent));
+        let rentItems = floorF(monthlyHistoryMode?mergedRent:windowF(mergedRent));
         rentItems = pyBandMultiFilter(rentItems);
         rentItems = applyBuildYearFilter(rentItems);
         if(!rentItems.length){
@@ -5251,7 +5268,7 @@ async function runSearch(opts){
       // 매매·분양권 양쪽에서 독립적으로 이름 매칭을 시도한 뒤 병합한다 (매매 매칭 성공 여부와 무관하게 분양권도 항상 시도).
       let rawMerged = raw;
       rawMerged = mergeTradeAndPresaleForRanking(raw,rawP,lawd);
-      let items = windowF(floorF(rawMerged));
+      let items = monthlyHistoryMode?floorF(rawMerged):windowF(floorF(rawMerged));
       if(mode==='region' || mode==='volume'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
@@ -5272,7 +5289,7 @@ async function runSearch(opts){
         d.buildYear = buildYearLabel();
         if(!items.length){ d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'}; }
       } else if(mode==='jeonselongtermrise'){
-        let rentItems = windowF(rawJ);
+        let rentItems = monthlyHistoryMode?rawJ:windowF(rawJ);
         rentItems = pyBandMultiFilter(rentItems);
         rentItems = applyBuildYearFilter(rentItems);
         if(!rentItems.length){
@@ -5300,7 +5317,7 @@ async function runSearch(opts){
       } else if(mode==='gap'){
         // 공개 탭(2026.08) — 매매·전세 실거래를 짝지어 전세가율(갭투자) 랭킹.
         items = pyBandMultiFilter(items); // 매매 쪽만 걸러도 충분 — 전세 쪽은 매칭 시 자연스럽게 걸러짐(아래 analyzeGapRanking 주석 참고)
-        const rentItems = windowF(rawJ);
+        const rentItems = monthlyHistoryMode?rawJ:windowF(rawJ);
         d = analyzeGapRanking(items, rentItems, months);
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
@@ -5310,7 +5327,7 @@ async function runSearch(opts){
         // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
         // 자체적으로 시도하므로, 매매 매칭이 실패해도(예: 표기 차이) 전세는 따로 찾힐 수 있다.
         try{
-          const itemsJ = windowF(floorF(rawJ));
+          const itemsJ = floorF(rawJ);
           const dJ = analyzeComplex(itemsJ, name, months, undefined, lawd);
           d = includeJeonseOnlySaleAreas(d, dJ);
           d.jeonse = dJ.found ? dJ : null;
@@ -5718,7 +5735,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     }
     return s;
   };
-  if(!monthly || monthly.length < 2) return '<div class="rng" style="padding:8px 0">월별 데이터 부족 (2개월 이상 거래 필요)</div>';
+  if(!monthly || monthly.length < 2) return '<div class="rng" style="padding:8px 0">월별 데이터 부족 (표시 가능한 2개월 이상 필요)</div>';
   const W=340, H=170, P={t:14,r:12,b:24,l:38};
   const volH = 26; // 하단 거래량 막대 영역
   const xs = monthly.map((_,i)=> P.l + i*(W-P.l-P.r)/(monthly.length-1));
@@ -5727,7 +5744,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   if(hi===lo){ hi+=0.5; lo-=0.5; }
   const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
   const y = v => P.t + (hi-v)/(hi-lo)*(H-P.t-P.b-volH);
-  const maxN = Math.max(...monthly.map(m=>m.n));
+  const maxN = Math.max(1,...monthly.map(m=>m.n));
   const gap = monthly.length>1 ? (W-P.l-P.r)/(monthly.length-1) : 0;
   const barW = Math.min(14, Math.max(3, gap*0.55));
   const volY = n => (H-P.b) - (n/maxN)*(volH-4);
@@ -5760,7 +5777,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     <rect class="chart-hover-capture" x="${P.l}" y="${P.t}" width="${(W-P.l-P.r).toFixed(1)}" height="${(H-P.t-P.b).toFixed(1)}" fill="transparent" style="pointer-events:all"
       onpointerdown="chartHoverAt(event)" onpointermove="chartHoverAt(event)" onpointerleave="chartHoverEnd(event)" onclick="chartClick(event)"/>
   </svg></div>
-  <div class="chart-note">라인 = 월평균 ${priceLabel} (억) · 막대 = 월 거래량 · <span style="color:#DC2626">●</span>최고 <span style="color:#0F2B3D">●</span>최저<br>점을 탭하면 월/건수/범위 고정 표시, 다시 탭하면 상세</div>`;
+  <div class="chart-note">라인 = 월평균 ${priceLabel} (억) · 무거래월은 직전 평균가 유지 · 막대 = 실제 월 거래량 · <span style="color:#DC2626">●</span>최고 <span style="color:#0F2B3D">●</span>최저<br>점을 탭하면 월/건수/범위 고정 표시, 다시 탭하면 상세</div>`;
 }
 
 let selPy = -1; // -1 = 전체
@@ -5783,8 +5800,8 @@ function completeJeonseSizeRows(sale){
   return {...sale,...(rent||{}),byPy:rows,trades:rent?.trades||[],count:rent?.count||0};
 }
 function curComplexData(){ return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData; }
-const SALE_TRADES_FOOT = '평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
-const JEONSE_TRADES_FOOT = '평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
+const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
@@ -6030,7 +6047,7 @@ function complexDynamicHTML(){
     </div>
     ${isSale ? `
     <div class="sec">
-      <details id="complexTrendPanel" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)" ontoggle="this.querySelector('summary').textContent=this.open?'단기 추세 · 접기':'단기 추세 · 펼쳐보기'"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단기 추세 · 펼쳐보기</summary><div class="rng" style="margin-top:10px">평형별 · 이전 3개월 vs 최근 3개월</div>
+      <details id="complexTrendPanel" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)" ontoggle="this.querySelector('summary').textContent=this.open?'단기 추세 · 접기':'단기 추세 · 펼쳐보기'"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단기 추세 · 펼쳐보기</summary><div class="rng" style="margin-top:10px">평형별 · 이전 3개월 vs 최근 3개월 · 무거래월은 직전 평균가 유지</div>
       <div id="trendBox">${trendHTML(d)}</div>
       <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
       </details>
@@ -6351,7 +6368,7 @@ function multiTipFor(idx){
   const rows = curMultiChart.series
     .map(s=>({ s, m: s.byYm.get(ym) }))
     .sort((a,b)=> (b.m?b.m.avg:-Infinity) - (a.m?a.m.avg:-Infinity)) // 비싼 단지가 위로
-    .map(({s,m})=> `<span style="color:${s.color}">●</span> ${esc(s.label)}: ${m? `<b>${m.avg.toFixed(1)}억</b>` : '<span style="opacity:.6">거래 없음</span>'}`)
+    .map(({s,m})=> `<span style="color:${s.color}">●</span> ${esc(s.label)}: ${m? `<b>${m.avg.toFixed(1)}억</b>${m.carriedFrom?` <span style="opacity:.7">(${esc(m.carriedFrom)} 평균 유지)</span>`:''}` : '<span style="opacity:.6">거래 없음</span>'}`)
     .join('<br>');
   return `<b>20${ym}</b><br>${rows}`;
 }
@@ -6532,7 +6549,7 @@ function renderCompare(d){
     <div class="sec">
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
-      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 평균은 오늘(KST)부터 30·90·180·365·730일 기준, 최고가는 조회 기간 기준 · 모든 평균: 직거래·기존 저가 이상치 제외 · 단기 추세: 5층 이상, 이전 90일 vs 최근 90일 · 최근 거래: 3층 이상·직거래 제외 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
+      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 평균은 현재월 포함 1·3·6·12·24개월의 월평균을 동일 비중으로 계산, 최고가는 조회 기간 기준 · 모든 평균: 무거래월은 직전 평균가 유지 · 직거래·기존 저가 이상치 제외 · 단기 추세: 5층 이상, 이전 3개월 vs 최근 3개월 · 최근 거래: 3층 이상·직거래 제외 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
@@ -6843,7 +6860,7 @@ function renderPriceBandRise(d){
     </div>
     <div class="sec">
       <h3>${esc(resultLabel)} (${d.isLimited ? `${d.matchedCount}개 중 상위 ${d.rows.length}개` : `${d.rows.length}개`})</h3>
-      ${hint(basisHint, '현재가 = 최근 90일 평균')}
+      ${hint(basisHint, '현재가 = 최근 3개월 월평균 · 무거래월은 직전 평균가 유지')}
       ${rows}
     </div>
   </div>
