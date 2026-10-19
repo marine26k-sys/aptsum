@@ -321,7 +321,8 @@ function mergeFull(fulls) {
   if (!hh) return null;
   const dongCnt = fulls.reduce((s, f) => s + (f.dongCnt || 0), 0) || null;
   const useDate = fulls.map((f) => f.useDate).filter(Boolean).sort()[0] || null; // 가장 이른 사용승인일
-  return { hhcnt: hh, dongCnt, useDate, ...mergeSubway(fulls) };
+  const identity=fulls.length===1?Object.fromEntries(['kaptCode','kaptAddr','bjdCode'].filter(field=>fulls[0][field]!=null).map(field=>[field,fulls[0][field]])):{};
+  return { hhcnt: hh, dongCnt, useDate, ...mergeSubway(fulls), ...identity };
 }
 // 위와 동일하되 라이브 조회(fetchBasis) 결과들을 합산 (subways는 별도 fetchDtl 결과 배열을 받아 합침)
 function mergeBasis(bases, subways = []) {
