@@ -21,8 +21,8 @@ test('호가 변동 실거래는 년월을 앞에 가격 뒤에 거래층을 표
  vm.runInContext(html.slice(html.indexOf('function listingTrendRowHTML('),html.indexOf('function listingGapPriceHTML(')),c);
  const item={apt:'가상 단지',peak:40,prevAsk:36,ask:35,drop:1,latestSale:{price:34.5,date:'20260915',floor:12},points:[{date:'10/18',ask:36},{date:'10/19',ask:35}]};
  const row=c.listingTrendRowHTML(item,0,false,'down',true);
- assert.match(row,/\(26.09\)<\/span> 실거래 <b>34.5억<\/b> <span style="font-size:.85em">\(12층\)<\/span>/);assert.doesNotMatch(row,/20260915|평균/);
+ assert.match(row,/\(26.09\)<\/span> <span class="listing-ref-label">최신<\/span> <b>34.5억<\/b> <span style="font-size:.85em">\(12층\)<\/span>/);assert.doesNotMatch(row,/20260915|평균/);
  assert.doesNotMatch(c.listingTrendRowHTML(item,0,false,'all'),/실거래/);
- assert.match(c.listingTrendRowHTML({...item,latestSale:undefined},0,false,'down',true),/실거래 없음/);
+ assert.match(c.listingTrendRowHTML({...item,latestSale:undefined},0,false,'down',true),/최신 거래 없음/);
  assert.doesNotMatch(c.listingTrendRowHTML({...item,latestSale:{...item.latestSale,floor:null}},0,false,'down',true),/null층|0층/);
 });
