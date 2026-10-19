@@ -30,3 +30,14 @@ test('latest comparison trade requires floor three or higher and excludes direct
  const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610']).complexes[0].pys[0];
  const p=analyze(records);assert.equal(p.latest.day,1);assert.equal(p.latest.floor,3);assert.equal(analyze(records.slice(1)).latest,null);
 });
+
+test('all comparison averages and monthly graph points use the existing outlier rule without raw fallback',()=>{
+ const c=setup();c.median=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+ vm.runInContext(html.slice(html.indexOf('function markOutliers('),html.indexOf('// ── 층별 가격 프리미엄',html.indexOf('function markOutliers('))),c);
+ const base={apt:'가상단지',umd:'가상동',area:84,py:34,ym:'202610',floor:12,direct:0};
+ const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511']).complexes[0].pys[0];
+ const p=analyze([12,13,14,5].map((amt,i)=>({...base,amt,d:i+1})).concat({...base,amt:50,d:5,direct:1}));
+ for(const key of ['avg1','avg3','avg6','avg12']){assert.equal(p[key].v,13);assert.equal(p[key].n,3);}
+ assert.equal(p.monthly[0].avg,13);assert.equal(p.monthly[0].n,3);assert.equal(p.avgAll,13);
+ const none=analyze([{...base,amt:50,d:1,direct:1}]);for(const key of ['avg1','avg3','avg6','avg12','avgAll'])assert.equal(none[key],null);assert.equal(none.monthly.length,0);
+});
