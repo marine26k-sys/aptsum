@@ -4329,7 +4329,7 @@ function analyzeCompare(itemsByLawd, targets, months){
       const prices=arr.map(t=>t.amt).sort((a,b)=>a-b),mid=prices.length>>1;
       const high=byDate.reduce((a,t)=>!a||t.amt>=a.amt?t:a,null),low=byDate.reduce((a,t)=>!a||t.amt<=a.amt?t:a,null);
       return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
-        latest:deal(byDate.at(-1)),high:deal(high),low:deal(low),
+        latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
         avg1:periodAvg(0,1),avg6:periodAvg(0,6),avg12:periodAvg(0,12),prev3:periodAvg(3,3),
         avgAll:R1(avgA(arr)),median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
         min:prices[0],activeMonths:monthly.length,
@@ -6476,7 +6476,7 @@ function renderCompare(d){
     <div class="sec">
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
-      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 기간 통계도 조회 기간 안에서 계산 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
+      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 기간 통계도 조회 기간 안에서 계산 · 최근 거래: 3층 이상·직거래 제외 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;

@@ -22,3 +22,11 @@ test('summary renders side-by-side fields, exact school details and missing valu
  assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,14);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
  c.cmpPyMap[0]=59;assert.doesNotMatch(c.compareSummaryHTML({complexes:[a,b]}),/20.0억/);
 });
+
+test('latest comparison trade requires floor three or higher and excludes direct sales even on raw fallback',()=>{
+ const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,ym:'202610',amt:10};
+ c.markOutliers=()=>[];
+ const records=[{...base,d:1,floor:3,direct:0},{...base,d:2,floor:2,direct:0},{...base,d:3,floor:12,direct:1},{...base,d:4,floor:null,direct:0}];
+ const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610']).complexes[0].pys[0];
+ const p=analyze(records);assert.equal(p.latest.day,1);assert.equal(p.latest.floor,3);assert.equal(analyze(records.slice(1)).latest,null);
+});
