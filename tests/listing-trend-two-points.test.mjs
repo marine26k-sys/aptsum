@@ -23,6 +23,6 @@ test('호가 변동 최근 실거래는 년월을 앞에 가격 뒤에 거래층
  const row=c.listingTrendRowHTML(item,0,false,'down',true);
  assert.match(row,/\(26.09\)<\/span> 최근 실거래 <b>34.5억<\/b> · 12층/);assert.doesNotMatch(row,/20260915|평균/);
  assert.doesNotMatch(c.listingTrendRowHTML(item,0,false,'all'),/최근 실거래/);
- assert.match(c.listingTrendRowHTML({...item,latestSale:undefined},0,false,'down',true),/최근 실거래 없음/);
+ assert.match(c.listingTrendRowHTML({...item,latestSale:undefined},0,false,'down',true),/실거래 없음/);
  assert.doesNotMatch(c.listingTrendRowHTML({...item,latestSale:{...item.latestSale,floor:null}},0,false,'down',true),/null층|0층/);
 });
