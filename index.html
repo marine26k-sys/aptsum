@@ -6980,19 +6980,19 @@ function listingOccupancyApply(){
   lastData=null;
 }
 function enforceListingTrialLawd(lawd){if(isListingTrial()&&lawd!==LISTING_TRIAL_LAWD)throw Object.assign(new Error('무료 체험은 강남구만 조회할 수 있습니다.'),{auth:true});}
-async function fetchListings(lawd){
+async function fetchListings(lawd,refresh=false){
   enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}:${listingFloor()}`;
-  if(listingMem[key]) return listingMem[key];
+  if(!refresh&&listingMem[key]) return listingMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return (listingMem[key] = await r.json());
 }
-async function fetchListingHistory(lawd){
+async function fetchListingHistory(lawd,refresh=false){
   enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
-  if(listingHistoryMem[key]) return listingHistoryMem[key];
+  if(!refresh&&listingHistoryMem[key]) return listingHistoryMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=${occupancy}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -7157,7 +7157,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
     if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch(false);return;}targets=[selectedComplex];}
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
-      const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
+      const [current,history]=await Promise.all([fetchListings(t.lawd,true),fetchListingHistory(t.lawd,true)]);
       packs.push({t,current,history});
     }catch(e){if(e.auth)throw e;failed.push(t.name);}}));
     if(myToken!==searchToken)return;
