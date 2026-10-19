@@ -2548,6 +2548,7 @@ function setMode(m, fromRestore){
   // 안 그러면 그 결과가 늦게 도착했을 때 지금 막 전환한 새 탭 화면을 덮어쓸 수 있음.
   searchToken++;
   closeExpandedComplexMap();
+  const floatingHead=document.getElementById('cmpSummaryFloatingHead');if(floatingHead)floatingHead.hidden=true;
   mode = m;
   renderRecentComplexes();
   document.getElementById('searchBox').dataset.mode=m;
@@ -2713,7 +2714,7 @@ function addCmpRow(){
   div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
     <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
-  const defaultLawd=rows.length?rows[rows.length-1].querySelector('select').value:sel.value;
+  const defaultLawd=rows.length?rows[rows.length-1].querySelector('select').value:'';
   setCmpRowLawd(div, defaultLawd); // 새 행은 직전 비교 행의 지역 범위를 유지한다.
   document.getElementById('cmpRows').appendChild(div);
 }
@@ -4300,15 +4301,23 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     divergence: divergence.slice(0,300) };
 }
 
-function analyzeCompare(itemsByLawd, targets, months){
+function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
+  const kstToday=new Date(now+9*3600000).toISOString().slice(0,10);
+  const today=Date.parse(kstToday+'T00:00:00Z'),dayMs=86400000;
+  const tradeDay=t=>{
+    const ym=String(t.ym||''),day=Number(t.d);
+    if(!/^\d{6}$/.test(ym)||!Number.isInteger(day)||day<1||day>31)return NaN;
+    const value=Date.UTC(Number(ym.slice(0,4)),Number(ym.slice(4,6))-1,day);
+    return new Date(value).toISOString().slice(0,10)===`${ym.slice(0,4)}-${ym.slice(4,6)}-${String(day).padStart(2,'0')}`?value:NaN;
+  };
+  const referenceMonths=Array.from({length:13},(_,i)=>{const d=new Date(Date.UTC(Number(kstToday.slice(0,4)),Number(kstToday.slice(5,7))-1-i,1));return d.toISOString().slice(0,7).replace('-','');});
   const monthsAsc = months.slice().reverse();
-  const m3 = months.slice(0,3);
   const complexes=[], missing=[];
   for(const tg of targets){
     const all = itemsByLawd[tg.lawd] || [];
     const m = matchComplex(all, tg.name, tg.lawd);
     if(m.multi){ missing.push(`${tg.name} (여러 단지 일치 — 정확한 단지명 입력)`); continue; }
-    const hits = m.hits || [];
+    const hits = (m.hits || []).filter(t=>months.includes(t.ym));
     if(!hits.length){ missing.push(tg.name); continue; }
     const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
     const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
@@ -4316,8 +4325,7 @@ function analyzeCompare(itemsByLawd, targets, months){
     const pys = Object.entries(groups).map(([areaKey, arrRaw])=>{
       const clean = markOutliers(arrRaw, months);
       const arr = clean.length? clean : arrRaw;
-      const averageTrades=clean.filter(t=>!t.direct);
-      const a3 = averageTrades.filter(t=>m3.includes(t.ym));
+      const averageTrades=clean.filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
       const monthly = monthsAsc.map(ym=>{
         const mA = averageTrades.filter(t=>t.ym===ym);
         return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
@@ -4326,15 +4334,17 @@ function analyzeCompare(itemsByLawd, targets, months){
       const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
       const byDate=arr.slice().sort((a,b)=>String(a.ym||'').localeCompare(String(b.ym||''))||(Number(a.d)||0)-(Number(b.d)||0));
       const deal=t=>t?{price:t.amt,ym:t.ym,day:t.d,floor:t.floor}:null;
-      const periodAvg=(start,count)=>{const subset=averageTrades.filter(t=>months.slice(start,start+count).includes(t.ym));return subset.length?{v:R1(avgA(subset)),n:subset.length}:null;};
+      const referenceRaw=(m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)&&tradeDay(t)>=today-365*dayMs&&tradeDay(t)<=today);
+      const reference=markOutliers(referenceRaw,referenceMonths).filter(t=>!t.direct);
+      const periodAvg=(days,offset=0)=>{const subset=reference.filter(t=>tradeDay(t)>=today-(days+offset)*dayMs&&tradeDay(t)<=today-offset*dayMs);return subset.length?{v:R1(avgA(subset)),n:subset.length}:null;};
       const prices=arr.map(t=>t.amt).sort((a,b)=>a-b),mid=prices.length>>1;
       const high=byDate.reduce((a,t)=>!a||t.amt>=a.amt?t:a,null),low=byDate.reduce((a,t)=>!a||t.amt<=a.amt?t:a,null);
       return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
         latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
-        avg1:periodAvg(0,1),avg6:periodAvg(0,6),avg12:periodAvg(0,12),prev3:periodAvg(3,3),
+        avg1:periodAvg(30),avg6:periodAvg(180),avg12:periodAvg(365),prev3:periodAvg(90,90),
         avgAll:averageTrades.length?R1(avgA(averageTrades)):null,median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
         min:prices[0],activeMonths:monthly.length,
-        avg3: a3.length? {v:R1(avgA(a3)), n:a3.length} : null,
+        avg3:periodAvg(90),
         max: Math.max(...arr.map(t=>t.amt)), monthly };
     }).sort((a,b)=>a.area-b.area);
     if(!pys.length){ missing.push(tg.name); continue; }
@@ -5188,15 +5198,15 @@ async function runSearch(opts){
       const uniq = [...new Set(expandedCmp.map(x=>x.lawd))];
       // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
       const [fetched, fetchedP] = await Promise.all([
-        Promise.all(lookupProgressMap(uniq,ld=>ensureMonths(ld, effMN))),
-        Promise.all(uniq.map(ld=>ensureMonthsP(ld, effMN).catch(()=>[]))),
+        Promise.all(lookupProgressMap(uniq,ld=>ensureMonths(ld, Math.max(effMN,13)))),
+        Promise.all(uniq.map(ld=>ensureMonthsP(ld, Math.max(effMN,13)).catch(()=>[]))),
       ]);
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       if(myToken!==searchToken)return;
       const byLawd = {};
       uniq.forEach((ld,i)=>{
         const merged = mergeTradeAndPresaleForRanking(fetched[i],fetchedP[i],ld);
-        byLawd[ld]=floorF(windowF(merged));
+        byLawd[ld]=floorF(merged);
       });
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       if(myToken!==searchToken)return;
@@ -6407,7 +6417,25 @@ function fitCompareSummaryTables(){
     table.style.width=`${labelWidth+dataWidth*count}px`;
     cols[0].style.width=`${labelWidth}px`;
     [...cols].slice(1).forEach(col=>{col.style.width=`${dataWidth}px`;});
+    table.parentElement.onscroll=syncCompareSummarySticky;
   });
+}
+
+function syncCompareSummarySticky(){
+  const table=document.querySelector('#cmpTable .cmp-summary-table');
+  let floating=document.getElementById('cmpSummaryFloatingHead');
+  if(!table||!table.getBoundingClientRect().width){if(floating)floating.hidden=true;return;}
+  const wrapper=table.parentElement,head=table.querySelector('thead');
+  if(!head)return;
+  const rect=wrapper.getBoundingClientRect(),headRect=head.getBoundingClientRect();
+  if(headRect.top>=0||rect.bottom<=headRect.height){if(floating)floating.hidden=true;return;}
+  if(!floating){floating=document.createElement('div');floating.id='cmpSummaryFloatingHead';floating.setAttribute('aria-hidden','true');floating.style.cssText='position:fixed;top:0;z-index:60;overflow:hidden;background:#fff;pointer-events:none;box-shadow:0 2px 5px #0002';document.body.append(floating);}
+  if(syncCompareSummarySticky.source!==table){
+    const copy=document.createElement('table');copy.className='cmp-summary-table';copy.append(table.querySelector('colgroup').cloneNode(true),head.cloneNode(true));floating.replaceChildren(copy);syncCompareSummarySticky.source=table;
+  }
+  const copy=floating.firstElementChild;copy.style.width=table.style.width;
+  const widths=table.querySelectorAll('col');copy.querySelectorAll('col').forEach((col,i)=>{col.style.width=widths[i].style.width;});
+  floating.style.left=rect.left+'px';floating.style.width=wrapper.clientWidth+'px';floating.style.height=headRect.height+'px';floating.hidden=false;floating.scrollLeft=wrapper.scrollLeft;
 }
 
 function compareSummaryHTML(d){
@@ -6478,7 +6506,7 @@ function renderCompare(d){
     <div class="sec">
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
-      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 기간 통계도 조회 기간 안에서 계산 · 모든 평균: 직거래·기존 저가 이상치 제외 · 최근 거래: 3층 이상·직거래 제외 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
+      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 가격·거래는 선택 평형과 조회 기간 기준 · 최근 평균은 오늘(KST)부터 30·90·180·365일 기준, 최고가는 조회 기간 기준 · 모든 평균: 직거래·기존 저가 이상치 제외 · 최근 거래: 3층 이상·직거래 제외 · — 자료 없음 · 지하철은 제공된 도보시간 안내입니다.</div>
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
@@ -7818,6 +7846,7 @@ function listingTrendDate(date){
 }
 function fitListingHeadingNames(){
   fitCompareSummaryTables();
+  syncCompareSummarySticky();
   document.querySelectorAll('.cmp-legend-name').forEach(name=>{
     name.style.fontSize='';
     const fontSize=parseFloat(getComputedStyle(name).fontSize);
@@ -7847,6 +7876,7 @@ function fitListingTrendPrices(){
   });
 }
 window.addEventListener('resize',fitListingTrendPrices);
+window.addEventListener('scroll',syncCompareSummarySticky,{passive:true});
 function toggleListingTrendHistory(button){
   const history=button.closest('.listing-trend-row').querySelector('.listing-trend-history');
   if(!history)return;

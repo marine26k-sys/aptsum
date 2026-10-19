@@ -41,3 +41,11 @@ test('all comparison averages and monthly graph points use the existing outlier 
  assert.equal(p.monthly[0].avg,13);assert.equal(p.monthly[0].n,3);assert.equal(p.avgAll,13);
  const none=analyze([{...base,amt:50,d:1,direct:1}]);for(const key of ['avg1','avg3','avg6','avg12','avgAll'])assert.equal(none[key],null);assert.equal(none.monthly.length,0);
 });
+
+test('recent averages roll back from KST today across month and year boundaries independently of chart window',()=>{
+ const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,floor:12,direct:0};
+ const records=[['202610',19,30],['202609',19,10],['202609',18,20],['202607',21,40],['202607',20,50],['202604',22,60],['202604',21,70],['202510',19,80],['202510',18,90],['202610',20,999]].map(([ym,d,amt])=>({...base,ym,d,amt}));
+ const result=c.analyzeCompare({'11111':records},[{lawd:'11111',name:'가상단지'}],['202610'],Date.parse('2026-10-18T15:30:00Z')).complexes[0].pys[0];
+ for(const [key,price,n] of [['avg1',20,2],['avg3',25,4],['avg6',35,6],['avg12',45,8]]){assert.equal(result[key].v,price,key);assert.equal(result[key].n,n,key);}
+ assert.equal(result.monthly.length,1);assert.equal(result.monthly[0].avg,30);assert.equal(result.monthly[0].n,1);
+});
