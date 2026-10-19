@@ -57,3 +57,8 @@ test('short-term trend compares consecutive non-overlapping ninety-day windows a
  const trend=get(records).trend;assert.equal(trend.prevAvg,10);assert.equal(trend.recentAvg,20);assert.equal(trend.pct,100);assert.equal(trend.prevN,2);assert.equal(trend.recentN,2);
  assert.equal(get(records.filter(t=>t.ym!=='202606'&&!(t.ym==='202607'&&t.d===20))).trend,null);
 });
+
+ test('trend labels identify previous and recent averages without transaction counts',()=>{
+ const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,trend:{prevAvg:10,recentAvg:11,pct:10,prevN:7,recentN:8}}]}]});
+ assert.match(result,/이전 3개월 평균/);assert.match(result,/최근 3개월 평균/);assert.doesNotMatch(result,/이전 7건|최근 8건/);assert.match(result,/cmp-summary-heading/);
+ });

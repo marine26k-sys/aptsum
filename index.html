@@ -313,6 +313,9 @@ try {
   .cmp-summary-table th:first-child{position:sticky;left:0;z-index:1;background:#F1F5F9;text-align:left}
   .cmp-summary-table thead th{background:var(--teal-light-soft);color:var(--navy);text-align:left}
   .cmp-summary-table thead th:first-child{z-index:2}
+  .cmp-summary-heading{display:flex;align-items:flex-start;gap:4px}
+  .cmp-summary-dot{flex:0 0 7px;width:7px;height:7px;margin-top:5px;border-radius:50%}
+  .cmp-summary-name{flex:1;min-width:0;text-wrap:balance;word-break:break-all}
   .cmp-summary-table .cmp-group th{background:var(--teal);color:white;padding:5px 10px}
   .listing-complex-title{white-space:nowrap}
   .listing-trend-heading{display:flex;align-items:baseline;gap:5px;min-width:0}
@@ -6455,7 +6458,7 @@ function compareSummaryHTML(d){
   const deal=t=>t?`${money(t.price)}<br><span style="color:var(--sub)">${esc(date(t))}${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?` · ${esc(t.floor)}층`:''}</span>`:'—';
   const row=(label,fn)=>`<tr><th scope="row">${esc(label)}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
   const group=label=>`<tr class="cmp-group"><th scope="row">${esc(label)}</th>${chosen.map(()=>'<td style="background:var(--teal)"></td>').join('')}</tr>`;
-  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span style="color:${CMP_COLORS[i%4]}">●</span> ${esc(c.name)}</th>`).join('')}</tr></thead><tbody>
+  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr></thead><tbody>
     ${group('단지·입지')}
     ${row('법정동',c=>value(c.umd))}
     ${row('준공·년차',c=>{const year=String(c.hh?.useDate||c.hh?.built||c.build||'').slice(0,4);return /^\d{4}$/.test(year)?esc(complexBuildLabel(year)):'—';})}
@@ -6472,7 +6475,7 @@ function compareSummaryHTML(d){
     ${row('최근 6개월 평균',(_c,p)=>period(p?.avg6))}
     ${row('최근 12개월 평균',(_c,p)=>period(p?.avg12))}
     ${row('최근 24개월 평균',(_c,p)=>period(p?.avg24))}
-    ${row('단기 추세',(_c,p)=>p?.trend?`${money(p.trend.prevAvg)} → ${money(p.trend.recentAvg)}<br><b style="color:var(--${p.trend.pct>0?'red':p.trend.pct<0?'blue':'sub'})">${p.trend.pct>0?'▲':p.trend.pct<0?'▼':'보합 '}${Math.abs(p.trend.pct)}%</b><br><span style="color:var(--sub)">이전 ${p.trend.prevN}건 · 최근 ${p.trend.recentN}건</span>`:'—')}
+    ${row('단기 추세',(_c,p)=>p?.trend?`이전 3개월 평균 ${money(p.trend.prevAvg)}<br>최근 3개월 평균 ${money(p.trend.recentAvg)}<br><b style="color:var(--${p.trend.pct>0?'red':p.trend.pct<0?'blue':'sub'})">${p.trend.pct>0?'▲':p.trend.pct<0?'▼':'보합 '}${Math.abs(p.trend.pct)}%</b>`:'—')}
   </tbody></table>`;
 }
 
