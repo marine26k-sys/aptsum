@@ -2706,7 +2706,8 @@ function addCmpRow(){
   div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
     <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
-  setCmpRowLawd(div, sel.value); // 기본: 현재 선택 지역(값+버튼 라벨 함께 설정)
+  const defaultLawd=rows.length?rows[rows.length-1].querySelector('select').value:sel.value;
+  setCmpRowLawd(div, defaultLawd); // 새 행은 직전 비교 행의 지역 범위를 유지한다.
   document.getElementById('cmpRows').appendChild(div);
 }
 
