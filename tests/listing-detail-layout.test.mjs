@@ -16,3 +16,13 @@ test('metadata moves area only in the new layout and highlights only its listing
  const normal=c.listingInfoHTML(item,false),moved=c.listingInfoHTML(item,false,true);
  assert.match(normal,/34평 \(전용 84\)/);assert.doesNotMatch(moved,/34평|전용 84/);assert.match(moved,/가상동.*10년차.*500세대/);assert.match(moved,/<b style="color:var\(--teal-dark\)">중\/25층<\/b>/);
 });
+
+test('individual header contains common building details while rows keep only their own floor',()=>{
+ const c=vm.createContext({esc:String,buildAgeLabel:()=> '5년차',hdTop:()=>'',listingOccupancyLabel:()=> '입주 가능',listingFloorLabel:()=> '중층 이상',listingTrialBadgeHTML:()=>'',guShort:x=>x});
+ vm.runInContext(html.slice(html.indexOf('function listingInfoHTML('),html.indexOf('function listingTrendDate(')),c);
+ const item={umd:'가상동',built:'202101',hh:1313,fl:'고/36'};
+ const header=c.listingHeaderHTML({individual:true,complexName:'가상 단지',complexRegion:'경기 가상시 가상동',rows:[item]},'단지 분석');
+ assert.match(header,/경기 가상시 가상동/);assert.match(header,/5년차 · 1,313세대/);
+ const row=c.listingInfoHTML(item,false,true,true);assert.match(row,/고\/36층/);assert.doesNotMatch(row,/가상동|5년차|1,313세대/);
+ assert.equal(c.listingInfoHTML({...item,fl:''},false,true,true),'');
+});

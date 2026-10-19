@@ -7728,14 +7728,17 @@ function regionMulti(list){
   return { pre: head ? head + ' ' : '' };
 }
 function guShort(gu, m){ return (m && m.pre && gu.startsWith(m.pre)) ? gu.slice(m.pre.length) : gu; }
-function listingInfoHTML(x, multiRegion, hidePyeong=false){
+function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=false){
+  if(commonInfoInHeader)return x.fl?`<b style="color:var(--teal-dark)">${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}</b>`:'';
   return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${hidePyeong?'<b style="color:var(--teal-dark)">':''}${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}${hidePyeong?'</b>':''}`:''}`;
 }
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
+  const built=d.individual?(d.rows||[]).find(x=>x.built)?.built:null;
+  const hh=d.individual?(d.rows||[]).find(x=>x.hh)?.hh:null;
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
       <h2>${esc(d.individual?d.complexName:(title || shortRegionLabel(d.scopeLabel||'')))}</h2>
-      ${d.individual?`<div style="text-align:center;font-size:13px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${esc(d.complexRegion||'')}</div>`:''}
+      ${d.individual?`<div style="text-align:center;font-size:13px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${esc(d.complexRegion||'')}</div>${built||hh?`<div style="text-align:center;font-size:12px;line-height:1.5;margin:-3px 0 8px;color:rgba(255,255,255,.8)">${[built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:''].filter(Boolean).join(' · ')}</div>`:''}`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
         ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
@@ -7849,7 +7852,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b></span>`:listingNameHTML(x,true)}<small>${listingInfoHTML(x, multiRegion, smallPeakDate)}</small></span>
+    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b></span>`:listingNameHTML(x,true)}<small>${listingInfoHTML(x, multiRegion, smallPeakDate, x.commonInfoInHeader)}</small></span>
     </div>
     ${smallPeakDate?`<div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최신 거래 없음'}</div>`:''}
     ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
@@ -7949,7 +7952,7 @@ let listingBudgetVisibleCount=100;
 function listingWithoutHistoryHTML(x,i,multiRegion,asOf,failed=false){
   const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`<span style="font-size:.85em">(${peakYmLabel(x.peakYm)})</span> `:'')+'<span class="listing-ref-label">전고점</span>';
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm"><span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x,true)}<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b></span><small>${listingInfoHTML(x,multiRegion,true)}</small></span></div>
+    <span class="nm"><span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x,true)}<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b></span><small>${listingInfoHTML(x,multiRegion,true,x.commonInfoInHeader)}</small></span></div>
     <div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최신 거래 없음'}</div>
     ${comparisonPeak>0?`<div class="listing-trend-peak">${comparisonLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:''}
     <span class="listing-trend-change"><span class="price now">${asOf?`<span class="date">${esc(listingTrendDate(asOf))}</span> `:''}${x.ask.toFixed(1)}억</span><span style="margin-left:auto;font-size:12px;color:var(--sub)">${failed?'호가 이력 조회 실패':'직전 이력 없음'}</span></span></div>`;
@@ -7978,7 +7981,7 @@ function renderListingBudget(d,limit=100){
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·${listingFloorLabel()} 매물)</div>`
     : list.map((x,i)=>{
-        if(d.individual){const trend=individualListingTrend(x,d.individualTrend);if(trend)return listingTrendRowHTML({...trend,...x,points:trend.points,prevAsk:trend.prevAsk,drop:trend.drop},i,multiRegion,'all',true);return listingWithoutHistoryHTML(x,i,multiRegion,d.asOf,d.individualTrendError);}
+        if(d.individual){x={...x,commonInfoInHeader:true};const trend=individualListingTrend(x,d.individualTrend);if(trend)return listingTrendRowHTML({...trend,...x,points:trend.points,prevAsk:trend.prevAsk,drop:trend.drop},i,multiRegion,'all',true);return listingWithoutHistoryHTML(x,i,multiRegion,d.asOf,d.individualTrendError);}
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
