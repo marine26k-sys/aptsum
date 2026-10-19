@@ -1397,6 +1397,12 @@ function buildShareURL(inp){
   return location.pathname + '?' + p.toString();
 }
 // 탭 주소는 조건 화면만 연다. 조회 조건이 담긴 공유 링크만 자동 검색한다.
+function parseCmpShareItems(value){
+  return String(value||'').split('|').flatMap(item=>{
+    const match=item.match(/^(ALL:[^:]+|CITYALL:[^:]+|[^:]+):([\s\S]+)$/);
+    return match?[{lawd:match[1],name:match[2]}]:[];
+  });
+}
 async function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
@@ -1442,7 +1448,7 @@ async function initFromURL(){
     listingGapSet(small,large);
   }
   if(m==='compare'){
-    const items = (p.get('c')||'').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name);
+    const items = parseCmpShareItems(p.get('c'));
     document.getElementById('cmpRows').innerHTML='';
     items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
     while(document.querySelectorAll('.cmp-row').length<2)addCmpRow();
