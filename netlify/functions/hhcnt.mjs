@@ -144,15 +144,16 @@ function naverLookup(nv, lawd, name) {
 }
 function applyFallback(fallback, lawd, name, result) {
   const hit = naverLookup(fallback, lawd, name);
-  // K-apt 세대수·지하철 정보는 유지하고, 같은 세대수의 네이버 용적률만 보완한다.
-  if (result && result.found && result.hhcnt > 0) {
-    return hit && hit.hh === result.hhcnt && result.far == null && hit.far != null
-      ? { ...result, far: hit.far } : result;
+  // K-apt 정보는 유지하고, 같은 세대수로 연결된 네이버 보조 지표만 보완한다.
+  if(result && result.found && result.hhcnt>0){
+    if(!(hit && hit.hh === result.hhcnt))return result;
+    const out={...result};
+    for(const field of ['far','bcr','dongCnt','built'])if(out[field]==null && hit[field]!=null)out[field]=hit[field];
+    return out;
   }
-  if (!hit) return result;
-  const base = (result && result.found) ? result : { found: true, name };
-  // 매핑표에 있는 보조 메타만 채우고, K-apt에서 온 필드는 유지한다.
-  return { ...base, found: true, name, hhcnt: hit.hh, ...(hit.far != null ? { far: hit.far } : {}) };
+  if(!hit)return result;
+  const base=(result&&result.found)?result:{found:true,name};
+  return {...base,found:true,name,hhcnt:hit.hh,...Object.fromEntries(['far','bcr','dongCnt','built'].filter(field=>hit[field]!=null).map(field=>[field,hit[field]]))};
 }
 
 function resolveSigungu(lawd) {
