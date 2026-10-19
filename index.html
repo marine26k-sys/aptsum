@@ -7578,7 +7578,7 @@ function renderListingRecentComplexes(){
 }
 function openListingRecentComplex(entry){
   if(isListingTrial()&&entry.lawd!==LISTING_TRIAL_LAWD){showError(LISTING_TRIAL_MSG);return;}
-  document.getElementById('listingNameQuery').value=entry.apt;listingNameChanged();listingNameRestoreKey=entry.key;search({silentScroll:true});
+  document.getElementById('listingNameQuery').value=entry.apt;listingNameChanged();listingNameRestoreKey=entry.key;search({silentScroll:true,scrollToListingResult:true});
 }
 let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
 function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
