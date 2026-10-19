@@ -6501,7 +6501,7 @@ function compareSummaryHTML(d){
   };
   const value=x=>x===null||x===undefined||x===''?'—':esc(x);
   const money=x=>Number.isFinite(x)?`<span class="cmp-sale-price">${x.toFixed(1)}억</span>`:'—';
-  const change=x=>x?`<span style="color:var(--sub)">${esc(ymLabel(x.from))}</span> ${money(x.basePrice)}<br><span style="font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.abs(x.pct).toFixed(1)}%)</span>`:'—';
+  const change=x=>x?`<span style="color:var(--sub)">${esc(ymLabel(x.from))}</span> ${money(x.basePrice)}<br><span style="font-size:10px;font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.round(Math.abs(x.pct))}%)</span>`:'—';
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)}<br><span style="color:var(--sub)">${esc(date(t))}${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?` · ${esc(t.floor)}층`:''}</span>`:'—';
   const row=(label,fn)=>`<tr><th scope="row">${esc(label)}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
