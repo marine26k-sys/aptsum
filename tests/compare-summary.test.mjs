@@ -19,6 +19,6 @@ test('comparison statistics use the selected exclusive area and actual contract 
 test('summary renders side-by-side fields, exact school details and missing values safely',()=>{
  const c=setup();const a={name:'가상<A>',umd:'가상동',count:4,build:'2020',hh:{hhcnt:1000,far:250,bcr:20,dongCnt:10,subwayWalk:'10분이내'},schoolInfo:{schools:[{name:'가상초',level:'초',distance:123,type:'공립'}]},pys:[{area:84,py:'34평',n:4,avg3:{v:19,n:3},max:20,latest:{price:20,ym:'202610',day:15,floor:12}}]};
  const b={name:'가상B',pys:[],count:0};const result=c.compareSummaryHTML({complexes:[a,b],period:'26.05 ~ 26.10'});
- assert.match(result,/<table/);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.match(result,/가상초 · 123m \(공립\)/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
+ assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,14);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
  c.cmpPyMap[0]=59;assert.doesNotMatch(c.compareSummaryHTML({complexes:[a,b]}),/20.0억/);
 });
