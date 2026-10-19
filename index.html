@@ -6831,13 +6831,13 @@ function renderLongTermRise(d){
       ${hdTop('매매 변동률')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs(`${d.periodM}개월 전 평균`, '최근 1개월 평균')}
+      ${hdVs(`${d.periodM}개월 전 월평균`, '현재월 평균')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>단지별 상세</h3>
-      ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
+      ${hint(`"${d.periodM}개월 전" = 해당 월평균가`, '무거래월은 직전 월평균 유지 · 직거래·저가 이상치 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
@@ -6899,13 +6899,13 @@ function renderJeonseLongTermRise(d){
       ${hdTop('전세 변동률')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs(`${d.periodM}개월 전 평균 전세가`, '최근 1개월 평균 전세가')}
+      ${hdVs(`${d.periodM}개월 전 월평균 전세가`, '현재월 평균 전세가')}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
     <div class="sec">
       <h3>전세가 상승 단지</h3>
-      ${hint(`"${d.periodM}개월 전" = 그 시점 30일 평균가`, '표본 2건↑ · 직거래 제외')}
+      ${hint(`"${d.periodM}개월 전" = 해당 월평균가`, '무거래월은 직전 월평균 유지 · 직거래·저가 이상치 제외')}
       ${rows(d.rows, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
