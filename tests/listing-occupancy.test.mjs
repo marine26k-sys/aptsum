@@ -86,3 +86,14 @@ test('floor scopes keep separate minimums, matching links and low-only types',()
  assert.equal(snapshotForHistory({items},'available').items.length,1);
  assert.equal(listingItemsForFloor([{ask:10,occupancy:'available'}],'available','all').length,0);
 });
+
+test('latest Excel transaction keeps its own price, date and floor through API upload',()=>{
+ const old={...base,'최근 거래금액(억)':34.5,'최근 거래일':'2026-09-15','최근 거래층':12};
+ const newer={...base,'최근 거래금액(억)':35.2,'최근 거래일':'2026-10-01','최근 거래층':8};
+ const item=summarize([newer,old]).regions['서울시|강남구'][0];
+ assert.deepEqual(JSON.parse(JSON.stringify(cleanItem(item).latestSale)),{price:35.2,date:'20261001',floor:8});
+ assert.equal(cleanItem(summarize([base]).regions['서울시|강남구'][0]).latestSale,undefined);
+ assert.equal(cleanItem({...item,latestSale:{price:2,date:'20261301',floor:1}}).latestSale,undefined);
+ assert.equal(cleanItem({...item,latestSale:{price:2,date:'202609',floor:''}}).latestSale.floor,null);
+ assert.equal(cleanItem({...item,latestSale:{price:-1,date:'202609',floor:1}}).latestSale,undefined);
+});

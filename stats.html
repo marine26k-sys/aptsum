@@ -649,6 +649,11 @@ function summarizeListings(rows){
     if(py) x.pyCnt[py] = (x.pyCnt[py]||0) + 1;
     const peak = +r["실거래최고가(억)"];
     if(peak > x.peak){ x.peak = peak; x.peakYm = String(r["실거래최고_시점"] ?? ""); }
+    const latestPrice=Number(r["최근 거래금액(억)"]),latestDate=String(r["최근 거래일"]??"").replace(/[-./\s]/g,"");
+    const latestFloor=r["최근 거래층"];
+    if(Number.isFinite(latestPrice)&&latestPrice>0&&/^\d{6}(\d{2})?$/.test(latestDate)&&Number(latestDate.slice(4,6))>=1&&Number(latestDate.slice(4,6))<=12&&(!x.latestSale||latestDate>x.latestSale.date)){
+      x.latestSale={price:latestPrice,date:latestDate,floor:latestFloor!==null&&latestFloor!==undefined&&String(latestFloor).trim()!==""&&Number.isInteger(Number(latestFloor))?Number(latestFloor):null};
+    }
     const occupancy = String(r["입주구분"]).trim();
     const floorType=String(r["층구분"]).trim();
     if(!["저층","중층","고층"].includes(floorType) || ![MOVE_IN,"세안고","분양권"].includes(occupancy)) continue;
