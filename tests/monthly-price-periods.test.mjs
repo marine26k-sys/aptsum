@@ -57,3 +57,17 @@ test('area-price inversion can calculate current-month comparisons without curre
  const r=c.analyzeInversion(records,c.calendarMonths(13)).rows[0];
  assert.ok(r);assert.equal(r.underAvgAmt,10);assert.equal(r.otherAvgAmt,18);assert.equal(r.lowPriorAmt,13);assert.equal(r.refPriorAmt,10);
 });
+
+test('inversion excludes candidates without an actual one-year high instead of showing infinite margins',()=>{
+ const c=setup();c.SQM_PER_PY=3.3058;
+ vm.runInContext(html.slice(html.indexOf('function analyzeInversion('),html.indexOf('function buildRepRows(')),c);
+ const records=[trade('202503',10,{area:59,py:25}),trade('202503',12),trade('202609',18)];
+ assert.equal(c.analyzeInversion(records,c.calendarMonths(25)).rows.length,0);
+});
+test('live refresh keeps pre-window seed months and the original floor filter',()=>{
+ const c=setup();c.lastMonthsYm=n=>Array.from(c.calendarMonths(n));
+ vm.runInContext(html.slice(html.indexOf('function complexRefreshCacheItems('),html.indexOf('async function tapComplexLiveRefresh(')),c);
+ const cache={'11111':{'202610':{items:[trade('202610',10,{floor:2}),trade('202610',12,{floor:12})]},'202601':{items:[trade('202601',8)]}}};
+ const records=c.complexRefreshCacheItems(cache,'11111',3,5);
+ assert.equal(records.length,2);assert.ok(records.some(t=>t.ym==='202601'));assert.ok(records.every(t=>t.floor>=5));
+});

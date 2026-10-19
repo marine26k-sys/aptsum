@@ -3978,7 +3978,7 @@ function analyzeInversion(all, months){
     // 가격대) 진짜 상승 여력이 있는 저평가로 본다(운영자 요청, 2026.09) — 적정가가 기존 최고가 이하면
     // 이미 그 가격대를 경험해본 적 있다는 뜻이라, 그냥 평범한 시세 등락이지 특별한 저평가 신호가 아님.
     const underYearMax = Math.max(...byPy[underPy].filter(t=>dayDiff(t)<=365).map(t=>t.amt));
-    if(fairAmt <= underYearMax) continue;
+    if(!Number.isFinite(underYearMax)||fairAmt <= underYearMax) continue;
     const underAvgAmt = underTrades.price.v, otherAvgAmt = otherTrades.price.v;
     const lowAvgAmt = deviation < 0 ? underAvgAmt : otherAvgAmt, refAvgAmt = deviation < 0 ? otherAvgAmt : underAvgAmt;
     const lowPriorAmt = priorLow.price.v, refPriorAmt = priorRef.price.v; // 기준선(이전 6개월) 쪽 평균가격도 같이 제시
@@ -6077,6 +6077,9 @@ function complexDynamicHTML(){
 }
 
 let complexLiveBusy=false,complexLiveTapCount=0,complexLiveLastTap=0,complexLiveTapOwner=null;
+function complexRefreshCacheItems(cache,lawd,monthsN,floorMin=0){
+  return lastMonthsYm((monthsN||36)+12).flatMap(ym=>cache[lawd]?.[ym]?.items||[]).filter(t=>!floorMin||parseInt(t.floor,10)>=floorMin);
+}
 async function tapComplexLiveRefresh(){
  const now=Date.now();
  if(complexLiveTapOwner!==lastData){complexLiveTapCount=0;complexLiveTapOwner=lastData;}
@@ -6097,11 +6100,12 @@ async function tapComplexLiveRefresh(){
   for(const result of results){const cache=caches[result.kind][lawd] ||= {};applyMonthResults(cache,result.months,result,Date.now());}
   lsSave(lawd);lsSaveP(lawd);lsSaveJ(lawd);
   const months=lastMonthsYm(original.monthsN||36);
-  const read=cache=>months.flatMap(ym=>cache[lawd]?.[ym]?.items||[]);
+  const read=cache=>complexRefreshCacheItems(cache,lawd,original.monthsN);
+  const floor=t=>!original.floorMin||parseInt(t.floor,10)>=original.floorMin;
   const merged=mergeTradeAndPresaleForRanking(read(monthCache),read(monthCacheP),lawd);
   const query=original.name+(original.umd?' ['+original.umd+']':'');
-  let updated=analyzeComplex(merged,query,months,merged,lawd);
-  const rent=analyzeComplex(read(monthCacheJ),query,months,undefined,lawd);
+  let updated=analyzeComplex(merged.filter(floor),query,months,merged,lawd);
+  const rent=analyzeComplex(read(monthCacheJ).filter(floor),query,months,undefined,lawd);
   updated=includeJeonseOnlySaleAreas(updated,rent);
   if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
   const view=complexView;
