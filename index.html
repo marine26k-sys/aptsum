@@ -4369,7 +4369,10 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
       const referenceRaw=(m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)&&referenceMonths.includes(t.ym)&&tradeDay(t)<=today);
       const reference=markOutliers(referenceRaw,referenceMonths).filter(t=>!t.direct);
       const periodAvg=(count,offset=0)=>monthlyPriceAverage(reference,calendarMonths(count,offset,now));
-      const currentPrice=periodAvg(1);
+      const currentAverage=periodAvg(1);
+      const currentPrice=currentAverage?{...currentAverage,ym:calendarMonths(1,0,now)[0]}:null;
+      const high3Months=new Set(calendarMonths(36,0,now));
+      const high3=reference.filter(t=>high3Months.has(t.ym)).sort((a,b)=>tradeDay(a)-tradeDay(b)).reduce((best,t)=>!best||t.amt>=best.amt?t:best,null);
       const changeAt=offset=>{
         const past=periodAvg(1,offset);
         if(!currentPrice||!past||past.v<=0)return null;
@@ -4384,7 +4387,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
       const prices=arr.map(t=>t.amt).sort((a,b)=>a-b),mid=prices.length>>1;
       const high=byDate.reduce((a,t)=>!a||t.amt>=a.amt?t:a,null),low=byDate.reduce((a,t)=>!a||t.amt<=a.amt?t:a,null);
       return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
-        currentPrice,changes,trend,latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
+        currentPrice,high3:deal(high3),changes,trend,latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
         avg1:periodAvg(1),avg6:periodAvg(6),avg12:periodAvg(12),avg24:periodAvg(24),prev3:periodAvg(3,3),
         avgAll:monthlyPriceAverage(reference,months)?.v??null,median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
         min:prices[0],activeMonths:monthly.filter(m=>m.n>0).length,
@@ -6513,7 +6516,8 @@ function compareSummaryHTML(d){
     ${row('건폐율',c=>c.hh?.bcr!=null?`${value(c.hh.bcr)}%`:'—')}
     ${group('선택 평형·가격')}
     ${row('최근 거래',(_c,p)=>deal(p?.latest))}
-    ${row('최근 시세',(_c,p)=>money(p?.currentPrice?.v))}
+    ${row('최근 3년 최고가',(_c,p)=>deal(p?.high3))}
+    ${row('최근 시세',(_c,p)=>p?.currentPrice?`<span style="color:var(--sub)">${esc(ymLabel(p.currentPrice.ym))}</span> ${money(p.currentPrice.v)}`:'—')}
     ${row('1개월',(_c,p)=>change(p?.changes?.m1))}
     ${row('3개월',(_c,p)=>change(p?.changes?.m3))}
     ${row('6개월',(_c,p)=>change(p?.changes?.m6))}
