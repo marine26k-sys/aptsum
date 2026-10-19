@@ -20,7 +20,7 @@ test('comparison statistics use the selected exclusive area and actual contract 
 test('summary renders side-by-side fields, exact school details and missing values safely',()=>{
  const c=setup();const a={name:'가상<A>',umd:'가상동',count:4,build:'2020',hh:{hhcnt:1000,far:250,bcr:20,dongCnt:10,subwayWalk:'10분이내'},schoolInfo:{schools:[{name:'가상초',level:'초',distance:123,type:'공립'}]},pys:[{area:84,py:'34평',n:4,avg3:{v:19,n:3},max:20,latest:{price:20,ym:'202610',day:15,floor:12}}]};
  const b={name:'가상B',pys:[],count:0};const result=c.compareSummaryHTML({complexes:[a,b],period:'26.05 ~ 26.10'});
- assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,18);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.match(result,/지하철 도보[^]*10분이내/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
+ assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,19);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.doesNotMatch(result,/지하철 도보/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
  c.cmpPyMap[0]=59;assert.doesNotMatch(c.compareSummaryHTML({complexes:[a,b]}),/20.0억/);
 });
 
@@ -60,16 +60,22 @@ test('short-term trend compares consecutive calendar quarters at floor five and 
 });
 
 test('comparison summary shows current price then ordered period changes without trend or period averages',()=>{
- const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0},changes:{m1:{amount:2,pct:20},m3:{amount:-1,pct:-7.7},ytd:{amount:0,pct:0}}}]}]});
- assert.match(result,/최근 시세/);assert.match(result,/\+2.0억 \(\+20.0%\)/);assert.match(result,/-1.0억 \(-7.7%\)/);assert.match(result,/0.0억 \(0.0%\)/);
+ const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0},changes:{m1:{basePrice:10,from:"202609",amount:2,pct:20},m3:{basePrice:13,from:"202607",amount:-1,pct:-7.7},ytd:{basePrice:12,from:"202512",amount:0,pct:0}}}]}]});
+ assert.match(result,/최근 시세/);assert.match(result,/26.09/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20.0%\)/);assert.match(result,/▼1.0억 \(7.7%\)/);assert.match(result,/0.0억 \(0.0%\)/);
  assert.doesNotMatch(result,/단기 추세|개월 평균|조회 기간 최고가/);
- const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-9),['최근 거래','최근 시세','1개월','3개월','6개월','YTD','1년','2년','3년']);
+ const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 거래','최근 시세','1개월','3개월','6개월','YTD','1년','2년','3년','4년','5년']);
 });
 test('comparison changes use the current calendar month and exact prior months including December YTD',()=>{
  const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,floor:10,direct:0,d:1};
- const records=[['202309',5],['202310',6],['202410',8],['202510',10],['202512',12],['202604',15],['202607',16],['202609',18]].map(([ym,amt])=>({...base,ym,amt}));
+ const records=[['202109',3],['202110',4],['202209',4],['202309',5],['202310',6],['202410',8],['202510',10],['202512',12],['202604',15],['202607',16],['202609',18]].map(([ym,amt])=>({...base,ym,amt}));
  const p=c.analyzeCompare({'11111':records},[{lawd:'11111',name:'가상단지'}],['202610','202609'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(p.currentPrice.v,18);assert.equal(p.currentPrice.n,0);
- for(const [key,amount,pct,from] of [['m1',0,0,'202609'],['m3',2,12.5,'202607'],['m6',3,20,'202604'],['ytd',6,50,'202512'],['y1',8,80,'202510'],['y2',10,125,'202410'],['y3',12,200,'202310']]){
- assert.equal(p.changes[key].amount,amount,key);assert.equal(p.changes[key].pct,pct,key);assert.equal(p.changes[key].from,from,key);}
+ for(const [key,amount,pct,from] of [['m1',0,0,'202609'],['m3',2,12.5,'202607'],['m6',3,20,'202604'],['ytd',6,50,'202512'],['y1',8,80,'202510'],['y2',10,125,'202410'],['y3',12,200,'202310'],['y4',14,350,'202210'],['y5',14,350,'202110']]){
+ assert.equal(p.changes[key].basePrice,18-amount,key);assert.equal(p.changes[key].amount,amount,key);assert.equal(p.changes[key].pct,pct,key);assert.equal(p.changes[key].from,from,key);}
+});
+
+test('comparison region includes city, district and neighborhood without subway row',()=>{
+ const c=setup();c.REGIONS=[['경기',[['안양 동안구','41173']]],['서울',[['마포구','11440']]]];
+ const result=c.compareSummaryHTML({complexes:[{name:'가상A',lawd:'41173',umd:'비산동',pys:[]},{name:'가상B',lawd:'11440',umd:'아현동',pys:[]}]});
+ assert.match(result,/scope="row">지역/);assert.match(result,/안양시 동안구 비산동/);assert.match(result,/서울시 마포구 아현동/);assert.doesNotMatch(result,/법정동|지하철/);
 });
