@@ -6459,7 +6459,7 @@ function drawCompare(d){
     if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)} (거래 없음)</span>`;
     return `<span style="display:flex;align-items:center;flex-wrap:nowrap;gap:5px;width:100%;min-width:0">
       <i style="background:${CMP_COLORS[i%4]};flex:none"></i><span class="cmp-legend-name" style="flex:1;min-width:0;white-space:nowrap">${esc(c.name)}</span>
-      <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:16px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:1px 4px;background:#fff;min-width:165px;max-width:100%;flex:none">
+      <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:16px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:1px 4px;background:#fff;width:165px;min-width:165px;max-width:100%;flex:none">
         ${opts.map(p=>`<option value="${p.area}"${p.area===cur?' selected':''}>${esc(p.py)} (전용 ${p.area})</option>`).join('')}
       </select>
     </span>`;
