@@ -62,7 +62,7 @@ test('short-term trend compares consecutive calendar quarters at floor five and 
 test('comparison summary shows current price then ordered period changes without trend or period averages',()=>{
  const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0,ym:"202610"},changes:{m1:{basePrice:10,from:"202609",amount:2,pct:20},m3:{basePrice:13,from:"202607",amount:-1,pct:-7.7},ytd:{basePrice:12,from:"202512",amount:0,pct:0}}}]}]});
  assert.match(result,/최근 시세/);assert.match(result,/26.09/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20%\)/);assert.match(result,/▼1.0억 \(8%\)/);assert.match(result,/0.0억 \(0%\)/);
- assert.doesNotMatch(result,/최근 거래|단기 추세|개월 평균|조회 기간 최고가/);assert.match(result,/26.10<\/span> <span class="cmp-sale-price">12.0억/);
+ assert.doesNotMatch(result,/최근 거래|단기 추세|개월 평균|조회 기간 최고가/);assert.match(result,/12.0억<\/span> <span class="cmp-price-date">\(26.10\)/);
  const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 3년 최고가','최근 시세','1개월','3개월','6개월','YTD','1년','2년','3년','4년','5년']);
 });
 test('comparison changes use the current calendar month and exact prior months including December YTD',()=>{

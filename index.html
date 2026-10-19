@@ -306,6 +306,7 @@ try {
   .listing-ref-price{font-variant-numeric:tabular-nums}
   .listing-ref-date{white-space:nowrap}
   .cmp-sale-price{color:var(--teal);font-weight:700}
+  .cmp-price-date{font-size:9.5px;color:var(--sub);white-space:nowrap}
   .cmp-legend-name{font-size:14px;font-weight:700}
   .cmp-summary-scroll{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
   .cmp-summary-table{border-collapse:separate;border-spacing:0;min-width:100%;width:max-content;table-layout:fixed;font-size:11px}
@@ -6501,9 +6502,9 @@ function compareSummaryHTML(d){
   };
   const value=x=>x===null||x===undefined||x===''?'—':esc(x);
   const money=x=>Number.isFinite(x)?`<span class="cmp-sale-price">${x.toFixed(1)}억</span>`:'—';
-  const change=x=>x?`<span style="color:var(--sub)">${esc(ymLabel(x.from))}</span> ${money(x.basePrice)}<br><span style="font-size:10px;font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.round(Math.abs(x.pct))}%)</span>`:'—';
+  const change=x=>x?`${money(x.basePrice)} <span class="cmp-price-date">(${esc(ymLabel(x.from))})</span><br><span style="font-size:10px;font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.round(Math.abs(x.pct))}%)</span>`:'—';
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
-  const deal=t=>t?`${money(t.price)}<br><span style="color:var(--sub)">${esc(date(t))}${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?` · ${esc(t.floor)}층`:''}</span>`:'—';
+  const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
   const row=(label,fn)=>`<tr><th scope="row">${esc(label)}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
   return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr></thead><tbody>
     ${row('지역',c=>region(c))}
@@ -6513,7 +6514,7 @@ function compareSummaryHTML(d){
     ${row('용적률',c=>c.hh?.far!=null?`${value(c.hh.far)}%`:'—')}
     ${row('건폐율',c=>c.hh?.bcr!=null?`${value(c.hh.bcr)}%`:'—')}
     ${row('최근 3년 최고가',(_c,p)=>deal(p?.high3))}
-    ${row('최근 시세',(_c,p)=>p?.currentPrice?`<span style="color:var(--sub)">${esc(ymLabel(p.currentPrice.ym))}</span> ${money(p.currentPrice.v)}`:'—')}
+    ${row('최근 시세',(_c,p)=>p?.currentPrice?`${money(p.currentPrice.v)} <span class="cmp-price-date">(${esc(ymLabel(p.currentPrice.ym))})</span>`:'—')}
     ${row('1개월',(_c,p)=>change(p?.changes?.m1))}
     ${row('3개월',(_c,p)=>change(p?.changes?.m3))}
     ${row('6개월',(_c,p)=>change(p?.changes?.m6))}
