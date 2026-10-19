@@ -86,11 +86,3 @@ test('floor scopes keep separate minimums, matching links and low-only types',()
  assert.equal(snapshotForHistory({items},'available').items.length,1);
  assert.equal(listingItemsForFloor([{ask:10,occupancy:'available'}],'available','all').length,0);
 });
-
-test('Excel recent sale average survives upload and API cleaning without inventing legacy values',()=>{
- const rows=summarize([{...base,'매매 평균':14.23,'매매 건수':7},{...base,'입주구분':'세안고','매매가(억)':13,'매매 평균':14.23,'매매 건수':7}]).regions['서울시|강남구'];
- for(const row of rows){const clean=cleanItem(row);assert.equal(clean.saleAvg,14.23);assert.equal(clean.saleCount,7);assert.equal(snapshotForHistory({items:[clean]},'available',true).items.length,row.occupancy==='available'?1:0);}
- assert.equal(cleanItem(summarize([base]).regions['서울시|강남구'][0]).saleAvg,undefined);
- for(const value of [-1,NaN,Infinity])assert.equal(cleanItem({...rows[0],saleAvg:value}).saleAvg,undefined);
- assert.equal(cleanItem({...rows[0],saleCount:0}).saleAvg,undefined);
-});

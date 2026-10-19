@@ -6980,19 +6980,19 @@ function listingOccupancyApply(){
   lastData=null;
 }
 function enforceListingTrialLawd(lawd){if(isListingTrial()&&lawd!==LISTING_TRIAL_LAWD)throw Object.assign(new Error('무료 체험은 강남구만 조회할 수 있습니다.'),{auth:true});}
-async function fetchListings(lawd,refresh=false){
+async function fetchListings(lawd){
   enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}:${listingFloor()}`;
-  if(!refresh&&listingMem[key]) return listingMem[key];
+  if(listingMem[key]) return listingMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return (listingMem[key] = await r.json());
 }
-async function fetchListingHistory(lawd,refresh=false){
+async function fetchListingHistory(lawd){
   enforceListingTrialLawd(lawd);
   const occupancy=listingOccupancy(), key=`${lawd}:${occupancy}`;
-  if(!refresh&&listingHistoryMem[key]) return listingHistoryMem[key];
+  if(listingHistoryMem[key]) return listingHistoryMem[key];
   const r = await fetch(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=${occupancy}`, { credentials:'same-origin', cache:'no-store', signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal });
   if(r.status===401) throw Object.assign(new Error('비공개 탭 인증이 필요합니다.'), { auth:true });
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -7157,7 +7157,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
     if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch(false);return;}targets=[selectedComplex];}
     const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
-      const [current,history]=await Promise.all([fetchListings(t.lawd,true),fetchListingHistory(t.lawd,true)]);
+      const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
       packs.push({t,current,history});
     }catch(e){if(e.auth)throw e;failed.push(t.name);}}));
     if(myToken!==searchToken)return;
@@ -7811,9 +7811,9 @@ function listingTrendPeakChangeHTML(x){
  const delta=x.ask-x.peak,pct=delta/x.peak*100;
  return `<span style="color:var(--${delta>0?'red':delta<0?'blue':'sub'});white-space:nowrap">${delta>0?'▲':delta<0?'▼':''}${Math.abs(delta).toFixed(1)}억 (${Math.round(Math.abs(pct))}%)</span>`;
 }
-function listingTrendRowHTML(x, i, multiRegion, direction='down', showSaleAverage=false){
+function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=false){
   const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`(${peakYmLabel(x.peakYm)}) `:'')+'전고점';
-  const peakLabel=showSaleAverage?`${peakYmLabel(x.peakYm)?`<span style="font-size:.85em">(${peakYmLabel(x.peakYm)})</span> `:''}전고점`:comparisonLabel;
+  const peakLabel=smallPeakDate?`${peakYmLabel(x.peakYm)?`<span style="font-size:.85em">(${peakYmLabel(x.peakYm)})</span> `:''}전고점`:comparisonLabel;
   const peakPoint=x.previousPricePoint||null;
   if(peakPoint)x={...x,prevAsk:peakPoint.ask,drop:Math.abs(x.ask-peakPoint.ask)};
   if(direction==='all')direction=x.ask>x.prevAsk?'up':x.ask<x.prevAsk?'down':'flat';
@@ -7832,7 +7832,6 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', showSaleAverag
     <span class="nm">${listingNameHTML(x, true)}<small>${listingInfoHTML(x, multiRegion)}</small></span>
     </div>
     ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
-    ${showSaleAverage?`<div class="listing-trend-peak">최근 3개월 평균 ${x.saleAvg>0&&x.saleCount>0?`<b>${x.saleAvg.toFixed(1)}억</b> · ${x.saleCount}건`:"자료 없음"}</div>`:""}
     <span class="listing-trend-change">${prices}<span class="val" style="margin-left:auto;color:var(--${direction==='up'?'red':direction==='flat'?'sub':'blue'})">${direction==='up'?'▲':direction==='flat'?'보합 ':'▼'}${x.drop.toFixed(precision)}억</span></span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }

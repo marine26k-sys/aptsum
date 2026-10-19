@@ -15,13 +15,3 @@ test('개별 단지는 이전 최저 호가 날짜와 최신 날짜 및 그 차�
  const result=c.listingTrendRowHTML({apt:'가상 단지',ask:11.5,peak:20,prevAsk:11.5,drop:0,previousPricePoint:{date:'10/9',ask:11.9},points:[{date:'10/9',ask:11.9},{date:'10/16',ask:11.5},{date:'10/17',ask:11.5}]},0,false,'all');
  assert.match(result,/10\/9/);assert.match(result,/11.9억/);assert.match(result,/10\/17/);assert.match(result,/▼0.4억/);assert.doesNotMatch(result,/10\/16|보합/);assert.match(result,/전고점 <b>20.0억/);assert.doesNotMatch(result,/최근 2주 호가 최고가/);
 });
-
-test('호가 변동에만 작은 전고점 날짜와 엑셀 3개월 평균을 표시한다',()=>{
- const c=vm.createContext({esc:String,peakYmLabel:ym=>ym==='202610'?'26.10':'',listingNameHTML:()=> '가상 단지',listingInfoHTML:()=>'',listingTrendPrecision:()=>1,listingTrendPriceDigits:()=>1,listingTrendDate:x=>x,listingTrendHistoryHTML:()=>'',listingTrendPeakChangeHTML:()=>''});
- vm.runInContext(html.slice(html.indexOf('function listingTrendRowHTML('),html.indexOf('function listingGapPriceHTML(')),c);
- const item={apt:'가상 단지',peak:20,peakYm:'202610',saleAvg:18.2,saleCount:7,prevAsk:19,ask:18,drop:1,points:[{date:'10/16',ask:19},{date:'10/17',ask:18}]};
- const trend=c.listingTrendRowHTML(item,0,false,'down',true);
- assert.match(trend,/font-size:.85em[^]*26.10/);assert.match(trend,/최근 3개월 평균 <b>18.2억<\/b> · 7건/);
- assert.doesNotMatch(c.listingTrendRowHTML(item,0,false,'all'),/최근 3개월 평균|font-size:.85em/);
- assert.match(c.listingTrendRowHTML({...item,saleAvg:undefined},0,false,'down',true),/최근 3개월 평균 자료 없음/);
-});

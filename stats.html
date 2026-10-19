@@ -649,8 +649,6 @@ function summarizeListings(rows){
     if(py) x.pyCnt[py] = (x.pyCnt[py]||0) + 1;
     const peak = +r["실거래최고가(억)"];
     if(peak > x.peak){ x.peak = peak; x.peakYm = String(r["실거래최고_시점"] ?? ""); }
-    const saleAvg=Number(r["매매 평균"]),saleCount=Number(r["매매 건수"]);
-    if(!x.saleAvg && saleAvg>0 && Number.isInteger(saleCount) && saleCount>0){x.saleAvg=saleAvg;x.saleCount=saleCount;}
     const occupancy = String(r["입주구분"]).trim();
     const floorType=String(r["층구분"]).trim();
     if(!["저층","중층","고층"].includes(floorType) || ![MOVE_IN,"세안고","분양권"].includes(occupancy)) continue;
