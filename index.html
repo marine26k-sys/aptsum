@@ -4359,7 +4359,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
       const clean = markOutliers(arrRaw, months);
       const arr = clean.length? clean : arrRaw;
       const averageTrades=clean.filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
-      const graphHistory=markOutliers((m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)).map(t=>({...t})),[...new Set([...months,...(m.hits||[]).map(t=>t.ym)])].sort().reverse()).filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
+      const graphHistory=markOutliers((m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)).map(t=>({...t})),priceHistoryMonths(m.hits||[],months)).filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
       const graphMonths=[...new Set([...monthsAsc,...graphHistory.filter(t=>t.ym<=monthsAsc.at(-1)).map(t=>t.ym)])].sort();
       const monthly = fillMonthlyChartGaps(graphMonths.map(ym=>{
         const mA = graphHistory.filter(t=>t.ym===ym);

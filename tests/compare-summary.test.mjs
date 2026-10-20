@@ -104,3 +104,19 @@ test('backfilled Acro River Park 59sqm history supplies four- and five-year base
  const p=c.analyzeCompare({'11650':[...seed,latest]},[{lawd:'11650',name:'아크로리버파크'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(p.changes.y4.basePrice,27);assert.equal(p.changes.y5.basePrice,27);assert.equal(p.changes.y4.from,'202210');assert.equal(p.changes.y5.from,'202110');
 });
+
+test('Byeongjeom presale history and occupancy rights are merged into historical comparison prices',()=>{
+ const c=setup();c.median=a=>{const s=a.slice().sort((a,b)=>a-b),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+ vm.runInContext(readFileSync(new URL('../shared/complex-identity.js',import.meta.url),'utf8'),c);
+ vm.runInContext(html.slice(html.indexOf('function markOutliers('),html.indexOf('// ── 층별 가격 프리미엄')),c);
+ const presales=JSON.parse(readFileSync(new URL('../data/presale/HS-병점구/202105.json',import.meta.url),'utf8')).items.filter(t=>t.apt.replace(/\s/g,'')==='병점역아이파크캐슬'&&Math.floor(t.area)===59);
+ assert.ok(presales.length>0);
+ const current={...presales[0],apt:'병점역아이파크캐슬',ym:'202610',d:1,amt:7};
+ const merged=c.aptsumComplexIdentity.mergeSources([current],presales,{},'HS-병점구');
+ assert.ok(merged.filter(t=>t.ym==='202105').every(t=>t.kind==='분양권'));
+ const p=c.analyzeCompare({'HS-병점구':merged},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(p.changes.y4.basePrice,5.3);assert.equal(p.changes.y5.basePrice,5.3);
+ const rights=c.aptsumComplexIdentity.mergeSources([current],[{...presales[0],ownership:'입주권',amt:6}],{},'HS-병점구');
+ const q=c.analyzeCompare({'HS-병점구':rights},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(rights[1].kind,'입주권');assert.equal(q.changes.y5.basePrice,6);
+});
