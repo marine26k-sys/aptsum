@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {changePeriods,regionalChange,selectRegionalSamples} from '../shared/regional-change.mjs';
-test('monthly includes current month through as-of day and handles January rollover',()=>{const p=changePeriods('2026-10-21');assert.equal(p.monthly[0].label,'2026-10');assert.equal(p.monthly.length,12);assert.equal(p.monthly[11].label,'2025-11');assert.equal(new Date(p.monthly[0].end).toISOString().slice(0,10),'2026-10-22');assert.equal(p.monthly[1].label,'2026-09');const jan=changePeriods('2026-01-02').monthly[0];assert.equal(new Date(jan.previousStart).toISOString().slice(0,7),'2025-12');});
+test('monthly includes current month through as-of day and handles January rollover',()=>{const p=changePeriods('2026-10-21');assert.equal(p.monthly[0].label,'2026-10');assert.equal(p.monthly.length,24);assert.equal(p.monthly[23].label,'2024-11');assert.equal(new Date(p.monthly[0].end).toISOString().slice(0,10),'2026-10-22');assert.equal(p.monthly[1].label,'2026-09');const jan=changePeriods('2026-01-02').monthly[0];assert.equal(new Date(jan.previousStart).toISOString().slice(0,7),'2025-12');});
 test('same complex composition compares mean unit prices and excludes unmatched or direct trades',()=>{const p=changePeriods('2026-10-13').monthly[1],items=[];for(let i=0;i<5;i++)for(let k=0;k<2;k++){items.push({apt:'단지'+i,umd:'동',area:84,floor:7,amt:10,ym:'202608',d:10},{apt:'단지'+i,umd:'동',area:84,floor:7,amt:11,ym:'202609',d:10});}items.push({apt:'단지0',umd:'동',area:84,floor:7,amt:100,ym:'202609',d:10,direct:1},{apt:'다른단지',umd:'동',area:84,floor:7,amt:100,ym:'202609',d:10});const r=regionalChange(items,p);assert.equal(r.rate,10);assert.equal(r.currentTrades,10);assert.equal(regionalChange(items.slice(0,4),p).rate,null);});
 test('fixed samples give each complex return equal weight with one trade per month',()=>{const p=changePeriods('2026-10-13').monthly[1],rows=[];for(const [apt,old,now] of [['A',10,11],['B',100,90],['outside',10,100]]){rows.push({apt,umd:'동',area:50,amt:old,ym:'202608',d:1},{apt,umd:'동',area:50,amt:now,ym:'202609',d:1});}const samples=['A','B','no-trade'].map(apt=>JSON.stringify(['동',apt]));const result=regionalChange(rows,p,{},samples);assert.equal(result.rate,null);assert.equal(result.groups,2);assert.equal(result.sampleCount,3);});
 
@@ -60,11 +60,11 @@ test('custom month ranges use the end-month highest type and the same start-mont
  const months=changePeriods('2026-10-21').monthly;
  const rows=[t('A','202512',20,1),t('A','202609',20,1.2),t('A','202610',20,1.4),t('A','202512',60,.8),t('A','202610',60,1.3),t('B','202511',15,1),t('C','202512',80,1),{...t('A','202610',20,99),d:22}];
  const matrix=regionalPeriodMatrix(rows,months);
- assert.equal(Object.keys(matrix).length,66);
+ assert.equal(Object.keys(matrix).length,276);
  assert.equal(matrix['2025-12|2026-09'].rate,6.67);
  assert.equal(matrix['2025-12|2026-10'].rate,13.33);
  assert.equal(matrix['2025-12|2026-10'].groups,3);
- assert.equal(matrix['2026-09|2026-10'].previousTrades,1);
+ assert.equal(matrix['2026-09|2026-10'].rate,5.56);
  assert.equal(matrix['2026-10|2026-09'],undefined);
  const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,1);assert.equal(filtered['2025-12|2026-10'].rate,null);
  const missing=regionalPeriodMatrix(rows,months,{},null,new Set(['202512']));assert.equal(missing['2025-12|2026-10'].missing,true);

@@ -106,7 +106,9 @@ function renderYtdRanking(){
  const range=document.createElement('div');range.className='ranking-range';
  const rangeSelect=(id,label)=>{const field=document.createElement('label');field.textContent=label;const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label);for(const p of data.periods.monthly){const option=document.createElement('option');option.value=p.label;option.textContent=p.label.replace('-','.');select.append(option);}field.append(select);range.append(field);return select;};
  const startSelect=rangeSelect('rankingStart','시작 월'),endSelect=rangeSelect('rankingEnd','끝 월');
- startSelect.value=previousStart||data.periods.monthly.at(-1).label;endSelect.value=previousEnd||data.periods.monthly[0].label;panel.append(range);
+ const defaultEnd=previousEnd||data.periods.monthly[0].label;
+ const defaultStart=(Number(defaultEnd.slice(0,4))-1)+defaultEnd.slice(4);
+ startSelect.value=previousStart||defaultStart;endSelect.value=defaultEnd;panel.append(range);
  const toolbar=document.createElement('div');toolbar.className='ytd-toolbar';
  const filterLabel=document.createElement('label');filterLabel.textContent='지역';filterLabel.htmlFor='ytdProvince';
  const filter=document.createElement('select');filter.id='ytdProvince';

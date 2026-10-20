@@ -1,6 +1,7 @@
 import {areaToPy} from './rtms-parse.mjs';
 const supplyPy=t=>Number.isFinite(t.py)&&t.py>0?t.py:areaToPy(Math.round(t.area));
 export const REGIONAL_PY_MIN=0,REGIONAL_PY_MAX=null;
+export const REGIONAL_HISTORY_MONTHS=24;
 export function regionalSupplyPy(t){return supplyPy(t);}
 const eligiblePy=py=>Number.isFinite(py)&&py>0;
 export function median(values){const a=[...values].sort((a,b)=>a-b),n=a.length;return n?n%2?a[n>>1]:(a[n/2-1]+a[n/2])/2:null;}
@@ -56,13 +57,13 @@ export function regionalPeriodMatrix(items,periods,names={},samples=null,availab
   const key=first.label+'|'+last.label,required=[];const day=new Date(first.start);
   while(+day<last.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCMonth(day.getUTCMonth()+1);}
   if(available&&!required.every(ym=>available.has(ym))){result[key]={rate:null,groups:0,missing:true};continue;}
-  const {comparisons,...summary}=regionalChange(items,p,names,samples,history);result[key]=summary;
+  const {rate,groups}=regionalChange(items,p,names,samples,history);result[key]={rate,groups};
  }
  return result;
 }
 
 export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1);
- const monthly=Array.from({length:12},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m,1)).toISOString().slice(0,7),start:Date.UTC(y,m,1),end:i===0?+date+86400000:Date.UTC(y,m+1,1),previousStart:Date.UTC(y,m-1,1)};});
+ const monthly=Array.from({length:REGIONAL_HISTORY_MONTHS},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m,1)).toISOString().slice(0,7),start:Date.UTC(y,m,1),end:i===0?+date+86400000:Date.UTC(y,m+1,1),previousStart:Date.UTC(y,m-1,1)};});
  return {monthly};}
 
 // 연초 대비는 전년 12월 시세와 선택월 시세를 직접 비교한다.
