@@ -4386,7 +4386,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
         if(!currentPrice||!past||past.v<=0)return null;
         return {basePrice:past.v,amount:R1(currentPrice.v-past.v),pct:R1((currentPrice.v-past.v)/past.v*100),from:calendarMonths(1,offset,now)[0],to:calendarMonths(1,0,now)[0]};
       };
-      const changes={m1:changeAt(1),m3:changeAt(3),m6:changeAt(6),ytd:changeAt(Number(kstToday.slice(5,7))),y1:changeAt(12),y2:changeAt(24),y3:changeAt(36),y4:changeAt(48),y5:changeAt(60)};
+      const changes={m1:changeAt(1),m3:changeAt(3),m6:changeAt(6),m9:changeAt(9),y1:changeAt(12),y2:changeAt(24),y3:changeAt(36),y4:changeAt(48),y5:changeAt(60)};
       const trendTrades=reference.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=5);
       const recentPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,0,now));
       const previousPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,3,now));
@@ -6608,7 +6608,7 @@ function compareSummaryHTML(d){
     ${row('1개월 전 시세',(_c,p)=>change(p?.changes?.m1),monthAt(1))}
     ${row('3개월 전 시세',(_c,p)=>change(p?.changes?.m3),monthAt(3))}
     ${row('6개월 전 시세',(_c,p)=>change(p?.changes?.m6),monthAt(6))}
-    ${row('전년 말 시세 (YTD)',(_c,p)=>change(p?.changes?.ytd),monthAt(Number(basisMonth?.slice(4))))}
+    ${row('9개월 전 시세',(_c,p)=>change(p?.changes?.m9),monthAt(9))}
     ${row('1년 전 시세',(_c,p)=>change(p?.changes?.y1),monthAt(12))}
     ${row('2년 전 시세',(_c,p)=>change(p?.changes?.y2),monthAt(24))}
     ${row('3년 전 시세',(_c,p)=>change(p?.changes?.y3),monthAt(36))}
@@ -6667,7 +6667,7 @@ function renderCompare(d,areas){
     <div class="sec">
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
-      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 최근 시세는 현재월 월평균가 · 기간별 변동 금액(변동률)은 각 시점의 월평균가 대비 · YTD는 전년 12월 대비 · 무거래월은 직전 평균가 유지 · 직거래·기존 저가 이상치 제외 · — 자료 없음.</div>
+      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 최근 시세는 현재월 월평균가 · 기간별 변동 금액(변동률)은 각 시점의 월평균가 대비 · 무거래월은 직전 평균가 유지 · 직거래·기존 저가 이상치 제외 · — 자료 없음.</div>
     </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
