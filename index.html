@@ -7507,6 +7507,7 @@ async function searchListingUndervalue(myToken, lawd){
     lsDataBounds(all,['ask']);
     const priceFilter=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
+      askBand:lsAskText(priceFilter)==='전체'?null:lsAskText(priceFilter),filterLabel:'같은 구 비교',
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
       divergence: analyzeListingUndervalue(all,priceFilter) };
     lastData = d;
@@ -7554,17 +7555,7 @@ function renderListingUndervalue(d){
   // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 제목 아래 청록 배지로 표시 — 제목보다 작게(2026.09 운영자 요청)
   const html = `
   <div class="card">
-    <div class="card-hd">
-      ${hdTop('저평가 실매물', true)}
-      <h2>${esc(shortRegionLabel(d.scopeLabel||''))}</h2>
-      <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
-        <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
-        <span style="color:rgba(255,255,255,.88);white-space:nowrap">같은 구 비교 <span style="opacity:.5">|</span> 기준일 ${esc(d.asOf||'-')}</span>
-      </div>
-      ${hdVs('최근 3년 최고가', '현재 최저 실매물')}
-      ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
-      ${listingTrialBadgeHTML()}
-    </div>
+    ${listingHeaderHTML(d, '저평가 실매물', '최근 3년 최고가', '현재 최저 실매물')}
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가가 비슷했던 같은 구 단지보다 호가가 5% 이상 싼 단지</div>
       ${hint(`호가 기준 · ${LISTING_MIN_HH}세대↑ · ${listingOccupancyLabel()} · 저층 매물 제외`)}
@@ -7909,7 +7900,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
     const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
-      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',
+      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',askBand:individual?null:(lsAskText(ls)==='전체'?null:lsAskText(ls)),
       scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
@@ -7985,14 +7976,17 @@ function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=fa
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
   const built=d.individual?(d.rows||[]).find(x=>x.built)?.built:null;
   const hh=d.individual?(d.rows||[]).find(x=>x.hh)?.hh:null;
+  const askBand=d.askBand||(d.askLabel&&d.askLabel!=='전체'?d.askLabel:null);
+  const filters=[askBand,d.pyBand,d.filterLabel].filter(Boolean).map(text=>`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(text)}</span>`);
+  const separator='<span aria-hidden="true" style="color:rgba(255,255,255,.55)">·</span>';
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
       <h2${d.individual?' class="listing-complex-title"':''}>${esc(d.individual?d.complexName:(title || shortRegionLabel(d.scopeLabel||'')))}</h2>
       ${d.individual?`<div style="text-align:center;font-size:12px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8);white-space:nowrap">${[esc(d.complexRegion||''),built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:''].filter(Boolean).join(' · ')}</div>`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
-        ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
-        ${d.filterLabel?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.filterLabel)}</b> <span style="opacity:.5">|</span></span>`:''}
+        ${separator}
+        ${filters.length?filters.join(separator)+separator:''}
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">기준일 ${esc(d.asOf||'-')}</span>
       </div>
       ${vsPrev ? hdVs(vsPrev, vsRecent) : ''}
