@@ -52,7 +52,7 @@ async function main(){
   failures+=remaining.length;done++;
   if(done%10===0||done===jobs.length)console.log(JSON.stringify({done,total:jobs.length,written,failures}));
  }};
- await Promise.all(Array.from({length:Math.min(3,Number(args.concurrency)||2)},worker));
+ await Promise.all(Array.from({length:Math.max(1,Math.min(3,Number(args.concurrency)||2))},worker));
  console.log(JSON.stringify({complete:failures===0,written,failures}));if(failures)process.exitCode=1;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(e=>{console.error(e.message);process.exitCode=1;});

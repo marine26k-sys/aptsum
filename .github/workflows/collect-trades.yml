@@ -94,6 +94,7 @@ jobs:
       - name: 최초 백필 완료 표시 (자동 73개월 수집이 성공했을 때만)
         if: steps.gate.outputs.run == 'true' && success() && github.event_name == 'schedule' && steps.months.outputs.months == '73'
         run: |
+          if [ -f data/.trades-backfilled ]; then exit 0; fi
           mkdir -p data
           touch data/.trades-backfilled
           git add data/.trades-backfilled

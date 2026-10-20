@@ -1,3 +1,4 @@
+import {fetchAllRtmsPages} from '../../shared/rtms-pages.mjs';
 import {latestTradeMonth} from '../../shared/latest-trade-data.mjs';
 import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
@@ -145,12 +146,13 @@ function rtmsFailed(t) {
   return true;                                                   // header도 resultCode도 없는 이상한 응답
 }
 
-async function fetchText(key, lawd, ym, retries = 2) {
+function fetchText(key,lawd,ym,retries=2){return fetchAllRtmsPages((page,size)=>fetchTextPage(key,lawd,ym,retries,page,size));}
+async function fetchTextPage(key, lawd, ym, retries = 2, page = 1, size = 2000) {
   for (let i = 0; i <= retries; i++) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
     try {
-      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=2000&pageNo=1`, { signal: ac.signal });
+      const r = await fetch(`${RTMS}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=${size}&pageNo=${page}`, { signal: ac.signal });
       const t = await r.text();
       if (!rtmsFailed(t)) return { text: t, failed: false };
       if (i === retries) return { text: t || "", failed: true };
