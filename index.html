@@ -994,6 +994,7 @@ try {
     <div id="regionChips" style="display:none"></div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
+    <div id="recentCompareComplexes" hidden style="margin:5px 0 8px"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
     <div class="row2" id="subwayRow" style="display:none">
@@ -1363,6 +1364,7 @@ function captureViewInputs(){
     pbb: document.getElementById('priceBandBasis').value,
     nh7: newHighWeekOnly, // "신고가 속보 (7일)" 탭 여부(2026.09 신설, 구독 전용) — newhigh와 같은 mode를 공유하므로 뒤로가기 복원 시 따로 저장해야 함
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
+    cmpAreas:mode==='compare'&&typeof lastData!=='undefined'?captureCompareAreas(lastData):{},
     regionSel: regionSel.slice() // 지역 랭킹·저평가·신고가의 칩(복수 지역) 선택 상태 — sel.value만으론 복수 선택이 안 잡힘(2026.07 발견)
   };
 }
@@ -1390,6 +1392,7 @@ function buildShareURL(inp){
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
     p.set('c', inp.cmp.filter(x=>x.name.trim()).map(x=>x.lawd+':'+x.name.trim()).join('|'));
+    if(inp.cmpAreas&&Object.keys(inp.cmpAreas).length)p.set('ca',JSON.stringify(inp.cmpAreas));
   } else {
     p.set('r', inp.lawd);
     if(inp.mode==='complex') p.set('q', inp.q);
@@ -1825,7 +1828,7 @@ function restoreView(vi){
   updateRegionFavBtn();
   renderFavRegions();
   if(v.data.mode==='complex') renderComplex(v.data);
-  else if(v.data.mode==='compare') renderCompare(v.data);
+  else if(v.data.mode==='compare') renderCompare(v.data,inp.cmpAreas);
   else if(v.data.mode==='shortval') renderShortUndervalue(v.data);
   else if(v.data.mode==='peak') renderPeak(v.data);
   else if(v.data.mode==='longpeak') renderLongPeak(v.data);
@@ -2595,6 +2598,7 @@ function setMode(m, fromRestore){
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
   document.getElementById('singleRow').style.display = (m==='compare'||m==='listingfavorites') ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
+  if(typeof renderRecentCompareComplexes==='function')renderRecentCompareComplexes();
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
   document.getElementById('q').style.display = m==='complex' ? '' : 'none';
   // 평형 필터는 계산에 실제로 반영되는 탭에서만 노출 — 저평가(단기/반기/연간)는 항상 20~39평(20평대/30평대 평대별) 고정 계산이라 셀렉트를 아예 숨긴다(2026.07)
@@ -6358,6 +6362,79 @@ function renderComplex(d){
 const CMP_COLORS = ['#00828A','#DC2626','#0F2B3D','#D97706'];
 let cmpPyMap = {}; // cmpPyMap: 단지 인덱스 -> 선택 전용면적 정수
 
+function cmpAreaKey(c){return JSON.stringify([String(c.lawd||''),String(c.umd||''),String(c.name||'')]);}
+function parseCmpAreas(text){
+  try{
+    if(typeof text!=='string'||text.length>50000)return {};
+    const value=JSON.parse(text);if(!value||typeof value!=='object'||Array.isArray(value))return {};
+    return Object.fromEntries(Object.entries(value).filter(([key,area])=>{
+      if(key.length>400||!Number.isInteger(area)||area<=0||area>=1000)return false;
+      try{const parts=JSON.parse(key);return Array.isArray(parts)&&parts.length===3&&parts.every(x=>typeof x==='string');}catch{return false;}
+    }).slice(-100));
+  }catch{return {};}
+}
+function savedCmpAreas(){try{return parseCmpAreas(localStorage.getItem('aptsum:compare-areas')||'{}');}catch{return {};}}
+function captureCompareAreas(d){
+  return Object.fromEntries((d?.mode==='compare'?d.complexes:[]).flatMap((c,i)=>c.pys.some(p=>p.area===cmpPyMap[i])?[[cmpAreaKey(c),cmpPyMap[i]]]:[]));
+}
+function restoreCmpAreas(d,overrides){
+  const saved=savedCmpAreas();
+  let linked={};try{linked=parseCmpAreas(new URLSearchParams(location.search).get('ca')||'{}');}catch{}
+  const preferred=overrides??linked;
+  return Object.fromEntries(d.complexes.map((c,i)=>{
+    const key=cmpAreaKey(c),area=preferred[key]??saved[key];
+    return [i,c.pys.some(p=>p.area===area)?area:cmpDefaultPyFor(c)];
+  }));
+}
+function persistCmpArea(c,area){
+  try{const saved=savedCmpAreas(),key=cmpAreaKey(c);delete saved[key];saved[key]=area;localStorage.setItem('aptsum:compare-areas',JSON.stringify(Object.fromEntries(Object.entries(saved).slice(-100))));}catch{}
+}
+
+function getRecentCompareComplexes(){
+  try{
+    const rows=JSON.parse(localStorage.getItem('aptsum:compare-recent')||'[]');
+    return Array.isArray(rows)?rows.filter(x=>x&&/^(?:\d{5}|(?:BC|HS|IC)-[가-힣]+)$/.test(x.lawd)&&typeof x.name==='string'&&x.name.length>0&&x.name.length<=120&&typeof x.umd==='string'&&x.umd.length<=80&&(!x.area||(Number.isInteger(x.area)&&x.area>0&&x.area<1000))).slice(0,5):[];
+  }catch{return [];}
+}
+function rememberRecentCompareComplexes(d){
+  const current=(d?.mode==='compare'?d.complexes:[]).map((c,i)=>{
+    const p=c.pys.find(p=>p.area===cmpPyMap[i]);
+    return {lawd:c.lawd,name:c.name,umd:c.umd||'',area:p?.area||null,py:p?.py||''};
+  });
+  if(!current.length)return;
+  const keys=new Set(current.map(cmpAreaKey));
+  const rows=[...current,...getRecentCompareComplexes().filter(x=>!keys.has(cmpAreaKey(x)))].slice(0,5);
+  try{localStorage.setItem('aptsum:compare-recent',JSON.stringify(rows));}catch{}
+  renderRecentCompareComplexes();
+}
+function addRecentCompareComplex(x){
+  const query=x.name+(x.umd?' ['+x.umd+']':'');
+  let rows=[...document.querySelectorAll('.cmp-row')];
+  let row=rows.find(r=>{
+    const scope=r.querySelector('select').value;
+    return r.querySelector('input').value.trim()===query&&(scope===x.lawd||(isAllScope(scope)&&lawdsOfScope(scope).some(t=>t.lawd===x.lawd)));
+  })||rows.find(r=>!r.querySelector('input').value.trim());
+  if(!row&&rows.length<4){addCmpRow();rows=[...document.querySelectorAll('.cmp-row')];row=rows.at(-1);}
+  if(!row){showError('비교 단지는 최대 4개입니다. 기존 단지를 삭제한 뒤 추가해 주세요.');return;}
+  setCmpRowLawd(row,x.lawd);row.querySelector('input').value=query;
+  if(x.area){
+    persistCmpArea(x,x.area);
+    try{const url=new URL(location.href),areas=parseCmpAreas(url.searchParams.get('ca')||'{}');areas[cmpAreaKey(x)]=x.area;url.searchParams.set('ca',JSON.stringify(areas));history.replaceState(history.state,'',url.pathname+url.search+url.hash);}catch{}
+  }
+  row.querySelector('input').focus();
+}
+function renderRecentCompareComplexes(){
+  const box=document.getElementById('recentCompareComplexes');if(!box)return;
+  box.replaceChildren();box.hidden=mode!=='compare';if(box.hidden)return;
+  const rows=getRecentCompareComplexes();if(!rows.length){box.hidden=true;return;}
+  const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;color:var(--sub)';
+  const title=document.createElement('span');title.textContent='최근 조회한 단지';header.append(title);
+  const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('aptsum:compare-recent');}catch{}renderRecentCompareComplexes();};header.append(clear);box.append(header);
+  const chips=document.createElement('div');chips.className='chips';
+  for(const x of rows){const button=document.createElement('button');button.type='button';button.className='chip';const region=(typeof REGIONS==='undefined'?[]:REGIONS).flatMap(([,arr])=>arr).find(([,lawd])=>lawd===x.lawd)?.[0]||'';button.textContent=x.name+' · '+[region,x.umd].filter(Boolean).join(' ');button.onclick=()=>addRecentCompareComplex(x);chips.append(button);}
+  box.append(chips);
+}
+
 function cmpDefaultPyFor(c){
   // 32~36평(국민평형) 중 거래 최다 → 없으면 23~27평 중 거래 최다 → 그래도 없으면 전체 중 거래 최다
   const byRange = (lo,hi) => {
@@ -6558,11 +6635,21 @@ function drawCompare(d){
   if(document.fonts)document.fonts.ready.then(fitListingHeadingNames);
 }
 
-function selectCmpPyFor(idx, area){ cmpPyMap[idx] = Number(area); drawCompare(lastData); }
+function selectCmpPyFor(idx, area){
+  const c=lastData?.mode==='compare'?lastData.complexes[idx]:null,value=Number(area);
+  if(!c?.pys.some(p=>p.area===value))return;
+  cmpPyMap[idx]=value;persistCmpArea(c,value);rememberRecentCompareComplexes(lastData);
+  const areas=captureCompareAreas(lastData);
+  try{
+    const url=new URL(location.href);url.searchParams.set('ca',JSON.stringify(areas));history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+    const view=typeof viewStack==='undefined'?null:viewStack[history.state?.vi];if(view?.inputs?.mode==='compare')view.inputs.cmpAreas=areas;
+  }catch{}
+  drawCompare(lastData);
+}
 
-function renderCompare(d){
-  cmpPyMap = {};
-  d.complexes.forEach((c,i)=>{ cmpPyMap[i] = cmpDefaultPyFor(c); });
+function renderCompare(d,areas){
+  cmpPyMap = restoreCmpAreas(d,areas);
+  rememberRecentCompareComplexes(d);
   const html = `
   <div class="card">
     <div class="card-hd">
