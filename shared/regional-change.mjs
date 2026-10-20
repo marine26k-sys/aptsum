@@ -44,6 +44,12 @@ export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!N
  const monthly=Array.from({length:12},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m,1)).toISOString().slice(0,7),start:Date.UTC(y,m,1),end:i===0?+date+86400000:Date.UTC(y,m+1,1),previousStart:Date.UTC(y,m-1,1)};});
  return {monthly};}
 
+// 연초 대비는 전년 12월 시세와 선택월 시세를 직접 비교한다.
+export function regionalYtdPeriod(period){
+ const year=new Date(period.start).getUTCFullYear();
+ return {...period,start:Date.UTC(year,0,1),previousStart:Date.UTC(year-1,11,1)};
+}
+
 // 최근 완료된 12개월의 공급평당 평균 가격 상위 30개. 선정 후 목록은 고정한다.
 export function selectRegionalSamples(items,names={},start,end,limit=30){
  const groups=new Map();

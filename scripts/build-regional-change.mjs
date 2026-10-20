@@ -1,7 +1,7 @@
 import {applyNaverSupplyAreas} from '../shared/supply-area-loader.mjs';
 import {readFile,writeFile,readdir,mkdir} from 'node:fs/promises';
 import {REGIONS} from '../shared/regions.mjs';
-import {changePeriods,regionalChange,selectRegionalSamples,regionalSupplyPy,REGIONAL_PY_MIN,REGIONAL_PY_MAX} from '../shared/regional-change.mjs';
+import {changePeriods,regionalChange,regionalYtdPeriod,selectRegionalSamples,regionalSupplyPy,REGIONAL_PY_MIN,REGIONAL_PY_MAX} from '../shared/regional-change.mjs';
 const asOf=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const periods=changePeriods(asOf),regions=[];
 await mkdir('data/regional-change-details',{recursive:true});
@@ -27,6 +27,13 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
   const required=[];const day=new Date(p.previousStart);while(+day<p.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCDate(1);day.setUTCMonth(day.getUTCMonth()+1);}
   const samples=regionAllSamples;
   return required.every(ym=>available.has(ym))?regionalChange(items,p,names,samples):{rate:null,groups:0,sampleCount:samples.length,previousTrades:0,currentTrades:0,missing:true};});
+ const ytdMetric=samples=>periods.monthly.map(month=>{
+  const p=regionalYtdPeriod(month),required=[];const day=new Date(p.previousStart);
+  while(+day<p.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCMonth(day.getUTCMonth()+1);}
+  if(!required.every(ym=>available.has(ym)))return {rate:null,groups:0,sampleCount:samples.length,missing:true};
+  const {comparisons,...summary}=regionalChange(items,p,names,samples);return summary;
+ });
+ metrics.ytd=ytdMetric(fixed.regions[lawd]);allMetrics.ytd=ytdMetric(regionAllSamples);
  const details={all:{},top50:{}};periods.monthly.forEach((p,i)=>{details.all[p.label]=allMetrics.monthly[i].comparisons||[];details.top50[p.label]=metrics.monthly[i].comparisons||[];delete allMetrics.monthly[i].comparisons;delete metrics.monthly[i].comparisons;});
  await writeFile(`data/regional-change-details/${lawd}.json`,JSON.stringify(details));
  regions.push({province,name,lawd,metrics,allMetrics});

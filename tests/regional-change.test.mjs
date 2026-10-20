@@ -44,3 +44,13 @@ test('current month carries September price and excludes trades after the as-of 
  const r=regionalChange([t('A','202609',30,1),{...t('A','202610',30,2),d:22},t('B','202609',30,1),t('B','202610',30,1.3),t('C','202608',50,1)],now);
  assert.equal(r.groups,3);assert.equal(r.rate,10);assert.equal(r.comparisons.find(x=>x.name==='A').currentPrice,1);
 });
+
+test('year-to-date compares December with selected month rather than averaging year or compounding regional rates',async()=>{
+ const {regionalYtdPeriod}=await import('../shared/regional-change.mjs');
+ const period=regionalYtdPeriod(changePeriods('2026-10-21').monthly[0]);
+ assert.equal(new Date(period.previousStart).toISOString().slice(0,7),'2025-12');
+ const rows=[t('A','202512',30,1),t('A','202601',30,10),t('A','202610',30,1.2),t('B','202511',40,1),t('C','202512',60,1),t('C','202609',60,.9)];
+ const r=regionalChange(rows,period);assert.equal(r.groups,3);assert.equal(r.rate,3.33);
+ assert.equal(r.comparisons.find(x=>x.name==='B').rate,0);
+ const january=regionalYtdPeriod(changePeriods('2026-01-02').monthly[0]);assert.equal(january.previousStart,Date.UTC(2025,11,1));
+});
