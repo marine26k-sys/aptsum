@@ -3627,6 +3627,20 @@ function fillMonthlyChartGaps(monthly, monthsAsc){
   });
 }
 
+// 저층도 같은 단지·전용면적의 해당 연도 최고가이면 시세 계산에 포함한다.
+function priceFloorTrades(trades,minFloor=5){
+  const key=t=>JSON.stringify([t.lawd||t.gu||'',t.apt,t.umd,exclusiveAreaKey(t),String(t.ym||'').slice(0,4)]);
+  const highs=new Map();
+  for(const t of trades){
+    if(t.direct||!/^\d{6}$/.test(String(t.ym||''))||!Number.isFinite(t.amt)||t.amt<=0)continue;
+    const k=key(t);highs.set(k,Math.max(highs.get(k)||0,t.amt));
+  }
+  return trades.filter(t=>{
+    if(t.direct)return false;
+    const floor=parseInt(t.floor,10);
+    return Number.isFinite(floor)&&(floor>=minFloor||(floor>=1&&floor<=3&&t.amt===highs.get(key(t))));
+  });
+}
 function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
@@ -3674,7 +3688,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
     // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
-    const arrTrend = priceHistory.filter(t=>parseInt(t.floor,10)>=5);
+    const arrTrend = priceFloorTrades(priceHistory);
     const avg3t = periodAvg(arrTrend,m3), pv3t = periodAvg(arrTrend,p3v);
     const trend = avg3t&&pv3t? {pct:Math.round((avg3t.v-pv3t.v)/pv3t.v*100), recentAvg:avg3t.v, prevAvg:pv3t.v} : null;
     const historyMonths=[...new Set([...monthsAsc,...priceHistory.map(t=>t.ym)])].sort();
@@ -3917,7 +3931,7 @@ function analyzePricePerPyeong(all, months){
 // 엄격한 기준, 운영자 선택) — 한쪽만 거래된 달은 판단 재료 부족으로 스킵.
 // 월별 동일 비중 평균을 사용하며 무거래월은 직전 평균가를 유지한다.
 function analyzeInversion(all, months){
-  all = all.filter(t=>!t.direct && !t.kind && t.area && parseInt(t.floor,10)>=5 && t.py>=20 && t.py<=39); // 분양권/입주권은 매매와 가격 형성 구조가 달라 제외 · 20~39평만(운영자 요청)
+  all = priceFloorTrades(all.filter(t=>!t.kind && t.area && t.py>=20 && t.py<=39)); // 분양권/입주권은 매매와 가격 형성 구조가 달라 제외 · 20~39평만(운영자 요청)
   const dayDiff = t=>{
     const y=+t.ym.slice(0,4), mo=+t.ym.slice(4,6), da=+t.d;
     if(!y||!mo||!da) return Infinity;
@@ -4015,7 +4029,7 @@ function analyzeInversion(all, months){
 
 // 평형별 등락률 대표행(단지당 거래량 최다 평형 1개) 계산
 function buildRepRows(all, months, windowMonths=2){
-  const eligible = all.filter(t=>parseInt(t.floor,10)>=5); // 1~4층 제외 (2026.07 저평가/peak 탭과 동일 기준으로 강화 — 4층까지만 걸러서는 저층 할인 왜곡이 통계에 새어 들어와 실제로는 시세 변동이 없는 단지가 등락 랭킹·초단기 저평가 단지에 허위로 잡히는 사례 발견)
+  const eligible = priceFloorTrades(all); // 1~4층 제외 (2026.07 저평가/peak 탭과 동일 기준으로 강화 — 4층까지만 걸러서는 저층 할인 왜곡이 통계에 새어 들어와 실제로는 시세 변동이 없는 단지가 등락 랭킹·초단기 저평가 단지에 허위로 잡히는 사례 발견)
   const byAptPy = {};
   for(const t of eligible){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
   const r3set = new Set(months.slice(0,windowMonths)), p3set = new Set(months.slice(windowMonths,windowMonths*2));
@@ -4121,7 +4135,7 @@ function avgGroupA(items, months, minN){
   return out;
 }
 function analyzeGapRanking(saleAll, rentAll, months){
-  const saleBy = avgGroupA(saleAll.filter(t=>parseInt(t.floor,10)>=5), months, 2);
+  const saleBy = avgGroupA(priceFloorTrades(saleAll), months, 2);
   const rentBy = avgGroupA(rentAll, months, 2);
   const rows = [];
   for(const k of Object.keys(rentBy)){
@@ -4387,7 +4401,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
         return {basePrice:past.v,amount:R1(currentPrice.v-past.v),pct:R1((currentPrice.v-past.v)/past.v*100),from:calendarMonths(1,offset,now)[0],to:calendarMonths(1,0,now)[0]};
       };
       const changes={m1:changeAt(1),m3:changeAt(3),m6:changeAt(6),m9:changeAt(9),y1:changeAt(12),y2:changeAt(24),y3:changeAt(36),y4:changeAt(48),y5:changeAt(60)};
-      const trendTrades=reference.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=5);
+      const trendTrades=priceFloorTrades(reference);
       const recentPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,0,now));
       const previousPrice=monthlyPriceAverage(trendTrades,calendarMonths(3,3,now));
       const recentAvg=recentPrice?.v??null,prevAvg=previousPrice?.v??null;
@@ -6067,7 +6081,7 @@ function complexDynamicHTML(){
     <div class="sec">
       <details id="complexTrendPanel" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)" ontoggle="this.querySelector('summary').textContent=this.open?'단기 추세 · 접기':'단기 추세 · 펼쳐보기'"><summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단기 추세 · 펼쳐보기</summary><div class="rng" style="margin-top:10px">평형별 · 이전 3개월 vs 최근 3개월 · 무거래월은 직전 평균가 유지</div>
       <div id="trendBox">${trendHTML(d)}</div>
-      <div class="rng" style="margin-top:4px">1~4층 거래는 저층 할인 왜곡 방지를 위해 제외하고 계산</div>
+      <div class="rng" style="margin-top:4px">5층 이상 거래와 해당 연도 최고가인 1~3층 거래로 계산 · 직거래 제외</div>
       </details>
     </div>
 
@@ -6783,7 +6797,7 @@ function renderGap(d){
       ${rows}
     </div>
   </div>
-  <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가 (조회기간 평균, 이상치 제외) · 매매는 1~4층 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">전세가율 = 전세 평균가 ÷ 매매 평균가 (조회기간 평균, 이상치 제외) · 매매는 5층 이상 및 연중 최고가인 1~3층 포함 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -7066,7 +7080,7 @@ ${uvSep(i)}
 
     <div class="sec">
       <h3>저평가 신호 단지</h3>
-      ${hint('같은 단지 평형 간 평당가 차가 6개월새 5%↑ 벌어짐', '1~4층·직거래 제외')}
+      ${hint('같은 단지 평형 간 평당가 차가 6개월새 5%↑ 벌어짐', '5층 이상·연중 최고가 1~3층 포함 · 직거래 제외')}
       ${rows}
     </div>
 
@@ -7096,7 +7110,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 20평대 (20~29)끼리·30평대 (30~39)끼리만 각각 비교 · 5층 이상·연중 최고가 1~3층 포함 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
