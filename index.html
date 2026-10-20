@@ -6605,15 +6605,15 @@ function compareSummaryHTML(d){
     ${row('건폐율',c=>c.hh?.bcr!=null?`${value(c.hh.bcr)}%`:'—')}
     ${row('최근 3년 최고가',(_c,p)=>deal(p?.high3))}
     ${row('최근 시세',(_c,p)=>money(p?.currentPrice?.v),monthAt(0),'cmp-current-row')}
-    ${row('1개월 전 시세',(_c,p)=>change(p?.changes?.m1),monthAt(1))}
-    ${row('3개월 전 시세',(_c,p)=>change(p?.changes?.m3),monthAt(3))}
-    ${row('6개월 전 시세',(_c,p)=>change(p?.changes?.m6),monthAt(6))}
-    ${row('9개월 전 시세',(_c,p)=>change(p?.changes?.m9),monthAt(9))}
-    ${row('1년 전 시세',(_c,p)=>change(p?.changes?.y1),monthAt(12))}
-    ${row('2년 전 시세',(_c,p)=>change(p?.changes?.y2),monthAt(24))}
-    ${row('3년 전 시세',(_c,p)=>change(p?.changes?.y3),monthAt(36))}
-    ${row('4년 전 시세',(_c,p)=>change(p?.changes?.y4),monthAt(48))}
-    ${row('5년 전 시세',(_c,p)=>change(p?.changes?.y5),monthAt(60))}
+    ${row('1개월 전',(_c,p)=>change(p?.changes?.m1),monthAt(1))}
+    ${row('3개월 전',(_c,p)=>change(p?.changes?.m3),monthAt(3))}
+    ${row('6개월 전',(_c,p)=>change(p?.changes?.m6),monthAt(6))}
+    ${row('9개월 전',(_c,p)=>change(p?.changes?.m9),monthAt(9))}
+    ${row('1년 전',(_c,p)=>change(p?.changes?.y1),monthAt(12))}
+    ${row('2년 전',(_c,p)=>change(p?.changes?.y2),monthAt(24))}
+    ${row('3년 전',(_c,p)=>change(p?.changes?.y3),monthAt(36))}
+    ${row('4년 전',(_c,p)=>change(p?.changes?.y4),monthAt(48))}
+    ${row('5년 전',(_c,p)=>change(p?.changes?.y5),monthAt(60))}
   </tbody></table>`;
 }
 
