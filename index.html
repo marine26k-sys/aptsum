@@ -6519,6 +6519,7 @@ function compareSummaryHTML(d){
   const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
   const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
   return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr></thead><tbody>
+    ${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—')}
     ${row('지역',c=>region(c))}
     ${row('준공·년차',c=>{const year=String(c.hh?.useDate||c.hh?.built||c.build||'').slice(0,4);return /^\d{4}$/.test(year)?esc(complexBuildLabel(year)):'—';})}
     ${row('세대수',c=>c.hh?.hhcnt>0?`${c.hh.hhcnt.toLocaleString()}세대`:'—')}

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// 국토부 실거래(매매/분양권/전세) 월별 데이터를 지역 전체(서울·경기·인천, 73개 지역)에 대해 미리 수집해
+// 국토부 실거래(매매/분양권/전세) 월별 데이터를 지원 지역 전체(서울·경기·인천·부산)에 대해 미리 수집해
 // data/<kind>/<lawd>/<ym>.json 으로 저장한다. Netlify 함수(analyze/presale/rent.mjs)는 이 정적 파일이
 // 있으면 국토부 API를 호출하지 않고 그대로 서빙한다 (netlify/functions/_static.mjs 참고).
 //
 // 사용법:
-//   DATA_GO_KR_KEY=xxx node scripts/collect-trades.mjs [--kinds=analyze,presale,rent] [--months=60] [--refresh=4] [--force] [--only=11680,HS-동탄구]
+//   DATA_GO_KR_KEY=xxx node scripts/collect-trades.mjs [--kinds=analyze,presale,rent] [--months=73] [--refresh=4] [--force] [--only=11680,HS-동탄구]
 // 수집이 끝나면 같은 실행에서 data/tier-map.json도 최근 36개월 기준으로 다시 생성한다.
 //
-// - months: 오늘 기준 과거 몇 개월치를 확보할지 (기본 60 = 5년, 사이트 조회 기간 최대값)
+// - months: 오늘 기준 과거 몇 개월치를 확보할지 (기본 73 = 5년 전 기준월 + 직전 거래월 여유 12개월)
 // - refresh: 최근 N개월은 이미 파일이 있어도 항상 다시 조회 (실거래 신고 지연으로 뒤늦게 채워지는 값을 잡기 위함,
 //   정기 배치는 하루 세 번(한국시간 05:00·12:00·18:00) 최근 4개월을 다시 확인한다)
 // - force: 전체를 무조건 재수집 (최초 백필 재실행 등)
@@ -17,7 +17,7 @@ import { mkdir, writeFile, access, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
-import { recentTradeMonths, coversFullTradeBatch } from "../shared/trade-batch-policy.mjs";
+import { recentTradeMonths, coversFullTradeBatch, TRADE_HISTORY_MONTHS } from "../shared/trade-batch-policy.mjs";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
 
@@ -78,7 +78,7 @@ function parseArgs() {
   }));
   return {
     kinds: args.kinds ? String(args.kinds).split(",") : Object.keys(KIND_CONFIG),
-    months: parseInt(args.months, 10) || 60,
+    months: parseInt(args.months, 10) || TRADE_HISTORY_MONTHS,
     refresh: parseInt(args.refresh, 10) || 4,
     force: !!args.force,
     only: args.only ? String(args.only).split(",") : null,
