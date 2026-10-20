@@ -6,7 +6,7 @@ const asOf=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric'
 const periods=changePeriods(asOf),regions=[];
 await mkdir('data/regional-change-details',{recursive:true});
 let fixed;try{fixed=JSON.parse(await readFile('data/regional-samples.json','utf8'));}catch(e){if(e.code!=='ENOENT')throw e;fixed={selectedAt:asOf,regions:{}};}
-const selectionEnd=periods.monthly[0].end,selectionDate=new Date(selectionEnd);selectionDate.setUTCFullYear(selectionDate.getUTCFullYear()-1);const selectionStart=+selectionDate;
+const selectionEnd=periods.monthly[0].start,selectionDate=new Date(selectionEnd);selectionDate.setUTCFullYear(selectionDate.getUTCFullYear()-1);const selectionStart=+selectionDate;
 if(fixed.method!=='top30-supply-price-all-sizes-v2')fixed={method:'top30-supply-price-all-sizes-v2',selectedAt:asOf,selectionStart:new Date(selectionStart).toISOString().slice(0,10),selectionEnd:new Date(selectionEnd).toISOString().slice(0,10),regions:{},details:{}};
 const allFixed={selectedAt:asOf,regions:{}};
 for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
