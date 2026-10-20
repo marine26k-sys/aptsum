@@ -71,5 +71,5 @@ test('sale-change period selector includes the extended comparison periods', () 
   const row = html.match(/<div class="row2" id="risePeriodRow"[\s\S]*?<\/div>/)?.[0] || '';
   const periods = [...row.matchAll(/<option value="(\d+)"/g)].map(m=>Number(m[1]));
   assert.deepEqual(periods, [3,6,9,12,24,36,48,60]);
-  assert.doesNotMatch(row, /36개월|48개월|60개월/);
+  for(const months of [36,48,60])assert.ok(row.includes(`${months}개월 전 대비`));
 });
