@@ -11,9 +11,30 @@ test('detail rows exactly cover the complexes used in the aggregate',()=>{const 
 
 test('supply price uses matched supply pyeong for prices and top sample selection',()=>{const p=changePeriods('2026-10-13').monthly[0];const rows=[{apt:'A',umd:'동',area:84,py:33,amt:9.9,ym:'202608',d:1},{apt:'A',umd:'동',area:84,py:33,amt:10.89,ym:'202609',d:1},{apt:'B',umd:'동',area:84,py:50,amt:12,ym:'202609',d:1}];const result=regionalChange(rows,p);assert.ok(Math.abs(result.comparisons[0].previousPrice-.3)<1e-9);assert.ok(Math.abs(result.comparisons[0].currentPrice-.33)<1e-9);assert.ok(Math.abs(result.comparisons[0].rate-10)<1e-9);const selected=selectRegionalSamples(rows,{},p.start,p.end);assert.equal(selected[0].name,'A');});
 
-test('each month weights common-size prices by its own transaction counts',()=>{const p=changePeriods('2026-10-13').monthly[0],rows=[];const add=(ym,py,price,n)=>{for(let i=0;i<n;i++)rows.push({apt:'A',umd:'동',area:py===20?50:100,py,amt:price*py,ym,d:1});};add('202608',20,.5,1);add('202608',40,.3,9);add('202609',20,.5,9);add('202609',40,.3,1);add('202609',50,.9,3);const r=regionalChange(rows,p).comparisons[0];assert.ok(Math.abs(r.rate-50)<1e-8);assert.ok(Math.abs(r.previousPrice-.32)<1e-8);assert.ok(Math.abs(r.currentPrice-.48)<1e-8);assert.equal(r.currentTrades,10);assert.deepEqual(r.matchedTypes.map(x=>x.py),[20,40]);});
-test('complex needs a common supply size in both months, and compares monthly weighted prices',()=>{const p=changePeriods('2026-10-13').monthly[0];const t=(apt,ym,py,price)=>({apt,umd:'동',area:84,py,amt:py*price,ym,d:1});const rows=[t('A','202608',20,.5),t('A','202609',20,.55),t('A','202608',40,.3),t('A','202609',40,.27),t('B','202608',20,.5),t('B','202609',40,.3)];const r=regionalChange(rows,p);assert.equal(r.groups,1);assert.ok(Math.abs(r.comparisons[0].rate-2.5)<1e-9);assert.equal(r.comparisons[0].matchedTypes.length,2);});
-
-test('only supply sizes 20 through 40 inclusive enter comparison and sample ranking',()=>{const p=changePeriods('2026-10-13').monthly[0],rows=[19,20,40,41].flatMap(py=>[{apt:'A'+py,umd:'동',area:84,py,amt:py,ym:'202608',d:1},{apt:'A'+py,umd:'동',area:84,py,amt:py*1.1,ym:'202609',d:1}]);const r=regionalChange(rows,p);assert.deepEqual(r.comparisons.map(x=>x.name).sort(),['A20','A40']);assert.deepEqual(selectRegionalSamples(rows,{},p.start,p.end).map(x=>x.name).sort(),['A20','A40']);});
-
-test('month prices use separate month trade counts while region keeps equal complex weights',()=>{const p=changePeriods('2026-10-13').monthly[0],rows=[];const add=(apt,ym,py,unit,n)=>{for(let i=0;i<n;i++)rows.push({apt,umd:'동',area:84,py,amt:py*unit,ym,d:1});};add('A','202608',20,1,1);add('A','202609',20,1.1,3);add('A','202608',40,1,1);add('A','202609',40,.9,1);for(const apt of ['B','C']){add(apt,'202608',30,1,1);add(apt,'202609',30,1,1);}const r=regionalChange(rows,p),a=r.comparisons.find(x=>x.name==='A');assert.ok(Math.abs(a.rate-5)<1e-8);assert.ok(Math.abs(a.currentPrice-1.05)<1e-8);assert.equal(r.rate,1.67);});
+const p=changePeriods('2026-10-21').monthly[0];
+const t=(apt,ym,py,unit)=>({apt,umd:'동',area:py*2.5,py,amt:py*unit,ym,d:1});
+test('highest current unit-price type is used consistently for both months without transaction weights',()=>{
+ const rows=[t('A','202608',20,.5),t('A','202609',20,.55),...Array.from({length:9},()=>t('A','202608',50,.3)),t('A','202609',50,.4)];
+ const a=regionalChange(rows,p).comparisons[0];assert.equal(a.py,20);assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.55);assert.ok(Math.abs(a.rate-10)<1e-8);assert.equal(a.matchedTypes.length,1);
+});
+test('all positive supply sizes enter comparisons and sample selection',()=>{
+ const rows=[12,19,20,40,41,80].flatMap(py=>[t('A'+py,'202608',py,1),t('A'+py,'202609',py,1.1)]);
+ assert.equal(regionalChange(rows,p).groups,6);assert.equal(selectRegionalSamples(rows,{},p.start,p.end).length,6);
+});
+test('empty months carry historical prices and preserve zero actual trade counts',()=>{
+ const rows=[t('A','202601',60,.5),t('B','202602',15,.4),t('C','202608',45,.6),t('C','202609',45,.66)];
+ const r=regionalChange(rows,p);assert.equal(r.groups,3);assert.equal(r.rate,3.33);
+ const a=r.comparisons.find(x=>x.name==='A');assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.5);assert.equal(a.currentTrades,0);assert.equal(a.previousTrades,0);assert.equal(a.rate,0);
+});
+test('future prices never fill past months and new highest types have no backwards fill',()=>{
+ const rows=[t('new','202609',25,1),t('future','202610',30,3),t('A','202608',20,.5),t('A','202609',80,.8)];
+ assert.equal(regionalChange(rows,p).groups,0);
+});
+test('a carried highest-price type is not replaced by a newly traded cheaper type',()=>{
+ const a=regionalChange([t('A','202601',15,1),t('A','202609',70,.6)],p).comparisons[0];
+ assert.equal(a.py,15);assert.equal(a.currentPrice,1);assert.equal(a.rate,0);assert.equal(a.currentTrades,0);
+});
+test('regional rates keep equal complex weights and exclude cancellations',()=>{
+ const rows=[t('A','202608',60,1),t('A','202609',60,1.3),t('B','202601',12,1),t('C','202601',80,1),{...t('B','202609',12,10),cancelled:true}];
+ const r=regionalChange(rows,p);assert.equal(r.groups,3);assert.equal(r.rate,10);
+});
