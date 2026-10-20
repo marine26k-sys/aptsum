@@ -315,6 +315,8 @@ try {
   .cmp-summary-table th:first-child{position:sticky;left:0;z-index:1;background:#F1F5F9;text-align:left}
   .cmp-summary-table thead th{background:var(--teal-light-soft);color:var(--navy);text-align:left}
   .cmp-summary-table thead th:first-child{z-index:2}
+  .cmp-summary-table .cmp-current-row th{background:#F1F5F9}
+  .cmp-summary-table .cmp-current-row td{background:var(--teal-light-soft)}
   .cmp-summary-heading{display:flex;align-items:flex-start;gap:4px}
   .cmp-summary-dot{flex:0 0 7px;width:7px;height:7px;margin-top:5px;border-radius:50%}
   .cmp-summary-name{flex:1;min-width:0;text-wrap:balance;word-break:break-all}
@@ -4398,7 +4400,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
     if(!pys.length){ missing.push(tg.name); continue; }
     complexes.push({name:naverNameOf(tg.lawd, officialName, hits[0].umd) || officialName, umd:hits[0].umd, count:hits.length, build:hits.find(t=>/^\d{4}$/.test(String(t.build||'')))?.build||'', pys, lawd:tg.lawd});
   }
-  return { found:complexes.length>0, mode:'compare',
+  return { found:complexes.length>0, mode:'compare',asOfYm:calendarMonths(1,0,now)[0],
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     complexes, missing };
@@ -6504,12 +6506,18 @@ function compareSummaryHTML(d){
     else if(/구$/.test(city))city=match.province+'시 '+city;
     return esc([city,c.umd].filter(Boolean).join(' '));
   };
+  const basisMonth=d.asOfYm||chosen.find(({p})=>p?.currentPrice?.ym)?.p.currentPrice.ym;
+  const monthAt=offset=>{
+    if(!/^\d{6}$/.test(String(basisMonth||'')))return null;
+    const date=new Date(Date.UTC(Number(basisMonth.slice(0,4)),Number(basisMonth.slice(4))-1-offset,1));
+    return date.toISOString().slice(0,7).replace('-','');
+  };
   const value=x=>x===null||x===undefined||x===''?'—':esc(x);
   const money=x=>Number.isFinite(x)?`<span class="cmp-sale-price">${x.toFixed(1)}억</span>`:'—';
-  const change=x=>x?`${money(x.basePrice)} <span class="cmp-price-date">(${esc(ymLabel(x.from))})</span><br><span style="font-size:10px;font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.round(Math.abs(x.pct))}%)</span>`:'—';
+  const change=x=>x?`${money(x.basePrice)}<br><span style="font-size:10px;font-weight:700;color:var(--${x.pct>0?'red':x.pct<0?'blue':'sub'});white-space:nowrap">${x.pct>0?'▲':x.pct<0?'▼':'보합 '}${Math.abs(x.amount).toFixed(1)}억 (${Math.round(Math.abs(x.pct))}%)</span>`:'—';
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
-  const row=(label,fn)=>`<tr><th scope="row">${esc(label)}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
+  const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
   return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr></thead><tbody>
     ${row('지역',c=>region(c))}
     ${row('준공·년차',c=>{const year=String(c.hh?.useDate||c.hh?.built||c.build||'').slice(0,4);return /^\d{4}$/.test(year)?esc(complexBuildLabel(year)):'—';})}
@@ -6518,16 +6526,16 @@ function compareSummaryHTML(d){
     ${row('용적률',c=>c.hh?.far!=null?`${value(c.hh.far)}%`:'—')}
     ${row('건폐율',c=>c.hh?.bcr!=null?`${value(c.hh.bcr)}%`:'—')}
     ${row('최근 3년 최고가',(_c,p)=>deal(p?.high3))}
-    ${row('최근 시세',(_c,p)=>p?.currentPrice?`${money(p.currentPrice.v)} <span class="cmp-price-date">(${esc(ymLabel(p.currentPrice.ym))})</span>`:'—')}
-    ${row('1개월',(_c,p)=>change(p?.changes?.m1))}
-    ${row('3개월',(_c,p)=>change(p?.changes?.m3))}
-    ${row('6개월',(_c,p)=>change(p?.changes?.m6))}
-    ${row('YTD',(_c,p)=>change(p?.changes?.ytd))}
-    ${row('1년',(_c,p)=>change(p?.changes?.y1))}
-    ${row('2년',(_c,p)=>change(p?.changes?.y2))}
-    ${row('3년',(_c,p)=>change(p?.changes?.y3))}
-    ${row('4년',(_c,p)=>change(p?.changes?.y4))}
-    ${row('5년',(_c,p)=>change(p?.changes?.y5))}
+    ${row('최근 시세',(_c,p)=>money(p?.currentPrice?.v),monthAt(0),'cmp-current-row')}
+    ${row('1개월',(_c,p)=>change(p?.changes?.m1),monthAt(1))}
+    ${row('3개월',(_c,p)=>change(p?.changes?.m3),monthAt(3))}
+    ${row('6개월',(_c,p)=>change(p?.changes?.m6),monthAt(6))}
+    ${row('YTD',(_c,p)=>change(p?.changes?.ytd),monthAt(Number(basisMonth?.slice(4))))}
+    ${row('1년',(_c,p)=>change(p?.changes?.y1),monthAt(12))}
+    ${row('2년',(_c,p)=>change(p?.changes?.y2),monthAt(24))}
+    ${row('3년',(_c,p)=>change(p?.changes?.y3),monthAt(36))}
+    ${row('4년',(_c,p)=>change(p?.changes?.y4),monthAt(48))}
+    ${row('5년',(_c,p)=>change(p?.changes?.y5),monthAt(60))}
   </tbody></table>`;
 }
 
