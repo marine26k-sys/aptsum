@@ -315,6 +315,7 @@ try {
   .cmp-summary-table th:first-child{position:sticky;left:0;z-index:1;background:#F1F5F9;text-align:left}
   .cmp-summary-table thead th{background:var(--teal-light-soft);color:var(--navy);text-align:left}
   .cmp-summary-table thead th:first-child{z-index:2}
+  .cmp-summary-table .cmp-size-row th,.cmp-summary-table .cmp-size-row td{background:var(--teal-light-soft);color:var(--navy)}
   .cmp-summary-table .cmp-current-row th{background:#F1F5F9}
   .cmp-summary-table .cmp-current-row td{background:var(--teal-light-soft)}
   .cmp-summary-heading{display:flex;align-items:flex-start;gap:4px}
@@ -6518,8 +6519,7 @@ function compareSummaryHTML(d){
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
   const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
-  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr></thead><tbody>
-    ${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—')}
+  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
     ${row('지역',c=>region(c))}
     ${row('준공·년차',c=>{const year=String(c.hh?.useDate||c.hh?.built||c.build||'').slice(0,4);return /^\d{4}$/.test(year)?esc(complexBuildLabel(year)):'—';})}
     ${row('세대수',c=>c.hh?.hhcnt>0?`${c.hh.hhcnt.toLocaleString()}세대`:'—')}

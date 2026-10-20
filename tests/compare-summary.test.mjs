@@ -120,3 +120,9 @@ test('Byeongjeom presale history and occupancy rights are merged into historical
  const q=c.analyzeCompare({'HS-병점구':rights},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(rights[1].kind,'입주권');assert.equal(q.changes.y5.basePrice,6);
 });
+
+test('selected pyeong row belongs to the shaded header so it scrolls with complex names',()=>{
+ const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,py:'34평'}]}]});
+ const head=result.match(/<thead>([\s\S]*?)<\/thead>/)[1],body=result.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
+ assert.match(head,/<tr class="cmp-size-row"><th scope="row">평수/);assert.match(head,/34평 \(전용 84\)/);assert.doesNotMatch(body,/scope="row">평수/);
+});
