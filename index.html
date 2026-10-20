@@ -7909,7 +7909,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
     const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
-      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',
+      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',askBand:individual?null:(lsAskText(ls)==='전체'?null:lsAskText(ls)),
       scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
@@ -7991,6 +7991,7 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
       ${d.individual?`<div style="text-align:center;font-size:12px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8);white-space:nowrap">${[esc(d.complexRegion||''),built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:''].filter(Boolean).join(' · ')}</div>`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
+        ${d.askBand?`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(d.askBand)}</span>`:''}
         ${d.pyBand?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.pyBand)}</b> <span style="opacity:.5">|</span></span>`:''}
         ${d.filterLabel?`<span style="color:rgba(255,255,255,.88);white-space:nowrap"><b style="color:#7FD4D9">${esc(d.filterLabel)}</b> <span style="opacity:.5">|</span></span>`:''}
         <span style="color:rgba(255,255,255,.88);white-space:nowrap">기준일 ${esc(d.asOf||'-')}</span>
