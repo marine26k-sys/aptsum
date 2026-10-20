@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function setup(){
  const c=vm.createContext({matchComplex:all=>({hits:all}),naverNameOf:()=>null,markOutliers:a=>a,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:()=>34,avgA:a=>a.reduce((s,t)=>s+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s.slice(2,4)+'.'+s.slice(4),yearsLabel:()=>'',esc:s=>String(s??'').replace(/[<>&"]/g,x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x])),complexBuildLabel:y=>y+'년',formatWalkDisplay:x=>x,CMP_COLORS:['teal','red'],cmpPyMap:{0:84,1:84}});
+ vm.runInContext(html.slice(html.indexOf('function complexTradeBuild('),html.indexOf('function calendarMonths('))+html.slice(html.indexOf('function complexCompletionYear('),html.indexOf('let complexCompletionFallbackPromise')),c);
  vm.runInContext(html.slice(html.indexOf('function calendarMonths('),html.indexOf('function analyzeComplex(')),c);
  vm.runInContext(html.slice(html.indexOf('function analyzeCompare('),html.indexOf('function esc(')),c);
  vm.runInContext(html.slice(html.indexOf('function compareSummaryHTML('),html.indexOf('function drawCompare(')),c);
@@ -20,7 +21,7 @@ test('comparison statistics use the selected exclusive area and actual contract 
 test('summary renders side-by-side fields, exact school details and missing values safely',()=>{
  const c=setup();const a={name:'가상<A>',umd:'가상동',count:4,build:'2020',hh:{hhcnt:1000,far:250,bcr:20,dongCnt:10,subwayWalk:'10분이내'},schoolInfo:{schools:[{name:'가상초',level:'초',distance:123,type:'공립'}]},pys:[{area:84,py:'34평',n:4,avg3:{v:19,n:3},max:20,latest:{price:20,ym:'202610',day:15,floor:12}}]};
  const b={name:'가상B',pys:[],count:0};const result=c.compareSummaryHTML({complexes:[a,b],period:'26.05 ~ 26.10'});
- assert.match(result,/<table/);assert.equal((result.match(/scope="row"/g)||[]).length,17);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.doesNotMatch(result,/지하철 도보/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
+ assert.match(result,/<table/);assert.match(result,/scope="row">평수/);assert.match(result,/34평 \(전용 84\)/);assert.equal((result.match(/scope="row"/g)||[]).length,18);assert.match(result,/scope="col"/);assert.match(result,/가상&lt;A&gt;/);assert.match(result,/건폐율[^]*20%/);assert.doesNotMatch(result,/가상초|초등학교|중학교|고등학교/);assert.doesNotMatch(result,/지하철 도보/);assert.match(result,/<td>—<\/td>/);assert.doesNotMatch(result,/NaN|undefined|Infinity/);
  c.cmpPyMap[0]=59;assert.doesNotMatch(c.compareSummaryHTML({complexes:[a,b]}),/20.0억/);
 });
 
@@ -60,17 +61,17 @@ test('short-term trend compares consecutive calendar quarters at floor five and 
 });
 
 test('comparison summary shows current price then ordered period changes without trend or period averages',()=>{
- const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0,ym:"202610"},changes:{m1:{basePrice:10,from:"202609",amount:2,pct:20},m3:{basePrice:13,from:"202607",amount:-1,pct:-7.7},ytd:{basePrice:12,from:"202512",amount:0,pct:0}}}]}]});
- assert.match(result,/최근 시세/);assert.match(result,/26.09/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20%\)/);assert.match(result,/▼1.0억 \(8%\)/);assert.match(result,/0.0억 \(0%\)/);
- assert.doesNotMatch(result,/최근 거래|단기 추세|개월 평균|조회 기간 최고가/);assert.match(result,/12.0억<\/span> <span class="cmp-price-date">\(26.10\)/);
- const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 3년 최고가','최근 시세','1개월','3개월','6개월','YTD','1년','2년','3년','4년','5년']);
+ const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0,ym:"202610"},changes:{m1:{basePrice:10,from:"202609",amount:2,pct:20},m3:{basePrice:13,from:"202607",amount:-1,pct:-7.7},m9:{basePrice:12,from:"202512",amount:0,pct:0}}}]}]});
+ assert.match(result,/최근 시세/);assert.match(result,/scope="row">1개월 전<br>[^]*?\(26.09\)/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20%\)/);assert.match(result,/▼1.0억 \(8%\)/);assert.match(result,/0.0억 \(0%\)/);
+ assert.doesNotMatch(result,/최근 거래|단기 추세|개월 평균|조회 기간 최고가/);assert.match(result,/class="cmp-current-row"><th scope="row">최근 시세<br>[^]*?\(26.10\)/);
+ const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 3년 최고가','최근 시세','1개월 전','3개월 전','6개월 전','9개월 전','1년 전','2년 전','3년 전','4년 전','5년 전']);
 });
-test('comparison changes use the current calendar month and exact prior months including December YTD',()=>{
+test('comparison changes use the current calendar month and exact prior months including nine months ago',()=>{
  const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,floor:10,direct:0,d:1};
  const records=[['202109',3],['202110',4],['202209',4],['202309',5],['202310',6],['202410',8],['202510',10],['202512',12],['202604',15],['202607',16],['202609',18]].map(([ym,amt])=>({...base,ym,amt}));
  const p=c.analyzeCompare({'11111':records},[{lawd:'11111',name:'가상단지'}],['202610','202609'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(p.currentPrice.v,18);assert.equal(p.currentPrice.n,0);
- for(const [key,amount,pct,from] of [['m1',0,0,'202609'],['m3',2,12.5,'202607'],['m6',3,20,'202604'],['ytd',6,50,'202512'],['y1',8,80,'202510'],['y2',10,125,'202410'],['y3',12,200,'202310'],['y4',14,350,'202210'],['y5',14,350,'202110']]){
+ for(const [key,amount,pct,from] of [['m1',0,0,'202609'],['m3',2,12.5,'202607'],['m6',3,20,'202604'],['m9',6,50,'202601'],['y1',8,80,'202510'],['y2',10,125,'202410'],['y3',12,200,'202310'],['y4',14,350,'202210'],['y5',14,350,'202110']]){
  assert.equal(p.changes[key].basePrice,18-amount,key);assert.equal(p.changes[key].amount,amount,key);assert.equal(p.changes[key].pct,pct,key);assert.equal(p.changes[key].from,from,key);}
 });
 
@@ -87,3 +88,52 @@ test('three-year high uses actual eligible trades independently of graph query p
  const p=c.analyzeCompare({'11111':records},[{lawd:'11111',name:'가상단지'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(p.high3.price,22);assert.equal(p.high3.ym,'202311');assert.equal(p.high.price,20);assert.equal(p.currentPrice.ym,'202610');
 });
+
+test('common dates stay in row headings even when a selected complex lacks that period price',()=>{
+ const c=setup(),result=c.compareSummaryHTML({asOfYm:'202610',complexes:[{name:'가상A',pys:[]},{name:'가상B',pys:[{area:84,currentPrice:{v:12,ym:'202610'},changes:{m1:{basePrice:12,from:'202609',amount:0,pct:0}}}]}]});
+ const rows=[...result.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map(m=>m[1]);
+ for(const [label,date] of [['최근 시세','26.10'],['1개월 전','26.09'],['3개월 전','26.07'],['9개월 전','26.01'],['5년 전','21.10']]){
+  const row=rows.find(r=>r.includes('scope="row">'+label+'<br>'));assert.ok(row);assert.ok(row.split('</th>')[0].includes(date));assert.ok(!row.split('</th>')[1].includes(date));
+ }
+ assert.match(result,/<tr class="cmp-current-row">/);
+});
+test('backfilled Acro River Park 59sqm history supplies four- and five-year baseline prices',()=>{
+ const c=setup();
+ const seed=JSON.parse(readFileSync(new URL('../data/analyze/11650/202106.json',import.meta.url),'utf8')).items.filter(t=>t.apt==='아크로리버파크'&&Math.floor(t.area)===59);
+ assert.ok(seed.length>0);
+ const latest={...seed[0],ym:'202610',d:1,amt:45.7};
+ const p=c.analyzeCompare({'11650':[...seed,latest]},[{lawd:'11650',name:'아크로리버파크'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(p.changes.y4.basePrice,27);assert.equal(p.changes.y5.basePrice,27);assert.equal(p.changes.y4.from,'202210');assert.equal(p.changes.y5.from,'202110');
+});
+
+test('Byeongjeom presale history and occupancy rights are merged into historical comparison prices',()=>{
+ const c=setup();c.median=a=>{const s=a.slice().sort((a,b)=>a-b),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+ vm.runInContext(readFileSync(new URL('../shared/complex-identity.js',import.meta.url),'utf8'),c);
+ vm.runInContext(html.slice(html.indexOf('function markOutliers('),html.indexOf('// ── 층별 가격 프리미엄')),c);
+ const presales=JSON.parse(readFileSync(new URL('../data/presale/HS-병점구/202105.json',import.meta.url),'utf8')).items.filter(t=>t.apt.replace(/\s/g,'')==='병점역아이파크캐슬'&&Math.floor(t.area)===59);
+ assert.ok(presales.length>0);
+ const current={...presales[0],apt:'병점역아이파크캐슬',ym:'202610',d:1,amt:7};
+ const merged=c.aptsumComplexIdentity.mergeSources([current],presales,{},'HS-병점구');
+ assert.ok(merged.filter(t=>t.ym==='202105').every(t=>t.kind==='분양권'));
+ const p=c.analyzeCompare({'HS-병점구':merged},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(p.changes.y4.basePrice,5.3);assert.equal(p.changes.y5.basePrice,5.3);
+ const rights=c.aptsumComplexIdentity.mergeSources([current],[{...presales[0],ownership:'입주권',amt:6}],{},'HS-병점구');
+ const q=c.analyzeCompare({'HS-병점구':rights},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(rights[1].kind,'입주권');assert.equal(q.changes.y5.basePrice,6);
+});
+
+test('selected pyeong row belongs to the shaded header so it scrolls with complex names',()=>{
+ const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,py:'34평'}]}]});
+ const head=result.match(/<thead>([\s\S]*?)<\/thead>/)[1],body=result.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
+ assert.match(head,/<tr class="cmp-size-row"><th scope="row">평수/);assert.match(head,/34평 \(전용 84\)/);assert.doesNotMatch(body,/scope="row">평수/);
+});
+
+ test('comparison uses the same completion year as complex analysis when approval year differs',()=>{
+ const c=setup(),record={apt:'가상단지',umd:'가상동',area:84,py:34,build:'2022',floor:10,ym:'202610',d:1,amt:10};
+ const result=c.analyzeCompare({'11111':[record]},[{lawd:'11111',name:'가상단지'}],['202610']);
+ const complex=result.complexes[0];complex.hh={useDate:'20211105',built:'2022.03'};
+ assert.equal(c.complexCompletionYear(complex),2022);
+ const output=c.compareSummaryHTML(result);
+ assert.match(output,/준공·년차<[^]*2022년/);assert.doesNotMatch(output,/2021년/);
+ assert.equal(c.complexCompletionYear({build:'',hh:{useDate:'20211105'}}),2021);
+ });
