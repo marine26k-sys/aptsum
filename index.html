@@ -3631,30 +3631,32 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const q = name.replace(/\s/g,'');
   const m = matchComplex(all, name, lawd);
   if(m.multi) return {found:false, multi:true, suggest:complexSuggestionNames(all, m.multi, lawd).slice(0,8)};
-  const historyHits=m.hits||[];
+  const historyHits=(m.hits||[]).filter(t=>t.ym<=months[0]);
   const hits=historyHits.filter(t=>months.includes(t.ym));
-  if(!hits.length){
+  if(!historyHits.length){
     const names = [...new Set(all.map(t=>t.apt))];
     const grams=[]; for(let i=0;i+2<=q.length;i++) grams.push(q.slice(i,i+2));
     const sugg = names.map(n=>[n, grams.filter(g=>n.replace(/\s/g,'').includes(g)).length])
       .filter(([,s])=>s>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n])=>n);
     return {found:false, suggest:complexSuggestionNames(all, sugg, lawd)};
   }
-  const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
+  const metaHits=hits.length?hits:historyHits;
+  const nameCnt={}; metaHits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
   let officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
   // 시공사별로 나뉜 등록명을 합친 경우("관악드림(삼성)"+"관악드림(동아)")엔 그중 하나가 아니라 단지 이름으로
   // 보여준다. 우선 검색어로 두고, search()에서 K-apt 공식 단지명("관악드림타운" — 네이버·호갱노노와 같은
   // 표기)을 찾으면 그걸로 바꾼다(kaptNameForSplit). 세대수 조회·즐겨찾기도 이 이름으로 다시 찾을 수 있다(2026.10, 운영자 요청)
   let splitBase = null;
   // 네이버 단지명이 있으면 그 이름으로 보여준다(합쳐진 등록명이 모두 같은 네이버 단지일 때만)
-  const naverNames = new Set(hits.map(t=>naverNameOf(lawd, t.apt, t.umd) || t.apt));
+  const naverNames = new Set(metaHits.map(t=>naverNameOf(lawd, t.apt, t.umd) || t.apt));
   if(naverNames.size===1 && [...naverNames][0]!==officialName) officialName = [...naverNames][0];
-  else if(Object.keys(nameCnt).length>1 && isBuilderSplit(hits, Object.keys(nameCnt))){
+  else if(Object.keys(nameCnt).length>1 && isBuilderSplit(metaHits, Object.keys(nameCnt))){
     officialName = name.trim().replace(/\s*아파트$/,'');
     splitBase = looseAptKey(Object.keys(nameCnt)[0].replace(/\([^)]*\)/g,''), true);
   }
   hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
-  const groups={}; for(const t of hits){ const key=exclusiveAreaKey(t); (groups[key]=groups[key]||[]).push(t); }
+  const groups={}; for(const t of historyHits)groups[exclusiveAreaKey(t)] ||= [];
+  for(const t of hits)groups[exclusiveAreaKey(t)].push(t);
   const monthsAsc = months.slice().reverse();
   const m3=months.slice(0,3), p3v=months.slice(3,6);
   const periodAvg=(arr,ms)=>monthlyPriceAverage(arr,ms);
@@ -3667,9 +3669,11 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const byPy = Object.entries(groups).map(([sizeKey, arrRaw])=>{
     const clean = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months));
     const arr = clean.length? clean : arrRaw;
-    const max = Math.max(...arr.map(t=>t.amt));
+    const historyType=historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey);
+    const labelTrades=arr.length?arr:historyType;
+    const max = arr.length?Math.max(...arr.map(t=>t.amt)):null;
     const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
-    const maxDate = `${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`;
+    const maxDate = maxTrade?`${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`:null;
     const recent = arr[0];
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
@@ -3691,14 +3695,14 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       const rawClean = markOutliers(rawMatch, priceHistoryMonths(rawMatch,recentMonths));
       floorBand = floorBands(rawClean,recentMonths);
     }
-    return { py:`${representativePy(arr)}평`, sizeKey:+sizeKey, area:`(전용 ${sizeKey})`, n:arr.length,
+    return { py:`${representativePy(labelTrades)}평`, sizeKey:+sizeKey, area:`(전용 ${sizeKey})`, n:arr.length,
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
-      recent:{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor},
+      recent:recent?{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor}:null,
       max, maxDate, quarters, trend,
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
-      isNewHigh: recent.amt>=max && arr.length>=3, monthly, floorBand };
+      isNewHigh: !!recent && recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>a.sizeKey-b.sizeKey);
-  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:hits[0].lawd, umd:hits[0].umd, build:complexTradeBuild(hits),
+  return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:metaHits[0].lawd, umd:metaHits[0].umd, build:complexTradeBuild(metaHits),
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
@@ -4355,14 +4359,18 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
     const all = itemsByLawd[tg.lawd] || [];
     const m = matchComplex(all, tg.name, tg.lawd);
     if(m.multi){ missing.push(`${tg.name} (여러 단지 일치 — 정확한 단지명 입력)`); continue; }
-    const hits = (m.hits || []).filter(t=>months.includes(t.ym));
-    if(!hits.length){ missing.push(tg.name); continue; }
-    const nameCnt={}; hits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
+    const historyHits=(m.hits||[]).filter(t=>t.ym<=months[0]);
+    const hits = historyHits.filter(t=>months.includes(t.ym));
+    if(!historyHits.length){ missing.push(tg.name); continue; }
+    const metaHits=hits.length?hits:historyHits;
+    const nameCnt={}; metaHits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
     const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
-    const groups={}; for(const t of hits){ const key=exclusiveAreaKey(t); (groups[key]=groups[key]||[]).push(t); }
+    const groups={}; for(const t of historyHits)groups[exclusiveAreaKey(t)] ||= [];
+  for(const t of hits)groups[exclusiveAreaKey(t)].push(t);
     const pys = Object.entries(groups).map(([areaKey, arrRaw])=>{
       const clean = markOutliers(arrRaw, months);
       const arr = clean.length? clean : arrRaw;
+      const labelTrades=arr.length?arr:historyHits.filter(t=>exclusiveAreaKey(t)===Number(areaKey));
       const averageTrades=clean.filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
       const graphHistory=markOutliers((m.hits||[]).filter(t=>exclusiveAreaKey(t)===Number(areaKey)).map(t=>({...t})),priceHistoryMonths(m.hits||[],months)).filter(t=>!t.direct&&Number.isFinite(tradeDay(t))&&tradeDay(t)<=today);
       const graphMonths=[...new Set([...monthsAsc,...graphHistory.filter(t=>t.ym<=monthsAsc.at(-1)).map(t=>t.ym)])].sort();
@@ -4370,7 +4378,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
         const mA = graphHistory.filter(t=>t.ym===ym);
         return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
       }).filter(Boolean),graphMonths).filter(m=>monthsAsc.some(ym=>ymLabel(ym)===m.ym));
-      const areaCnt={}; arr.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
+      const areaCnt={}; labelTrades.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1); // 그룹 내 가장 흔한 전용면적을 대표값으로
       const area = +Object.entries(areaCnt).sort((a,b)=>b[1]-a[1])[0][0];
       const byDate=arr.slice().sort((a,b)=>String(a.ym||'').localeCompare(String(b.ym||''))||(Number(a.d)||0)-(Number(b.d)||0));
       const deal=t=>t?{price:t.amt,ym:t.ym,day:t.d,floor:t.floor}:null;
@@ -4394,16 +4402,16 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
       const trend=recentAvg!==null&&prevAvg>0?{recentAvg,prevAvg,pct:Math.round((recentAvg-prevAvg)/prevAvg*100),recentN:recentPrice.n,prevN:previousPrice.n}:null;
       const prices=arr.map(t=>t.amt).sort((a,b)=>a-b),mid=prices.length>>1;
       const high=byDate.reduce((a,t)=>!a||t.amt>=a.amt?t:a,null),low=byDate.reduce((a,t)=>!a||t.amt<=a.amt?t:a,null);
-      return { py:`${representativePy(arr)}평`, area:+areaKey, n:arr.length,
+      return { py:`${representativePy(labelTrades)}평`, area:+areaKey, n:arr.length,
         currentPrice,high3:deal(high3),changes,trend,latest:deal(byDate.filter(t=>Number.isFinite(Number(t.floor))&&Number(t.floor)>=3&&!t.direct).at(-1)),high:deal(high),low:deal(low),
         avg1:periodAvg(1),avg6:periodAvg(6),avg12:periodAvg(12),avg24:periodAvg(24),prev3:periodAvg(3,3),
-        avgAll:monthlyPriceAverage(reference,months)?.v??null,median:R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2),
-        min:prices[0],activeMonths:monthly.filter(m=>m.n>0).length,
+        avgAll:monthlyPriceAverage(reference,months)?.v??null,median:prices.length?R1(prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2):null,
+        min:prices[0]??null,activeMonths:monthly.filter(m=>m.n>0).length,
         avg3:periodAvg(3),
-        max: Math.max(...arr.map(t=>t.amt)), monthly };
+        max: arr.length?Math.max(...arr.map(t=>t.amt)):null, monthly };
     }).sort((a,b)=>a.area-b.area);
     if(!pys.length){ missing.push(tg.name); continue; }
-    complexes.push({name:naverNameOf(tg.lawd, officialName, hits[0].umd) || officialName, umd:hits[0].umd, count:hits.length, build:complexTradeBuild(hits), pys, lawd:tg.lawd});
+    complexes.push({name:naverNameOf(tg.lawd, officialName, metaHits[0].umd) || officialName, umd:metaHits[0].umd, count:hits.length, build:complexTradeBuild(metaHits), pys, lawd:tg.lawd});
   }
   return { found:complexes.length>0, mode:'compare',asOfYm:calendarMonths(1,0,now)[0],
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -5118,7 +5126,7 @@ async function runSearch(opts){
   const baseFetchMN = allScope
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
-  const effMN=monthlyHistoryMode?Math.max(baseFetchMN,neededMN+12):baseFetchMN;
+  const effMN=monthlyHistoryMode?Math.max(baseFetchMN,neededMN+12,73):baseFetchMN;
   saveQueriedSliders();
   document.getElementById('tradeLoadNote').hidden = false;
   showLookupProgress(0,1);
@@ -5836,7 +5844,7 @@ function pyTableHTML(d){
       <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
       <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
       <td class="tr-r td-teal">${avgCell(p.quarters[3].avg)}</td>
-      <td class="tr-r td-max">${p.rentOnly?`<span class="rng">${esc(p.noTradeLabel||'매매 거래 없음')}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
+      <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
   </table>`;
 }
@@ -5889,7 +5897,8 @@ function trendHTML(d){
 
 function chartTarget(d){
   if(selPy !== -1) return selPy;
-  return d.byPy.reduce((best,p,i,a)=> p.n>0 && (best<0 || p.n>a[best].n)? i:best, -1); // 전체 = 매매/전세 거래 최다 평형
+  const best=d.byPy.reduce((best,p,i,a)=> p.n>0 && (best<0 || p.n>a[best].n)? i:best, -1);
+  return best>=0?best:d.byPy.findIndex(p=>p.monthly?.length); // 전체 = 매매/전세 거래 최다 평형
 }
 
 // ── 층별 가격 프리미엄 미니 차트 ──
@@ -6085,7 +6094,7 @@ function complexDynamicHTML(){
 
 let complexLiveBusy=false,complexLiveTapCount=0,complexLiveLastTap=0,complexLiveTapOwner=null;
 function complexRefreshCacheItems(cache,lawd,monthsN,floorMin=0){
-  return lastMonthsYm((monthsN||36)+12).flatMap(ym=>cache[lawd]?.[ym]?.items||[]).filter(t=>!floorMin||parseInt(t.floor,10)>=floorMin);
+  return lastMonthsYm(Math.max((monthsN||36)+12,73)).flatMap(ym=>cache[lawd]?.[ym]?.items||[]).filter(t=>!floorMin||parseInt(t.floor,10)>=floorMin);
 }
 async function tapComplexLiveRefresh(){
  const now=Date.now();

@@ -71,3 +71,25 @@ test('live refresh keeps pre-window seed months and the original floor filter',(
  const records=c.complexRefreshCacheItems(cache,'11111',3,5);
  assert.equal(records.length,2);assert.ok(records.some(t=>t.ym==='202601'));assert.ok(records.every(t=>t.floor>=5));
 });
+
+test('complex keeps a historical-only size with carried prices and no fabricated current trades or high',()=>{
+ const c=setup();c.floorBands=()=>null;
+ vm.runInContext(html.slice(html.indexOf('function analyzeComplex('),html.indexOf('function analyzeRegion(')),c);
+ const r=c.analyzeComplex([trade('202401',8)],'가상단지',c.calendarMonths(6),undefined,'11111');
+ assert.equal(r.found,true);assert.equal(r.count,0);assert.equal(r.trades.length,0);
+ const p=r.byPy[0];assert.equal(p.n,0);assert.equal(p.max,null);assert.equal(p.recent,null);assert.equal(p.isNewHigh,false);
+ assert.equal(p.monthly.length,6);assert.ok(p.monthly.every(x=>x.avg===8&&x.n===0));
+ assert.ok(p.quarters.every(x=>x.avg.v===8&&x.avg.n===0));assert.equal(p.trend.recentAvg,8);
+});
+test('complex retains an inactive size alongside an actively traded size',()=>{
+ const c=setup();c.floorBands=()=>null;
+ vm.runInContext(html.slice(html.indexOf('function analyzeComplex('),html.indexOf('function analyzeRegion(')),c);
+ const r=c.analyzeComplex([trade('202610',12),trade('202401',8,{area:59,py:25})],'가상단지',c.calendarMonths(3),undefined,'11111');
+ assert.equal(r.count,1);assert.equal(r.byPy.length,2);assert.equal(r.byPy.find(p=>p.sizeKey===59).n,0);
+});
+test('monthly tabs load a five-year history seed including the live refresh path',()=>{
+ assert.match(html,/Math.max\(baseFetchMN,neededMN\+12,73\)/);
+ const c=setup();c.lastMonthsYm=n=>Array.from(c.calendarMonths(n));
+ vm.runInContext(html.slice(html.indexOf('function complexRefreshCacheItems('),html.indexOf('async function tapComplexLiveRefresh(')),c);
+ assert.equal(c.complexRefreshCacheItems({'11111':{'202401':{items:[trade('202401',8)]}}},'11111',3).length,1);
+});
