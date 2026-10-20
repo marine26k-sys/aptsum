@@ -54,3 +54,18 @@ test('year-to-date compares December with selected month rather than averaging y
  assert.equal(r.comparisons.find(x=>x.name==='B').rate,0);
  const january=regionalYtdPeriod(changePeriods('2026-01-02').monthly[0]);assert.equal(january.previousStart,Date.UTC(2025,11,1));
 });
+
+test('custom month ranges use the end-month highest type and the same start-month type without future leakage',async()=>{
+ const {regionalPeriodMatrix}=await import('../shared/regional-change.mjs');
+ const months=changePeriods('2026-10-21').monthly;
+ const rows=[t('A','202512',20,1),t('A','202609',20,1.2),t('A','202610',20,1.4),t('A','202512',60,.8),t('A','202610',60,1.3),t('B','202511',15,1),t('C','202512',80,1),{...t('A','202610',20,99),d:22}];
+ const matrix=regionalPeriodMatrix(rows,months);
+ assert.equal(Object.keys(matrix).length,66);
+ assert.equal(matrix['2025-12|2026-09'].rate,6.67);
+ assert.equal(matrix['2025-12|2026-10'].rate,13.33);
+ assert.equal(matrix['2025-12|2026-10'].groups,3);
+ assert.equal(matrix['2026-09|2026-10'].previousTrades,1);
+ assert.equal(matrix['2026-10|2026-09'],undefined);
+ const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,1);assert.equal(filtered['2025-12|2026-10'].rate,null);
+ const missing=regionalPeriodMatrix(rows,months,{},null,new Set(['202512']));assert.equal(missing['2025-12|2026-10'].missing,true);
+});

@@ -7,24 +7,30 @@ export function median(values){const a=[...values].sort((a,b)=>a-b),n=a.length;r
 export function tradeDay(t){const y=Number(String(t.ym).slice(0,4)),m=Number(String(t.ym).slice(4)),d=Number(t.d);if(!y||!m||!d)return NaN;const time=Date.UTC(y,m-1,d),date=new Date(time);return date.getUTCMonth()===m-1&&date.getUTCDate()===d?time:NaN;}
 // 비교월의 최고 평당가 평형을 선택하고 같은 평형의 전월 시세와 비교한다.
 // 무거래월은 과거 월평균을 이어받으며 미래 거래로 과거를 채우지 않는다.
-export function regionalChange(items,period,names={},samples=null){
- const average=a=>a.reduce((sum,x)=>sum+x,0)/a.length;
- const allowed=samples?new Set(samples):null,groupsByKey=new Map();
+function prepareRegionalHistory(items,cutoff,names){
+ const groupsByKey=new Map();
  for(const t of items){
   if(t.direct||t.cancel||t.cancelled||!Number.isFinite(t.amt)||t.amt<=0||!Number.isFinite(t.area)||t.area<=0)continue;
   const date=tradeDay(t),py=supplyPy(t);
-  if(!Number.isFinite(date)||date>=period.end||!eligiblePy(py))continue;
+  if(!Number.isFinite(date)||date>=cutoff||!eligiblePy(py))continue;
   const apt=names[`${t.apt}|${t.umd}`]||t.apt,key=JSON.stringify([t.umd,apt]);
-  if(allowed&&!allowed.has(key))continue;
   const types=groupsByKey.get(key)||new Map(),months=types.get(py)||new Map();
   const ym=String(t.ym),entry=months.get(ym)||{sum:0,n:0,date:Date.UTC(Number(ym.slice(0,4)),Number(ym.slice(4))-1,1)};
   entry.sum+=t.amt/py;entry.n++;months.set(ym,entry);types.set(py,months);groupsByKey.set(key,types);
  }
+ for(const types of groupsByKey.values())for(const [py,months] of types)types.set(py,[...months.values()].sort((a,b)=>a.date-b.date));
+ return groupsByKey;
+}
+export function regionalChange(items,period,names={},samples=null,history=null){
+ const average=a=>a.reduce((sum,x)=>sum+x,0)/a.length;
+ const allowed=samples?new Set(samples):null,groupsByKey=history||prepareRegionalHistory(items,period.end,names);
  const comparisons=[];let previousTrades=0,currentTrades=0;
  for(const [key,types] of groupsByKey){
+  if(allowed&&!allowed.has(key))continue;
   const candidates=[];
   for(const [py,months] of types){
-   const entries=[...months.values()].sort((a,b)=>a.date-b.date);
+   const entries=months.filter(x=>x.date<period.end);
+   if(!entries.length)continue;
    const previous=entries.filter(x=>x.date<period.start).at(-1),current=entries.at(-1);
    // 비교월 최고 평당가를 먼저 선택하며, 과거 가격이 없다고 다른 평형으로 바꾸지 않는다.
    candidates.push({py,previousPrice:previous?previous.sum/previous.n:null,currentPrice:current.sum/current.n,
@@ -40,6 +46,21 @@ export function regionalChange(items,period,names={},samples=null){
  const groups=comparisons.length;
  return {comparisons,rate:groups>=3?(Math.round(average(comparisons.map(x=>x.rate))*100)/100||0):null,groups,sampleCount:samples?.length??groups,previousTrades,currentTrades,previousPrice:groups?average(comparisons.map(x=>x.previousPrice)):null,currentPrice:groups?average(comparisons.map(x=>x.currentPrice)):null};
 }
+// 시작월 시세와 끝월의 동일 평형 시세를 비교하는 모든 월 조합.
+export function regionalPeriodMatrix(items,periods,names={},samples=null,available=null){
+ if(!periods.length)return {};
+ const history=prepareRegionalHistory(items,Math.max(...periods.map(p=>p.end)),names),result={};
+ for(let endIndex=0;endIndex<periods.length-1;endIndex++)for(let startIndex=endIndex+1;startIndex<periods.length;startIndex++){
+  const first=periods[startIndex],last=periods[endIndex],date=new Date(first.start);
+  const p={start:Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,1),previousStart:first.start,end:last.end};
+  const key=first.label+'|'+last.label,required=[];const day=new Date(first.start);
+  while(+day<last.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCMonth(day.getUTCMonth()+1);}
+  if(available&&!required.every(ym=>available.has(ym))){result[key]={rate:null,groups:0,missing:true};continue;}
+  const {comparisons,...summary}=regionalChange(items,p,names,samples,history);result[key]=summary;
+ }
+ return result;
+}
+
 export function changePeriods(asOf){const date=new Date(asOf+'T00:00:00Z');if(!Number.isFinite(+date))throw Error('invalid date');const month=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1);
  const monthly=Array.from({length:12},(_,i)=>{const d=new Date(month),y=d.getUTCFullYear(),m=d.getUTCMonth()-i;return {id:`m${i}`,label:new Date(Date.UTC(y,m,1)).toISOString().slice(0,7),start:Date.UTC(y,m,1),end:i===0?+date+86400000:Date.UTC(y,m+1,1),previousStart:Date.UTC(y,m-1,1)};});
  return {monthly};}
