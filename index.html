@@ -5778,9 +5778,13 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   const iMax = vals.indexOf(Math.max(...vals)), iMin = vals.indexOf(Math.min(...vals));
   const dense = monthly.length > 14;
   const fs = dense ? 8 : 9.5;
-  // 값 라벨 겹침 방지: 인접 달의 평균가가 비슷해 라벨이 겹치면 자동으로 위/아래 배치를 조정
-  const labelPos = monthly.map((m,i)=>({cx:xs[i], cy:y(m.avg)}));
-  placeLabels(labelPos, [-8, 14, -24, 30], Math.max(20, fs*2.6), fs+3);
+  // 최근·최고·최저를 우선 배치하고 일반 가격은 3개월 간격으로만 표시한다.
+  const lastIndex=monthly.length-1;
+  const important=new Set([lastIndex,iMax,iMin]);
+  const labelPos = monthly.map((m,i)=>({i,cx:xs[i],cy:y(m.avg)}));
+  const visibleLabels=labelPos.filter(p=>important.has(p.i)||((lastIndex-p.i)%3===0&&!monthly[p.i].carriedFrom));
+  placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-8, 14, -24, 30], Math.max(20, fs*2.6), fs+3);
+  const labelIndices=new Set(visibleLabels.map(p=>p.i));
 
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
   curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel, sizeKey };
@@ -5794,7 +5798,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     <polyline points="${pts}" fill="none" stroke="#00828A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     ${monthly.map((m,i)=>`
       <circle cx="${xs[i]}" cy="${y(m.avg).toFixed(1)}" r="${i===iMax||i===iMin?4:2.5}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#00828A'}"/>
-      <text x="${xs[i]}" y="${y(m.avg) + labelPos[i].dy}" text-anchor="middle" font-size="${fs}" font-weight="${i===iMax||i===iMin?'700':'500'}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#475569'}">${m.avg.toFixed(1)}</text>
+      ${labelIndices.has(i)?`<text class="chart-price-label" data-month="${esc(m.ym)}" x="${xs[i]}" y="${y(m.avg) + labelPos[i].dy}" text-anchor="middle" font-size="${fs}" font-weight="${important.has(i)?'700':'500'}" fill="${i===iMax?'#DC2626':i===iMin?'#0F2B3D':'#475569'}">${m.avg.toFixed(1)}</text>`:''}
       ${(i===0||i===monthly.length-1||i%Math.ceil(monthly.length/5)===0)? `<text x="${xs[i]}" y="${H-8}" text-anchor="middle" font-size="9" fill="#94A3B8">${m.ym}</text>`:''}
     `).join('')}
     <rect id="chartRangeShade" x="0" y="${P.t}" width="0" height="${H-P.b-volH-P.t}" fill="#00828A" opacity=".12" style="pointer-events:none"/>
