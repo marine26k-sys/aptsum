@@ -4403,7 +4403,7 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
         max: Math.max(...arr.map(t=>t.amt)), monthly };
     }).sort((a,b)=>a.area-b.area);
     if(!pys.length){ missing.push(tg.name); continue; }
-    complexes.push({name:naverNameOf(tg.lawd, officialName, hits[0].umd) || officialName, umd:hits[0].umd, count:hits.length, build:hits.find(t=>/^\d{4}$/.test(String(t.build||'')))?.build||'', pys, lawd:tg.lawd});
+    complexes.push({name:naverNameOf(tg.lawd, officialName, hits[0].umd) || officialName, umd:hits[0].umd, count:hits.length, build:complexTradeBuild(hits), pys, lawd:tg.lawd});
   }
   return { found:complexes.length>0, mode:'compare',asOfYm:calendarMonths(1,0,now)[0],
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -5589,7 +5589,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
       await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
         const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
-        arr.forEach(c=>{ c.hh = map[c.name] || null; });
+        await Promise.all(arr.map(async c=>{ c.hh = map[c.name] || null; await loadCompletionFallback(c,c.lawd); }));
       }));
       // renderCompare(d) 대신 drawCompare(d)만 다시 그려서, 사용자가 이미 선택해둔 단지별 평형(cmpPyMap)을 유지한다.
       if(myToken===searchToken && document.getElementById('cmpChart')) drawCompare(d);
@@ -6598,7 +6598,7 @@ function compareSummaryHTML(d){
   const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
   return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
     ${row('지역',c=>region(c))}
-    ${row('준공·년차',c=>{const year=String(c.hh?.useDate||c.hh?.built||c.build||'').slice(0,4);return /^\d{4}$/.test(year)?esc(complexBuildLabel(year)):'—';})}
+    ${row('준공·년차',c=>{const year=complexCompletionYear(c);return year?esc(complexBuildLabel(year)):esc(c.completionFallbackLabel||'—');})}
     ${row('세대수',c=>c.hh?.hhcnt>0?`${c.hh.hhcnt.toLocaleString()}세대`:'—')}
     ${row('동수',c=>c.hh?.dongCnt>0?`${c.hh.dongCnt}개동`:'—')}
     ${row('용적률',c=>c.hh?.far!=null?`${value(c.hh.far)}%`:'—')}

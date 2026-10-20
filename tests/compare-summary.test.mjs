@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function setup(){
  const c=vm.createContext({matchComplex:all=>({hits:all}),naverNameOf:()=>null,markOutliers:a=>a,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:()=>34,avgA:a=>a.reduce((s,t)=>s+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s.slice(2,4)+'.'+s.slice(4),yearsLabel:()=>'',esc:s=>String(s??'').replace(/[<>&"]/g,x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x])),complexBuildLabel:y=>y+'년',formatWalkDisplay:x=>x,CMP_COLORS:['teal','red'],cmpPyMap:{0:84,1:84}});
+ vm.runInContext(html.slice(html.indexOf('function complexTradeBuild('),html.indexOf('function calendarMonths('))+html.slice(html.indexOf('function complexCompletionYear('),html.indexOf('let complexCompletionFallbackPromise')),c);
  vm.runInContext(html.slice(html.indexOf('function calendarMonths('),html.indexOf('function analyzeComplex(')),c);
  vm.runInContext(html.slice(html.indexOf('function analyzeCompare('),html.indexOf('function esc(')),c);
  vm.runInContext(html.slice(html.indexOf('function compareSummaryHTML('),html.indexOf('function drawCompare(')),c);
@@ -126,3 +127,13 @@ test('selected pyeong row belongs to the shaded header so it scrolls with comple
  const head=result.match(/<thead>([\s\S]*?)<\/thead>/)[1],body=result.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
  assert.match(head,/<tr class="cmp-size-row"><th scope="row">평수/);assert.match(head,/34평 \(전용 84\)/);assert.doesNotMatch(body,/scope="row">평수/);
 });
+
+ test('comparison uses the same completion year as complex analysis when approval year differs',()=>{
+ const c=setup(),record={apt:'가상단지',umd:'가상동',area:84,py:34,build:'2022',floor:10,ym:'202610',d:1,amt:10};
+ const result=c.analyzeCompare({'11111':[record]},[{lawd:'11111',name:'가상단지'}],['202610']);
+ const complex=result.complexes[0];complex.hh={useDate:'20211105',built:'2022.03'};
+ assert.equal(c.complexCompletionYear(complex),2022);
+ const output=c.compareSummaryHTML(result);
+ assert.match(output,/준공·년차<[^]*2022년/);assert.doesNotMatch(output,/2021년/);
+ assert.equal(c.complexCompletionYear({build:'',hh:{useDate:'20211105'}}),2021);
+ });
