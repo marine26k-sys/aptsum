@@ -1012,6 +1012,9 @@ try {
         <option value="9">9개월 전 대비</option>
         <option value="12" selected>12개월 전 대비</option>
         <option value="24">24개월 전 대비</option>
+        <option value="36">36개월 전 대비</option>
+        <option value="48">48개월 전 대비</option>
+        <option value="60">60개월 전 대비</option>
       </select>
     </div>
     <div class="row2" id="priceBandRow" style="display:none">
@@ -1358,7 +1361,7 @@ function captureViewInputs(){
     trendContinuous: document.getElementById('listingTrendContinuous').checked,
     budgetNewOnly: false,
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
-    rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
+    rp: document.getElementById('risePeriodN').value, // 기간별 변동률의 비교 시점(3/6/9/12/24/36/48/60개월 전) — 이게 빠져 있어 공유 링크·뒤로가기에서 기본값으로 되돌아갔음(2026.09 수정)
     pbp: document.getElementById('priceBandPeriodN').value,
     pb: document.getElementById('priceBandN').value,
     pbb: document.getElementById('priceBandBasis').value,

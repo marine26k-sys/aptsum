@@ -93,3 +93,13 @@ test('monthly tabs load a five-year history seed including the live refresh path
  vm.runInContext(html.slice(html.indexOf('function complexRefreshCacheItems('),html.indexOf('async function tapComplexLiveRefresh(')),c);
  assert.equal(c.complexRefreshCacheItems({'11111':{'202401':{items:[trade('202401',8)]}}},'11111',3).length,1);
 });
+
+test('complex change supports exact same-month comparisons at thirty-six, forty-eight and sixty months',()=>{
+ const c=setup(),records=[trade('202110',6),trade('202210',7),trade('202310',8),trade('202609',12)];
+ for(const [period,price,label] of [[36,8,'23.10'],[48,7,'22.10'],[60,6,'21.10']]){
+  const result=c.analyzeLongTermRise(records,c.calendarMonths(73),period);
+  assert.equal(result.pastPeriod,label);assert.equal(result.rows[0].pastAvg,price);assert.equal(result.rows[0].recentAvg,12);assert.equal(result.rows[0].recentN,0);
+ }
+ const select=html.slice(html.indexOf('<select id="risePeriodN"'),html.indexOf('</select>',html.indexOf('<select id="risePeriodN"')));
+ for(const value of [36,48,60])assert.ok(select.includes(`value="${value}"`));
+});
