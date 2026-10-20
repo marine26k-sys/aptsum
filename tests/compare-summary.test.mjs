@@ -96,3 +96,11 @@ test('common dates stay in row headings even when a selected complex lacks that 
  }
  assert.match(result,/<tr class="cmp-current-row">/);
 });
+test('backfilled Acro River Park 59sqm history supplies four- and five-year baseline prices',()=>{
+ const c=setup();
+ const seed=JSON.parse(readFileSync(new URL('../data/analyze/11650/202106.json',import.meta.url),'utf8')).items.filter(t=>t.apt==='아크로리버파크'&&Math.floor(t.area)===59);
+ assert.ok(seed.length>0);
+ const latest={...seed[0],ym:'202610',d:1,amt:45.7};
+ const p=c.analyzeCompare({'11650':[...seed,latest]},[{lawd:'11650',name:'아크로리버파크'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
+ assert.equal(p.changes.y4.basePrice,27);assert.equal(p.changes.y5.basePrice,27);assert.equal(p.changes.y4.from,'202210');assert.equal(p.changes.y5.from,'202110');
+});
