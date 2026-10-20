@@ -874,9 +874,9 @@ try {
     <div class="tab-grp">
       <div class="tab-grp-name">흐름</div>
       <div class="tab-grp-tabs">
-          <a class="tab" id="tabNH" href="./index.html?m=newhigh"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</a>
-          <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>매매 변동률</a>
           <a class="tab" id="tabRegionalChange" href="./regional-change.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>지역 변동률</a>
+          <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>단지 변동률</a>
+          <a class="tab" id="tabNH" href="./index.html?m=newhigh"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -6928,7 +6928,7 @@ function renderLongTermRise(d){
   const html = `
   <div class="card">
     <div class="card-hd">
-      ${hdTop('매매 변동률')}
+      ${hdTop('단지 변동률')}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)}${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
       ${hdVs(`${d.periodM}개월 전 월평균`, '현재월 평균')}
