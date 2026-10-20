@@ -62,9 +62,9 @@ test('short-term trend compares consecutive calendar quarters at floor five and 
 
 test('comparison summary shows current price then ordered period changes without trend or period averages',()=>{
  const c=setup(),result=c.compareSummaryHTML({complexes:[{name:'가상단지',pys:[{area:84,currentPrice:{v:12,n:0,ym:"202610"},changes:{m1:{basePrice:10,from:"202609",amount:2,pct:20},m3:{basePrice:13,from:"202607",amount:-1,pct:-7.7},ytd:{basePrice:12,from:"202512",amount:0,pct:0}}}]}]});
- assert.match(result,/최근 시세/);assert.match(result,/scope="row">1개월<br>[^]*?\(26.09\)/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20%\)/);assert.match(result,/▼1.0억 \(8%\)/);assert.match(result,/0.0억 \(0%\)/);
+ assert.match(result,/최근 시세/);assert.match(result,/scope="row">1개월 전 시세<br>[^]*?\(26.09\)/);assert.match(result,/10.0억/);assert.match(result,/▲2.0억 \(20%\)/);assert.match(result,/▼1.0억 \(8%\)/);assert.match(result,/0.0억 \(0%\)/);
  assert.doesNotMatch(result,/최근 거래|단기 추세|개월 평균|조회 기간 최고가/);assert.match(result,/class="cmp-current-row"><th scope="row">최근 시세<br>[^]*?\(26.10\)/);
- const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 3년 최고가','최근 시세','1개월','3개월','6개월','YTD','1년','2년','3년','4년','5년']);
+ const labels=[...result.matchAll(/scope="row">([^<]+)/g)].map(m=>m[1]);assert.deepEqual(labels.slice(-11),['최근 3년 최고가','최근 시세','1개월 전 시세','3개월 전 시세','6개월 전 시세','전년 말 시세 (YTD)','1년 전 시세','2년 전 시세','3년 전 시세','4년 전 시세','5년 전 시세']);
 });
 test('comparison changes use the current calendar month and exact prior months including December YTD',()=>{
  const c=setup(),base={apt:'가상단지',umd:'가상동',area:84,py:34,floor:10,direct:0,d:1};
@@ -92,7 +92,7 @@ test('three-year high uses actual eligible trades independently of graph query p
 test('common dates stay in row headings even when a selected complex lacks that period price',()=>{
  const c=setup(),result=c.compareSummaryHTML({asOfYm:'202610',complexes:[{name:'가상A',pys:[]},{name:'가상B',pys:[{area:84,currentPrice:{v:12,ym:'202610'},changes:{m1:{basePrice:12,from:'202609',amount:0,pct:0}}}]}]});
  const rows=[...result.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map(m=>m[1]);
- for(const [label,date] of [['최근 시세','26.10'],['1개월','26.09'],['3개월','26.07'],['YTD','25.12'],['5년','21.10']]){
+ for(const [label,date] of [['최근 시세','26.10'],['1개월 전 시세','26.09'],['3개월 전 시세','26.07'],['전년 말 시세 (YTD)','25.12'],['5년 전 시세','21.10']]){
   const row=rows.find(r=>r.includes('scope="row">'+label+'<br>'));assert.ok(row);assert.ok(row.split('</th>')[0].includes(date));assert.ok(!row.split('</th>')[1].includes(date));
  }
  assert.match(result,/<tr class="cmp-current-row">/);
