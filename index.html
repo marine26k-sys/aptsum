@@ -7335,6 +7335,7 @@ function listingGapInvestmentMatch(x,v=listingGapInvestmentValues()){
 }
 function listingOccupancyApply(){
   // 입주 조건은 조회 버튼을 눌렀을 때 적용한다. 이전 조건의 응답·더보기가 섞이지 않도록 비운다.
+  const previousData=lastData;
   searchToken++;
   if(searchAbortController)searchAbortController.abort();
   document.getElementById('loading').classList.remove('on');
@@ -7344,6 +7345,7 @@ function listingOccupancyApply(){
   listingNameChoices=[];
   lastData=null;
   if(typeof syncListingGapInvestmentFilter==='function')syncListingGapInvestmentFilter();
+  if(typeof mode!=='undefined'&&mode==='listingbudget'&&!isIndividualListing()&&previousData?.mode==='listingbudget')listingGapInvestmentSetMax(previousData.gapRows||previousData.rows||[]);
 }
 function enforceListingTrialLawd(lawd){if(isListingTrial()&&lawd!==LISTING_TRIAL_LAWD)throw Object.assign(new Error('무료 체험은 강남구만 조회할 수 있습니다.'),{auth:true});}
 async function fetchListings(lawd){
