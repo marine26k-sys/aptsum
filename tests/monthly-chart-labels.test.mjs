@@ -18,10 +18,12 @@ test('carried months omit ordinary repeated labels and keep latest and tooltip d
 test('price labels choose positions that do not cross the chart line',()=>{
  const c=setup();
  const line=[{cx:0,cy:80},{cx:20,cy:60},{cx:40,cy:25},{cx:60,cy:45}];
- const labels=[{cx:20,cy:60,offsets:[-12,18,-26,34]},{cx:40,cy:25,offsets:[-12,-26,18,34]}];
- c.placeLabels(labels,[-12,18,-26,34],22,12,line);
+ const positions=[{dx:0,dy:-11},{dx:14,dy:-11},{dx:-14,dy:-11},{dx:0,dy:16},{dx:14,dy:16},{dx:-14,dy:16},{dx:0,dy:-20},{dx:0,dy:25}];
+ const labels=[{cx:20,cy:60,offsets:positions},{cx:40,cy:25,offsets:positions}];
+ c.placeLabels(labels,[-11,16,-20,25],22,12,line);
  for(const p of labels){
-   const y=p.cy+p.dy,box={x1:p.cx-11,x2:p.cx+11,y1:y-12,y2:y+2};
+   const x=p.cx+p.dx,y=p.cy+p.dy,box={x1:x-11,x2:x+11,y1:y-12,y2:y+2};
    assert.equal(line.some((q,i)=>i&&c.segmentHitsLabelBox(line[i-1],q,box)),false);
+   assert.ok(Math.abs(p.dy)<=25);
  }
 });
