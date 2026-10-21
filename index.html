@@ -7679,6 +7679,7 @@ function resetAllSliderFilters(){
   renderPyBandMultiBtn();syncAnalysisSelectSliders();
   // 초기화한 기본 조건을 저장해 다음 진입 시 이전 조회값이 다시 나타나지 않게 한다.
   saveQueriedSliders();
+  refreshAfterFilterReset();
 }
 function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
@@ -7695,8 +7696,19 @@ function resetListingFilters(){
   document.getElementById('listingTrendUpload').value='';
   lsSync();
   document.getElementById('listingBudgetFavoriteMsg').textContent='필터를 초기화했습니다. 저장한 즐겨찾기는 유지됩니다.';
-  const hasRegion=regionSel.length>0||!!sel.value;
-  if(hasRegion&&!(mode==='listingbudget'&&isIndividualListing()))search({silentScroll:true});
+  refreshAfterFilterReset();
+}
+function refreshAfterFilterReset(){
+  let ready=regionSel.length>0||!!sel.value;
+  if(mode==='complex')ready=ready&&document.getElementById('q').value.trim().length>=2;
+  if(mode==='compare'){
+    const rows=[...document.querySelectorAll('.cmp-row')].filter(row=>row.querySelector('input').value.trim().length>=2);
+    ready=rows.length>=2&&rows.every(row=>row.querySelector('select').value);
+  }
+  if(mode==='listingbudget'&&isIndividualListing())ready=false; // 초기화로 단지명이 지워진 상태
+  if(mode==='pricebandrise')ready=ready&&!!document.getElementById('priceBandPeriodN').value&&document.getElementById('priceBandN').value!=='';
+  if(ready)search({silentScroll:true});
+  else{const result=document.getElementById('result');if(result){result.classList.remove('on');result.innerHTML='';}}
 }
 function lsSavedLimits(){return Object.fromEntries(Object.keys(LS_FACETS).map(name=>[name,lsFacetLimits(name)]));}
 function lsRestoreLimits(limits){if(!limits)return;for(const [name,b] of Object.entries(limits)){if(!LS_FACETS[name]||!Number.isFinite(b.min)||!Number.isFinite(b.max)||b.min>b.max)continue;for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=b.min;el.max=b.max;el.step=LS_FACETS[name].step;}}}
