@@ -2644,7 +2644,7 @@ function setMode(m, fromRestore){
   // 공통으로 이 체크박스 패널을 쓴다(예전엔 region/volume/updown/gap은 단일 select였음).
   // 실매물 3개 탭은 lsFilters 안의 평형 슬라이더(lsPyMin/lsPyMax)를 쓴다.
   document.getElementById('pyBandMultiWrap').style.display = 'none';
-  document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','pyprice','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
+  document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
   pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : []);
