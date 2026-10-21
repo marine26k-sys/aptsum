@@ -132,19 +132,22 @@ function renderYtdRanking(){
   updateRegionalComparisonBox(comparison,startSelect.value,endSelect.value);
   title.textContent=Number(endSelect.value.slice(0,4))+'년 '+Number(endSelect.value.slice(5))+'월';
   summary.textContent=startSelect.value.replace('-','.')+' → '+endSelect.value.replace('-','.')+' · '+(sampleMode==='all'?'전체 단지 표본':'상위 30단지');
-  const rows=data.regions.map(region=>({region,metric:(sampleMode==='all'?region.allPeriodMetrics:region.periodMetrics)?.[key]})).filter(x=>Number.isFinite(x.metric?.rate)&&(filter.value==='전체'||x.region.province===filter.value)).sort((a,b)=>b.metric.rate-a.metric.rate||(a.region.province+' '+a.region.name).localeCompare(b.region.province+' '+b.region.name,'ko'));
+  const rows=data.regions.map(region=>({region,metric:(sampleMode==='all'?region.allPeriodMetrics:region.periodMetrics)?.[key]})).filter(x=>filter.value==='전체'||x.region.province===filter.value).sort((a,b)=>{
+   const ar=Number.isFinite(a.metric?.rate),br=Number.isFinite(b.metric?.rate);
+   return ar&&br?b.metric.rate-a.metric.rate:ar?-1:br?1:(a.region.province+' '+a.region.name).localeCompare(b.region.province+' '+b.region.name,'ko');
+  });
   content.replaceChildren();
   if(!rows.length){const empty=document.createElement('p');empty.className='ytd-empty';empty.textContent='비교 가능한 지역 자료가 없습니다.';content.append(empty);return;}
   const axis=document.createElement('div');axis.className='ytd-axis';axis.textContent='하락 ◀　0　▶ 상승 · '+rows.length+'개 지역';content.append(axis);
-  const max=Math.max(1,...rows.map(x=>Math.abs(x.metric.rate))),list=document.createElement('ol');list.className='ytd-list';
+  const max=Math.max(1,...rows.filter(x=>Number.isFinite(x.metric?.rate)).map(x=>Math.abs(x.metric.rate))),list=document.createElement('ol');list.className='ytd-list';
   rows.forEach(({region,metric},i)=>{
    const row=document.createElement('li');row.className='ytd-row';
    const rank=document.createElement('span');rank.className='ytd-rank';rank.textContent=i+1;
    const name=document.createElement('span');name.className='ytd-region';name.textContent=region.province+' '+region.name;
-   const count=document.createElement('small');count.textContent=metric.groups+'단지';name.append(count);
+   const count=document.createElement('small');count.textContent=Number.isFinite(metric?.rate)?metric.groups+'단지':'비교 자료 없음';name.append(count);
    const track=document.createElement('span');track.className='ytd-track';track.setAttribute('aria-hidden','true');
-   const bar=document.createElement('span');bar.className='ytd-bar';const width=Math.abs(metric.rate)/max*50;bar.style.width=width+'%';bar.style.left=(metric.rate<0?50-width:50)+'%';bar.style.background=metric.rate<0?'#2563eb':'#dc2626';track.append(bar);
-   const value=document.createElement('span');value.className='ytd-rate '+(metric.rate>0?'positive':metric.rate<0?'negative':'');value.textContent=(metric.rate>0?'+':'')+metric.rate.toFixed(1)+'%';
+   if(Number.isFinite(metric?.rate)){const bar=document.createElement('span');bar.className='ytd-bar';const width=Math.abs(metric.rate)/max*50;bar.style.width=width+'%';bar.style.left=(metric.rate<0?50-width:50)+'%';bar.style.background=metric.rate<0?'#2563eb':'#dc2626';track.append(bar);}
+   const value=document.createElement('span');value.className='ytd-rate '+(metric?.rate>0?'positive':metric?.rate<0?'negative':'');value.textContent=Number.isFinite(metric?.rate)?(metric.rate>0?'+':'')+metric.rate.toFixed(1)+'%':'표본 부족';
    row.append(rank,name,track,value);list.append(row);
   });content.append(list);
  };
