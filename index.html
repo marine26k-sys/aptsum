@@ -1085,6 +1085,21 @@ try {
     <!-- 실매물 슬라이더 — 최저 호가 하락은 평형만, 예산별 실매물·급매 선별은 평형·연식·세대수(2026.09 운영자 요청: 선택지 몇 개로는 너무 한정적이라
          슬라이드로 자유롭게). 연식은 최소~최대 년차 범위, 세대수는 최소 세대. 손을 떼면 바로 다시 조회(엑셀 요약은
          한 번 받으면 메모리에 캐시돼 재조회가 빠르다). -->
+    <div id="listingOccupancyFilters" class="ls-filters" style="display:none">
+      <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">입주 조건
+        <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option><option id="listingPresaleOption" value="presale" hidden disabled>분양권</option></select>
+      </label>
+    </div>
+    <div id="listingGapInvestmentFilters" class="ls-filters" style="display:none">
+      <div class="ls-row">
+        <div class="ls-hd"><span>갭 금액</span><b id="listingGapInvestmentTxt">전체</b></div>
+        <div class="ls-control"><div class="ls-dual" id="listingGapInvestmentDual">
+          <input type="range" id="listingGapInvestmentMin" min="0" max="30" step="0.5" value="0" oninput="listingGapInvestmentSync(this)" onchange="listingGapInvestmentApply()" aria-label="최소 갭 금액(억)">
+          <input type="range" id="listingGapInvestmentMax" min="0" max="30" step="0.5" value="30" oninput="listingGapInvestmentSync(this)" onchange="listingGapInvestmentApply()" aria-label="최대 갭 금액(억)">
+        </div><div class="ls-numbers"><input type="number" id="listingGapInvestmentMinNumber" aria-label="최소 갭 금액(억) 직접 입력" onchange="listingGapInvestmentNumberApply(this)"><span>~</span><input type="number" id="listingGapInvestmentMaxNumber" aria-label="최대 갭 금액(억) 직접 입력" onchange="listingGapInvestmentNumberApply(this)"><span>억</span></div></div>
+      </div>
+      <div class="rng">매매가 − 전세 평균가 · 최대값은 30억 이상을 포함합니다.</div>
+    </div>
     <div id="analysisPyFilters" class="ls-filters" style="display:none">
       <div class="ls-row"><div class="ls-hd"><span>평형</span><b id="analysisPyTxt">전체</b></div>
       <div class="ls-dual" id="analysisPyDual">
@@ -1133,11 +1148,6 @@ try {
           <input type="range" id="lsRateMax" min="-30" max="30" step="1" value="30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 변동률">
         </div><div class="ls-numbers"><input type="number" id="lsRateMinNumber" aria-label="최소 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsRateMaxNumber" aria-label="최대 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>%</span></div></div>
       </div>
-    </div>
-    <div id="listingOccupancyFilters" class="ls-filters" style="display:none">
-      <label style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700">입주 조건
-        <select id="listingOccupancy" onchange="listingOccupancyApply()" style="flex:1"><option value="available" selected>입주 가능</option><option value="tenant">세안고</option><option id="listingPresaleOption" value="presale" hidden disabled>분양권</option></select>
-      </label>
     </div>
     <div id="listingFloorFilters" class="ls-filters" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700">층수
@@ -2387,7 +2397,7 @@ function initializeAnalysisRangeNumbers(){
 function initializeAnalysisSelectSliders(){
   // 필터 초기화 바로 아래에 평형 조건을 두고, 그 다음에 다른 필터를 보여준다.
   const resetRow=document.getElementById('sliderFilterResetRow');
-  resetRow.after(...['analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
+  resetRow.after(...['listingOccupancyFilters','listingGapInvestmentFilters','analysisPyFilters','lsFilters','listingGapFilters'].map(id=>document.getElementById(id)));
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
@@ -2679,6 +2689,7 @@ function setMode(m, fromRestore){
   const presaleOption=document.getElementById('listingPresaleOption');
   presaleOption.hidden=presaleOption.disabled=m!=='listingbudget';
   document.getElementById('listingOccupancy').value=normalizeListingOccupancy(document.getElementById('listingOccupancy').value,m);
+  if(typeof syncListingGapInvestmentFilter==='function')syncListingGapInvestmentFilter();
   document.getElementById('listingGapFilters').style.display = m==='listinggap' ? '' : 'none';
   if(m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')){
     // 세대수 슬라이더 왼쪽 끝을 탭에 맞춘다(예산별 100 / 급매 300). 왼쪽 끝(필터 없음)에 있었으면 새 끝으로 옮긴다.
@@ -7278,6 +7289,35 @@ function setListingFloor(value){listingFloorScope=value==='all'?'all':'mid';sync
 function normalizeListingOccupancy(value,tab){ return value==='tenant' ? 'tenant' : value==='presale' && tab==='listingbudget' ? 'presale' : 'available'; }
 function listingOccupancy(){ return normalizeListingOccupancy(document.getElementById('listingOccupancy').value,mode); }
 function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세안고',presale:'분양권'}[listingOccupancy()]; }
+function listingGapInvestmentValues(){return {min:+document.getElementById('listingGapInvestmentMin').value,max:+document.getElementById('listingGapInvestmentMax').value};}
+function listingGapInvestmentText(v=listingGapInvestmentValues()){return v.min===0&&v.max===30?'전체':`${v.min.toFixed(1)}~${v.max.toFixed(1)}억${v.max===30?' 이상':''}`;}
+function listingGapInvestmentSync(el){
+  const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');
+  if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}
+  const v=listingGapInvestmentValues(),dual=document.getElementById('listingGapInvestmentDual');
+  document.getElementById('listingGapInvestmentTxt').textContent=listingGapInvestmentText(v);
+  const pct=n=>(n-+lo.min)/(+lo.max-+lo.min)*100;
+  dual.style.setProperty('--lo',pct(v.min)+'%');dual.style.setProperty('--hi',pct(v.max)+'%');
+  document.getElementById('listingGapInvestmentMinNumber').value=lo.value;
+  document.getElementById('listingGapInvestmentMaxNumber').value=hi.value;
+}
+function listingGapInvestmentNumberApply(input){
+  const slider=document.getElementById(input.id.replace('Number',''));if(!slider)return;
+  const n=Number(input.value);if(Number.isFinite(n))slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(n*2)/2));
+  listingGapInvestmentSync(slider);listingGapInvestmentApply();
+}
+function listingGapInvestmentApply(){listingGapInvestmentSync();if(mode==='listingbudget'&&lastData?.mode==='listingbudget')search({silentScroll:true});}
+function syncListingGapInvestmentFilter(){
+  const active=mode==='listingbudget'&&!isIndividualListing()&&listingOccupancy()==='tenant';
+  document.getElementById('listingGapInvestmentFilters').style.display=active?'':'none';
+  if(active)listingGapInvestmentSync();
+}
+function listingGapInvestmentMatch(x,v=listingGapInvestmentValues()){
+  if(listingOccupancy()!=='tenant')return true;
+  const gap=Number(x.ask)-Number(x.rentMean);
+  if(!Number.isFinite(gap)||Number(x.rentMean)<=0)return false;
+  return (v.min===0||gap>=v.min)&&(v.max===30||gap<=v.max);
+}
 function listingOccupancyApply(){
   // 입주 조건은 조회 버튼을 눌렀을 때 적용한다. 이전 조건의 응답·더보기가 섞이지 않도록 비운다.
   searchToken++;
@@ -7288,6 +7328,7 @@ function listingOccupancyApply(){
   const candidates=document.getElementById('listingNameCandidates');if(candidates)candidates.replaceChildren();
   listingNameChoices=[];
   lastData=null;
+  if(typeof syncListingGapInvestmentFilter==='function')syncListingGapInvestmentFilter();
 }
 function enforceListingTrialLawd(lawd){if(isListingTrial()&&lawd!==LISTING_TRIAL_LAWD)throw Object.assign(new Error('무료 체험은 강남구만 조회할 수 있습니다.'),{auth:true});}
 async function fetchListings(lawd){
@@ -7715,6 +7756,9 @@ function resetListingFilters(){
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
   listingFloorScope='mid';syncListingFloor();
+  document.getElementById('listingGapInvestmentMin').value=0;
+  document.getElementById('listingGapInvestmentMax').value=30;
+  if(typeof listingGapInvestmentSync==='function')listingGapInvestmentSync();
 
   document.getElementById('listingTrendContinuous').checked=false;
   listingTrendUploadId='';listingBudgetSel=null;
@@ -7962,7 +8006,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     const ls=lsGet();
     const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
-    const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
+    const gapFilter = tabMode==='listingbudget' && !individual && listingOccupancy()==='tenant' ? listingGapInvestmentValues() : null;
+    const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls))&&(!gapFilter||listingGapInvestmentMatch(x,gapFilter)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       nameSearch,askRangeSelected:lsAskText(ls)!=='전체',askBand:individual?null:(lsAskText(ls)==='전체'?null:lsAskText(ls)),
       scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
@@ -8282,7 +8327,6 @@ function individualListingTrend(item, trends){
   return (trends||[]).find(x=>String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&x.lawd===item.lawd&&x.ask===item.ask)||null;
 }
 function renderListingBudget(d,limit=100){
-
   const presale=listingOccupancy()==='presale';
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
@@ -8307,7 +8351,7 @@ function renderListingBudget(d,limit=100){
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${x.latestSale?.price>0?`<small><span class="listing-ref-label">최신</span> <span class="listing-ref-price">${x.latestSale.price.toFixed(1)}억</span> <span class="listing-ref-date">(${peakYmLabel(String(x.latestSale.date).slice(0,6))})</span></small>`:''}${drop===null ? '<small>실거래 전고점 없음</small>' : `<small><span class="listing-ref-label">전고점</span> <span class="listing-ref-price">${x.peak.toFixed(1)}억</span> <span class="listing-ref-date">${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</span></small><small>${chgHTML(x.ask - x.peak, drop)}</small>`}</span>
+        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${listingOccupancy()==='tenant'&&x.rentMean>0?`<small>갭 ${(x.ask-x.rentMean).toFixed(1)}억</small>`:''}${x.latestSale?.price>0?`<small><span class="listing-ref-label">최신</span> <span class="listing-ref-price">${x.latestSale.price.toFixed(1)}억</span> <span class="listing-ref-date">(${peakYmLabel(String(x.latestSale.date).slice(0,6))})</span></small>`:''}${drop===null ? '<small>실거래 전고점 없음</small>' : `<small><span class="listing-ref-label">전고점</span> <span class="listing-ref-price">${x.peak.toFixed(1)}억</span> <span class="listing-ref-date">${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</span></small><small>${chgHTML(x.ask - x.peak, drop)}</small>`}</span>
       </div>${d.individual?`<div class="rng" style="margin:4px 0 10px">${d.individualTrendError?'호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.':'비교 가능한 직전 호가 이력이 없습니다.'}</div>`:''}${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
