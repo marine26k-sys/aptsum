@@ -422,7 +422,7 @@ try {
   .ls-numbers span{font-size:10px;white-space:nowrap}
   #lsFilters{padding:8px 10px}
   #lsFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
-  #lsFilters .ls-hd{flex:0 0 100px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
+  #lsFilters .ls-hd{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
   #lsFilters .ls-dual{flex:1;min-width:0}
   #listingBudgetFavorites{padding:8px 10px}
   #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
@@ -1141,7 +1141,7 @@ try {
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
       <div class="ls-row" id="lsRateRow">
-        <div class="ls-hd"><span>변동률 (전고점 대비)</span><b id="lsRateTxt">전체</b></div>
+        <div class="ls-hd"><span>변동률</span><b id="lsRateTxt">전체</b></div>
         <div class="ls-control"><div class="ls-dual" id="lsRateDual">
           <input type="range" id="lsRateMin" min="-30" max="30" step="1" value="-30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 변동률">
           <input type="range" id="lsRateMax" min="-30" max="30" step="1" value="30" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 변동률">
