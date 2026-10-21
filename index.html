@@ -2031,6 +2031,14 @@ function resetListingRegion(){
   if(document.getElementById('loading')?.classList.contains('on'))stopSearch();else searchToken++;
   regionSel=[];
   if(typeof sel!=='undefined'&&sel)sel.value='';
+  if(mode==='compare'){
+    document.querySelectorAll('.cmp-row').forEach(row=>{
+      const rowSelect=row.querySelector('select');
+      if(rowSelect)rowSelect.value='';
+      const rowLabel=row.querySelector('.rgpick-txt');
+      if(rowLabel)rowLabel.textContent='지역 선택';
+    });
+  }
   listingGapCapPreviewKey='';listingFilterSourceItems=[];
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();renderFavRegions();saveNativeRegionResult();
   document.getElementById('error')?.classList.remove('on');
