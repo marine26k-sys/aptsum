@@ -997,7 +997,7 @@ try {
     <div id="cmpRows" style="display:none"></div>
     <div id="recentCompareComplexes" hidden style="margin:5px 0 8px"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
-      <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;margin:4px 0 6px"><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
+      <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;gap:6px;margin:4px 0 6px"><button id="listingRegionReset" type="button" onclick="resetListingRegion()" style="border:1px solid var(--teal-light);border-radius:8px;background:#fff;color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⌖ 지역 초기화</button><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
     <div class="row2" id="subwayRow" style="display:none">
       <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
         <option value="5">도보 5분 이내</option>
@@ -1992,6 +1992,12 @@ function removeRegionGroup(lawds){
   listingGapCapPreviewKey='';listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
 }
 function clearRegions(){ regionSel = []; listingGapCapPreviewKey='';listingFilterSourceItems=[]; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
+function resetListingRegion(){
+  regionSel=[];
+  if(typeof sel!=='undefined'&&sel)sel.value='';
+  listingGapCapPreviewKey='';listingFilterSourceItems=[];
+  saveRegionSel();renderRegionChips();syncRegionPickBtn();saveNativeRegionResult();
+}
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(typeof updateRegionFavBtn === 'function') updateRegionFavBtn();
