@@ -2773,7 +2773,7 @@ function addCmpRow(){
 // (2026.10 19→20: 20261012 네이버 엑셀 공급면적을 우선 적용하고 기존 월별 평형 캐시 갱신)
 // (2026.10 20→21: 네이버 전용·공급면적 매칭표의 확정 타입을 우선 적용하고 전용 소수값을 구분)
 // Split district live and historical transactions now share the selected district calibration.
-const CACHE_VER = 26;
+const CACHE_VER = 27;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -2826,7 +2826,7 @@ async function postFetch(lawd, yms){
 }
 
 // ── localStorage 영구 캐시 (압축 배열 포맷, 용량 초과 시 오래된 지역 삭제) ──
-const LS_FIELDS = ['apt','umd','area','py','amt','ym','d','floor','build','direct'];
+const LS_FIELDS = ['apt','umd','area','py','amt','ym','d','floor','build','direct','firstSeenAt'];
 const lsLoaded = {};
 function lsLoad(lawd){
   if(lsLoaded[lawd]) return;
@@ -2931,7 +2931,7 @@ async function ensureMonths(lawd, n){
 // ── 분양권·입주권 전매 (별도 API/캐시, 매매와 완전히 독립) ──
 // 실패해도 단지 분석(매매) 자체는 정상 동작해야 하므로, 호출부에서 항상 try/catch로 감싼다.
 const monthCacheP = {};
-const LS_FIELDS_P = ['apt','umd','area','py','amt','ym','d','floor','ownership','direct'];
+const LS_FIELDS_P = ['apt','umd','area','py','amt','ym','d','floor','ownership','direct','firstSeenAt'];
 const lsLoadedP = {};
 function lsLoadP(lawd){
   if(lsLoadedP[lawd]) return;
@@ -3212,6 +3212,12 @@ function isRecentDeal(t, days=30){
   if(!y || !mo || !da) return false;
   const dealDate = new Date(y, mo-1, da);
   return (Date.now() - dealDate.getTime()) <= days*24*3600*1000 && dealDate.getTime() <= Date.now();
+}
+// 계약일과 무관하게, 정기 수집에서 이 거래를 처음 확인한 시점 기준 신규 표시.
+function isNewlyCollectedDeal(t, days=7, now=Date.now()){
+  const firstSeen=Date.parse(t?.firstSeenAt||'');
+  if(!Number.isFinite(firstSeen)||firstSeen>now)return false;
+  return now-firstSeen<=days*24*3600*1000;
 }
 // 준공연도(입주년차) 필터 — 지역/거래량/등락 랭킹 공용. build 정보가 없는 거래(분양권 등 일부)는 연식을
 // 특정할 수 없어 필터가 걸려있을 때는 제외한다(전체 연식 선택 시에는 그대로 포함).
@@ -3711,7 +3717,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
     byPy,
-    trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, sizeKey:exclusiveAreaKey(t), area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null})) };
+    trades: hits.map(t=>({date:`${ymLabel(t.ym)}.${String(t.d).padStart(2,'0')}`, py:`${t.py}평`, sizeKey:exclusiveAreaKey(t), area:t.area, amt:t.amt, floor:t.floor, ex:t.ex||null, kind:t.kind||null, firstSeenAt:t.firstSeenAt||null})) };
 }
 
 // 전세만 거래된 전용면적도 매매 화면의 평형 목록에 보여준다.
@@ -5879,7 +5885,7 @@ function tradesHTML(d, footNote){
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
-      return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      return `<tr${cls}><td>${esc(t.date)}${isNewlyCollectedDeal(t)?'<span class="nh">N</span>':''}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}

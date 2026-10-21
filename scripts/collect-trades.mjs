@@ -13,13 +13,14 @@
 // - force: 전체를 무조건 재수집 (최초 백필 재실행 등)
 // - only: 특정 지역 코드만 (콤마 구분) — 디버그/부분 재수집용
 
-import { mkdir, writeFile, access, rename } from "node:fs/promises";
+import { mkdir, writeFile, readFile, access, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
 import { recentTradeMonths, coversFullTradeBatch, TRADE_HISTORY_MONTHS } from "../shared/trade-batch-policy.mjs";
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
+import { preserveTradeFirstSeen } from "../shared/trade-first-seen.mjs";
 
 // GitHub Actions가 300분 타임아웃으로 죽거나 스크립트가 도중에 죽어도(API 장애 등) 그때까지
 // 받아온 데이터는 살아남도록, kind 하나가 끝날 때마다(또는 catch 시) 바로 커밋·푸시해버린다.
@@ -216,8 +217,15 @@ async function main() {
       }
 
       await mkdir(dir, { recursive: true });
+      let previousItems=[];
+      try{
+        const previous=JSON.parse(await readFile(file,"utf8"));
+        if(Array.isArray(previous?.items))previousItems=previous.items;
+      }catch{}
+      const collectedAt=new Date().toISOString();
+      items=preserveTradeFirstSeen(previousItems,items,collectedAt);
       const temp=file+".tmp";
-      await writeFile(temp, JSON.stringify({ ym, items, updatedAt: new Date().toISOString() }));
+      await writeFile(temp, JSON.stringify({ ym, items, updatedAt: collectedAt }));
       await rename(temp,file);
     });
     console.log(`${kind}: 성공 ${ok}건, 실패 ${fail}건 (총 ${tasks.length}건 중 스킵 제외)`);
