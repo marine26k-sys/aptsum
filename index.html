@@ -7319,6 +7319,16 @@ async function previewListingGapInvestmentMax(){
   const key=targets.map(x=>x.lawd).join('|')+':'+occupancy+':'+listingFloor();
   if(key===listingGapCapPreviewKey)return;
   listingGapCapPreviewKey=key;
+  // 지역이 바뀌면 이전 지역에서 사용하던 범위를 먼저 해제하고 새 지역의 실제 범위로 다시 맞춘다.
+  lsSet({q0:0,q1:50,a0:1,a1:LS_AGE_MAX,h:lsHhBase(),h1:5000,r0:LS_RATE_MIN,r1:LS_RATE_MAX,p0:LS_PY_MIN,p1:LS_PY_MAX});
+  if(mode==='listingbudget'){
+    listingGapInvestmentBand=null;
+    listingGapInvestmentMaxCap=30;
+    document.getElementById('listingGapInvestmentMin').max=30;
+    document.getElementById('listingGapInvestmentMax').max=30;
+    document.getElementById('listingGapInvestmentMin').value=0;
+    document.getElementById('listingGapInvestmentMax').value=30;
+  }
   try{
     const responses=await Promise.all(targets.map(t=>fetch(`/api/listings?lawd=${encodeURIComponent(t.lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store'})));
     if(responses.some(r=>!r.ok))return;
