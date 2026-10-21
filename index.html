@@ -5903,7 +5903,7 @@ function trendHTML(d){
     </div>`;
     const t = p.trend;
     return `<div class="trend trend-by-size" style="margin-bottom:8px">
-      <span class="pct ${t.pct>=0?'up':'down'}">${t.pct>0?'▲':(t.pct<0?'▼':'')}${Math.abs(t.pct)}%</span>
+      <span class="pct ${t.pct>0?'up':t.pct<0?'down':'rng'}">${t.pct===0?'보합':`${t.pct>0?'▲':'▼'}${Math.abs(t.pct)}%`}</span>
       ${size}
       <span class="d">이전 3개월 평균 <b>${t.prevAvg.toFixed(1)}억</b><br>최근 3개월 평균 <b>${t.recentAvg.toFixed(1)}억</b></span>
     </div>`;
