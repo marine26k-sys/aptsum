@@ -8348,10 +8348,15 @@ function renderListingBudget(d,limit=100){
     : list.map((x,i)=>{
         if(d.individual){x={...x,commonInfoInHeader:true};const trend=individualListingTrend(x,d.individualTrend);if(trend)return listingTrendRowHTML({...trend,...x,points:trend.points,prevAsk:trend.prevAsk,drop:trend.drop},i,multiRegion,'all',true);return listingWithoutHistoryHTML(x,i,multiRegion,d.asOf,d.individualTrendError);}
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
+        const tenant = listingOccupancy()==='tenant';
+        const rent = tenant&&x.rentMean>0 ? `<small><span class="listing-ref-label">전세 평균</span> <span class="listing-ref-price">${x.rentMean.toFixed(1)}억</span>${x.rentCount?` <span class="listing-ref-date">(${x.rentCount}건)</span>`:''}</small>` : '';
+        const latest = !tenant&&x.latestSale?.price>0 ? `<small><span class="listing-ref-label">최신</span> <span class="listing-ref-price">${x.latestSale.price.toFixed(1)}억</span> <span class="listing-ref-date">(${peakYmLabel(String(x.latestSale.date).slice(0,6))})</span></small>` : '';
+        const peak = drop===null ? '<small>실거래 전고점 없음</small>' : `<small><span class="listing-ref-label">전고점</span> <span class="listing-ref-price">${x.peak.toFixed(1)}억</span> <span class="listing-ref-date">${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</span></small>`;
+        const change = drop===null ? '' : `<small>${chgHTML(x.ask - x.peak, drop)}</small>`;
         // 급매 배지는 전고점 대비 변동률이 0% 이하일 때만(운영자 요청 — 전고점보다 비싼 '급매'는 급매로 보기 어려움)
         return `<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
         <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion)}</small></span>
-        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${listingOccupancy()==='tenant'&&x.rentMean>0?`<small>갭 ${(x.ask-x.rentMean).toFixed(1)}억</small>`:''}${x.latestSale?.price>0?`<small><span class="listing-ref-label">최신</span> <span class="listing-ref-price">${x.latestSale.price.toFixed(1)}억</span> <span class="listing-ref-date">(${peakYmLabel(String(x.latestSale.date).slice(0,6))})</span></small>`:''}${drop===null ? '<small>실거래 전고점 없음</small>' : `<small><span class="listing-ref-label">전고점</span> <span class="listing-ref-price">${x.peak.toFixed(1)}억</span> <span class="listing-ref-date">${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</span></small><small>${chgHTML(x.ask - x.peak, drop)}</small>`}</span>
+        <span class="val" style="color:var(--teal)">${x.ask.toFixed(1)}억${rent}${latest}${peak}${change}</span>
       </div>${d.individual?`<div class="rng" style="margin:4px 0 10px">${d.individualTrendError?'호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.':'비교 가능한 직전 호가 이력이 없습니다.'}</div>`:''}${rkSep(i,list.length)}`; }).join('');
   const html = `
   <div class="card">
