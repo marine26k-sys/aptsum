@@ -7334,6 +7334,7 @@ async function previewListingGapInvestmentMax(){
     if(responses.some(r=>!r.ok))return;
     const payloads=await Promise.all(responses.map(r=>r.json()));
     const items=payloads.flatMap(x=>x.items||[]);
+    listingFilterSourceItems=items;
     lsDataBounds(items,mode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);
     if(mode==='listingbudget')listingGapInvestmentSetMax(items);
   }catch{}
@@ -7722,6 +7723,7 @@ const LISTING_BUDGET_BANDS = [
   { v:'30-', l:'30억 이상', lo:30, hi:Infinity },
 ];
 let listingBudgetSel = null; // 선택한 금액대(v) — 세션 동안 유지, 없으면 결과의 중앙값이 속한 금액대
+let listingFilterSourceItems = [];
 
 function listingBudgetBandOf(ask){
   return LISTING_BUDGET_BANDS.find(b => ask >= b.lo && ask < b.hi) || null;
@@ -7912,6 +7914,10 @@ function lsSync(el){
 // 손을 떼면 결과가 이미 떠 있는 경우 바로 다시 조회(엑셀 요약은 메모리 캐시라 빠름)
 // silentScroll: 슬라이더를 만지는 중에 재조회 때마다 화면이 맨 위로 튀지 않도록(2026.09 운영자 리포트)
 function lsApply(){
+  if(listingFilterSourceItems.length && (mode==='listingbudget'||mode==='listingurgent')){
+    lsDataBounds(listingFilterSourceItems,mode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);
+    if(mode==='listingbudget')listingGapInvestmentSetMax(listingFilterSourceItems.filter(x=>lsMatch(x,lsGet())));
+  }
   if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || (lastData.mode==='listingtrend'||lastData.mode==='listingrise') || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 function getListingBudgetFavorites(){
@@ -8055,6 +8061,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     // 평형·연식·세대수 슬라이더(2026.09 운영자 요청 — 평형도 체크박스 다중선택 대신 슬라이더로 통일)
     const ls=lsGet();
     const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
+    listingFilterSourceItems=cohort;
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
     if(tabMode==='listingbudget'&&!individual)listingGapInvestmentSetMax(cohort);
     const gapFilter = tabMode==='listingbudget' && !individual && listingOccupancy()==='tenant' ? listingGapInvestmentValues() : null;
