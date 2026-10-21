@@ -7318,7 +7318,7 @@ function listingGapInvestmentMatch(x,v=listingGapInvestmentValues()){
   if(listingOccupancy()!=='tenant')return true;
   const gap=Number(x.ask)-Number(x.rentMean);
   if(!Number.isFinite(gap)||Number(x.rentMean)<=0)return false;
-  return !v.band||(gap>=v.min&&gap<v.max);
+  return v.min===0&&v.max===Infinity ? true : gap>=v.min&&(v.max===Infinity||gap<=v.max);
 }
 function listingOccupancyApply(){
   // 입주 조건은 조회 버튼을 눌렀을 때 적용한다. 이전 조건의 응답·더보기가 섞이지 않도록 비운다.
