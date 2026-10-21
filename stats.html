@@ -645,6 +645,8 @@ function summarizeListings(rows){
     const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:+r["세대수"]||null,
       built:String(r["준공년월"]??""), ex, pyCnt:{}, peak:0, peakYm:"", offers:{} };
     g.set(k, x);
+    const rentMean=Number(r["전세평균(억)"]),rentCount=Number(r["전세거래건수"]);
+    if(Number.isFinite(rentMean)&&rentMean>0){x.rentMean=rentMean;x.rentCount=Number.isFinite(rentCount)&&rentCount>0?Math.floor(rentCount):null;}
     const py = +r["면적(평)"];
     if(py) x.pyCnt[py] = (x.pyCnt[py]||0) + 1;
     const peak = +r["실거래최고가(억)"];

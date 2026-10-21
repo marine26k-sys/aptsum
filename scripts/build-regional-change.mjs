@@ -29,6 +29,29 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
   return required.every(ym=>available.has(ym))?regionalChange(items,p,names,samples):{rate:null,groups:0,sampleCount:samples.length,previousTrades:0,currentTrades:0,missing:true};});
  const periodMetrics=regionalPeriodMatrix(items,periods.monthly,names,fixed.regions[lawd],available);
  const allPeriodMetrics=regionalPeriodMatrix(items,periods.monthly,names,regionAllSamples,available);
+ // 2026년 7월 신설된 인천 구는 분구 이후 자료만 별도 코드로 보유한다.
+ // 이 경우 12개월 전 비교키는 비어 있지만 최신 월간 비교자료는 있으므로,
+ // 기간 탭에서도 해당 지역을 누락시키지 않고 확보된 최신 비교값을 사용한다.
+ if(lawd.startsWith('IC-')){
+   const firstAvailable= [...new Set(items.map(t=>String(t.ym)).filter(ym=>/^\d{6}$/.test(ym)))].sort()[0];
+   const availableValue=(key,samples)=>{
+     const [startLabel,endLabel]=key.split('|');
+     if(!firstAvailable||firstAvailable>=endLabel.replace('-',''))return null;
+     const endPeriod=periods.monthly.find(p=>p.label===endLabel);
+     if(!endPeriod)return null;
+     const firstDate=new Date(`${firstAvailable.slice(0,4)}-${firstAvailable.slice(4)}-01T00:00:00Z`);
+     const start=Date.UTC(firstDate.getUTCFullYear(),firstDate.getUTCMonth()+1,1);
+     const previousStart=+firstDate;
+     const value=regionalChange(items,{start,previousStart,end:endPeriod.end},names,samples);
+     return Number.isFinite(value.rate)?{...Object.fromEntries(Object.entries(value).filter(([name])=>name!=='comparisons')),availableFrom:firstAvailable}:null;
+   };
+   for(const [key,value] of Object.entries(periodMetrics)){
+     if(value?.rate==null){const fallback=availableValue(key,fixed.regions[lawd]);if(fallback)periodMetrics[key]=fallback;}
+   }
+   for(const [key,value] of Object.entries(allPeriodMetrics)){
+     if(value?.rate==null){const fallback=availableValue(key,regionAllSamples);if(fallback)allPeriodMetrics[key]=fallback;}
+   }
+ }
  const details={all:{},top50:{}};periods.monthly.forEach((p,i)=>{details.all[p.label]=allMetrics.monthly[i].comparisons||[];details.top50[p.label]=metrics.monthly[i].comparisons||[];delete allMetrics.monthly[i].comparisons;delete metrics.monthly[i].comparisons;});
  await writeFile(`data/regional-change-details/${lawd}.json`,JSON.stringify(details));
  regions.push({province,name,lawd,metrics,allMetrics,periodMetrics,allPeriodMetrics});
