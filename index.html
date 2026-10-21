@@ -426,6 +426,7 @@ try {
   #lsFilters .ls-dual{flex:1;min-width:0}
   #listingBudgetFavorites{padding:8px 10px}
   #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
+  #listingGapInvestmentBands,#listingGapInvestmentResultBands{display:none!important}
   #listingBudgetFavorites[open] summary{margin-bottom:8px}
   #listingBudgetFavoriteName{border:1px solid var(--line);border-radius:8px;padding:7px 8px}
   #listingOccupancyFilters{padding:7px 10px;margin-top:6px}
@@ -8372,7 +8373,7 @@ function renderListingBudget(d,limit=100){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':'금액대별 매물'} (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      ${gapMode ? `<div class="rng" style="margin:4px 0 5px;color:var(--teal-dark)">갭 금액별 매물</div><div id="listingGapInvestmentResultBands" style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px"></div>` : hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
+      ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${d.individual?listingTrendGraphLegend(true):''}
