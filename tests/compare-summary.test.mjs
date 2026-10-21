@@ -137,3 +137,13 @@ test('selected pyeong row belongs to the shaded header so it scrolls with comple
  assert.match(output,/준공·년차<[^]*2022년/);assert.doesNotMatch(output,/2021년/);
  assert.equal(c.complexCompletionYear({build:'',hh:{useDate:'20211105'}}),2021);
  });
+
+test('comparison includes sizes without query-window trades using historical monthly prices only',()=>{
+ const c=setup(),record={apt:'가상단지',umd:'가상동',area:84,py:34,build:'2020',floor:12,ym:'202401',d:1,amt:8};
+ const r=c.analyzeCompare({'11111':[record]},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608'],Date.parse('2026-10-21T00:00:00Z'));
+ assert.equal(r.found,true);assert.equal(r.complexes[0].count,0);
+ const p=r.complexes[0].pys[0];assert.equal(p.n,0);assert.equal(p.currentPrice.v,8);assert.equal(p.currentPrice.n,0);
+ assert.equal(p.max,null);assert.equal(p.high,null);assert.equal(p.latest,null);assert.equal(p.min,null);assert.equal(p.median,null);
+ assert.equal(p.monthly.length,3);assert.ok(p.monthly.every(x=>x.n===0&&x.avg===8));
+ assert.doesNotMatch(c.compareSummaryHTML(r),/NaN|Infinity|undefined/);
+});
