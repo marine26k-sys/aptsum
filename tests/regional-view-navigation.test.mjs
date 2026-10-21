@@ -12,4 +12,5 @@ test('기간 선택 상자는 결과 헤더 위에 있고 선택 후 결과로 �
  assert.match(html,/endSelect\.onchange=\(\)=>updateRange\('end',true\)/);
  assert.match(html,/#updated\{margin:4px 0 6px\}/);
  assert.match(html,/\.ranking-range\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(html,/sampleControls\.before\(updated\)/);
 });

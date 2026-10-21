@@ -63,6 +63,8 @@ body{font-family:'Noto Sans KR',sans-serif;line-height:1.6}header{display:block}
 </ul></div></details></div></main><script type="module">
 import {REGIONAL_LAYOUT,compactRegionRow} from '/shared/regional-layout.mjs';
 import {loadRegionalData} from '/shared/regional-data-loader.mjs';
+const updated=document.getElementById('updated'),sampleControls=document.getElementById('allSample').closest('.controls');
+sampleControls.before(updated);
 document.getElementById('sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else{await navigator.clipboard.writeText(location.href);document.getElementById('sharePage').title='주소를 복사했습니다.';}}catch{}};
 let data,kind='monthly',sampleMode='all';const grid=document.querySelector('#grid'),period=document.querySelector('#period');
 function setRegionalView(view){
