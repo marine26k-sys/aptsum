@@ -2014,6 +2014,7 @@ function addRegion(v){
   // 싱글 전용 탭(단지분석·단지비교·거래량·등락)도 방금 칩에 추가한 지역으로 바로 갱신되도록 sel.value까지 맞춰준다
   // (2026.08 — 전에는 칩만 갱신되고 sel.value는 그대로라 다른 탭으로 넘어가면 예전 지역이 남아있었음)
   if(!isAllScope(v) && add.length) sel.value = v;
+  saveRecentRegionSearch(add);
   listingGapCapPreviewKey='';listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
 }
 function removeRegion(lawd){
@@ -2283,6 +2284,7 @@ sel.addEventListener('change', ()=>{
     // 나중에 그 탭으로 넘어갔을 때 예전 칩이 아니라 방금 고른 지역이 보이게 한다(2026.08)
     const opt = [...sel.options].find(o=>o.value===sel.value);
     regionSel = opt ? [{lawd:sel.value, name:opt.textContent}] : [];
+    saveRecentRegionSearch(regionSel);
     saveRegionSel(); renderRegionChips();
   }
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
