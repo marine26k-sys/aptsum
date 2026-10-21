@@ -7326,6 +7326,7 @@ async function previewListingGapInvestmentMax(){
   if(key===listingGapCapPreviewKey)return;
   listingGapCapPreviewKey=key;
   listingFilterSourceItems=[];
+  if(typeof listingManualFacets!=='undefined')listingManualFacets.clear();
   // 지역이 바뀌면 이전 지역에서 사용하던 범위를 먼저 해제하고 새 지역의 실제 범위로 다시 맞춘다.
   lsSet({q0:0,q1:50,a0:1,a1:LS_AGE_MAX,h:lsHhBase(),h1:5000,r0:LS_RATE_MIN,r1:LS_RATE_MAX,p0:LS_PY_MIN,p1:LS_PY_MAX});
   if(mode==='listingbudget'){
@@ -7349,9 +7350,9 @@ async function previewListingGapInvestmentMax(){
     if(mode==='listingbudget')listingGapInvestmentSetMax(items);
   }catch{}
 }
-function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
+function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;listingManualFacets.add('gap');const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
 function listingGapInvestmentNumberApply(input){const slider=document.getElementById(input.id.replace('Number',''));if(!slider)return;const n=Number(input.value);if(Number.isFinite(n))slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(n*10)/10));listingGapInvestmentRangeSync(slider);listingGapInvestmentApply();}
-function listingGapInvestmentApply(){listingGapInvestmentSync();if(mode==='listingbudget'&&lastData?.mode==='listingbudget')search({silentScroll:true});}
+function listingGapInvestmentApply(){listingManualFacets.add('gap');listingGapInvestmentSync();if(mode==='listingbudget'&&lastData?.mode==='listingbudget')search({silentScroll:true});}
 function setListingGapInvestmentBand(band){listingGapInvestmentBand=listingGapInvestmentBand===band?null:band;listingGapInvestmentApply();}
 function renderListingGapInvestmentBands(rows){
   const boxes=[...document.querySelectorAll('#listingGapInvestmentBands,#listingGapInvestmentResultBands')];if(!boxes.length)return;
@@ -7734,6 +7735,7 @@ const LISTING_BUDGET_BANDS = [
 ];
 let listingBudgetSel = null; // 선택한 금액대(v) — 세션 동안 유지, 없으면 결과의 중앙값이 속한 금액대
 let listingFilterSourceItems = [];
+let listingManualFacets=new Set();
 
 function listingBudgetBandOf(ask){
   return LISTING_BUDGET_BANDS.find(b => ask >= b.lo && ask < b.hi) || null;
@@ -7808,6 +7810,7 @@ function resetAllSliderFilters(){
 }
 function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
+  if(typeof listingManualFacets!=='undefined')listingManualFacets.clear();
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
   document.getElementById('listingOccupancy').value='available';
   document.getElementById('listingNameQuery').value='';
@@ -7859,7 +7862,7 @@ function lsAskBounds(items){
 }
 function lsAskText(v){const {min,max}=lsAskLimits();return v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
-function lsPyActive(v){return lsFacetActive('py',v);}
+function lsPyActive(v){return listingManualFacets.has('py')&&lsFacetActive('py',v);}
 function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
@@ -7868,7 +7871,7 @@ function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v)
 function lsAgeText(v){return v.a0===v.a1?`${v.a0}년차`:!lsFacetActive('age',v)?'전체':`${v.a0}~${v.a1}년차`;}
 function lsHhActive(v){return lsFacetActive('hh',v);}
 function lsHhText(v){return v.h===v.h1?`${v.h.toLocaleString()}세대`:!lsHhActive(v)?'전체':`${v.h.toLocaleString()}~${v.h1.toLocaleString()}세대`;}
-function lsLabel(v,withRate){return [lsFacetActive('age',v)?lsAgeText(v):null,lsHhActive(v)?lsHhText(v):null,withRate&&lsRateActive(v)?'변동률 '+lsRateText(v):null].filter(Boolean).join(' · ')||null;}
+function lsLabel(v,withRate){return [listingManualFacets.has('age')&&lsFacetActive('age',v)?lsAgeText(v):null,listingManualFacets.has('hh')&&lsHhActive(v)?lsHhText(v):null,withRate&&listingManualFacets.has('rate')&&lsRateActive(v)?'변동률 '+lsRateText(v):null].filter(Boolean).join(' · ')||null;}
 function lsPyMatch(x,v){return lsFacetMatch('py',x,v);}
 function lsMatch(x,v){return ['age','hh','py'].every(name=>lsFacetMatch(name,x,v));}
 // 직접 입력은 확정(Enter/포커스 이동)할 때 적용하고 슬라이더와 같은 범위를 사용한다.
@@ -7891,6 +7894,7 @@ function lsNumbersSync(){
 }
 // 슬라이더를 움직이는 동안 최소·최대 역전을 방지한다.
 function lsSync(el){
+  if(el?.id){const facet=Object.keys(LS_FACETS).find(name=>LS_FACETS[name].ids.includes(el.id));if(facet)listingManualFacets.add(facet);}
   const h0=document.getElementById('lsHhMin'),h1=document.getElementById('lsHhMax');
   h1.min=h0.min;
   if(+h0.value>+h1.value){if(el===h1)h0.value=h1.value;else h1.value=h0.value;}
@@ -8082,7 +8086,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     if(gapFilter)items.splice(0,items.length,...baseItems.filter(x=>listingGapInvestmentMatch(x,gapFilter)));
     const base = { found:true, mode:tabMode, asOf, budgetNewOnly:newOnly, uncomparable, failedRegions:failed, pyBand: lsPyActive(ls) ? lsPyText(ls) : null, filterLabel: lsLabel(ls, tabMode === 'listingbudget'), hhMin: Math.max(lsHhBase(), ls.h),
       gapRows,
-      nameSearch,askRangeSelected:lsAskText(ls)!=='전체',askBand:individual?null:(lsAskText(ls)==='전체'?null:lsAskText(ls)),
+      nameSearch,askRangeSelected:listingManualFacets.has('ask')&&lsAskText(ls)!=='전체',askBand:individual||!listingManualFacets.has('ask')?null:(lsAskText(ls)==='전체'?null:lsAskText(ls)),
       scopeLabel: nameSearch?`${targets[0].apt} · ${targets[0].name} ${targets[0].umd}`:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent };
     let d;
     if(tabMode === 'listingurgent'){
@@ -8156,10 +8160,13 @@ function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=fa
   return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${hidePyeong?'<b style="color:var(--teal-dark)">':''}${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}${hidePyeong?'</b>':''}`:''}`;
 }
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
+  const manual=typeof listingManualFacets!=='undefined'?listingManualFacets:new Set();
   const built=d.individual?(d.rows||[]).find(x=>x.built)?.built:null;
   const hh=d.individual?(d.rows||[]).find(x=>x.hh)?.hh:null;
   const askBand=d.askBand||(d.askLabel&&d.askLabel!=='전체'?d.askLabel:null);
-  const filters=[askBand,d.pyBand,d.filterLabel].filter(Boolean).map(text=>`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(text)}</span>`);
+  const gv=typeof listingGapInvestmentValues==='function'?listingGapInvestmentValues():null;
+  const gapLabel=manual.has('gap')&&gv&&!(gv.min===0&&gv.max===Infinity)?`갭 ${gv.min.toFixed(1)}~${gv.max===Infinity?listingGapInvestmentMaxCap.toFixed(1):gv.max.toFixed(1)}억`:null;
+  const filters=[askBand,d.pyBand,d.filterLabel,gapLabel].filter(Boolean).map(text=>`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(text)}</span>`);
   const separator='<span aria-hidden="true" style="color:rgba(255,255,255,.55)">·</span>';
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
