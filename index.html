@@ -1948,7 +1948,7 @@ const lastRegionPref = getLastRegionPref();
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
 const RECENT_REGION_CACHE_KEY = 'apc:recentRegions';
-const RECENT_REGION_CACHE_MAX = 5;
+const RECENT_REGION_CACHE_MAX = 7;
 const REGION_MAX = REGIONS.find(([province])=>province==='경기')[1].length; // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
