@@ -7804,6 +7804,13 @@ function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
   document.getElementById('listingOccupancy').value='available';
+  regionSel=[];
+  if(typeof sel!=='undefined'&&sel)sel.value='';
+  listingGapCapPreviewKey='';
+  listingFilterSourceItems=[];
+  if(typeof saveRegionSel==='function')saveRegionSel();
+  if(typeof renderRegionChips==='function')renderRegionChips();
+  if(typeof syncRegionPickBtn==='function')syncRegionPickBtn();
   document.getElementById('listingNameQuery').value='';
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
