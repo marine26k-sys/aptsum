@@ -8025,7 +8025,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     const ls=lsGet();
     const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
-    if(tabMode==='listingbudget'&&!individual&&listingOccupancy()==='tenant')listingGapInvestmentSetMax(cohort);
+    if(tabMode==='listingbudget'&&!individual)listingGapInvestmentSetMax(cohort);
     const gapFilter = tabMode==='listingbudget' && !individual && listingOccupancy()==='tenant' ? listingGapInvestmentValues() : null;
     const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const baseItems=items;
