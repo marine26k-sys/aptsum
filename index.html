@@ -7821,6 +7821,7 @@ function resetListingFilters(){
   document.getElementById('listingGapInvestmentMin').value=0;
   document.getElementById('listingGapInvestmentMax').value=30;
   if(typeof listingGapInvestmentSync==='function')listingGapInvestmentSync();
+  if(typeof syncListingGapInvestmentFilter==='function')syncListingGapInvestmentFilter();
 
   document.getElementById('listingTrendContinuous').checked=false;
   listingTrendUploadId='';listingBudgetSel=null;
