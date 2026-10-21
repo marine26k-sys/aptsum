@@ -426,7 +426,6 @@ try {
   #lsFilters .ls-dual{flex:1;min-width:0}
   #listingBudgetFavorites{padding:8px 10px}
   #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
-  #listingGapInvestmentBands{display:none!important}
   #listingBudgetFavorites[open] summary{margin-bottom:8px}
   #listingBudgetFavoriteName{border:1px solid var(--line);border-radius:8px;padding:7px 8px}
   #listingOccupancyFilters{padding:7px 10px;margin-top:6px}
@@ -7304,7 +7303,7 @@ function listingGapInvestmentBandOf(gap){return gap<1?'under1':gap>=10?'10+':Str
 function listingGapInvestmentBandLabel(v){return LISTING_GAP_BANDS.find(b=>b.v===v)?.l||'전체';}
 function listingGapInvestmentValues(){const b=LISTING_GAP_BANDS.find(x=>x.v===listingGapInvestmentBand);if(b)return {min:b.lo,max:b.hi,band:b.v};const min=+document.getElementById('listingGapInvestmentMin').value,max=+document.getElementById('listingGapInvestmentMax').value;return {min,max:max>=listingGapInvestmentMaxCap-1e-9?Infinity:max,band:null};}
 function listingGapInvestmentText(v=listingGapInvestmentValues()){return v.band?listingGapInvestmentBandLabel(v.band):'전체';}
-function listingGapInvestmentSync(){const v=listingGapInvestmentValues();document.getElementById('listingGapInvestmentTxt').textContent=v.band?listingGapInvestmentBandLabel(v.band):(v.min===0&&v.max===Infinity?'전체':`${v.min.toFixed(1)}~${v.max===Infinity?listingGapInvestmentMaxCap.toFixed(1):v.max.toFixed(1)}억`);const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(v.band){lo.value=v.min;hi.value=v.max===Infinity?listingGapInvestmentMaxCap:v.max;}document.getElementById('listingGapInvestmentMinNumber').value=lo.value;document.getElementById('listingGapInvestmentMaxNumber').value=hi.value;const dual=document.getElementById('listingGapInvestmentDual'),pct=n=>listingGapInvestmentMaxCap?Math.max(0,Math.min(100,n/listingGapInvestmentMaxCap*100)):0;dual.style.setProperty('--lo',pct(+lo.value)+'%');dual.style.setProperty('--hi',pct(+hi.value)+'%');}
+function listingGapInvestmentSync(){const v=listingGapInvestmentValues();document.getElementById('listingGapInvestmentTxt').textContent=v.band?listingGapInvestmentBandLabel(v.band):(v.min===0&&v.max===Infinity?'전체':`${v.min.toFixed(1)}~${v.max===Infinity?listingGapInvestmentMaxCap.toFixed(1):v.max.toFixed(1)}억`);const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(v.band){lo.value=v.min;hi.value=v.max===Infinity?listingGapInvestmentMaxCap:v.max;}document.getElementById('listingGapInvestmentMinNumber').value=lo.value;document.getElementById('listingGapInvestmentMaxNumber').value=hi.value;const dual=document.getElementById('listingGapInvestmentDual'),pct=n=>listingGapInvestmentMaxCap?Math.max(0,Math.min(100,n/listingGapInvestmentMaxCap*100)):0;dual.style.setProperty('--lo',pct(+lo.value)+'%');dual.style.setProperty('--hi',pct(+hi.value)+'%');const bands=document.getElementById('listingGapInvestmentBands');if(bands)bands.style.display=listingOccupancy()==='tenant'&&!v.band&&v.min===0&&v.max===Infinity?'flex':'none';}
 function listingGapInvestmentSetMax(rows){
   const gaps=(rows||[]).map(x=>Number(x.ask)-Number(x.rentMean)).filter(x=>Number.isFinite(x)&&x>=0);
   const nextCap=Math.max(0.1,Math.ceil((Math.max(...gaps,0)+1e-9)*10)/10);
@@ -8410,8 +8409,6 @@ function renderListingBudget(d,limit=100){
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
   }
   const gapMode=listingOccupancy()==='tenant'&&!d.individual&&Array.isArray(d.gapRows);
-  const gapValues=typeof listingGapInvestmentValues==='function'?listingGapInvestmentValues():{min:1,max:0};
-  const showGapBands=gapMode&&!listingGapInvestmentBand&&gapValues.min===0&&gapValues.max===Infinity;
   const hideBands=presale||d.nameSearch||d.askRangeSelected||gapMode;
   const cur = hideBands ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
   const gapRows=d.gapRows||[];
@@ -8441,7 +8438,6 @@ function renderListingBudget(d,limit=100){
     <div class="sec">
       <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':'금액대별 매물'} (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
-      ${showGapBands ? '<div id="listingGapInvestmentResultBands" style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px"></div>' : ''}
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑ · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
