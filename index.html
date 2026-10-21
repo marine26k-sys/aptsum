@@ -1889,8 +1889,8 @@ window.addEventListener('popstate', e=>{
   restoreView(vi);
 });
 
-function getLastRegionPref(){ try{ return localStorage.getItem('apc:lastRegion'); }catch(e){ return null; } }
-function saveLastRegionPref(code){ try{ localStorage.setItem('apc:lastRegion', code); }catch(e){} }
+function getLastRegionPref(){ return null; }
+function saveLastRegionPref(code){ try{ localStorage.removeItem('apc:lastRegion'); }catch(e){} }
 
 // 저평가(분기/연간) 탭은 2026.07부로 잠금 해제 — 항상 공개 탭
 
@@ -1947,6 +1947,8 @@ const lastRegionPref = getLastRegionPref();
 // 지역 셀렉트를 "추가기"로 쓴다: 구를 고르면 칩으로 쌓이고, '○○ 전체'를 고르면 그 시·도의 모든 구가 한 번에 추가된다.
 // 칩이 비어 있으면 기존과 동일하게 셀렉트에 표시된 단일 지역만 조회한다.
 let regionSel = []; // [{name, lawd}]
+const RECENT_REGION_CACHE_KEY = 'apc:recentRegions';
+const RECENT_REGION_CACHE_MAX = 5;
 const REGION_MAX = REGIONS.find(([province])=>province==='경기')[1].length; // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
 const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
@@ -1957,12 +1959,44 @@ function regionSelMax(){
   // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
-function saveRegionSel(){ try{ localStorage.setItem('apc:regionSel', JSON.stringify(regionSel)); }catch(e){} }
+// 현재 선택 지역은 탭 사이에 영구 저장하지 않는다. 뒤로가기/공유 복원은 viewStack·URL이 담당하고,
+// 새 탭으로 들어오면 항상 '지역 선택'에서 시작한다.
+function saveRegionSel(){ try{ localStorage.removeItem('apc:regionSel'); }catch(e){} }
 function loadRegionSel(){
+  regionSel = [];
+  try{ localStorage.removeItem('apc:regionSel'); }catch(e){}
+}
+function getRecentRegionCache(){
   try{
-    const v = JSON.parse(localStorage.getItem('apc:regionSel')||'[]');
-    if(Array.isArray(v)) regionSel = v.filter(x=>x && x.lawd && x.name).slice(0, REGION_MAX);
-  }catch(e){ regionSel = []; }
+    const v=JSON.parse(localStorage.getItem(RECENT_REGION_CACHE_KEY)||'[]');
+    return Array.isArray(v) ? v.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.lawd&&x.name).slice(0,RECENT_REGION_CACHE_MAX) : [];
+  }catch(e){ return []; }
+}
+function saveRecentRegionSearch(items){
+  const incoming=(items||[]).filter(x=>x&&x.lawd&&x.name);
+  if(!incoming.length)return;
+  const rows=getRecentRegionCache();
+  incoming.slice().reverse().forEach(x=>{
+    const i=rows.findIndex(y=>y.lawd===x.lawd);
+    if(i>=0)rows.splice(i,1);
+    rows.unshift({lawd:x.lawd,name:x.name});
+  });
+  try{localStorage.setItem(RECENT_REGION_CACHE_KEY,JSON.stringify(rows.slice(0,RECENT_REGION_CACHE_MAX)));}catch(e){}
+  renderRecentRegionCache();
+}
+function renderRecentRegionCache(){
+  const box=document.getElementById('regionChips');
+  if(!box||regionSel.length)return;
+  const rows=getRecentRegionCache();
+  if(!rows.length)return;
+  box.insertAdjacentHTML('beforeend',`<div style="margin-top:6px"><div class="rng" style="padding:0 2px 3px;font-weight:700">최근 검색 지역</div><div style="display:flex;flex-wrap:wrap;gap:5px">${rows.map(x=>`<button type="button" onclick="selectRecentRegion('${esc(x.lawd)}')" style="border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer">${esc(x.name)}</button>`).join('')}</div></div>`);
+}
+function selectRecentRegion(lawd){
+  const row=getRecentRegionCache().find(x=>x.lawd===lawd); if(!row)return;
+  sel.value=lawd;
+  const multi=['complex','volume','gap','subway','region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingurgent','listingtrend','listingrise','listinggap','listingbudget','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'].includes(mode);
+  if(multi)addRegion(lawd); else sel.dispatchEvent(new Event('change'));
+  syncRegionPickBtn();
 }
 function addRegion(v){
   const add = isAllScope(v) ? lawdsOfScope(v) : (()=>{
@@ -2006,6 +2040,7 @@ function renderRegionChips(){
   box.style.display = '';
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
+    renderRecentRegionCache();
     return;
   }
   box.innerHTML = `
@@ -2236,7 +2271,8 @@ function closeRegionPicker(){
   }
 }
 
-sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
+// 지역은 새 탭·새 방문에서 이전 선택을 자동 복원하지 않는다. URL에 지역이 있으면 initFromURL()이 명시적으로 복원한다.
+sel.value = '';
 sel.addEventListener('change', ()=>{
   updateRegionFavBtn(); renderFavRegions();
   // 지역 랭킹·저평가(단기/반기/연간)에서는 셀렉트가 "추가기" 역할 — 고른 지역을 칩으로 쌓는다
@@ -2569,6 +2605,12 @@ function setMode(m, fromRestore){
     if (!fromRestore) showError(MASTER_REQUIRED_MSG);
     return false;
   }
+  if(!fromRestore){
+    // 실제 탭을 새로 열 때는 이전 탭의 현재 지역을 이어받지 않는다.
+    // 최근 검색 지역 5개는 별도 캐시에 남겨 두어 필요하면 다시 선택할 수 있다.
+    regionSel=[];sel.value='';listingGapCapPreviewKey='';listingFilterSourceItems=[];
+    saveRegionSel();
+  }
   if (isListingMode(m) && !fromRestore && isListingTrial()) {
     // 무료 체험 사용자는 강남구로 맞춰 둔다(다른 지역을 골라 두었어도 바로 조회되도록)
     regionSel = []; try{ saveRegionSel(); renderRegionChips(); }catch(e){}
@@ -2639,7 +2681,7 @@ function setMode(m, fromRestore){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
-  // 모든 탭이 선택 지역을 공유·고정 기억한다(2026.08 변경) — 탭을 넘나들어도 regionSel/sel.value를 그대로 유지.
+  // 탭마다 현재 지역 선택은 새로 시작한다. 뒤로가기·공유 링크처럼 명시적으로 복원하는 경우에만 아래에서 상태를 복원한다.
   // 단, 지역 선택 방식이 탭마다 다르다: 지역랭킹·저평가 3탭·신고가는 칩(regionSel, 복수), 단지분석·단지비교·거래량·등락은 단일 셀렉트(sel.value) —
   // 그동안 이 둘을 서로 이어주는 로직이 없어서 한쪽에서 고른 지역이 다른 쪽 탭엔 전혀 안 보이는 문제가 있었음(2026.08 수정).
   // 칩(regionSel)으로 복수 지역을 고르는 탭 전체 — useMulti/renderRegionChips/multiTargets 등이 쓰는 목록과
@@ -2654,9 +2696,7 @@ function setMode(m, fromRestore){
   } else {
     // 싱글 전용 탭(단지분석·단지비교·거래량·등락) 진입 시 셀렉트가 비어있고 칩이 있으면 그 중 첫 지역을 이어받는다
     if(!sel.value && regionSel.length) sel.value = regionSel[0].lawd;
-    if(!sel.value){
-      sel.value = (lastRegionPref && [...sel.options].some(o=>o.value===lastRegionPref)) ? lastRegionPref : '';
-    }
+    if(!sel.value) sel.value = '';
   }
   renderRegionChips();
   // 평형 다중 선택 UI — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice)
@@ -5104,6 +5144,10 @@ async function runSearch(opts){
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
   if(isListingMode(mode) && !listingNameActive() && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
+  if(mode!=='compare' && !listingNameActive()){
+    const queriedRegions = regionSel.length ? regionSel.slice() : (lawd && !isAllScope(lawd) ? [{lawd,name:regionNameByLawd(lawd)}] : []);
+    saveRecentRegionSearch(queriedRegions);
+  }
   if(isListingMode(mode))saveQueriedSliders();
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   if((mode==='listingtrend'||mode==='listingrise')) return searchListingTrend(myToken, lawd, silentScroll);
