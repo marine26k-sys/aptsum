@@ -5,11 +5,11 @@ function setup({lastData=null,regionSel=[{lawd:'11680',name:'강남구'}],value=
  const c=vm.createContext({mode:'listingbudget',lastData,regionSel,sel:{value},LS_FACETS:{ask:{ids:['min','max']}},localStorage:{removeItem(){}},queriedSliderKey:m=>m,document:{getElementById:get},listingNameSelected:{lawd:'41173'},listingNameRestoreKey:'41173',listingNameChoices:[{}],listingFloorScope:'all',syncListingFloor(){},listingGapSet(){},syncAnalysisSelectSliders(){},lsSync(){},isIndividualListing:()=>individual,search:opts=>calls.push({regions:regionSel.map(x=>x.lawd),value,opts})});
  vm.runInContext(html.slice(html.indexOf('function resetListingFilters(){'),html.indexOf('function lsSavedLimits(')),c);return {c,calls,elements};
 }
-test('reset clears the selected region and does not requery an incomplete scope',()=>{
- const {c,calls,elements}=setup();c.resetListingFilters();assert.equal(calls.length,0);assert.deepEqual(c.regionSel,[]);assert.equal(c.sel.value,'');assert.equal(elements.listingNameQuery.value,'');assert.equal(c.listingNameSelected,null);
+test('reset requeries the currently selected region even when native region return has no restored result',()=>{
+ const {c,calls,elements}=setup();c.resetListingFilters();assert.equal(calls.length,1);assert.equal(calls[0].value,'ALL:서울');assert.deepEqual(calls[0].regions,['11680']);assert.equal(elements.listingNameQuery.value,'');assert.equal(c.listingNameSelected,null);
 });
 test('old Anyang result never determines reset search scope after Seoul is selected',()=>{
- const {c,calls}=setup({lastData:{mode:'listingbudget',scopeLabel:'안양시'}});c.resetListingFilters();assert.equal(calls.length,0);assert.deepEqual(c.regionSel,[]);
+ const {c,calls}=setup({lastData:{mode:'listingbudget',scopeLabel:'안양시'}});c.resetListingFilters();assert.equal(calls.length,1);assert.equal(calls[0].value,'ALL:서울');
 });
 test('reset without a region or in individual listing analysis does not launch an incomplete search',()=>{
  for(const options of [{regionSel:[],value:''},{individual:true}]){const {c,calls}=setup(options);c.resetListingFilters();assert.equal(calls.length,0);}
@@ -17,7 +17,7 @@ test('reset without a region or in individual listing analysis does not launch a
 
 test('all listing analysis tabs refresh the selected region when filters reset',()=>{
  for(const mode of ['listingbudget','listingurgent','listingtrend','listingrise','longpeaklisting','listinggap']){
-  const {c,calls}=setup();c.mode=mode;c.resetListingFilters();assert.equal(calls.length,0,mode);assert.deepEqual(c.regionSel,[],mode);
+  const {c,calls}=setup();c.mode=mode;c.resetListingFilters();assert.equal(calls.length,1,mode);assert.equal(calls[0].value,'ALL:서울');
  }
 });
 test('MOLIT ranking tabs refresh current region while incomplete complex forms clear stale results',()=>{
