@@ -2028,10 +2028,13 @@ function removeRegionGroup(lawds){
 }
 function clearRegions(){ regionSel = []; listingGapCapPreviewKey='';listingFilterSourceItems=[]; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function resetListingRegion(){
+  if(document.getElementById('loading')?.classList.contains('on'))stopSearch();else searchToken++;
   regionSel=[];
   if(typeof sel!=='undefined'&&sel)sel.value='';
   listingGapCapPreviewKey='';listingFilterSourceItems=[];
-  saveRegionSel();renderRegionChips();syncRegionPickBtn();saveNativeRegionResult();
+  saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();renderFavRegions();saveNativeRegionResult();
+  document.getElementById('error')?.classList.remove('on');
+  const result=document.getElementById('result');if(result){result.classList.remove('on');result.replaceChildren();}
 }
 function renderRegionChips(){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
@@ -2765,6 +2768,12 @@ function setMode(m, fromRestore){
   document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
   document.getElementById('monthsN').disabled = false;
   document.getElementById('btn').textContent = isListingMode(m) ? '매물 조회' : m==='complex' ? '분석' : (m==='compare' ? '비교 분석' : (m==='subway' ? '검색' : ((m==='peak'||m==='longpeak'||m==='shortval') ? '등락 조회' : '랭킹 조회')));
+  // 지역 초기화는 필터 슬라이더가 없는 단지 분석 탭에서도 항상 사용할 수 있어야 한다.
+  const resetRow=document.getElementById('sliderFilterResetRow'),filterReset=document.getElementById('listingFilterReset');
+  if(resetRow){
+    resetRow.style.display=m==='listingfavorites'?'none':'flex';
+    if(filterReset)filterReset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'':'none';
+  }
   if(m==='compare'){
     if(!document.querySelector('.cmp-row')){ addCmpRow(); addCmpRow(); }
     else document.querySelectorAll('.cmp-row').forEach(r=>{
