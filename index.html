@@ -7312,17 +7312,20 @@ function listingGapInvestmentSetMax(rows){
   listingGapInvestmentSync();
 }
 async function previewListingGapInvestmentMax(){
-  if(typeof mode==='undefined'||mode!=='listingbudget'||listingOccupancy()!=='tenant')return;
+  if(typeof mode==='undefined'||mode!=='listingbudget')return;
+  const occupancy=listingOccupancy();
   const targets=regionSel.length?regionSel.slice():(sel.value&&!isAllScope(sel.value)?[{lawd:sel.value}]:[]);
   if(!targets.length)return;
-  const key=targets.map(x=>x.lawd).join('|')+':'+listingFloor();
+  const key=targets.map(x=>x.lawd).join('|')+':'+occupancy+':'+listingFloor();
   if(key===listingGapCapPreviewKey)return;
   listingGapCapPreviewKey=key;
   try{
-    const responses=await Promise.all(targets.map(t=>fetch(`/api/listings?lawd=${encodeURIComponent(t.lawd)}&occupancy=tenant&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store'})));
+    const responses=await Promise.all(targets.map(t=>fetch(`/api/listings?lawd=${encodeURIComponent(t.lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store'})));
     if(responses.some(r=>!r.ok))return;
     const payloads=await Promise.all(responses.map(r=>r.json()));
-    listingGapInvestmentSetMax(payloads.flatMap(x=>x.items||[]));
+    const items=payloads.flatMap(x=>x.items||[]);
+    lsDataBounds(items,['py','ask','age','hh','rate']);
+    listingGapInvestmentSetMax(items);
   }catch{}
 }
 function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
