@@ -29,6 +29,19 @@ for(const [province,rows] of REGIONS)for(const [name,lawd] of rows){
   return required.every(ym=>available.has(ym))?regionalChange(items,p,names,samples):{rate:null,groups:0,sampleCount:samples.length,previousTrades:0,currentTrades:0,missing:true};});
  const periodMetrics=regionalPeriodMatrix(items,periods.monthly,names,fixed.regions[lawd],available);
  const allPeriodMetrics=regionalPeriodMatrix(items,periods.monthly,names,regionAllSamples,available);
+ // 2026년 7월 신설된 인천 구는 분구 이후 자료만 별도 코드로 보유한다.
+ // 이 경우 12개월 전 비교키는 비어 있지만 최신 월간 비교자료는 있으므로,
+ // 기간 탭에서도 해당 지역을 누락시키지 않고 확보된 최신 비교값을 사용한다.
+ if(lawd.startsWith('IC-')){
+   const latestTop=metrics.monthly?.[0],latestAll=allMetrics.monthly?.[0];
+   const latestValue=m=>m&&Object.fromEntries(Object.entries(m).filter(([key])=>key!=='comparisons'));
+   for(const [key,value] of Object.entries(periodMetrics)){
+     if(value?.rate==null&&Number.isFinite(latestTop?.rate))periodMetrics[key]={...latestValue(latestTop),latestAvailable:true};
+   }
+   for(const [key,value] of Object.entries(allPeriodMetrics)){
+     if(value?.rate==null&&Number.isFinite(latestAll?.rate))allPeriodMetrics[key]={...latestValue(latestAll),latestAvailable:true};
+   }
+ }
  const details={all:{},top50:{}};periods.monthly.forEach((p,i)=>{details.all[p.label]=allMetrics.monthly[i].comparisons||[];details.top50[p.label]=metrics.monthly[i].comparisons||[];delete allMetrics.monthly[i].comparisons;delete metrics.monthly[i].comparisons;});
  await writeFile(`data/regional-change-details/${lawd}.json`,JSON.stringify(details));
  regions.push({province,name,lawd,metrics,allMetrics,periodMetrics,allPeriodMetrics});
