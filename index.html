@@ -1098,7 +1098,7 @@ try {
         <input type="range" id="listingGapInvestmentMin" min="0" max="30" step="0.1" value="0" oninput="listingGapInvestmentRangeSync(this)" onchange="listingGapInvestmentApply()" aria-label="최소 갭 금액(억)">
         <input type="range" id="listingGapInvestmentMax" min="0" max="30" step="0.1" value="30" oninput="listingGapInvestmentRangeSync(this)" onchange="listingGapInvestmentApply()" aria-label="최대 갭 금액(억)">
       </div><div class="ls-numbers"><input type="number" id="listingGapInvestmentMinNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최소 갭 금액(억) 직접 입력"><span>~</span><input type="number" id="listingGapInvestmentMaxNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최대 갭 금액(억) 직접 입력"><span>억</span></div></div></div>
-      <div class="rng">전세가는 최근 6개월 거래 평균 · 갭 = 매매가 − 전세가 · 최대값은 30억 이상을 포함합니다.</div>
+      <div class="rng">전세가는 최근 6개월 거래 평균 · 갭 = 매매가 − 전세가 · 선택 지역의 최대 갭까지 표시합니다.</div>
     </div>
     <div id="analysisPyFilters" class="ls-filters" style="display:none">
       <div class="ls-row"><div class="ls-hd"><span>평형</span><b id="analysisPyTxt">전체</b></div>
@@ -7291,11 +7291,24 @@ function listingOccupancy(){ return normalizeListingOccupancy(document.getElemen
 function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세안고',presale:'분양권'}[listingOccupancy()]; }
 const LISTING_GAP_BANDS=[{v:'under1',lo:0,hi:1,l:'갭 1억 미만'},...Array.from({length:9},(_,i)=>({v:String(i+1),lo:i+1,hi:i+2,l:`갭 ${i+1}억대`})),{v:'10+',lo:10,hi:Infinity,l:'갭 10억 이상'}];
 let listingGapInvestmentBand=null;
+let listingGapInvestmentMaxCap=30;
 function listingGapInvestmentBandOf(gap){return gap<1?'under1':gap>=10?'10+':String(Math.floor(gap));}
 function listingGapInvestmentBandLabel(v){return LISTING_GAP_BANDS.find(b=>b.v===v)?.l||'전체';}
-function listingGapInvestmentValues(){const b=LISTING_GAP_BANDS.find(x=>x.v===listingGapInvestmentBand);if(b)return {min:b.lo,max:b.hi,band:b.v};const min=+document.getElementById('listingGapInvestmentMin').value,max=+document.getElementById('listingGapInvestmentMax').value;return {min,max:max>=30?Infinity:max,band:null};}
+function listingGapInvestmentValues(){const b=LISTING_GAP_BANDS.find(x=>x.v===listingGapInvestmentBand);if(b)return {min:b.lo,max:b.hi,band:b.v};const min=+document.getElementById('listingGapInvestmentMin').value,max=+document.getElementById('listingGapInvestmentMax').value;return {min,max:max>=listingGapInvestmentMaxCap-1e-9?Infinity:max,band:null};}
 function listingGapInvestmentText(v=listingGapInvestmentValues()){return v.band?listingGapInvestmentBandLabel(v.band):'전체';}
-function listingGapInvestmentSync(){const v=listingGapInvestmentValues();document.getElementById('listingGapInvestmentTxt').textContent=v.band?listingGapInvestmentBandLabel(v.band):(v.min===0&&v.max===Infinity?'전체':`${v.min.toFixed(1)}~${v.max===Infinity?'30+':v.max.toFixed(1)}억`);const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(v.band){lo.value=v.min;hi.value=v.max===Infinity?30:v.max;}document.getElementById('listingGapInvestmentMinNumber').value=lo.value;document.getElementById('listingGapInvestmentMaxNumber').value=hi.value;}
+function listingGapInvestmentSync(){const v=listingGapInvestmentValues();document.getElementById('listingGapInvestmentTxt').textContent=v.band?listingGapInvestmentBandLabel(v.band):(v.min===0&&v.max===Infinity?'전체':`${v.min.toFixed(1)}~${v.max===Infinity?listingGapInvestmentMaxCap.toFixed(1):v.max.toFixed(1)}억`);const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(v.band){lo.value=v.min;hi.value=v.max===Infinity?listingGapInvestmentMaxCap:v.max;}document.getElementById('listingGapInvestmentMinNumber').value=lo.value;document.getElementById('listingGapInvestmentMaxNumber').value=hi.value;}
+function listingGapInvestmentSetMax(rows){
+  const gaps=(rows||[]).map(x=>Number(x.ask)-Number(x.rentMean)).filter(x=>Number.isFinite(x)&&x>=0);
+  const nextCap=Math.max(0.1,Math.ceil((Math.max(...gaps,0)+1e-9)*10)/10);
+  const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');
+  const oldCap=listingGapInvestmentMaxCap, oldMax=Number(hi.value);
+  listingGapInvestmentMaxCap=nextCap;
+  lo.max=hi.max=String(nextCap);
+  if(oldMax>=oldCap-1e-9||oldMax>nextCap)hi.value=String(nextCap);
+  if(Number(lo.value)>nextCap)lo.value=String(nextCap);
+  if(Number(lo.value)>Number(hi.value))lo.value=hi.value;
+  listingGapInvestmentSync();
+}
 function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
 function listingGapInvestmentNumberApply(input){const slider=document.getElementById(input.id.replace('Number',''));if(!slider)return;const n=Number(input.value);if(Number.isFinite(n))slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(n*10)/10));listingGapInvestmentRangeSync(slider);listingGapInvestmentApply();}
 function listingGapInvestmentApply(){listingGapInvestmentSync();if(mode==='listingbudget'&&lastData?.mode==='listingbudget')search({silentScroll:true});}
@@ -7759,6 +7772,9 @@ function resetListingFilters(){
   document.getElementById('listingNameCandidates').replaceChildren();
   listingFloorScope='mid';syncListingFloor();
   listingGapInvestmentBand=null;
+  listingGapInvestmentMaxCap=30;
+  document.getElementById('listingGapInvestmentMin').max=30;
+  document.getElementById('listingGapInvestmentMax').max=30;
   document.getElementById('listingGapInvestmentMin').value=0;
   document.getElementById('listingGapInvestmentMax').value=30;
   if(typeof listingGapInvestmentSync==='function')listingGapInvestmentSync();
@@ -8009,6 +8025,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
     const ls=lsGet();
     const cohort=all.filter(x=>(!newOnly||x.newlyAppeared)&&x.ask>0&&(tabMode==='listingurgent'?(x.urgent&&x.peak>0&&x.hh>=LISTING_MIN_HH&&x.ask>=URGENT_MIN_ASK&&Math.round((x.ask-x.peak)/x.peak*100)<0):(x.hh>=LISTING_BUDGET_MIN_HH&&!(x.peak>0&&Math.round((x.ask-x.peak)/x.peak*100)>=31))));
     lsDataBounds(cohort,tabMode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);Object.assign(ls,lsGet());
+    if(tabMode==='listingbudget'&&!individual&&listingOccupancy()==='tenant')listingGapInvestmentSetMax(cohort);
     const gapFilter = tabMode==='listingbudget' && !individual && listingOccupancy()==='tenant' ? listingGapInvestmentValues() : null;
     const items=individual?cohort:cohort.filter(x=>lsMatch(x,ls)&&lsAskMatch(x,ls)&&(tabMode!=='listingbudget'||lsRateMatch(x,ls)));
     const baseItems=items;
