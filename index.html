@@ -5583,8 +5583,16 @@ async function attachHHCountsAsync(d, myToken, lawd){
       // 신저가는 300세대 필터 적용을 위해 search() 단계에서 이미 세대수를 조회·부착해뒀으므로(위 참고) 여기선 재조회 불필요
     } else if(d.mode==='pyprice'){
       // 평당가는 세대수를 표시하지 않는 탭이라 조회 자체를 생략(운영자 요청 범위 밖 — 필요해지면 newhigh 분기처럼 추가하면 됨)
-    } else if(d.mode==='longtermrise' || d.mode==='jeonselongtermrise' || d.mode==='pricebandrise'){
-      // 매매/전세 변동률도 pyprice와 동일한 이유로 세대수 미표시 — 생략
+    } else if(d.mode==='longtermrise'){
+      const byLawd={};
+      (d.rows||[]).forEach(x=>{const lw=x.lawd||lawd;(byLawd[lw] ||= []).push(x);});
+      await Promise.all(Object.entries(byLawd).map(async([lw,list])=>{
+        const map=await fetchHHCntBatch(lw,[...new Set(list.map(x=>x.apt))]);
+        list.forEach(x=>{x.hh=map[x.apt]||null;});
+      }));
+      if(myToken===searchToken)renderLongTermRise(d);
+    } else if(d.mode==='jeonselongtermrise' || d.mode==='pricebandrise'){
+      // 별도 요청이 없는 전세·금액대 변동률은 세대수 조회를 생략한다.
     } else if(d.mode==='gap') {
       if(d.rows && d.rows.length){
         const byLawd = {};
@@ -6955,8 +6963,8 @@ function renderLongTermRise(d){
       <h3>단지별 상세</h3>
       ${hint(`"${d.periodM}개월 전" = 해당 월평균가`, '무거래월은 직전 월평균 유지 · 직거래·저가 이상치 제외')}
       ${rows(d.rows, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${d.periodM}개월 전 ${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?.hhcnt?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val" style="color:var(--teal)"><span style="font-size:11px;font-weight:400;color:var(--sub);margin-right:4px">${x.pastAvg.toFixed(1)}억 →</span>${x.recentAvg.toFixed(1)}억<small>${chgHTML(x.changeAmt, x.changePct)}</small></span>`)}
     </div>
 
   </div>
