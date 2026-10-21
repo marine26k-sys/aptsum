@@ -2275,6 +2275,7 @@ function restoreQueriedSliders(m){
   resetQueriedSliderDefaults(m);
   if(!v)return;
   for(const [id,value] of Object.entries(v.selects||{})){
+    if(m==='longtermrise'&&id==='risePeriodN')continue; // 새 진입은 12개월 기본값, 명시적 공유 링크·뒤로가기는 별도 복원
     if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
     const el=document.getElementById(id),restored=id==='monthsN'?analysisMonthsForMode(m,value):value;
     if([...el.options].some(o=>o.value===restored))el.value=restored;
