@@ -8351,7 +8351,7 @@ function renderListingBudget(d,limit=100){
         if(d.individual){x={...x,commonInfoInHeader:true};const trend=individualListingTrend(x,d.individualTrend);if(trend)return listingTrendRowHTML({...trend,...x,points:trend.points,prevAsk:trend.prevAsk,drop:trend.drop},i,multiRegion,'all',true);return listingWithoutHistoryHTML(x,i,multiRegion,d.asOf,d.individualTrendError);}
         const drop = x.peak>0 ? Math.round((x.ask - x.peak)/x.peak*100) : null;
         const tenant = listingOccupancy()==='tenant';
-        const rent = tenant&&x.rentMean>0 ? `<small><span class="listing-ref-label">전세가</span> <span class="listing-ref-price">${x.rentMean.toFixed(1)}억</span> <span class="listing-ref-date">(갭 <b style="color:var(--teal-dark);font-weight:900">${(x.ask-x.rentMean).toFixed(1)}억</b>)</span></small>` : '';
+        const rent = tenant&&x.rentMean>0 ? `<small><span class="listing-ref-label">전세가</span> <span class="listing-ref-price">${x.rentMean.toFixed(1)}억</span> <span class="listing-ref-date">(<b style="color:var(--teal-dark);font-weight:900">갭 ${(x.ask-x.rentMean).toFixed(1)}억</b>)</span></small>` : '';
         const latest = !tenant&&x.latestSale?.price>0 ? `<small><span class="listing-ref-label">최신</span> <span class="listing-ref-price">${x.latestSale.price.toFixed(1)}억</span> <span class="listing-ref-date">(${peakYmLabel(String(x.latestSale.date).slice(0,6))})</span></small>` : '';
         const peak = drop===null ? '<small>실거래 전고점 없음</small>' : `<small><span class="listing-ref-label">전고점</span> <span class="listing-ref-price">${x.peak.toFixed(1)}억</span> <span class="listing-ref-date">${x.peakYm?`(${peakYmLabel(x.peakYm)})`:''}</span></small>`;
         const change = drop===null ? '' : `<small>${chgHTML(x.ask - x.peak, drop)}</small>`;
