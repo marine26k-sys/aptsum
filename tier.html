@@ -175,7 +175,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 
 let tierData = null;
-let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: false };
+let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: true };
 
 async function load(){
   try{
