@@ -112,9 +112,8 @@ function renderYtdRanking(){
  const heading=document.createElement('div');heading.className='card-hd ranking-heading';
  const brand=document.querySelector('#monthlyPanel .hd-top').cloneNode(true);brand.querySelector('.hd-badge').textContent='기간 변동률';
  const title=document.createElement('h2');title.id='ytdRankingTitle';
- const summary=document.createElement('div');summary.className='meta';
  const comparison=document.createElement('div');comparison.className='regional-vs';
- heading.append(brand,title,summary,comparison);
+ heading.append(brand,title,comparison);
  const range=document.createElement('div');range.className='ranking-range';
  const rangeSelect=(id,label)=>{const field=document.createElement('label');field.textContent=label;const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label);for(const p of data.periods.monthly){const option=document.createElement('option');option.value=p.label;option.textContent=p.label.replace('-','.');select.append(option);}field.append(select);range.append(field);return select;};
  const startSelect=rangeSelect('rankingStart','시작 월'),endSelect=rangeSelect('rankingEnd','끝 월');
@@ -131,7 +130,6 @@ function renderYtdRanking(){
   const key=startSelect.value+'|'+endSelect.value;
   updateRegionalComparisonBox(comparison,startSelect.value,endSelect.value);
   title.textContent=Number(endSelect.value.slice(0,4))+'년 '+Number(endSelect.value.slice(5))+'월';
-  summary.textContent=startSelect.value.replace('-','.')+' → '+endSelect.value.replace('-','.')+' · '+(sampleMode==='all'?'전체 단지 표본':'상위 30단지');
   const rows=data.regions.map(region=>({region,metric:(sampleMode==='all'?region.allPeriodMetrics:region.periodMetrics)?.[key]})).filter(x=>filter.value==='전체'||x.region.province===filter.value).sort((a,b)=>{
    const ar=Number.isFinite(a.metric?.rate),br=Number.isFinite(b.metric?.rate);
    return ar&&br?b.metric.rate-a.metric.rate:ar?-1:br?1:(a.region.province+' '+a.region.name).localeCompare(b.region.province+' '+b.region.name,'ko');
