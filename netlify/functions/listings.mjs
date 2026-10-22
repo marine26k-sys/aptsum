@@ -144,6 +144,23 @@ export default async (request) => {
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
+    // 공개 지도는 원본 매물 대신 단지별 동일 비중의 집계만 제공한다.
+    if(q.get("askMap")==="1"){
+      const index=(await store.get(historyIndexKey(lawd),{type:"json",consistency:"strong"}))||[];
+      const weeks=new Map();
+      for(const entry of recentListingHistory(index)){
+        const data=await store.get(historyKey(lawd,entry.uploadId),{type:"json",consistency:"strong"});
+        if(!data)continue;
+        const date=new Date(String(data.asOf).replaceAll('.','-')+'T00:00:00Z');if(!Number.isFinite(+date))continue;
+        date.setUTCDate(date.getUTCDate()-((date.getUTCDay()+6)%7));const key=date.toISOString().slice(0,10);
+        if(!weeks.has(key))weeks.set(key,{last:data.asOf,items:new Map()});const week=weeks.get(key);if(data.asOf>week.last)week.last=data.asOf;
+        for(const item of listingItemsForFloor(data.items,'available','mid')){if(!(item.ask>0))continue;const k=String(item.nid)+'|'+item.ex;const values=week.items.get(k)||[];values.push(item.ask);week.items.set(k,values);}
+      }
+      const groups=[...weeks.entries()].sort((a,b)=>a[0].localeCompare(b[0]));const current=groups.at(-1)?.[1],previous=groups.at(-2)?.[1];const complexes=new Map();
+      if(current&&previous)for(const [key,values] of current.items){const old=previous.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const rates=complexes.get(nid)||[];rates.push((mean(values)/before-1)*100);complexes.set(nid,rates);}
+      const rates=[...complexes.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);
+      return json({rate:rates.length?rates.reduce((x,y)=>x+y,0)/rates.length:null,count:rates.length,asOf:current?.last||null,previousAsOf:previous?.last||null});
+    }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";

@@ -77,15 +77,10 @@ function previousFor(item,snapshots,index){const key=itemKey(item);const found=s
 async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error(String(r.status));return r.json()}
 async function loadRegion(province,name,lawd){
  try{
-  const [cur,hist]=await Promise.all([fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=available&floorScope=mid`),fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=available`)]);
-  const snaps=Array.isArray(hist.snapshots)?hist.snapshots.slice().sort((a,b)=>String(a.asOf).localeCompare(String(b.asOf))):[];const current=Array.isArray(cur.items)?cur.items:[];
-  const weeks=new Map(); for(const snap of snaps){const key=String(snap.asOf||'').replaceAll('.','-');const d=new Date(key+'T00:00:00Z');if(Number.isNaN(d.getTime()))continue;const weekKey=weekInfo(snap.asOf).key;if(!weeks.has(weekKey))weeks.set(weekKey,{key:weekKey,last:snap.asOf,items:new Map()});const group=weeks.get(weekKey);group.last=snap.asOf;for(const it of snapshotItems(snap)){const value=ask(it);if(!(value>0))continue;const k=itemKey(it);const list=group.items.get(k)||[];list.push(value);group.items.set(k,list);}}
-  const groups=[...weeks.values()].sort((a,b)=>a.key.localeCompare(b.key));const currentGroup=groups.at(-1),previousGroup=groups.at(-2);const rates=[];const complexRates=new Map();
-  if(currentGroup&&previousGroup){for(const [k,values] of currentGroup.items){const beforeValues=previousGroup.items.get(k);if(!beforeValues?.length)continue;const now=values.reduce((a,b)=>a+b,0)/values.length;const before=beforeValues.reduce((a,b)=>a+b,0)/beforeValues.length;if(before>0){const nid=k.split('|')[0];const values=complexRates.get(nid)||[];values.push((now-before)/before*100);complexRates.set(nid,values)}}}
-  for(const values of complexRates.values())rates.push(values.reduce((a,b)=>a+b,0)/values.length);
-  state.data.set(String(lawd),{province,name,lawd,rate:rates.length?rates.reduce((a,b)=>a+b,0)/rates.length:null,count:rates.length});
-  if(currentGroup?.last)state.asOf=state.asOf&&state.asOf>currentGroup.last?state.asOf:currentGroup.last;
-  if(previousGroup?.last)state.previousAsOf=state.previousAsOf&&state.previousAsOf>previousGroup.last?state.previousAsOf:previousGroup.last;
+  const metric=await fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&askMap=1`);
+  state.data.set(String(lawd),{province,name,lawd,...metric});
+  if(metric.asOf&&(!state.asOf||metric.asOf>state.asOf))state.asOf=metric.asOf;
+  if(metric.previousAsOf&&(!state.previousAsOf||metric.previousAsOf>state.previousAsOf))state.previousAsOf=metric.previousAsOf;
  }catch{state.data.set(String(lawd),{province,name,lawd,rate:null,count:0,error:true})}
 }
 function render(){
