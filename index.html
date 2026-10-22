@@ -5906,7 +5906,13 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     const below=[{dx:0,dy:16},{dx:inward,dy:16},{dx:-inward,dy:16},{dx:0,dy:25}];
     p.offsets=p.i===iMax?[...above,...below]:p.i===iMin?[...below,...above]:[above[0],below[0],above[1],below[1],above[2],below[2],above[3],below[3]];
   });
-  placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-11,16,-20,25], Math.max(20, fs*2.6), fs+3, labelPos);
+  const labelBoxW=Math.max(20, fs*2.6);
+  placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-11,16,-20,25], labelBoxW, fs+3, labelPos);
+  // Keep edge labels fully inside the SVG viewBox so the latest value is not clipped.
+  visibleLabels.forEach(p=>{
+    const minDx=labelBoxW/2-p.cx, maxDx=W-labelBoxW/2-p.cx;
+    p.dx=Math.max(minDx,Math.min(maxDx,p.dx||0));
+  });
   const labelIndices=new Set(visibleLabels.map(p=>p.i));
 
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
