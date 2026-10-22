@@ -23,4 +23,5 @@ test('신규 거래 N 배지는 평형·최고가 열에 청록색으로 표시�
   const source=html.slice(start,end);
   assert.match(source,/<td>\$\{esc\(t\.date\)\}<\/td><td>[\s\S]*trade-new-badge/);
   assert.doesNotMatch(source,/\$\{esc\(t\.date\)\}\$\{isNewlyCollectedDeal/);
+  assert.match(html,/\.trade-new-badge\{[^}]*color:#fff!important;[^}]*background:var\(--teal\)!important;/);
 });
