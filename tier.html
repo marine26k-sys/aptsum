@@ -344,9 +344,9 @@ function dongRankCardHTML(){
       <div class="tier-ladder-title">${esc(label)} <span style="font-weight:400;color:var(--sub)">· ${total.toLocaleString()}개 동 (탭해서 필터링)</span></div>
       ${groups.map(({grade, items}) => `
         <div class="tier-rung ${sel===grade.g?'on':''}" onclick="setDongRankGrade(${grade.g})">
-          <div class="tier-rung-dot" style="background:${grade.color}"></div>
+          <div class="tier-rung-dot" style="background:${tierGradeColor(grade)}"></div>
           <div class="tier-rung-info"><div class="tier-rung-label">${esc(grade.label)}</div><div class="tier-rung-band">${esc(grade.band)}</div></div>
-          <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(items.length/maxCount*100).toFixed(1)}%;background:${grade.color}"></div></div>
+          <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(items.length/maxCount*100).toFixed(1)}%;background:${tierGradeColor(grade)}"></div></div>
           <div class="tier-rung-count"><b>${items.length}</b>개 동</div>
         </div>
       `).join("")}
