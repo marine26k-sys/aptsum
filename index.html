@@ -8371,7 +8371,7 @@ function listingAskMapHTML(d){
     })).join('');
     if(stats.some(x=>x.province===province))groupsHTML.push(`<div class="listing-ask-map-group">${province}</div>${cells}`);
   }
-  return `<div class="listing-ask-map" aria-label="지역별 호가 통계 지도"><div class="listing-ask-map-title"><span>${rateMode?'호가 전주 대비 변동률':'호가 통계 지도'}</span><small>${rateMode?'중층 이상 최저매물 호가 · 최근 업로드와 직전 업로드 비교':'지역별 최저 호가 평균'} · ${stats.reduce((sum,x)=>sum+x.values.length,0)}개 매물</small></div><div class="listing-ask-map-grid">${groupsHTML.join('')}</div></div>`;
+  return `<div class="listing-ask-map" aria-label="지역별 호가 통계 지도"><div class="listing-ask-map-title"><span>${rateMode?'호가 주간 평균 변동률':'호가 통계 지도'}</span><small>${rateMode?'중층 이상 최저매물 호가 · 최근 주간 평균과 직전 주간 평균 비교':'지역별 최저 호가 평균'} · ${stats.reduce((sum,x)=>sum+x.values.length,0)}개 매물</small></div><div class="listing-ask-map-grid">${groupsHTML.join('')}</div></div>`;
 }
 function listingAskMapTargets(lawd){
   const selected=regionSel.length?regionSel.slice():(isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:regionNameByLawd(lawd)}]);
@@ -8386,11 +8386,11 @@ function renderListingAskMap(d){
     ${listingHeaderHTML(d,'호가 통계',null,null)}
     ${listingAskMapHTML(d)}
     <div class="sec">
-      ${hint('지역 변동률은 실거래 기준, 이 탭은 중층 이상 최저매물 호가의 최근 업로드 대비 직전 업로드 변동률입니다. 선택한 시·도의 전체 구·시·군을 표시합니다.')}
+      ${hint('지역 변동률은 실거래 기준, 이 탭은 중층 이상 최저매물 호가의 주간 평균을 직전 주간 평균과 비교한 변동률입니다. 선택한 시·도의 전체 구·시·군을 표시합니다.')}
       ${listingLinkLegend()}
     </div>
   </div>
-  <div class="src-note">지역별 호가 변동률은 중층 이상 최저매물 호가의 최근 업로드와 직전 업로드를 비교해 지역별로 평균한 값입니다. 출처: 네이버 부동산 매물</div>`;
+  <div class="src-note">지역별 호가 변동률은 중층 이상 최저매물 호가의 주간 평균을 직전 주간 평균과 비교해 지역별로 평균한 값입니다. 출처: 네이버 부동산 매물</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r=document.getElementById('result');r.innerHTML=html;r.classList.add('on');
 }
