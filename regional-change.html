@@ -76,12 +76,12 @@ function setRegionalView(view){
  document.getElementById('monthlyPeriodControls').hidden=ytd;
 }
 function updateRegionalComparisonBox(box,first,last){
- const start=first.split('-').map(Number),end=last.split('-').map(Number),months=(end[0]-start[0])*12+end[1]-start[1];
- const current=last===data.periods.monthly[0].label;
+ const start=first.split('-').map(Number),end=last.split('-').map(Number);
+ const label=parts=>(start[0]!==end[0]?parts[0]+'년 ':'')+parts[1]+'월 평균';
  box.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11M18 7l-3-3M18 7l-3 3M17 17H6M6 17l3-3M6 17l3 3"/></svg>';
- const before=document.createElement('span');before.textContent=current?months+'개월 전 월평균':first.slice(2).replace('-','.')+' 월평균';
+ const before=document.createElement('span');before.textContent=label(start);
  const vs=document.createElement('span');vs.className='vs';vs.textContent='vs';
- const after=document.createElement('span');after.textContent=current?'현재월 평균':last.slice(2).replace('-','.')+' 월평균';box.append(before,vs,after);
+ const after=document.createElement('span');after.textContent=label(end);box.append(before,vs,after);
 }
 function color(rate){if(rate==null)return '#f1f5f9';if(Math.abs(rate)<.005)return '#fff';const alpha=Math.min(.65,.08+Math.abs(rate)/15);return rate>0?`rgba(239,68,68,${alpha})`:`rgba(59,130,246,${alpha})`;}
 function render(){document.getElementById('regionDetails')?.close();const index=Number(period.value||0),p=data.periods[kind][index];document.querySelector('#title').textContent=p.label.split('-')[0]+'년 '+Number(p.label.split('-')[1])+'월';document.getElementById('comparisonPeriod').textContent=new Date(p.previousStart).toISOString().slice(0,7).replace('-','.')+' → '+p.label.replace('-','.')+' · '+(sampleMode==='all'?'전체 단지 표본':'평당가 상위 30단지');grid.replaceChildren();
