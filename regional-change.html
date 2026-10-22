@@ -135,7 +135,7 @@ function renderYtdRanking(){
    const ar=Number.isFinite(a.metric?.rate),br=Number.isFinite(b.metric?.rate);
    return ar&&br?b.metric.rate-a.metric.rate:ar?-1:br?1:(a.region.province+' '+a.region.name).localeCompare(b.region.province+' '+b.region.name,'ko');
   });
-  sampleCount.textContent='표본 '+rows.reduce((total,{metric})=>total+(Number(metric?.groups)||0),0).toLocaleString('ko-KR')+'개 단지';
+  sampleCount.textContent=sampleMode==='all'?'전체 단지 표본':'상위 30단지 표본';
   content.replaceChildren();
   if(!rows.length){const empty=document.createElement('p');empty.className='ytd-empty';empty.textContent='비교 가능한 지역 자료가 없습니다.';content.append(empty);return;}
   const axis=document.createElement('div');axis.className='ytd-axis';axis.textContent='하락 ◀　0　▶ 상승 · '+rows.length+'개 지역';content.append(axis);
