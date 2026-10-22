@@ -1531,7 +1531,12 @@ function getRecentComplexes(){
 }
 function rememberRecentComplex(lawd,d){
   if(!lawd||!d.name)return;
-  const requestedLawd=lawd;lawd=d.lawd||d.splitLawd||lawd;
+  const requestedLawd=lawd;
+  const isScopeCode=x=>/^(ALL:|CITYALL:)/.test(String(x||''));
+  // 통합 지역으로 검색해도 최근 기록에는 실제 거래가 속한 구 코드를 저장한다.
+  const resultLawd=d.splitLawd || (d.lawd && !isScopeCode(d.lawd) ? d.lawd : '');
+  lawd=resultLawd || (!isScopeCode(requestedLawd) ? requestedLawd : '');
+  if(!lawd)return;
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
