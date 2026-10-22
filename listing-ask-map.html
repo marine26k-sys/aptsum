@@ -71,21 +71,22 @@ function color(n){if(!Number.isFinite(n))return '#f1f5f9';if(Math.abs(n)<.005)re
 function itemKey(x){return `${x.nid||x.id||x.complexId||''}|${x.ex||x.exclusive||x.py||''}`}
 function ask(x){return Number(x.ask??x.price??x.minAsk??x.lowestAsk)}
 function snapshotItems(s){return Array.isArray(s?.items)?s.items:[]}
-function previousFor(item,snapshots,index){const key=itemKey(item);for(let i=index+1;i<snapshots.length;i++){const found=snapshotItems(snapshots[i]).find(x=>itemKey(x)===key&&ask(x)>0);if(found)return found}return null}
+function weekLabel(value){const d=new Date(value+'T00:00:00Z');if(Number.isNaN(d.getTime()))return value||'';const month=d.getUTCMonth()+1,week=Math.ceil(d.getUTCDate()/7);const thu=new Date(d);thu.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const yearStart=new Date(Date.UTC(thu.getUTCFullYear(),0,1));const iso=Math.ceil((((thu-yearStart)/86400000)+1)/7);return `${d.getUTCFullYear()}년 ${month}월 ${week}주차 (ISO ${iso}주)`;}
+function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error(String(r.status));return r.json()}
 async function loadRegion(province,name,lawd){
  try{
   const [cur,hist]=await Promise.all([fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=available&floorScope=mid`),fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=available`)]);
-  const snaps=Array.isArray(hist.snapshots)?hist.snapshots:[];const current=Array.isArray(cur.items)?cur.items:[];const latest=snaps.length?snaps[0]:cur;const latestItems=snapshotItems(latest).length?snapshotItems(latest):current;const idx=snaps.length?0:-1;const rates=[];
+  const snaps=Array.isArray(hist.snapshots)?hist.snapshots:[];const current=Array.isArray(cur.items)?cur.items:[];const idx=snaps.length-1;const latest=idx>=0?snaps[idx]:cur;const latestItems=snapshotItems(latest).length?snapshotItems(latest):current;const rates=[];
   for(const it of latestItems){const now=ask(it);const prev=idx>=0?previousFor(it,snaps,idx):null;const before=ask(prev);if(now>0&&before>0)rates.push((now-before)/before*100)}
   state.data.set(String(lawd),{province,name,lawd,rate:rates.length?rates.reduce((a,b)=>a+b,0)/rates.length:null,count:rates.length});
   if(cur.asOf)state.asOf=state.asOf&&state.asOf>cur.asOf?state.asOf:cur.asOf;
-  if(snaps[1]?.asOf)state.previousAsOf=state.previousAsOf&&state.previousAsOf>snaps[1].asOf?state.previousAsOf:snaps[1].asOf;
+  if(snaps[idx-1]?.asOf)state.previousAsOf=state.previousAsOf&&state.previousAsOf>snaps[idx-1].asOf?state.previousAsOf:snaps[idx-1].asOf;
  }catch{state.data.set(String(lawd),{province,name,lawd,rate:null,count:0,error:true})}
 }
 function render(){
- const title=$('#title');title.textContent=state.asOf?state.asOf.slice(0,7).replace('-','년 ')+'월':'호가 주간 평균';
- $('#comparisonPeriod').textContent=(state.previousAsOf?state.previousAsOf.slice(0,7).replace('-','.'):'직전 주간')+' → '+(state.asOf?state.asOf.slice(0,7).replace('-','.'):'현재')+' · 중층 이상 최저매물 호가';
+ const title=$('#title');title.textContent=state.asOf?weekLabel(state.asOf):'호가 주간 평균';
+ $('#comparisonPeriod').textContent=(state.previousAsOf?weekLabel(state.previousAsOf):'직전 주간')+' → '+(state.asOf?weekLabel(state.asOf):'현재')+' · 중층 이상 최저매물 호가';
  $('#monthlyVs').innerHTML='<span>↔</span><span>직전 주간 평균</span><span class="vs">vs</span><span>현재 주간 평균</span>';
  grid.replaceChildren();
  for(const [province,regions] of REGIONS){const g=document.createElement('div');g.className='group';g.textContent=province;grid.append(g);const pg=document.createElement('div');pg.className='province-grid';grid.append(pg);const placements=(REGIONAL_LAYOUT[province]||[]).flatMap(row=>row.map((name,column)=>({name,column:column+1})));
@@ -96,7 +97,7 @@ function render(){
 async function boot(){
  $('#updated').textContent='자료를 불러오는 중…';
  const jobs=[];for(const [province,regions] of REGIONS)for(const [name,lawd] of regions)jobs.push(loadRegion(province,name,lawd));
- await Promise.all(jobs);$('#updated').textContent=`자료 기준일 ${state.asOf||'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`; period.replaceChildren(); for(const [value,label] of [['0','최근 주간'],['1','직전 주간']]){const o=document.createElement('option');o.value=value;o.textContent=label;period.append(o)} render();
+ await Promise.all(jobs);$('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`; period.replaceChildren(); for(const [value,label] of [['0','최근 주간'],['1','직전 주간']]){const o=document.createElement('option');o.value=value;o.textContent=label;period.append(o)} render();
 }
 $('#monthlyView').textContent='주간 변동률';$('#ytdView').textContent='기간 변동률';$('#allSample').textContent='전체 표본';$('#topSample').textContent='상위 30단지';$('#monthly').textContent='주간';
 $('#monthlyView').onclick=()=>{state.view='weekly';$('#monthlyView').setAttribute('aria-pressed','true');$('#ytdView').setAttribute('aria-pressed','false')};$('#ytdView').onclick=()=>{state.view='period';$('#ytdView').setAttribute('aria-pressed','true');$('#monthlyView').setAttribute('aria-pressed','false');alert('호가 기간 변동률은 주간 자료 누적 후 제공됩니다.')};
