@@ -84,7 +84,7 @@ async function loadRegion(province,name,lawd){
  }catch{state.data.set(String(lawd),{province,name,lawd,rate:null,count:0,error:true})}
 }
 function render(){
- const title=$('#title');title.textContent=state.asOf?weekLabel(state.asOf):'호가 주간 평균';
+ const title=$('#title');title.textContent=state.asOf?(weekInfo(state.asOf)?.label||'호가 주간 평균'):'호가 주간 평균';
  $('#comparisonPeriod').textContent='중층 이상 최저매물 호가 비교';
  const beforeWeek=weekInfo(state.previousAsOf),afterWeek=weekInfo(state.asOf);
  const shortWeek=w=>w?w.label.replace(/^\d+년 /,''):'자료 확인 중';
