@@ -1530,8 +1530,8 @@ function getRecentComplexes(){
   try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
-  if(!lawd||!d.name)return;
-  const requestedLawd=lawd;
+  if(!d||!d.name)return;
+  const requestedLawd=lawd||'';
   const isScopeCode=x=>/^(ALL:|CITYALL:)/.test(String(x||''));
   // 통합 지역으로 검색해도 최근 기록에는 실제 거래가 속한 구 코드를 저장한다.
   const resultLawd=d.splitLawd || (d.lawd && !isScopeCode(d.lawd) ? d.lawd : '');

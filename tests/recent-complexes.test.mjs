@@ -24,3 +24,11 @@ test('recent complex uses result region and removes old query-region duplicate',
  c.rememberRecentComplex('41173',{name:'석수e편한세상',umd:'석수동'});
  assert.equal(c.getRecentComplexes().filter(x=>x.umd==='석수동').length,1);
 });
+
+test('recent complex saves when an all-region search has no select value',()=>{
+ const store=new Map();const c=vm.createContext({document:{getElementById:()=>null},localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)}});
+ vm.runInContext(html.slice(html.indexOf('const RECENT_COMPLEX_MAX'),html.indexOf('function getFavs(')),c);
+ c.rememberRecentComplex('',{name:'헬리오시티',umd:'가락동',splitLawd:'11740'});
+ const row=c.getRecentComplexes()[0];
+ assert.equal(row.lawd,'11740');assert.equal(row.name,'헬리오시티');assert.equal(row.umd,'가락동');
+});
