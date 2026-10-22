@@ -5924,6 +5924,10 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   visibleLabels.forEach(p=>{
     const minDx=labelBoxW/2-p.cx, maxDx=W-labelBoxW/2-p.cx;
     p.dx=Math.max(minDx,Math.min(maxDx,p.dx||0));
+    // SVG 위쪽 경계 밖으로 라벨이 밀리면 기간 비교 버튼과 맞닿아 글자가 잘릴 수 있다.
+    // 글자 박스가 그래프 안에 들어오도록 최소 y 위치도 보정한다.
+    const minDy=(fs+3)-p.cy;
+    p.dy=Math.max(minDy,p.dy||0);
   });
   // 최고값과 마지막 값이 인접하면 두 숫자가 같은 줄에 겹치므로 마지막 값을 아래로 분리한다.
   // placeLabels가 모든 후보를 소진한 경우에도 마지막 후처리에서 다시 충돌하지 않도록
@@ -5936,7 +5940,7 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   const boxOverlaps = (a,b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
   const isInside = p => {
     const b=labelBox(p);
-    return b.x1>=0 && b.x2<=W;
+    return b.x1>=0 && b.x2<=W && b.y1>=0 && b.y2<=H;
   };
   const otherBoxes = p => visibleLabels.filter(q=>q!==p).map(labelBox);
   const tryOffsets = (p, candidates, excluded=[]) => {
