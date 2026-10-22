@@ -40,7 +40,7 @@ test('호가 통계 지도는 전주 대비 변동률을 표시한다',()=>{
     {lawd:'11680',gu:'강남구',askRate:2},{lawd:'11680',gu:'강남구',askRate:4},
     {lawd:'11320',gu:'도봉구',askRate:-1}
   ]});
-  assert.match(out,/호가 전주 대비 변동률/);
+  assert.match(out,/호가 주간 평균 변동률/);
   assert.match(out,/\+3\.0%/);
   assert.match(out,/-1\.0%/);
 });
