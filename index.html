@@ -1525,8 +1525,9 @@ async function shareCurrent(){
 // (2026.08 히든 탭 잠금해제 로직 — 전세가율 탭 공개 전환으로 제거)
 
 // ── 즐겨찾기 ──
+const RECENT_COMPLEX_MAX = 7;
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,5):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
   if(!lawd||!d.name)return;
@@ -1534,7 +1535,7 @@ function rememberRecentComplex(lawd,d){
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
-  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,5)));}catch{}
+  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,RECENT_COMPLEX_MAX)));}catch{}
   renderRecentComplexes();
 }
 function renderRecentComplexes(){
