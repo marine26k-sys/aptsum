@@ -113,12 +113,6 @@ const NAVER_DENY = new Set([
   "11650|현대아파트", "11680|한솔마을", "11710|한양아파트", "26200|봉래",
   "28177|행복", "28177|우성아파트", "28177|삼원아파트", "41173|목련아파트",
   "BC-원미구|금강",
-  // 화성 동탄 여울동 "동탄역롯데캐슬"(940세대, 2021년 준공)이 접두어 매칭으로 청계동의 전혀 다른 단지
-  // "동탄역롯데캐슬알바트로스"(1,416세대, 2015년 준공, 용적률 189%)에 걸려 용적률이 틀리게 표시되던 문제
-  // (2026.09, 운영자 리포트 — 실제로는 486%). 여울동 단지는 이번 네이버 크롤링에 아예 없어서(수집 누락으로
-  // 추정) 세대수는 K-apt 자동 매칭(940세대, matchKapt의 "이름 길이가 가까운 후보 우선" 로직으로 이미
-  // 정상적으로 여울동 쪽을 채택함)으로 폴백되고, 용적률만 표시가 안 되는 상태가 됨 — 틀린 값보다는 낫다.
-  "HS-동탄구|동탄역롯데캐슬",
   // 2026.09 — 전국 실거래 단지명 스캔에서 "동 불일치 + 준공년도 5년 이상 차이"로 걸린 142건을 K-apt
   // 독립 매칭(matchKapt, 네이버와 전혀 다른 소스)과 한 번 더 대조해, 세대수까지 서로 어긋나는(오차 5세대
   // 초과) 51건만 추림(운영자 확인: "준공년도랑 세대수 다른 건 다른 단지로 보면 됨"). 동만 다르고
@@ -135,15 +129,15 @@ const NAVER_DENY = new Set([
   "41390|대우", "41390|삼호", "41450|동일하이빌", "HS-동탄구|e편한세상동탄파크아너스",
   "HS-만세구|송산",
 ]);
-function naverLookup(nv, lawd, name) {
+function naverLookup(nv, lawd, name, umd = null, expectedHouseholds = null) {
   if (!nv) return null;
   const n = String(name || "").replace(/\s/g, "");
   if (NAVER_DENY.has(`${lawd}|${n}`)) return null;
   // 구형 keyIndex는 이전 정규화 규칙으로 생성되어 공통 비교 함수로 재검증한다.
-  return findNaverComplex(nv.items, n);
+  return findNaverComplex(nv.items, n, { dong: umd || null, expectedHouseholds });
 }
-function applyFallback(fallback, lawd, name, result) {
-  const hit = naverLookup(fallback, lawd, name);
+function applyFallback(fallback, lawd, name, result, umd = null) {
+  const hit = naverLookup(fallback, lawd, name, umd, result?.hhcnt ?? null);
   // K-apt 정보는 유지하고, 같은 세대수로 연결된 네이버 보조 지표만 보완한다.
   if(result && result.found && result.hhcnt>0){
     if(!(hit && hit.hh === result.hhcnt))return result;
@@ -367,6 +361,7 @@ export default async (req) => {
     try { body = await req.json(); } catch { return Response.json({ error: "잘못된 요청" }, { status: 400 }); }
     const lawd = String(body.lawd || "").trim();
     const names = Array.isArray(body.names) ? [...new Set(body.names.map((n) => String(n || "").trim()).filter(Boolean))].slice(0, 200) : [];
+    const umds = body.umds && typeof body.umds === 'object' ? body.umds : {};
     const sggs = resolveSigungu(lawd);
     if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
     if (!names.length) return Response.json({ results: {} });
@@ -444,7 +439,8 @@ export default async (req) => {
 
     // 국토교통부에서 못 찾은 단지만 전체 단지 매핑표로 보완한다.
     const fallbackMap = await loadNaverHh(new URL(req.url).origin, lawd);
-    if (fallbackMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyFallback(fallbackMap, lawd, nm, results[nm]); }
+    // applyFallback(fallbackMap, lawd, nm, results[nm]) — 법정동을 알 수 없는 구형 요청과의 호환 기준
+    if (fallbackMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyFallback(fallbackMap, lawd, nm, results[nm], umds[nm] || null); }
 
     // 부분 보정(PARTIAL_OVERRIDE)은 네이버보다도 뒤 — 수동 확인값이 항상 최종 우선
     for (const nm of names) results[nm] = applyPartialOverride(lawd, nm, results[nm]);
@@ -457,6 +453,7 @@ export default async (req) => {
   const url = new URL(req.url);
   const lawd = (url.searchParams.get("lawd") || "").trim();
   const name = (url.searchParams.get("name") || "").trim();
+  const umd = (url.searchParams.get("umd") || "").trim() || null;
 
   const sggs = resolveSigungu(lawd);
   if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
@@ -499,7 +496,7 @@ export default async (req) => {
         if (hits.length) {
           const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
           const merged = fulls.length ? mergeFull(fulls) : null;
-          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }, umd))), { headers: cacheHeadersFound });
         }
       }
     }
@@ -527,10 +524,10 @@ export default async (req) => {
       : [[], []];
     const merged = mergeBasis(bases, subways);
     if (!merged) {
-      const patched = applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: false }));
+      const patched = applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: false }, umd));
       return new Response(JSON.stringify(patched), { headers: patched.found ? cacheHeadersFound : cacheHeadersMiss });
     }
-    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }, umd))), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });

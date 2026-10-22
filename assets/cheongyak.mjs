@@ -6,6 +6,9 @@ const params=new URLSearchParams(location.search);
 let selectedStatus=params.get('s')==='upcoming'?'upcoming':'open';
 for(const [id,key] of [['category','c'],['region','r']])if([...$(id).options].some(o=>o.value===params.get(key)))$(id).value=params.get(key);
 $('query').value=params.get('q')||'';
+function syncFilterPills(){for(const button of document.querySelectorAll('.filter-pill')){const active=$(button.dataset.filterId).value===button.dataset.value;button.classList.toggle('on',active);button.setAttribute('aria-pressed',String(active));}}
+document.querySelectorAll('.filter-pill').forEach(button=>button.addEventListener('click',()=>{$(button.dataset.filterId).value=button.dataset.value;syncFilterPills();$(button.dataset.filterId).dispatchEvent(new Event('change'));}));
+syncFilterPills();
 const filters=()=>({status:selectedStatus,category:$('category').value,region:$('region').value,query:$('query').value,favoritesOnly:$('favoritesOnly').checked,favorites});
 function money(value){return Number.isFinite(value)&&value>0?`${(value/10000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')}억`:'공고문 확인';}
 function card(item){
@@ -32,10 +35,10 @@ function render(){
  const p=new URLSearchParams();if(selectedStatus==='upcoming')p.set('s','upcoming');if(f.category)p.set('c',f.category);if(f.region)p.set('r',f.region);if(f.query)p.set('q',f.query);
  history.replaceState(null,'',location.pathname+(p.size?'?'+p.toString():''));
 }
-for(const id of ['category','region','favoritesOnly'])$(id).addEventListener('change',()=>{limit=20;render();});
+for(const id of ['category','region','favoritesOnly'])$(id).addEventListener('change',()=>{syncFilterPills();limit=20;render();});
 $('query').addEventListener('input',()=>{limit=20;render();});
 document.querySelectorAll('.count').forEach(b=>b.addEventListener('click',()=>{selectedStatus=b.dataset.status;limit=20;render();}));
-$('reset').addEventListener('click',()=>{selectedStatus='open';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;limit=20;render();});
+ $('reset').addEventListener('click',()=>{selectedStatus='open';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;syncFilterPills();limit=20;render();});
 $('more').addEventListener('click',()=>{limit+=20;render();});
 $('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;favorites=favorites.includes(key)?favorites.filter(x=>x!==key):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
 async function load(){

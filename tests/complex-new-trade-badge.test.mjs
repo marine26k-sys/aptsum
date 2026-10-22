@@ -16,3 +16,12 @@ test('최초 확인 후 7일 이내만 신규 거래로 표시한다',()=>{
   assert.equal(context.isNewlyCollectedDeal({firstSeenAt:'2026-10-14T02:59:59.000Z'},7,now),false);
   assert.equal(context.isNewlyCollectedDeal({},7,now),false);
 });
+
+test('신규 거래 N 배지는 평형·최고가 열에 청록색으로 표시한다',()=>{
+  const start=html.indexOf('function tradesHTML');
+  const end=html.indexOf('function showMoreTrades',start);
+  const source=html.slice(start,end);
+  assert.match(source,/<td>\$\{esc\(t\.date\)\}<\/td><td>[\s\S]*trade-new-badge/);
+  assert.doesNotMatch(source,/\$\{esc\(t\.date\)\}\$\{isNewlyCollectedDeal/);
+  assert.match(html,/\.trade-new-badge\{[^}]*color:#fff!important;[^}]*background:var\(--teal\)!important;/);
+});

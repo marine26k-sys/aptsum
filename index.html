@@ -250,6 +250,7 @@ try {
   .td-teal2{background:var(--teal-light-soft)}
   .td-teal2 b{color:var(--teal-dark);font-size:13px}
   .nh{display:inline-block;font-size:7.5px;font-weight:700;color:#fff;background:var(--red);border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
+  .trade-new-badge{display:inline-block;font-size:7.5px;font-weight:700;color:#fff!important;background:var(--teal)!important;border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
   .extag{display:inline-block;font-size:9px;font-weight:700;color:var(--sub);background:var(--slate-bg);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
   tr.exrow td{opacity:.45}
 
@@ -1524,16 +1525,22 @@ async function shareCurrent(){
 // (2026.08 히든 탭 잠금해제 로직 — 전세가율 탭 공개 전환으로 제거)
 
 // ── 즐겨찾기 ──
+const RECENT_COMPLEX_MAX = 7;
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,5):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
-  if(!lawd||!d.name)return;
-  const requestedLawd=lawd;lawd=d.lawd||d.splitLawd||lawd;
+  if(!d||!d.name)return;
+  const requestedLawd=lawd||'';
+  const isScopeCode=x=>/^(ALL:|CITYALL:)/.test(String(x||''));
+  // 통합 지역으로 검색해도 최근 기록에는 실제 거래가 속한 구 코드를 저장한다.
+  const resultLawd=d.splitLawd || (d.lawd && !isScopeCode(d.lawd) ? d.lawd : '');
+  lawd=resultLawd || (!isScopeCode(requestedLawd) ? requestedLawd : '');
+  if(!lawd)return;
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   rows.unshift({lawd,name:d.name,umd:d.umd||''});
-  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,5)));}catch{}
+  try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,RECENT_COMPLEX_MAX)));}catch{}
   renderRecentComplexes();
 }
 function renderRecentComplexes(){
@@ -1837,6 +1844,12 @@ function restoreView(vi){
   listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';
   listingFloorScope=inp.listingFloor==='all'?'all':'mid';syncListingFloor();
   if(isListingMode(v.data.mode)&&isListingTrial()){search({silentScroll:true});return;}
+  // 단지 분석에서 실시간 갱신한 뒤 이전 비교 화면을 그대로 복원하면 갱신 전 거래가 남는다.
+  // 비교 화면 스냅샷은 최신 월 캐시로 다시 계산해 현재 분석과 같은 자료를 사용한다.
+  if(v.data?.mode==='compare' && v.data._needsRefresh){
+    search({silentScroll:true});
+    return;
+  }
   lastData = v.data;
   updateRegionFavBtn();
   renderFavRegions();
@@ -3204,7 +3217,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
 // 2026.10 18→19: 운영자 제공 10/4 엑셀의 누락 세대수 보완, 이전 미조회 캐시 갱신
-const HH_CACHE_VER = 20;
+const HH_CACHE_VER = 22;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -3213,8 +3226,8 @@ function hhLSLoad(){
 }
 function hhLSSave(){ try{ localStorage.setItem(`apcHH:${HH_CACHE_VER}`, JSON.stringify(hhLS)); }catch(e){} }
 const hhMem = {}; // `${lawd}|${name}` → 결과(또는 null), 세션 내 메모리 캐시(localStorage 조회도 아끼기 위함)
-async function fetchHHCnt(lawd, name){
-  const k = `${lawd}|${name}`;
+async function fetchHHCnt(lawd, name, umd = ""){
+  const k = `${lawd}|${name}|${umd}`;
   if(k in hhMem) return hhMem[k];
   const ls = hhLSLoad();
   const cached = ls[k];
@@ -3224,7 +3237,7 @@ async function fetchHHCnt(lawd, name){
   }
   let v = null, ok = false;
   try{
-    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}&v=${HH_CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
+    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}&umd=${encodeURIComponent(umd)}&v=${HH_CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
     const d = await r.json();
     v = (d && d.found) ? d : null;
     ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
@@ -3238,13 +3251,13 @@ async function fetchHHCnt(lawd, name){
 // 이전엔 단지마다 /api/hhcnt를 개별 호출해(최대 100건) 서버가 매번 같은 data/hhcnt/<lawd>.json을
 // 반복해서 읽어야 했음 — 캐시 미스분만 모아 POST 배치로 보내 서버가 그 파일을 딱 한 번만 읽게 한다.
 // (2026.07 추가 — 지역 랭킹 5년·전체평형처럼 목록이 100건에 가까울 때 체감 로딩이 크게 줄어듦)
-async function fetchHHCntBatch(lawd, names){
+async function fetchHHCntBatch(lawd, names, umdByName = {}){
   const uniq = [...new Set(names)];
   const result = {};
   const ls = hhLSLoad();
   const need = [];
   for(const nm of uniq){
-    const k = `${lawd}|${nm}`;
+    const k = `${lawd}|${nm}|${umdByName[nm] || ""}`;
     if(k in hhMem){ result[nm] = hhMem[k]; continue; }
     const cached = ls[k];
     if(cached && Date.now() - cached.t < (cached.v ? HH_TTL_FOUND_MS : HH_TTL_MISS_MS)){
@@ -3254,13 +3267,13 @@ async function fetchHHCntBatch(lawd, names){
   }
   if(need.length){
     try{
-      const r = await fetch('/api/hhcnt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lawd, names: need }) });
+      const r = await fetch('/api/hhcnt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lawd, names: need, umds: Object.fromEntries(need.map(nm => [nm, umdByName[nm] || ''])) }) });
       const d = await r.json();
       const map = (d && d.results) || {};
       for(const nm of need){
         const raw = map[nm];
         const v = (raw && raw.found) ? raw : null;
-        const k = `${lawd}|${nm}`;
+        const k = `${lawd}|${nm}|${umdByName[nm] || ""}`;
         hhMem[k] = v; ls[k] = { v, t: Date.now() };
         result[nm] = v;
       }
@@ -5553,7 +5566,7 @@ async function runSearch(opts){
     }
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
-      d.hh = await fetchHHCnt(d.lawd, d.name);
+      d.hh = await fetchHHCnt(d.lawd, d.name, d.umd);
       await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
     }
@@ -5635,7 +5648,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
   try{
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
-      d.hh = await fetchHHCnt(d.lawd, d.name);
+      d.hh = await fetchHHCnt(d.lawd, d.name, d.umd);
       await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
@@ -5698,7 +5711,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       const byLawd = {};
       d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
       await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
-        const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
+        const map = await fetchHHCntBatch(lw, arr.map(c=>c.name), Object.fromEntries(arr.map(c=>[c.name,c.umd||''])));
         await Promise.all(arr.map(async c=>{ c.hh = map[c.name] || null; await loadCompletionFallback(c,c.lawd); }));
       }));
       // renderCompare(d) 대신 drawCompare(d)만 다시 그려서, 사용자가 이미 선택해둔 단지별 평형(cmpPyMap)을 유지한다.
@@ -5901,17 +5914,65 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   const visibleLabels=labelPos.filter(p=>important.has(p.i)||((lastIndex-p.i)%3===0&&!monthly[p.i].carriedFrom));
   visibleLabels.forEach(p=>{
     const inward=p.cx>W/2?-14:14;
-    const above=[{dx:0,dy:-11},{dx:inward,dy:-11},{dx:-inward,dy:-11},{dx:0,dy:-20}];
-    const below=[{dx:0,dy:16},{dx:inward,dy:16},{dx:-inward,dy:16},{dx:0,dy:25}];
-    p.offsets=p.i===iMax?[...above,...below]:p.i===iMin?[...below,...above]:[above[0],below[0],above[1],below[1],above[2],below[2],above[3],below[3]];
+    const above=[{dx:0,dy:-11},{dx:inward,dy:-11},{dx:-inward,dy:-11},{dx:inward*2,dy:-11},{dx:-inward*2,dy:-11},{dx:0,dy:-20}];
+    const below=[{dx:0,dy:16},{dx:inward,dy:16},{dx:-inward,dy:16},{dx:inward*2,dy:16},{dx:-inward*2,dy:16},{dx:0,dy:25}];
+    p.offsets=p.i===iMax?[...above,...below]:p.i===iMin?[...below,...above]:[...above,...below];
   });
-  placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-11,16,-20,25], Math.max(20, fs*2.6), fs+3, labelPos);
+  const labelBoxW=Math.max(20, fs*2.6);
+  placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-11,16,-20,25], labelBoxW, fs+3, labelPos);
+  // Keep edge labels fully inside the SVG viewBox so the latest value is not clipped.
+  visibleLabels.forEach(p=>{
+    const minDx=labelBoxW/2-p.cx, maxDx=W-labelBoxW/2-p.cx;
+    p.dx=Math.max(minDx,Math.min(maxDx,p.dx||0));
+    // SVG 위쪽 경계 밖으로 라벨이 밀리면 기간 비교 버튼과 맞닿아 글자가 잘릴 수 있다.
+    // 글자 박스가 그래프 안에 들어오도록 최소 y 위치도 보정한다.
+    const minDy=(fs+3)-p.cy;
+    p.dy=Math.max(minDy,p.dy||0);
+  });
+  // 최고값과 마지막 값이 인접하면 두 숫자가 같은 줄에 겹치므로 마지막 값을 아래로 분리한다.
+  // placeLabels가 모든 후보를 소진한 경우에도 마지막 후처리에서 다시 충돌하지 않도록
+  // 실제 박스 기준으로 후보를 재검사한다. (특히 최신값과 최고값이 같은 값인 경우)
+  const lastLabel=labelPos[lastIndex], maxLabel=labelPos[iMax];
+  const labelBox = p => {
+    const x=p.cx+(p.dx||0), y=p.cy+(p.dy||0);
+    return {x1:x-labelBoxW/2,x2:x+labelBoxW/2,y1:y-(fs+3),y2:y+2};
+  };
+  const boxOverlaps = (a,b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+  const isInside = p => {
+    const b=labelBox(p);
+    return b.x1>=0 && b.x2<=W && b.y1>=0 && b.y2<=H;
+  };
+  const otherBoxes = p => visibleLabels.filter(q=>q!==p).map(labelBox);
+  const tryOffsets = (p, candidates, excluded=[]) => {
+    const boxes=[...excluded.map(labelBox),...otherBoxes(p)];
+    for(const pos of candidates){
+      p.dx=pos.dx;p.dy=pos.dy;
+      if(isInside(p) && !boxOverlaps(labelBox(p),boxes[0]||{x1:Infinity,x2:Infinity,y1:Infinity,y2:Infinity}) &&
+         !boxes.slice(1).some(b=>boxOverlaps(labelBox(p),b))) return true;
+    }
+    return false;
+  };
+  if(iMax!==lastIndex && Math.abs(lastLabel.cx-maxLabel.cx)<labelBoxW*2.2){
+    const original={dx:lastLabel.dx||0,dy:lastLabel.dy||0};
+    const lastCandidates=[
+      {dx:14,dy:22},{dx:-14,dy:22},{dx:0,dy:26},
+      {dx:14,dy:-20},{dx:-14,dy:-20},{dx:0,dy:30},original
+    ];
+    if(!tryOffsets(lastLabel,lastCandidates,[maxLabel])){
+      // 그래도 공간이 부족한 좁은 차트에서는 최고값을 반대쪽으로 이동한다.
+      const maxOriginal={dx:maxLabel.dx||0,dy:maxLabel.dy||0};
+      const maxCandidates=[
+        {dx:-14,dy:-20},{dx:14,dy:-20},{dx:-14,dy:22},{dx:14,dy:22},maxOriginal
+      ];
+      tryOffsets(maxLabel,maxCandidates,[lastLabel]);
+    }
+  }
   const labelIndices=new Set(visibleLabels.map(p=>p.i));
 
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
   curChart = { monthly, xs, ys: monthly.map(m=>y(m.avg)), tipFor, W, top:P.t, bottom:H-P.b-volH, dataRef, pyLabel, sizeKey };
 
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:5px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeControls" hidden style="margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-size:12px;font-weight:700;color:#005B61">시작 월<select id="chartRangeStart" aria-label="비교 시작 월" onchange="updateChartRange('start')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label><label style="font-size:12px;font-weight:700;color:#005B61">끝 월<select id="chartRangeEnd" aria-label="비교 끝 월" onchange="updateChartRange('end')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'selected':''} ${i===0?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label></div><div style="font-size:11px;color:#64748B;margin-top:5px">시작 월과 끝 월을 선택하세요. 그래프를 터치해도 비교 구간은 바뀌지 않습니다.</div></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button id="chartRangeBtn" type="button" aria-pressed="false" onclick="toggleChartRange()" style="border:1px solid #00828A;border-radius:8px;padding:6px 10px;background:#fff;color:#005B61;font:inherit;font-size:11px;font-weight:700">기간 변동 비교</button></div><div id="chartRangeControls" hidden style="margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-size:12px;font-weight:700;color:#005B61">시작 월<select id="chartRangeStart" aria-label="비교 시작 월" onchange="updateChartRange('start')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label><label style="font-size:12px;font-weight:700;color:#005B61">끝 월<select id="chartRangeEnd" aria-label="비교 끝 월" onchange="updateChartRange('end')" style="display:block;width:100%;min-width:0;min-height:44px;margin-top:4px;border:1px solid #9ACDD1;border-radius:8px;padding:8px;background:#fff;color:#0F2B3D;font:inherit;font-size:14px">${monthly.map((m,i)=>`<option value="${i}" ${i===monthly.length-1?'selected':''} ${i===0?'disabled':''}>20${esc(m.ym)}</option>`).join('')}</select></label></div><div style="font-size:11px;color:#64748B;margin-top:5px">시작 월과 끝 월을 선택하세요. 그래프를 터치해도 비교 구간은 바뀌지 않습니다.</div></div><div id="chartRangeResult" role="status" style="font-size:12px;line-height:1.6;color:#52655E;margin-bottom:6px"></div><div class="chart-wrap" style="padding-top:8px"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     ${[0,.5,1].map(f=>{ const gy=P.t+f*(H-P.t-P.b); const gv=(hi-f*(hi-lo)).toFixed(1);
       return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>
       <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${gv}억</text>`; }).join('')}
@@ -5989,7 +6050,7 @@ function tradesHTML(d, footNote){
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
-      return `<tr${cls}><td>${esc(t.date)}${isNewlyCollectedDeal(t)?'<span class="nh">N</span>':''}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      return `<tr${cls}><td>${esc(t.date)}</td><td>${esc(t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
@@ -6252,6 +6313,10 @@ async function tapComplexLiveRefresh(){
   if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
   const view=complexView;
   lastData={...original,...updated,jeonse:rent.found?rent:null};
+  // 뒤로가기 스택에 저장된 비교 결과도 같은 최신 월 캐시로 재계산하도록 표시한다.
+  for(const entry of viewStack){
+    if(entry?.data?.mode==='compare') entry.data={...entry.data,_needsRefresh:true};
+  }
   renderComplex(lastData);if(view==='jeonse')setComplexView(view);
   document.getElementById('complexLiveStatus').textContent='최근 2개월 실시간 조회 완료';
  }catch(error){if(lastData===original&&searchToken===token&&status?.isConnected)status.textContent=error.name==='AbortError'?'조회가 중지됐습니다.':error.message;}
