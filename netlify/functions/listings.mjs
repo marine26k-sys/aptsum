@@ -148,7 +148,7 @@ export default async (request) => {
     if(q.get("askMap")==="1"){
       const index=(await store.get(historyIndexKey(lawd),{type:"json",consistency:"strong"}))||[];
       const weeks=new Map();
-      for(const entry of recentListingHistory(index)){
+      for(const entry of index){
         const data=await store.get(historyKey(lawd,entry.uploadId),{type:"json",consistency:"strong"});
         if(!data)continue;
         const date=new Date(String(data.asOf).replaceAll('.','-')+'T00:00:00Z');if(!Number.isFinite(+date))continue;
@@ -159,7 +159,14 @@ export default async (request) => {
       const groups=[...weeks.entries()].sort((a,b)=>a[0].localeCompare(b[0]));const current=groups.at(-1)?.[1],previous=groups.at(-2)?.[1];const complexes=new Map();
       if(current&&previous)for(const [key,values] of current.items){const old=previous.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const rates=complexes.get(nid)||[];rates.push((mean(values)/before-1)*100);complexes.set(nid,rates);}
       const rates=[...complexes.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);
-      return json({rate:rates.length?rates.reduce((x,y)=>x+y,0)/rates.length:null,count:rates.length,asOf:current?.last||null,previousAsOf:previous?.last||null});
+      // 저장된 전체 이력의 주차별 통계를 유지한다.
+      const weekly=groups.map(([weekStart,week],i)=>{
+        const prev=groups[i-1]?.[1],byComplex=new Map();
+        if(prev)for(const [key,values] of week.items){const old=prev.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const list=byComplex.get(nid)||[];list.push((mean(values)/before-1)*100);byComplex.set(nid,list);}
+        const values=[...byComplex.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);
+        return {weekStart,asOf:week.last,previousAsOf:prev?.last||null,count:values.length,rate:values.length?values.reduce((x,y)=>x+y,0)/values.length:null};
+      });
+      return json({rate:rates.length?rates.reduce((x,y)=>x+y,0)/rates.length:null,count:rates.length,asOf:current?.last||null,previousAsOf:previous?.last||null,weekly});
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);

@@ -100,8 +100,9 @@ function render(){
 async function boot(){
  $('#updated').textContent='자료를 불러오는 중…';
  const jobs=[];for(const [province,regions] of REGIONS)for(const [name,lawd] of regions)jobs.push(loadRegion(province,name,lawd));
- await Promise.all(jobs);$('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`; period.replaceChildren(); for(const [value,label] of [['0',weekInfo(state.asOf)?.label.replace(/^\d+년 /,'')||'현재 주차'],['1',weekInfo(state.previousAsOf)?.label.replace(/^\d+년 /,'')||'직전 주차']]){const o=document.createElement('option');o.value=value;o.textContent=label;period.append(o)} render();if(state.view==='period')renderWeeklyRanking();
+ await Promise.all(jobs);$('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`; period.replaceChildren(); for(const [value,label] of [['0',weekInfo(state.asOf)?.label.replace(/^\d+년 /,'')||'현재 주차'],['1',weekInfo(state.previousAsOf)?.label.replace(/^\d+년 /,'')||'직전 주차']]){const o=document.createElement('option');o.value=value;o.textContent=label;period.append(o)} const weeks=new Map();for(const row of state.data.values())for(const w of row.weekly||[])if(w.previousAsOf)weeks.set(w.weekStart,w);period.replaceChildren();for(const [key,w] of [...weeks].sort((a,b)=>b[0].localeCompare(a[0]))){const o=document.createElement('option');o.value=key;o.textContent=weekInfo(w.asOf)?.label.replace(/^\d+년 /,'')||key;period.append(o)} render();if(state.view==='period')renderWeeklyRanking();
 }
+period.onchange=()=>{const chosen=period.value;for(const row of state.data.values()){const metric=row.weekly?.find(w=>w.weekStart===chosen);if(metric){row.rate=metric.rate;row.count=metric.count;state.asOf=metric.asOf;state.previousAsOf=metric.previousAsOf}}render()};
 $('#monthlyView').textContent='주간 변동률';$('#ytdView').textContent='기간 변동률';$('#allSample').textContent='전체 표본';$('#topSample').textContent='상위 30단지';$('#monthly').textContent='주간';
 function renderWeeklyRanking(){
  const panel=$('#ytdRankingPanel');panel.replaceChildren();
