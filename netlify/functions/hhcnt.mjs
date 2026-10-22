@@ -135,15 +135,15 @@ const NAVER_DENY = new Set([
   "41390|대우", "41390|삼호", "41450|동일하이빌", "HS-동탄구|e편한세상동탄파크아너스",
   "HS-만세구|송산",
 ]);
-function naverLookup(nv, lawd, name) {
+function naverLookup(nv, lawd, name, umd = null, expectedHouseholds = null) {
   if (!nv) return null;
   const n = String(name || "").replace(/\s/g, "");
   if (NAVER_DENY.has(`${lawd}|${n}`)) return null;
   // 구형 keyIndex는 이전 정규화 규칙으로 생성되어 공통 비교 함수로 재검증한다.
-  return findNaverComplex(nv.items, n);
+  return findNaverComplex(nv.items, n, { dong: umd || null, expectedHouseholds });
 }
-function applyFallback(fallback, lawd, name, result) {
-  const hit = naverLookup(fallback, lawd, name);
+function applyFallback(fallback, lawd, name, result, umd = null) {
+  const hit = naverLookup(fallback, lawd, name, umd, result?.hhcnt ?? null);
   // K-apt 정보는 유지하고, 같은 세대수로 연결된 네이버 보조 지표만 보완한다.
   if(result && result.found && result.hhcnt>0){
     if(!(hit && hit.hh === result.hhcnt))return result;
@@ -367,6 +367,7 @@ export default async (req) => {
     try { body = await req.json(); } catch { return Response.json({ error: "잘못된 요청" }, { status: 400 }); }
     const lawd = String(body.lawd || "").trim();
     const names = Array.isArray(body.names) ? [...new Set(body.names.map((n) => String(n || "").trim()).filter(Boolean))].slice(0, 200) : [];
+    const umds = body.umds && typeof body.umds === 'object' ? body.umds : {};
     const sggs = resolveSigungu(lawd);
     if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
     if (!names.length) return Response.json({ results: {} });
@@ -444,7 +445,8 @@ export default async (req) => {
 
     // 국토교통부에서 못 찾은 단지만 전체 단지 매핑표로 보완한다.
     const fallbackMap = await loadNaverHh(new URL(req.url).origin, lawd);
-    if (fallbackMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyFallback(fallbackMap, lawd, nm, results[nm]); }
+    // applyFallback(fallbackMap, lawd, nm, results[nm]) — 법정동을 알 수 없는 구형 요청과의 호환 기준
+    if (fallbackMap) for (const nm of names) { if (!fullyOverridden.has(nm)) results[nm] = applyFallback(fallbackMap, lawd, nm, results[nm], umds[nm] || null); }
 
     // 부분 보정(PARTIAL_OVERRIDE)은 네이버보다도 뒤 — 수동 확인값이 항상 최종 우선
     for (const nm of names) results[nm] = applyPartialOverride(lawd, nm, results[nm]);
@@ -457,6 +459,7 @@ export default async (req) => {
   const url = new URL(req.url);
   const lawd = (url.searchParams.get("lawd") || "").trim();
   const name = (url.searchParams.get("name") || "").trim();
+  const umd = (url.searchParams.get("umd") || "").trim() || null;
 
   const sggs = resolveSigungu(lawd);
   if (!sggs.length) return Response.json({ error: "지역 코드 오류" }, { status: 400 });
@@ -499,7 +502,7 @@ export default async (req) => {
         if (hits.length) {
           const fulls = hits.map((h) => staticJ.items.find((it) => it.kaptCode === h.kaptCode)).filter(Boolean);
           const merged = fulls.length ? mergeFull(fulls) : null;
-          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+          if (merged) return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }, umd))), { headers: cacheHeadersFound });
         }
       }
     }
@@ -527,10 +530,10 @@ export default async (req) => {
       : [[], []];
     const merged = mergeBasis(bases, subways);
     if (!merged) {
-      const patched = applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: false }));
+      const patched = applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: false }, umd));
       return new Response(JSON.stringify(patched), { headers: patched.found ? cacheHeadersFound : cacheHeadersMiss });
     }
-    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }))), { headers: cacheHeadersFound });
+    return new Response(JSON.stringify(applyPartialOverride(lawd, name, applyFallback(fallbackGet, lawd, name, { found: true, name, ...merged }, umd))), { headers: cacheHeadersFound });
   } catch (e) {
     // 세대수는 보조 정보이므로, 실패해도 found:false로 조용히 반환(메인 분석에 영향 없도록 500을 피함)
     return new Response(JSON.stringify({ found: false }), { headers: cacheHeadersMiss });

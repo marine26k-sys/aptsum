@@ -1839,6 +1839,12 @@ function restoreView(vi){
   listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';
   listingFloorScope=inp.listingFloor==='all'?'all':'mid';syncListingFloor();
   if(isListingMode(v.data.mode)&&isListingTrial()){search({silentScroll:true});return;}
+  // 단지 분석에서 실시간 갱신한 뒤 이전 비교 화면을 그대로 복원하면 갱신 전 거래가 남는다.
+  // 비교 화면 스냅샷은 최신 월 캐시로 다시 계산해 현재 분석과 같은 자료를 사용한다.
+  if(v.data?.mode==='compare' && v.data._needsRefresh){
+    search({silentScroll:true});
+    return;
+  }
   lastData = v.data;
   updateRegionFavBtn();
   renderFavRegions();
@@ -3206,7 +3212,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
 // 2026.10 18→19: 운영자 제공 10/4 엑셀의 누락 세대수 보완, 이전 미조회 캐시 갱신
-const HH_CACHE_VER = 20;
+const HH_CACHE_VER = 21;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -3215,8 +3221,8 @@ function hhLSLoad(){
 }
 function hhLSSave(){ try{ localStorage.setItem(`apcHH:${HH_CACHE_VER}`, JSON.stringify(hhLS)); }catch(e){} }
 const hhMem = {}; // `${lawd}|${name}` → 결과(또는 null), 세션 내 메모리 캐시(localStorage 조회도 아끼기 위함)
-async function fetchHHCnt(lawd, name){
-  const k = `${lawd}|${name}`;
+async function fetchHHCnt(lawd, name, umd = ""){
+  const k = `${lawd}|${name}|${umd}`;
   if(k in hhMem) return hhMem[k];
   const ls = hhLSLoad();
   const cached = ls[k];
@@ -3226,7 +3232,7 @@ async function fetchHHCnt(lawd, name){
   }
   let v = null, ok = false;
   try{
-    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}&v=${HH_CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
+    const r = await fetch(`/api/hhcnt?lawd=${encodeURIComponent(lawd)}&name=${encodeURIComponent(name)}&umd=${encodeURIComponent(umd)}&v=${HH_CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
     const d = await r.json();
     v = (d && d.found) ? d : null;
     ok = true; // 응답을 정상적으로 받아 "찾음/못찾음"이 확정된 경우만 신뢰 가능
@@ -3240,13 +3246,13 @@ async function fetchHHCnt(lawd, name){
 // 이전엔 단지마다 /api/hhcnt를 개별 호출해(최대 100건) 서버가 매번 같은 data/hhcnt/<lawd>.json을
 // 반복해서 읽어야 했음 — 캐시 미스분만 모아 POST 배치로 보내 서버가 그 파일을 딱 한 번만 읽게 한다.
 // (2026.07 추가 — 지역 랭킹 5년·전체평형처럼 목록이 100건에 가까울 때 체감 로딩이 크게 줄어듦)
-async function fetchHHCntBatch(lawd, names){
+async function fetchHHCntBatch(lawd, names, umdByName = {}){
   const uniq = [...new Set(names)];
   const result = {};
   const ls = hhLSLoad();
   const need = [];
   for(const nm of uniq){
-    const k = `${lawd}|${nm}`;
+    const k = `${lawd}|${nm}|${umdByName[nm] || ""}`;
     if(k in hhMem){ result[nm] = hhMem[k]; continue; }
     const cached = ls[k];
     if(cached && Date.now() - cached.t < (cached.v ? HH_TTL_FOUND_MS : HH_TTL_MISS_MS)){
@@ -3256,13 +3262,13 @@ async function fetchHHCntBatch(lawd, names){
   }
   if(need.length){
     try{
-      const r = await fetch('/api/hhcnt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lawd, names: need }) });
+      const r = await fetch('/api/hhcnt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lawd, names: need, umds: Object.fromEntries(need.map(nm => [nm, umdByName[nm] || ''])) }) });
       const d = await r.json();
       const map = (d && d.results) || {};
       for(const nm of need){
         const raw = map[nm];
         const v = (raw && raw.found) ? raw : null;
-        const k = `${lawd}|${nm}`;
+        const k = `${lawd}|${nm}|${umdByName[nm] || ""}`;
         hhMem[k] = v; ls[k] = { v, t: Date.now() };
         result[nm] = v;
       }
@@ -5555,7 +5561,7 @@ async function runSearch(opts){
     }
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
-      d.hh = await fetchHHCnt(d.lawd, d.name);
+      d.hh = await fetchHHCnt(d.lawd, d.name, d.umd);
       await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
     }
@@ -5637,7 +5643,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
   try{
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
-      d.hh = await fetchHHCnt(d.lawd, d.name);
+      d.hh = await fetchHHCnt(d.lawd, d.name, d.umd);
       await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
       const el = document.getElementById('complexMeta');
@@ -5700,7 +5706,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
       const byLawd = {};
       d.complexes.forEach(c=>{ (byLawd[c.lawd] ||= []).push(c); });
       await Promise.all(Object.entries(byLawd).map(async ([lw, arr])=>{
-        const map = await fetchHHCntBatch(lw, arr.map(c=>c.name));
+        const map = await fetchHHCntBatch(lw, arr.map(c=>c.name), Object.fromEntries(arr.map(c=>[c.name,c.umd||''])));
         await Promise.all(arr.map(async c=>{ c.hh = map[c.name] || null; await loadCompletionFallback(c,c.lawd); }));
       }));
       // renderCompare(d) 대신 drawCompare(d)만 다시 그려서, 사용자가 이미 선택해둔 단지별 평형(cmpPyMap)을 유지한다.
@@ -6265,6 +6271,10 @@ async function tapComplexLiveRefresh(){
   if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
   const view=complexView;
   lastData={...original,...updated,jeonse:rent.found?rent:null};
+  // 뒤로가기 스택에 저장된 비교 결과도 같은 최신 월 캐시로 재계산하도록 표시한다.
+  for(const entry of viewStack){
+    if(entry?.data?.mode==='compare') entry.data={...entry.data,_needsRefresh:true};
+  }
   renderComplex(lastData);if(view==='jeonse')setComplexView(view);
   document.getElementById('complexLiveStatus').textContent='최근 2개월 실시간 조회 완료';
  }catch(error){if(lastData===original&&searchToken===token&&status?.isConnected)status.textContent=error.name==='AbortError'?'조회가 중지됐습니다.':error.message;}
