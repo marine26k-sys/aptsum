@@ -127,5 +127,6 @@ function renderWeeklyRanking(){
 function selectView(view){state.view=view;const ranking=view==='period';$('#monthlyView').setAttribute('aria-pressed',String(!ranking));$('#ytdView').setAttribute('aria-pressed',String(ranking));$('#monthlyPanel').hidden=ranking;$('#monthlyPeriodControls').hidden=ranking;$('#ytdRankingPanel').hidden=!ranking;if(ranking)renderWeeklyRanking();const range=document.querySelector('.ranking-range');range?.toggleAttribute('hidden',!ranking);if(ranking&&range)range.after($('#updated'));else $('#monthlyPeriodControls').after($('#updated'))}
 $('#monthlyView').onclick=()=>selectView('weekly');$('#ytdView').onclick=()=>selectView('period');
 
-boot().catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
+function cleanLegacyNotes(){document.querySelectorAll('.notes li').forEach(item=>{if(item.textContent.includes('표본 부족')||item.textContent.includes('상위 30단지'))item.remove();item.innerHTML=item.innerHTML.replaceAll('전체 표본','전체 단지');});}
+boot().then(cleanLegacyNotes).catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
 </script></body></html>
