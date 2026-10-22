@@ -1,0 +1,104 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"><title>지역별 호가 변동률 — 아파트썸</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#0f2b3d;font-family:system-ui,-apple-system,sans-serif}.wrap{max-width:960px;margin:auto;padding:12px}header{background:#0f2b3d;color:white;border-radius:16px;padding:18px;display:flex;align-items:center;gap:15px}header a{color:white;text-decoration:none;font-size:24px}h1{font-size:20px;margin:0}p{line-height:1.65}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}button,select{font:inherit;padding:10px 14px;border:1px solid #a8e0e4;border-radius:10px;background:white;color:#00565c;cursor:pointer}button[aria-pressed=true]{background:#00828a;color:white}.card{background:white;border:1px solid #a8e0e4;border-radius:14px;overflow:hidden}h2{font-size:17px;text-align:center;margin:0;padding:18px;background:#e0f2f3}.meta{font-size:12px;color:#64748b}.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:#d6e0e7}.cell{min-width:0;text-align:center;background:white;padding:10px 1px;border:0;border-radius:0;color:#0f2b3d}.cell b{display:block;font-size:13px;white-space:nowrap}.cell strong{display:block;font-size:16px;margin-top:8px}.cell small{display:block;font-size:10px;margin-top:5px;color:#526375}.empty{background:#f5f8fa;min-height:50px}.group{grid-column:1/-1;font-size:13px;font-weight:bold;padding:8px 12px;background:#0f2b3d;color:white}.legend{text-align:center;font-size:12px;padding:12px;color:#64748b}.notes{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:15px;font-size:12px;margin-top:15px;color:#64748b}.detail{font-size:13px;min-height:48px;padding:12px;border-top:1px solid #e2e8f0;line-height:1.6}.detail a{color:#00828a;font-weight:bold}@media(max-width:500px){.wrap{padding:8px}h1{font-size:17px}.cell{padding:9px 0}.cell b{font-size:10px;letter-spacing:-.5px}.cell strong{font-size:12px}.cell small{font-size:8px}.controls button,.controls select{padding:8px 10px;font-size:13px}}
+  .wrap{max-width:420px;margin:0 auto;padding:0 16px 60px;position:relative}
+  header{padding:10px 54px 10px 50px;text-align:center;background:linear-gradient(120deg,#102D3F,#17394B);border:1px solid rgba(255,255,255,.12);border-radius:17px;margin:10px 0 14px;box-shadow:0 8px 22px rgba(15,43,61,.10);position:relative}
+  .logo{display:inline-flex;align-items:center;gap:11px;color:#fff;text-align:left}
+  .brand-mark{flex:none;width:27px;height:27px;color:#83D1D2}
+  .brand-copy{display:flex;flex-direction:column;gap:1px}
+  .brand-name{font-weight:700;font-size:21px;line-height:1.35;letter-spacing:-.8px}
+  .brand-description{font-weight:500;font-size:10.5px;line-height:1.6;letter-spacing:.3px;color:#B7CBD5}
+  .header-share{position:absolute;top:50%;right:15px;transform:translateY(-50%);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.20);border-radius:10px;width:34px;height:34px;color:#D5E6EC;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+  .header-share:hover,.header-share:active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
+  .header-share:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
+  .header-share svg{width:17px;height:17px}
+  .analysis-back{display:flex;position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);align-items:center;justify-content:center}
+  .analysis-back:hover,.analysis-back:active{background:rgba(255,255,255,.22)}
+  .analysis-back:focus-visible{outline:2px solid #83D1D2;outline-offset:3px}
+
+
+
+body{font-family:'Noto Sans KR',sans-serif;line-height:1.6}header{display:block}.header-share{padding:0}header a{font-size:inherit}.wrap{padding:0 16px 60px}h2{background:#0f2b3d;color:#fff;font-size:20px;font-weight:900;letter-spacing:-.5px;padding:15px 18px}.card{border-radius:16px}.cell{height:60px;padding:5px 1px;line-height:1.2}.cell b{font-size:10px;letter-spacing:-.6px}.cell strong{font-size:12px;margin-top:2px}.cell small{font-size:8px;margin-top:2px}.brand-mark{width:27px;height:27px}.group{padding:8px 12px}@media(max-width:500px){.wrap{padding:0 16px 60px}.cell{height:60px}}
+.cell b{white-space:normal;overflow-wrap:anywhere;word-break:keep-all;line-height:1.15;min-height:23px;display:flex;align-items:center;justify-content:center;padding:0 2px;font-size:9px;letter-spacing:-.4px}.cell{padding:3px 1px}.cell strong{margin-top:1px}.cell strong:only-child{font-size:10px}.cell small{margin-top:1px}.province-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px}.empty{height:60px;min-height:60px;background:#edf2f6}.cell.insufficient strong{font-size:8px;font-weight:500;white-space:nowrap;color:#64748b}.notes ul{margin:8px 0;padding-left:16px}.notes li{margin:4px 0}.notes details{margin-top:8px}.notes summary{cursor:pointer;color:#00828a;font-weight:700}  .card-hd{background:#0f2b3d;color:#fff;padding:15px 18px;border-radius:16px 16px 0 0;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(15,43,61,.15)}
+  .card-hd h2{font-size:20px;font-weight:900;letter-spacing:-.5px;text-align:center;margin-bottom:2px}
+  .card-hd .meta{font-size:11px;color:#fff;opacity:.6;text-align:center}
+  .hd-top{position:relative;display:flex;align-items:center;justify-content:center;min-height:22px;margin-bottom:5px}
+  .hd-logo{position:absolute;left:0;display:inline-flex;align-items:center;gap:4px;color:#fff}
+  .hd-logo svg{width:12px;height:12px;flex:none}
+  .hd-logo span{font-size:13px;font-weight:800;line-height:1.3}
+  .hd-badge{font-size:13px;font-weight:800;color:#fff;background:#00828a;padding:6px 13px;border-radius:16px}
+.card{overflow:clip}.card-hd h2{padding:0;background:none}.card-hd .meta{margin-top:4px}.region-dialog{width:calc(100vw - 24px);max-width:720px;max-height:88dvh;padding:0;border:1px solid #a8e0e4;border-radius:16px;color:#0f2b3d;background:white}.region-dialog::backdrop{background:#0f2b3d88}.dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;background:#0f2b3d;color:white}.dialog-heading h3{font-size:16px;margin:0}.dialog-heading button{padding:6px 10px;background:#ffffff22;border:1px solid #ffffff77;color:white;white-space:nowrap}.dialog-summary{padding:10px 14px;font-size:12px;color:#64748b}.dialog-content{overflow:auto;max-height:65dvh;padding:0 12px 12px}.detail-table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.2}.detail-table th{padding:9px 5px;background:#e0f2f3;position:sticky;top:0;white-space:nowrap}.detail-table td{padding:5px 5px;border-bottom:1px solid #e2e8f0;text-align:right}.detail-table td:first-child{text-align:left;min-width:125px}.detail-table td:first-child a{color:#00828a;font-weight:700;text-decoration:none}.detail-table small{display:block;font-size:10px;color:#64748b;margin-top:2px}.detail-table .positive{color:#dc2626;font-weight:700}.detail-table .negative{color:#2563eb;font-weight:700}
+@media(max-width:600px){.region-dialog{max-height:92dvh}.dialog-heading{padding:12px;align-items:flex-start}.dialog-heading h3{font-size:17px;line-height:1.4}.dialog-heading button{min-height:44px;min-width:64px}.dialog-summary{line-height:1.5}.dialog-content{max-height:68dvh;overflow-x:hidden}.detail-table,.detail-table tbody{display:block}.detail-table thead{display:none}.detail-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);position:relative;gap:3px;margin-bottom:3px;padding:7px;border:1px solid #e2e8f0;border-radius:12px}.detail-table td{display:block;min-width:0;border:0;padding:0;text-align:left}.detail-table td:first-child{grid-column:1/-1;min-width:0;padding-right:80px}.detail-table td:first-child a{display:block;font-size:15px;line-height:1.2;overflow-wrap:anywhere}.detail-table td:nth-child(2),.detail-table td:nth-child(3){background:#f1f7f8;border-radius:6px;padding:5px}.detail-table td[data-period]::before{content:attr(data-period);display:block;color:#64748b;font-size:11px;margin-bottom:3px}.detail-table .price-num{font-size:16px;font-weight:700}.detail-table small{font-size:11px;margin-top:1px;line-height:1.15}.detail-table td:last-child{position:absolute;right:7px;top:7px;font-size:20px;font-weight:800;line-height:1.4}}
+.calculation-guide{margin-top:12px;color:#334155;font-size:13px;line-height:1.45}.calculation-guide summary{padding:8px 0;font-weight:700;color:#00828a;font-size:14px;cursor:pointer}.guide-section{padding:10px 0;border-top:1px solid #e2e8f0}.guide-section h3{margin:0 0 6px;font-size:14px;color:#0f2b3d}.guide-section ul{margin:0;padding-left:18px}.guide-section li{margin:0 0 5px;overflow-wrap:break-word}.guide-section li:last-child{margin-bottom:0}.guide-section b{color:#0f2b3d}
+
+.ranking-range{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 14px 10px}.ranking-range label{font-size:11px;font-weight:700;color:#64748b;min-width:0}.ranking-range select{display:block;width:100%;min-width:0;min-height:44px;margin-top:3px;padding:6px 8px}.ytd-toolbar{display:flex;flex-direction:column;gap:0;align-items:stretch;padding:0}.ytd-toolbar label{font-size:11px;color:#64748b}.ytd-toolbar select{min-height:44px;padding:6px 8px}.ytd-list{list-style:none;margin:0;padding:0}.ytd-row{display:grid;grid-template-columns:22px 115px minmax(60px,1fr) 58px;gap:6px;align-items:center;padding:2px 0;border-bottom:1px solid #edf2f6;font-size:12px}.ytd-rank{color:#94a3b8;font-size:11px}.ytd-region{line-height:1.1;overflow-wrap:anywhere}.ytd-region small{display:block;color:#64748b;font-weight:500;font-size:9px;margin-top:0;line-height:1.1}.ytd-track{height:16px;position:relative;background:linear-gradient(to right,#f3f7fc 50%,#fff5f5 50%);border-radius:3px}.ytd-track::before{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid #cbd5e1}.ytd-bar{position:absolute;top:2px;height:12px;border-radius:2px}.ytd-rate{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.ytd-rate.positive{color:#dc2626}.ytd-rate.negative{color:#2563eb}.ytd-axis{display:flex;justify-content:space-between;color:#94a3b8;font-size:11px;padding:0 0 4px}.ytd-empty{padding:20px 4px;color:#64748b;font-size:13px}@media(max-width:500px){.ytd-row{grid-template-columns:18px 88px minmax(50px,1fr) 50px;gap:4px;font-size:11px}.ytd-region small{font-size:9px}}
+.regional-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:7px 10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px;color:#7fd4d9;font-size:11.5px;font-weight:600;line-height:1.5}.regional-vs svg{width:12px;height:12px;flex:none}.regional-vs .vs{opacity:.6;font-weight:500}.ranking-heading{scroll-margin-top:10px}#updated{margin:4px 0 6px}[hidden]{display:none!important}
+</style><link rel="stylesheet" href="/assets/page-header.css">
+</head><body><main class="wrap">  <header>
+    <a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기" title="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
+    <div class="logo">
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
+      <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">호가 통계</span></div>
+    </div>
+    <button class="header-share" id="sharePage" title="공유" aria-label="현재 분석 공유">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+    </button>
+  </header><div class="controls" aria-label="호가 통계 화면"><button id="monthlyView" type="button" aria-pressed="true">주간 변동률</button><button id="ytdView" type="button" aria-pressed="false">기간 변동률</button></div><div class="controls"><button id="allSample" aria-pressed="true">전체 표본</button><button id="topSample" aria-pressed="false">상위 30단지</button></div><div id="monthlyPeriodControls" class="controls"><button id="monthly" aria-pressed="true">주간</button><select id="period" aria-label="비교 기준 기간"></select></div><p class="meta" id="updated"></p><section id="monthlyPanel" class="card"><div class="card-hd"><div class="hd-top"><span class="hd-logo"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="#83D1D2" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="#83D1D2" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="#83D1D2"/></svg><span>아파트썸</span></span><span class="hd-badge">호가 통계</span></div><h2 id="title">불러오는 중…</h2><div class="meta" id="comparisonPeriod"></div><div id="monthlyVs" class="regional-vs"></div></div><div class="grid" id="grid"></div><div class="legend">하락 <span style="color:#2563eb">■</span> · 보합 □ · 상승 <span style="color:#ef4444">■</span> · 표본 부족: 비교 단지 3개 미만</div></section><section id="ytdRankingPanel" class="card" hidden aria-labelledby="ytdRankingTitle"></section><div class="notes"><b>이렇게 읽어주세요</b><ul><li><b>표본:</b> <span id="sampleDescription">전체 평형·전체 단지 표본</span><br><b>변동률:</b> 같은 단지·같은 공급평형끼리 비교합니다. 비교 종료월에 평당가가 가장 높은 평형 하나를 골라 시작월의 같은 평형과 비교합니다. 거래가 없는 달은 해당 평형의 직전 월평균가를 유지합니다. 지역은 단지별 동일 비중으로 평균합니다.</li><li><b>단지 수:</b> 변동률 계산에 포함된 단지 수</li><li><b>표본 부족:</b> 비교 단지가 3개 미만인 지역</li></ul><details class="calculation-guide"><summary>계산 기준 자세히 보기</summary>
+<div class="guide-section"><h3>비교 방법</h3><ul>
+<li><b>평수 제한 없이 모든 평형</b>을 포함합니다.</li><li><b>같은 단지 · 같은 공급평형</b>끼리 비교합니다.</li>
+<li>거래가 없는 달은 <b>직전 거래월의 월평균 시세</b>를 이어받습니다. 첫 거래 이전은 채우지 않습니다.</li>
+<li><b>단지 안:</b> 비교월 기준 <b>평당가가 가장 높은 평형 하나</b>를 선택해 같은 평형의 전월 시세 대비 변동률을 구합니다. <b>지역:</b> 단지별 동일 비중으로 평균합니다.</li>
+<li>선택 평형의 전월 시세가 없는 단지는 계산에서 제외합니다.</li>
+</ul></div>
+<div class="guide-section"><h3>표본과 가격 기준</h3><ul>
+<li><b>전체 표본:</b> 평수 제한 없이 실거래 이력이 있는 전체 단지 목록</li>
+<li><b>상위 30단지:</b> 최근 완료된 12개월의 공급평당 평균 가격으로 선정 후 고정</li>
+<li><b>공급면적:</b> 네이버 매칭 자료 우선 · 없으면 추정 평형 사용</li>
+<li><b>거래 기준:</b> 국토부 아파트 매매 · 직거래·해제·분양권·입주권 제외</li>
+</ul></div>
+<div class="guide-section"><h3>알아두세요</h3><ul>
+<li>같은 평형 안에서도 타입·층 차이는 남을 수 있습니다.</li>
+<li>상위 30단지는 고가 단지 흐름이며, 지역 전체를 대표하지 않습니다.</li>
+<li>아파트썸 자체 집계입니다. 신고 지연·취소로 과거 수치도 바뀔 수 있습니다.</li>
+<li><b>실거래 수집 배치 후 갱신</b>됩니다.</li>
+</ul></div></details></div></main><script type="module">
+import {REGIONS} from '/shared/regions.mjs';
+import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
+const $=s=>document.querySelector(s), grid=$('#grid'), period=$('#period');
+const state={view:'weekly',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
+$('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
+function fmt(n){return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(1)+'%':'자료 없음'}
+function color(n){if(!Number.isFinite(n))return '#f1f5f9';if(Math.abs(n)<.005)return '#fff';const a=Math.min(.62,.10+Math.abs(n)/18);return n>0?`rgba(239,68,68,${a})`:`rgba(59,130,246,${a})`}
+function itemKey(x){return `${x.nid||x.id||x.complexId||''}|${x.ex||x.exclusive||x.py||''}`}
+function ask(x){return Number(x.ask??x.price??x.minAsk??x.lowestAsk)}
+function snapshotItems(s){return Array.isArray(s?.items)?s.items:[]}
+function previousFor(item,snapshots,index){const key=itemKey(item);for(let i=index+1;i<snapshots.length;i++){const found=snapshotItems(snapshots[i]).find(x=>itemKey(x)===key&&ask(x)>0);if(found)return found}return null}
+async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error(String(r.status));return r.json()}
+async function loadRegion(province,name,lawd){
+ try{
+  const [cur,hist]=await Promise.all([fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&occupancy=available&floorScope=mid`),fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&history=1&detail=1&occupancy=available`)]);
+  const snaps=Array.isArray(hist.snapshots)?hist.snapshots:[];const current=Array.isArray(cur.items)?cur.items:[];const latest=snaps.length?snaps[0]:cur;const latestItems=snapshotItems(latest).length?snapshotItems(latest):current;const idx=snaps.length?0:-1;const rates=[];
+  for(const it of latestItems){const now=ask(it);const prev=idx>=0?previousFor(it,snaps,idx):null;const before=ask(prev);if(now>0&&before>0)rates.push((now-before)/before*100)}
+  state.data.set(String(lawd),{province,name,lawd,rate:rates.length?rates.reduce((a,b)=>a+b,0)/rates.length:null,count:rates.length});
+  if(cur.asOf)state.asOf=state.asOf&&state.asOf>cur.asOf?state.asOf:cur.asOf;
+  if(snaps[1]?.asOf)state.previousAsOf=state.previousAsOf&&state.previousAsOf>snaps[1].asOf?state.previousAsOf:snaps[1].asOf;
+ }catch{state.data.set(String(lawd),{province,name,lawd,rate:null,count:0,error:true})}
+}
+function render(){
+ const title=$('#title');title.textContent=state.asOf?state.asOf.slice(0,7).replace('-','년 ')+'월':'호가 주간 평균';
+ $('#comparisonPeriod').textContent=(state.previousAsOf?state.previousAsOf.slice(0,7).replace('-','.'):'직전 주간')+' → '+(state.asOf?state.asOf.slice(0,7).replace('-','.'):'현재')+' · 중층 이상 최저매물 호가';
+ $('#monthlyVs').innerHTML='<span>↔</span><span>직전 주간 평균</span><span class="vs">vs</span><span>현재 주간 평균</span>';
+ grid.replaceChildren();
+ for(const [province,regions] of REGIONS){const g=document.createElement('div');g.className='group';g.textContent=province;grid.append(g);const pg=document.createElement('div');pg.className='province-grid';grid.append(pg);const placements=(REGIONAL_LAYOUT[province]||[]).flatMap(row=>row.map((name,column)=>({name,column:column+1})));
+  for(const p of placements){if(!p.name){const e=document.createElement('div');e.className='empty';e.setAttribute('aria-hidden','true');pg.append(e);continue}const found=regions.find(x=>x[0]===p.name);if(!found)continue;const m=state.data.get(String(found[1]))||{rate:null,count:0};const b=document.createElement('button');b.className='cell'+(!Number.isFinite(m.rate)?' insufficient':'');b.style.gridColumn=String(p.column);b.style.background=color(m.rate);b.innerHTML=`<b>${p.name}</b><strong>${fmt(m.rate)}</strong><small>${m.count?m.count+'개 매물':'자료 없음'}</small>`;b.setAttribute('aria-label',`${province} ${p.name} ${fmt(m.rate)}`);pg.append(b)}
+ }
+ $('#sampleDescription').textContent='중층 이상 최저매물 호가의 주간 평균';
+}
+async function boot(){
+ $('#updated').textContent='자료를 불러오는 중…';
+ const jobs=[];for(const [province,regions] of REGIONS)for(const [name,lawd] of regions)jobs.push(loadRegion(province,name,lawd));
+ await Promise.all(jobs);$('#updated').textContent=`자료 기준일 ${state.asOf||'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`;render();
+}
+$('#monthlyView').textContent='주간 변동률';$('#ytdView').textContent='기간 변동률';$('#allSample').textContent='전체 표본';$('#topSample').textContent='상위 30단지';$('#monthly').textContent='주간';
+$('#monthlyView').onclick=()=>{state.view='weekly';$('#monthlyView').setAttribute('aria-pressed','true');$('#ytdView').setAttribute('aria-pressed','false')};$('#ytdView').onclick=()=>{state.view='period';$('#ytdView').setAttribute('aria-pressed','true');$('#monthlyView').setAttribute('aria-pressed','false');alert('호가 기간 변동률은 주간 자료 누적 후 제공됩니다.')};
+boot().catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
+</script></body></html>
