@@ -175,6 +175,7 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 const TIER_GRADE_COLORS = ["#00565C", "#00727A", "#008791", "#2B9CA3", "#67B8BA", "#A8D9D8"];
 const tierGradeColor = (grade) => TIER_GRADE_COLORS[(Number(grade?.g) || 1) - 1] || grade?.color || TIER_GRADE_COLORS.at(-1);
+const tierGradeTextColor = (grade) => Number(grade?.g) >= 5 ? "#00565C" : "#FFFFFF";
 
 let tierData = null;
 let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: true };
@@ -261,7 +262,7 @@ function heatmapHTML(){
         ${flags.map(f => {
           const grade = tierData.grades.find(g => g.g === f.g);
           return `
-            <div class="tier-heat-cell" style="background:${tierGradeColor(grade)}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
+            <div class="tier-heat-cell" style="background:${tierGradeColor(grade)};color:${tierGradeTextColor(grade)}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
               <div class="tier-heat-region">${showProvince?`${esc(f.province)} `:''}${esc(f.gu)}</div>
               <div class="tier-heat-name">${esc(f.nm)}</div>
               <div class="tier-heat-amt">${tierFmtAmt(f.amt)} · ${f.py}평${f.ar?` (전용 ${f.ar})`:''}</div>
@@ -383,7 +384,7 @@ function dongHeatmapHTML(){
       ${items.map(c => {
         const grade = tierData.grades.find(g => g.g === c.g);
         return `
-          <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${tierGradeColor(grade)}" onclick="setDong('${esc(c.dong)}')">
+          <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${tierGradeColor(grade)};color:${tierGradeTextColor(grade)}" onclick="setDong('${esc(c.dong)}')">
           <div class="tier-heat-region">${esc(c.dong)}</div>
           <div class="tier-heat-name">${esc(c.nm)}</div>
           <div class="tier-heat-amt">${tierFmtAmt(c.amt)} · ${c.py}평${c.ar?` (전용 ${c.ar})`:''}</div>
