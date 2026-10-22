@@ -28,7 +28,10 @@ test('단지 단독 분석과 호가가 없는 결과에는 지도를 만들지 
 });
 
 test('호가 통계는 금액대별 결과에 섞이지 않고 별도 탭으로 연결된다',()=>{
-  assert.match(html,/id="tabLASK"[^>]*listingaskmap/);
+  assert.match(html,/id="tabLASK"[^>]*listing-ask-map\.html/);
+  const standalone=readFileSync(new URL('../listing-ask-map.html',import.meta.url),'utf8');
+  assert.match(standalone,/REGIONAL_LAYOUT/);
+  assert.match(standalone,/중층 이상 최저매물 호가/);
   assert.match(html,/function renderListingAskMap\(/);
   const headerStart=html.indexOf('function listingHeaderHTML(');
   const headerEnd=html.indexOf('function listingTrendDate(',headerStart);
