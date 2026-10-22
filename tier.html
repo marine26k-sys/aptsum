@@ -175,7 +175,9 @@ const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
 const TIER_GRADE_COLORS = ["#00565C", "#00727A", "#008791", "#2B9CA3", "#67B8BA", "#A8D9D8"];
 const tierGradeColor = (grade) => TIER_GRADE_COLORS[(Number(grade?.g) || 1) - 1] || grade?.color || TIER_GRADE_COLORS.at(-1);
-const tierGradeTextColor = (grade) => Number(grade?.g) >= 5 ? "#00565C" : "#FFFFFF";
+// 어두운 등급 카드의 흰색 본문은 모바일에서 눈부심이 커서 부드러운 회색으로 표시한다.
+// 밝은 하위 등급 카드에는 기존 청록색을 유지해 배경과의 대비를 보존한다.
+const tierGradeTextColor = (grade) => Number(grade?.g) >= 5 ? "#00565C" : "#D6E1E3";
 
 let tierData = null;
 let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: true };
