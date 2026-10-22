@@ -27,3 +27,12 @@ test('price labels choose positions that do not cross the chart line',()=>{
    assert.ok(Math.abs(p.dy)<=25);
  }
 });
+test('latest and nearby highest labels remain separated at the chart edge',()=>{
+ const c=setup();
+ const months=Array.from({length:36},(_,i)=>({ym:`${24+Math.floor(i/12)}.${String(i%12+1).padStart(2,'0')}`,avg:i===33?10.9:i===35?10.9:8+i/20,n:2}));
+ const svg=c.chartSVG(months,'34평',{},'매매가',84);
+ const labels=[...svg.matchAll(/<text class="chart-price-label" data-month="([^"]+)" x="([^"]+)" y="([^"]+)"/g)].map(m=>({ym:m[1],x:Number(m[2]),y:Number(m[3])}));
+ const max=labels.find(l=>l.ym===months[33].ym), latest=labels.find(l=>l.ym===months[35].ym);
+ assert.ok(max&&latest);
+ assert.ok(Math.abs(max.x-latest.x)>=20 || Math.abs(max.y-latest.y)>=11);
+});

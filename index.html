@@ -5926,9 +5926,42 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     p.dx=Math.max(minDx,Math.min(maxDx,p.dx||0));
   });
   // 최고값과 마지막 값이 인접하면 두 숫자가 같은 줄에 겹치므로 마지막 값을 아래로 분리한다.
+  // placeLabels가 모든 후보를 소진한 경우에도 마지막 후처리에서 다시 충돌하지 않도록
+  // 실제 박스 기준으로 후보를 재검사한다. (특히 최신값과 최고값이 같은 값인 경우)
   const lastLabel=labelPos[lastIndex], maxLabel=labelPos[iMax];
-  if(iMax!==lastIndex && Math.abs(lastLabel.cx-maxLabel.cx)<labelBoxW*1.8 && Math.abs(lastLabel.cy-maxLabel.cy)<fs+8){
-    lastLabel.dx=0;lastLabel.dy=24;
+  const labelBox = p => {
+    const x=p.cx+(p.dx||0), y=p.cy+(p.dy||0);
+    return {x1:x-labelBoxW/2,x2:x+labelBoxW/2,y1:y-(fs+3),y2:y+2};
+  };
+  const boxOverlaps = (a,b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+  const isInside = p => {
+    const b=labelBox(p);
+    return b.x1>=0 && b.x2<=W;
+  };
+  const otherBoxes = p => visibleLabels.filter(q=>q!==p).map(labelBox);
+  const tryOffsets = (p, candidates, excluded=[]) => {
+    const boxes=[...excluded.map(labelBox),...otherBoxes(p)];
+    for(const pos of candidates){
+      p.dx=pos.dx;p.dy=pos.dy;
+      if(isInside(p) && !boxOverlaps(labelBox(p),boxes[0]||{x1:Infinity,x2:Infinity,y1:Infinity,y2:Infinity}) &&
+         !boxes.slice(1).some(b=>boxOverlaps(labelBox(p),b))) return true;
+    }
+    return false;
+  };
+  if(iMax!==lastIndex && Math.abs(lastLabel.cx-maxLabel.cx)<labelBoxW*2.2){
+    const original={dx:lastLabel.dx||0,dy:lastLabel.dy||0};
+    const lastCandidates=[
+      {dx:14,dy:22},{dx:-14,dy:22},{dx:0,dy:26},
+      {dx:14,dy:-20},{dx:-14,dy:-20},{dx:0,dy:30},original
+    ];
+    if(!tryOffsets(lastLabel,lastCandidates,[maxLabel])){
+      // 그래도 공간이 부족한 좁은 차트에서는 최고값을 반대쪽으로 이동한다.
+      const maxOriginal={dx:maxLabel.dx||0,dy:maxLabel.dy||0};
+      const maxCandidates=[
+        {dx:-14,dy:-20},{dx:14,dy:-20},{dx:-14,dy:22},{dx:14,dy:22},maxOriginal
+      ];
+      tryOffsets(maxLabel,maxCandidates,[lastLabel]);
+    }
   }
   const labelIndices=new Set(visibleLabels.map(p=>p.i));
 
