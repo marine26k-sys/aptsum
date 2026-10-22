@@ -173,6 +173,8 @@ const tierFmtPy = (manwon) => (manwon / 10000).toFixed(2) + "억";
 const gradeShort = (label) => String(label || "").replace(/급지$/, "");
 const tierFmtAmt = (manwon) => (manwon / 10000).toFixed(1) + "억";
 const TIER_PROVINCES = ["서울", "경기", "인천", "부산"];
+const TIER_GRADE_COLORS = ["#00565C", "#00727A", "#008791", "#2B9CA3", "#67B8BA", "#A8D9D8"];
+const tierGradeColor = (grade) => TIER_GRADE_COLORS[(Number(grade?.g) || 1) - 1] || grade?.color || TIER_GRADE_COLORS.at(-1);
 
 let tierData = null;
 let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown: 30, tab: "complex", dongRankGrade: null, dongShown: 30, dongQ: "", flagshipsOpen: true };
@@ -231,7 +233,7 @@ function renderList(){
         <div class="tier-row">
           <div class="tier-row-no">${c.rank}</div>
           <div class="tier-row-main">
-            <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
+            <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${tierGradeColor(grade)}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.nm)}${c.presaleOnly?' <span class="tier-presale-badge">분양권</span>':''}</div>
             <div class="tier-row-sub">${esc(c.gu)} ${esc(c.dong)}${c.by?` · ${buildAgeLabel(c.by)}`:''}${c.hh?` · ${c.hh.toLocaleString()}세대`:''}</div>
           </div>
           <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span><div class="tier-row-amt">${tierFmtAmt(c.amt)} · ${c.py}평${c.ar?` (전용 ${c.ar})`:''}</div></div>
@@ -259,7 +261,7 @@ function heatmapHTML(){
         ${flags.map(f => {
           const grade = tierData.grades.find(g => g.g === f.g);
           return `
-            <div class="tier-heat-cell" style="background:${grade.color}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
+            <div class="tier-heat-cell" style="background:${tierGradeColor(grade)}" onclick="setRegionFromHeat('${esc(f.province)}','${esc(f.gu)}')">
               <div class="tier-heat-region">${showProvince?`${esc(f.province)} `:''}${esc(f.gu)}</div>
               <div class="tier-heat-name">${esc(f.nm)}</div>
               <div class="tier-heat-amt">${tierFmtAmt(f.amt)} · ${f.py}평${f.ar?` (전용 ${f.ar})`:''}</div>
@@ -305,7 +307,7 @@ function dongRowHTML(c){
     <div class="tier-row" style="cursor:pointer" onclick="openDongFromRank('${esc(c.province)}','${esc(c.gu)}','${esc(c.dong)}')">
       <div class="tier-row-no">${c.rank}</div>
       <div class="tier-row-main">
-        <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${grade.color}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
+        <div class="tier-row-name">${grade?`<span class="tier-grade-badge" style="background:${tierGradeColor(grade)}">${esc(gradeShort(grade.label))}</span>`:''}${esc(c.dong)}</div>
         <div class="tier-row-sub">${esc(c.province)} ${esc(c.gu)} · 상위 ${c.count}개 단지 평균</div>
       </div>
       <div class="tier-row-price"><b>${tierFmtPy(c.ppy)}</b><span>/평</span></div>
@@ -381,7 +383,7 @@ function dongHeatmapHTML(){
       ${items.map(c => {
         const grade = tierData.grades.find(g => g.g === c.g);
         return `
-        <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${grade.color}" onclick="setDong('${esc(c.dong)}')">
+          <div class="tier-heat-cell ${tierState.dong===c.dong?'on':''}" style="background:${tierGradeColor(grade)}" onclick="setDong('${esc(c.dong)}')">
           <div class="tier-heat-region">${esc(c.dong)}</div>
           <div class="tier-heat-name">${esc(c.nm)}</div>
           <div class="tier-heat-amt">${tierFmtAmt(c.amt)} · ${c.py}평${c.ar?` (전용 ${c.ar})`:''}</div>
@@ -466,9 +468,9 @@ function renderComplexBody(){
       <div class="tier-ladder-title">등급별 단지 분포 (탭해서 필터링)</div>
       ${gradeStats.map(g => `
         <div class="tier-rung ${tierState.grade===g.g?'on':''}" onclick="setGrade(${g.g})">
-          <div class="tier-rung-dot" style="background:${g.color}"></div>
+          <div class="tier-rung-dot" style="background:${tierGradeColor(g)}"></div>
           <div class="tier-rung-info"><div class="tier-rung-label">${esc(g.label)}</div><div class="tier-rung-band">${esc(g.band)}</div></div>
-          <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${g.color}"></div></div>
+          <div class="tier-rung-bar-track"><div class="tier-rung-bar-fill" style="width:${(g.count/maxCount*100).toFixed(1)}%;background:${tierGradeColor(g)}"></div></div>
           <div class="tier-rung-count"><b>${g.count}</b>개 단지<br>평균 ${tierFmtPy(g.avg)}</div>
         </div>
       `).join("")}
