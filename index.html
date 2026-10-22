@@ -5902,9 +5902,9 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
   const visibleLabels=labelPos.filter(p=>important.has(p.i)||((lastIndex-p.i)%3===0&&!monthly[p.i].carriedFrom));
   visibleLabels.forEach(p=>{
     const inward=p.cx>W/2?-14:14;
-    const above=[{dx:0,dy:-11},{dx:inward,dy:-11},{dx:-inward,dy:-11},{dx:0,dy:-20}];
-    const below=[{dx:0,dy:16},{dx:inward,dy:16},{dx:-inward,dy:16},{dx:0,dy:25}];
-    p.offsets=p.i===iMax?[...above,...below]:p.i===iMin?[...below,...above]:[above[0],below[0],above[1],below[1],above[2],below[2],above[3],below[3]];
+    const above=[{dx:0,dy:-11},{dx:inward,dy:-11},{dx:-inward,dy:-11},{dx:inward*2,dy:-11},{dx:-inward*2,dy:-11},{dx:0,dy:-20}];
+    const below=[{dx:0,dy:16},{dx:inward,dy:16},{dx:-inward,dy:16},{dx:inward*2,dy:16},{dx:-inward*2,dy:16},{dx:0,dy:25}];
+    p.offsets=p.i===iMax?[...above,...below]:p.i===iMin?[...below,...above]:[...above,...below];
   });
   const labelBoxW=Math.max(20, fs*2.6);
   placeLabels([...visibleLabels].sort((a,b)=>Number(important.has(b.i))-Number(important.has(a.i))||a.i-b.i), [-11,16,-20,25], labelBoxW, fs+3, labelPos);
