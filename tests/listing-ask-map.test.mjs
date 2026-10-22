@@ -27,3 +27,21 @@ test('단지 단독 분석과 호가가 없는 결과에는 지도를 만들지 
   assert.equal(ctx.listingAskMapHTML({rows:[{lawd:'11680',gu:'강남구',ask:null}]}),'');
 });
 
+test('호가 통계는 금액대별 결과에 섞이지 않고 별도 탭으로 연결된다',()=>{
+  assert.match(html,/id="tabLASK"[^>]*listingaskmap/);
+  assert.match(html,/function renderListingAskMap\(/);
+  const headerStart=html.indexOf('function listingHeaderHTML(');
+  const headerEnd=html.indexOf('function listingTrendDate(',headerStart);
+  assert.doesNotMatch(html.slice(headerStart,headerEnd),/listingAskMapHTML\(d\)/);
+});
+
+test('호가 통계 지도는 전주 대비 변동률을 표시한다',()=>{
+  const out=ctx.listingAskMapHTML({rows:[
+    {lawd:'11680',gu:'강남구',askRate:2},{lawd:'11680',gu:'강남구',askRate:4},
+    {lawd:'11320',gu:'도봉구',askRate:-1}
+  ]});
+  assert.match(out,/호가 전주 대비 변동률/);
+  assert.match(out,/\+3\.0%/);
+  assert.match(out,/-1\.0%/);
+});
+
