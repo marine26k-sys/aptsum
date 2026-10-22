@@ -112,8 +112,9 @@ function renderYtdRanking(){
  const heading=document.createElement('div');heading.className='card-hd ranking-heading';
  const brand=document.querySelector('#monthlyPanel .hd-top').cloneNode(true);brand.querySelector('.hd-badge').textContent='기간 변동률';
  const title=document.createElement('h2');title.id='ytdRankingTitle';
+ const sampleCount=document.createElement('div');sampleCount.className='meta';
  const comparison=document.createElement('div');comparison.className='regional-vs';
- heading.append(brand,title,comparison);
+ heading.append(brand,title,sampleCount,comparison);
  const range=document.createElement('div');range.className='ranking-range';
  const rangeSelect=(id,label)=>{const field=document.createElement('label');field.textContent=label;const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label);for(const p of data.periods.monthly){const option=document.createElement('option');option.value=p.label;option.textContent=p.label.replace('-','.');select.append(option);}field.append(select);range.append(field);return select;};
  const startSelect=rangeSelect('rankingStart','시작 월'),endSelect=rangeSelect('rankingEnd','끝 월');
@@ -134,6 +135,7 @@ function renderYtdRanking(){
    const ar=Number.isFinite(a.metric?.rate),br=Number.isFinite(b.metric?.rate);
    return ar&&br?b.metric.rate-a.metric.rate:ar?-1:br?1:(a.region.province+' '+a.region.name).localeCompare(b.region.province+' '+b.region.name,'ko');
   });
+  sampleCount.textContent='표본 '+rows.reduce((total,{metric})=>total+(Number(metric?.groups)||0),0).toLocaleString('ko-KR')+'개 단지';
   content.replaceChildren();
   if(!rows.length){const empty=document.createElement('p');empty.className='ytd-empty';empty.textContent='비교 가능한 지역 자료가 없습니다.';content.append(empty);return;}
   const axis=document.createElement('div');axis.className='ytd-axis';axis.textContent='하락 ◀　0　▶ 상승 · '+rows.length+'개 지역';content.append(axis);
