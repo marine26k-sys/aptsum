@@ -71,7 +71,7 @@ function color(n){if(!Number.isFinite(n))return '#f1f5f9';if(Math.abs(n)<.005)re
 function itemKey(x){return `${x.nid||x.id||x.complexId||''}|${x.ex||x.exclusive||x.py||''}`}
 function ask(x){return Number(x.ask??x.price??x.minAsk??x.lowestAsk)}
 function snapshotItems(s){return Array.isArray(s?.items)?s.items:[]}
-function weekLabel(value){const d=new Date(value+'T00:00:00Z');if(Number.isNaN(d.getTime()))return value||'';const month=d.getUTCMonth()+1,week=Math.ceil(d.getUTCDate()/7);const thu=new Date(d);thu.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const yearStart=new Date(Date.UTC(thu.getUTCFullYear(),0,1));const iso=Math.ceil((((thu-yearStart)/86400000)+1)/7);return `${d.getUTCFullYear()}년 ${month}월 ${week}주차 (ISO ${iso}주)`;}
+function weekLabel(value){const isoValue=String(value||'').replaceAll('.','-');const d=new Date(isoValue+'T00:00:00Z');if(Number.isNaN(d.getTime()))return value||'';const month=d.getUTCMonth()+1,week=Math.ceil(d.getUTCDate()/7);const thu=new Date(d);thu.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const yearStart=new Date(Date.UTC(thu.getUTCFullYear(),0,1));const iso=Math.ceil((((thu-yearStart)/86400000)+1)/7);return `${d.getUTCFullYear()}년 ${month}월 ${week}주차 (ISO ${iso}주)`;}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error(String(r.status));return r.json()}
 async function loadRegion(province,name,lawd){
