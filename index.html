@@ -5914,6 +5914,11 @@ function chartSVG(monthly, pyLabel, dataRef, priceLabel, sizeKey){
     const minDx=labelBoxW/2-p.cx, maxDx=W-labelBoxW/2-p.cx;
     p.dx=Math.max(minDx,Math.min(maxDx,p.dx||0));
   });
+  // 최고값과 마지막 값이 인접하면 두 숫자가 같은 줄에 겹치므로 마지막 값을 아래로 분리한다.
+  const lastLabel=labelPos[lastIndex], maxLabel=labelPos[iMax];
+  if(iMax!==lastIndex && Math.abs(lastLabel.cx-maxLabel.cx)<labelBoxW*1.8 && Math.abs(lastLabel.cy-maxLabel.cy)<fs+8){
+    lastLabel.dx=0;lastLabel.dy=24;
+  }
   const labelIndices=new Set(visibleLabels.map(p=>p.i));
 
   // 호버 인터랙션용 상태 등록 (이 차트가 현재 화면에 표시되는 인스턴스 — 매매/전세 서브탭은 항상 하나만 DOM에 존재)
