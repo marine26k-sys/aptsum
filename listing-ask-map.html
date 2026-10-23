@@ -129,13 +129,13 @@ $('#monthlyView').onclick=()=>selectView('weekly');$('#ytdView').onclick=()=>sel
 
 function cleanLegacyNotes(){document.querySelectorAll('.notes li').forEach(item=>{if(item.textContent.includes('표본 부족')||item.textContent.includes('상위 30단지'))item.remove();item.innerHTML=item.innerHTML.replaceAll('전체 표본','전체 단지');});}
 async function bootOptimized(){
- $('#updated').textContent='자료를 불러오는 중…';render();
+ $('#monthlyPanel').hidden=true;document.querySelectorAll('.controls button,.controls select').forEach(el=>el.disabled=true);$('#updated').textContent='자료를 불러오는 중…';
  const payload=await fetchJson('/api/listings?askMap=1&all=1');
  const byLawd=new Map((payload.regions||[]).map(item=>[String(item.lawd),item]));
  for(const [province,regions] of REGIONS)for(const [name,lawd] of regions){const metric=byLawd.get(String(lawd));state.data.set(String(lawd),{province,name,lawd,...(metric||{rate:null,count:0,weekly:[],error:true})});if(metric?.asOf&&(!state.asOf||metric.asOf>state.asOf))state.asOf=metric.asOf;if(metric?.previousAsOf&&(!state.previousAsOf||metric.previousAsOf>state.previousAsOf))state.previousAsOf=metric.previousAsOf;}
  $('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`;
  period.replaceChildren();const weeks=new Map();for(const row of state.data.values())for(const w of row.weekly||[])if(w.previousAsOf)weeks.set(w.weekStart,w);for(const [key,w] of [...weeks].sort((a,b)=>b[0].localeCompare(a[0]))){const o=document.createElement('option');o.value=key;o.textContent=weekInfo(w.asOf)?.label.replace(/^\d+년 /,'')||key;period.append(o)}
- render();if(state.view==='period')renderWeeklyRanking();
+ render();$('#monthlyPanel').hidden=state.view==='period';document.querySelectorAll('.controls button,.controls select').forEach(el=>el.disabled=false);if(state.view==='period')renderWeeklyRanking();
 }
 bootOptimized().then(cleanLegacyNotes).catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
 </script></body></html>
