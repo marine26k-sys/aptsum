@@ -6,7 +6,7 @@ export function regionalSupplyPy(t){return supplyPy(t);}
 const eligiblePy=py=>Number.isFinite(py)&&py>0;
 export function median(values){const a=[...values].sort((a,b)=>a-b),n=a.length;return n?n%2?a[n>>1]:(a[n/2-1]+a[n/2])/2:null;}
 export function tradeDay(t){const y=Number(String(t.ym).slice(0,4)),m=Number(String(t.ym).slice(4)),d=Number(t.d);if(!y||!m||!d)return NaN;const time=Date.UTC(y,m-1,d),date=new Date(time);return date.getUTCMonth()===m-1&&date.getUTCDate()===d?time:NaN;}
-// 비교월의 최고 평당가 평형을 선택하고 같은 평형의 전월 시세와 비교한다.
+// 비교월에 거래가 있는 모든 공급평형을 같은 평형의 전월 시세와 비교한다.
 // 무거래월은 과거 월평균을 이어받으며 미래 거래로 과거를 채우지 않는다.
 function prepareRegionalHistory(items,cutoff,names){
  const groupsByKey=new Map();
@@ -33,16 +33,16 @@ export function regionalChange(items,period,names={},samples=null,history=null){
    const entries=months.filter(x=>x.date<period.end);
    if(!entries.length)continue;
    const previous=entries.filter(x=>x.date<period.start).at(-1),current=entries.at(-1);
-   // 비교월 최고 평당가를 먼저 선택하며, 과거 가격이 없다고 다른 평형으로 바꾸지 않는다.
    candidates.push({py,previousPrice:previous?previous.sum/previous.n:null,currentPrice:current.sum/current.n,
     previousTrades:previous&&previous.date>=period.previousStart?previous.n:0,currentTrades:current.date>=period.start?current.n:0});
   }
-  candidates.sort((a,b)=>b.currentPrice-a.currentPrice||a.py-b.py);
-  const selected=candidates[0];if(!selected||!(selected.previousPrice>0))continue;
-  selected.rate=(selected.currentPrice/selected.previousPrice-1)*100;
   const [umd,name]=JSON.parse(key);
-  comparisons.push({name,umd,matchedTypes:[selected],...selected});
-  previousTrades+=selected.previousTrades;currentTrades+=selected.currentTrades;
+  for(const candidate of candidates){
+   if(!(candidate.previousPrice>0))continue;
+   candidate.rate=(candidate.currentPrice/candidate.previousPrice-1)*100;
+   comparisons.push({name,umd,matchedTypes:[candidate],...candidate});
+   previousTrades+=candidate.previousTrades;currentTrades+=candidate.currentTrades;
+  }
  }
  const groups=comparisons.length;
  return {comparisons,rate:groups>=3?(Math.round(average(comparisons.map(x=>x.rate))*100)/100||0):null,groups,sampleCount:samples?.length??groups,previousTrades,currentTrades,previousPrice:groups?average(comparisons.map(x=>x.previousPrice)):null,currentPrice:groups?average(comparisons.map(x=>x.currentPrice)):null};

@@ -13,9 +13,9 @@ test('supply price uses matched supply pyeong for prices and top sample selectio
 
 const p=changePeriods('2026-10-21').monthly[1];
 const t=(apt,ym,py,unit)=>({apt,umd:'동',area:py*2.5,py,amt:py*unit,ym,d:1});
-test('highest current unit-price type is used consistently for both months without transaction weights',()=>{
+test('all matched supply types are included without transaction weights',()=>{
  const rows=[t('A','202608',20,.5),t('A','202609',20,.55),...Array.from({length:9},()=>t('A','202608',50,.3)),t('A','202609',50,.4)];
- const a=regionalChange(rows,p).comparisons[0];assert.equal(a.py,20);assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.55);assert.ok(Math.abs(a.rate-10)<1e-8);assert.equal(a.matchedTypes.length,1);
+ const result=regionalChange(rows,p),a=result.comparisons[0],b=result.comparisons[1];assert.equal(result.groups,2);assert.equal(result.rate,null);assert.equal(a.py,20);assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.55);assert.ok(Math.abs(a.rate-10)<1e-8);assert.ok(Math.abs(b.rate-33.3333333)<1e-6);assert.equal(a.matchedTypes.length,1);
 });
 test('all positive supply sizes enter comparisons and sample selection',()=>{
  const rows=[12,19,20,40,41,80].flatMap(py=>[t('A'+py,'202608',py,1),t('A'+py,'202609',py,1.1)]);
@@ -55,17 +55,17 @@ test('year-to-date compares December with selected month rather than averaging y
  const january=regionalYtdPeriod(changePeriods('2026-01-02').monthly[0]);assert.equal(january.previousStart,Date.UTC(2025,11,1));
 });
 
-test('custom month ranges use the end-month highest type and the same start-month type without future leakage',async()=>{
+test('custom month ranges include all matched types without future leakage',async()=>{
  const {regionalPeriodMatrix}=await import('../shared/regional-change.mjs');
  const months=changePeriods('2026-10-21').monthly;
  const rows=[t('A','202512',20,1),t('A','202609',20,1.2),t('A','202610',20,1.4),t('A','202512',60,.8),t('A','202610',60,1.3),t('B','202511',15,1),t('C','202512',80,1),{...t('A','202610',20,99),d:22}];
  const matrix=regionalPeriodMatrix(rows,months);
  assert.equal(Object.keys(matrix).length,276);
- assert.equal(matrix['2025-12|2026-09'].rate,6.67);
- assert.equal(matrix['2025-12|2026-10'].rate,13.33);
- assert.equal(matrix['2025-12|2026-10'].groups,3);
- assert.equal(matrix['2026-09|2026-10'].rate,5.56);
+ assert.equal(matrix['2025-12|2026-09'].rate,5);
+ assert.equal(matrix['2025-12|2026-10'].rate,25.63);
+ assert.equal(matrix['2025-12|2026-10'].groups,4);
+ assert.equal(matrix['2026-09|2026-10'].rate,19.79);
  assert.equal(matrix['2026-10|2026-09'],undefined);
- const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,1);assert.equal(filtered['2025-12|2026-10'].rate,null);
+ const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,2);assert.equal(filtered['2025-12|2026-10'].rate,51.25);
  const missing=regionalPeriodMatrix(rows,months,{},null,new Set(['202512']));assert.equal(missing['2025-12|2026-10'].missing,true);
 });
