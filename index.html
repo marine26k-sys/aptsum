@@ -833,7 +833,7 @@ try {
     }
   </script>
   <header>
-    <a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기" title="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
+    <a class="analysis-back" href="./index.html" onclick="return handleAnalysisBack(event)" aria-label="뒤로가기" title="뒤로가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
     <div class="logo" id="logoTapZone">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
       <div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">실거래 · 실매물 · 아파트 분석</span></div>
@@ -1912,6 +1912,19 @@ function restoreView(vi){
   else renderRegion(v.data);
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
+// 상세 화면의 상단 뒤로가기 버튼도 브라우저 뒤로가기와 같은 히스토리 복원 흐름을 사용한다.
+// 기존에는 ./index.html로 바로 이동해 조회 조건 화면만 다시 열렸고, 랭킹에서 들어온 경우에도
+// 사용자가 보고 있던 결과 목록/스크롤 위치를 잃었다.
+function handleAnalysisBack(event){
+  event?.preventDefault();
+  const state = history.state;
+  if(state && typeof state.vi === 'number' && state.vi >= 0){
+    history.back();
+  }else{
+    location.href = './index.html';
+  }
+  return false;
+}
 window.addEventListener('popstate', e=>{
   if(nativeRegionReturnRestored){nativeRegionReturnRestored=false;return;}
   if(e.state?.modal==='region'){
