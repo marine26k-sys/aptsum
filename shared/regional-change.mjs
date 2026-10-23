@@ -45,7 +45,8 @@ export function regionalChange(items,period,names={},samples=null,history=null){
   }
  }
  const groups=comparisons.length;
- return {comparisons,rate:groups>=3?(Math.round(average(comparisons.map(x=>x.rate))*100)/100||0):null,groups,sampleCount:samples?.length??groups,previousTrades,currentTrades,previousPrice:groups?average(comparisons.map(x=>x.previousPrice)):null,currentPrice:groups?average(comparisons.map(x=>x.currentPrice)):null};
+ const complexes=new Set(comparisons.map(x=>JSON.stringify([x.umd,x.name]))).size;
+ return {comparisons,rate:groups>=3?(Math.round(average(comparisons.map(x=>x.rate))*100)/100||0):null,groups,complexes,sampleCount:samples?.length??complexes,previousTrades,currentTrades,previousPrice:groups?average(comparisons.map(x=>x.previousPrice)):null,currentPrice:groups?average(comparisons.map(x=>x.currentPrice)):null};
 }
 // 시작월 시세와 끝월의 동일 평형 시세를 비교하는 모든 월 조합.
 export function regionalPeriodMatrix(items,periods,names={},samples=null,available=null){
@@ -57,7 +58,7 @@ export function regionalPeriodMatrix(items,periods,names={},samples=null,availab
   const key=first.label+'|'+last.label,required=[];const day=new Date(first.start);
   while(+day<last.end){required.push(day.toISOString().slice(0,7).replace('-',''));day.setUTCMonth(day.getUTCMonth()+1);}
   if(available&&!required.every(ym=>available.has(ym))){result[key]={rate:null,groups:0,missing:true};continue;}
-  const {rate,groups}=regionalChange(items,p,names,samples,history);result[key]={rate,groups};
+  const {rate,groups,complexes}=regionalChange(items,p,names,samples,history);result[key]={rate,groups,complexes};
  }
  return result;
 }

@@ -15,7 +15,7 @@ const p=changePeriods('2026-10-21').monthly[1];
 const t=(apt,ym,py,unit)=>({apt,umd:'동',area:py*2.5,py,amt:py*unit,ym,d:1});
 test('all matched supply types are included without transaction weights',()=>{
  const rows=[t('A','202608',20,.5),t('A','202609',20,.55),...Array.from({length:9},()=>t('A','202608',50,.3)),t('A','202609',50,.4)];
- const result=regionalChange(rows,p),a=result.comparisons[0],b=result.comparisons[1];assert.equal(result.groups,2);assert.equal(result.rate,null);assert.equal(a.py,20);assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.55);assert.ok(Math.abs(a.rate-10)<1e-8);assert.ok(Math.abs(b.rate-33.3333333)<1e-6);assert.equal(a.matchedTypes.length,1);
+ const result=regionalChange(rows,p),a=result.comparisons[0],b=result.comparisons[1];assert.equal(result.groups,2);assert.equal(result.complexes,1);assert.equal(result.rate,null);assert.equal(a.py,20);assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.55);assert.ok(Math.abs(a.rate-10)<1e-8);assert.ok(Math.abs(b.rate-33.3333333)<1e-6);assert.equal(a.matchedTypes.length,1);
 });
 test('all positive supply sizes enter comparisons and sample selection',()=>{
  const rows=[12,19,20,40,41,80].flatMap(py=>[t('A'+py,'202608',py,1),t('A'+py,'202609',py,1.1)]);
