@@ -6456,7 +6456,7 @@ function addComplexSchoolMap(body,matched){
       const points=[{...matched,level:'단지'},...(matched.schools||[]).filter(validSchoolCoordinate)];
       const stations=await searchNearbySubwayStations(maps,matched);
       const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
-      stationSummary.innerHTML=stations.length?`가까운 지하철역 · ${stations.map(x=>`${esc(x.name)} ${x.walkDistance?`도보 ${x.walkDistance.toLocaleString()}m · ${x.walkTime}분`:`직선 ${x.distance.toLocaleString()}m`}`).join(' · ')}<br><small>${stations.some(x=>x.walkDistance)?'카카오 도보 최단경로 기준':'도보 API 키 미설정으로 직선거리 기준'}</small>`:'주변 3km 이내 지하철역을 찾지 못했습니다.';
+      stationSummary.innerHTML=stations.length?`<div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:4px">지하철</div>${stations.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}</span><span style="flex:none;color:var(--teal-dark);font-weight:700">${x.walkDistance?`도보 ${x.walkDistance.toLocaleString()}m · ${x.walkTime}분`:`직선 ${x.distance.toLocaleString()}m`}</span></div>`).join('')}<small style="display:block;margin-top:6px">${stations.some(x=>x.walkDistance)?'카카오 도보 최단경로 기준':'도보 API 키 미설정으로 직선거리 기준'}</small>`:'<div style="font-size:13px;font-weight:800;color:var(--teal-dark)">지하철</div><div style="margin-top:6px">주변 3km 이내 지하철역을 찾지 못했습니다.</div>';
       container.before(stationSummary);
       stations.forEach(station=>points.push({...station,level:'역'}));
       let info=null;
@@ -6632,7 +6632,7 @@ function renderComplex(d){
 
     <div class="sec" style="padding-top:12px;padding-bottom:0">
       <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
-        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교 · 펼쳐보기</summary>
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 펼쳐보기</summary>
         <div class="nearby-school-body" style="padding-top:8px"></div>
       </details>
     </div>
@@ -6642,7 +6642,7 @@ function renderComplex(d){
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
-  schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교 · 접기':'주변 학교 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
+  schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교·지하철 · 접기':'주변 학교·지하철 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
   placeComplexSchools(schoolPanel.parentElement);
   document.getElementById('complexMapButton').onclick=async event=>{
     const button=event.currentTarget;button.disabled=true;
