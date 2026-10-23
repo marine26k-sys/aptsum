@@ -19,9 +19,9 @@ export const config = { path: "/api/tab-clicks" };
 // index.html 탭 id — 여기 없는 값은 버린다(아무 문자열이나 쌓이지 않도록)
 export const TAB_IDS = [
   "tabC", "tabCmp", "tabCY", "tabTM", "tabSL", "tabSub",
-  "tabR", "tabV", "tabPP", "tabGap",
+  "tabR", "tabV", "tabGap",
   "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange",
-  "tabSU", "tabP", "tabLP", "tabINV",
+  "tabUV",
   "tabLPL", "tabLIC", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP", "tabLASK",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",
   "tabApply", "tabBusiness",
