@@ -880,7 +880,6 @@ try {
       <div class="tab-grp-name">랭킹</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabR" href="./index.html?m=region"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>단지 랭킹</a>
-          <a class="tab" id="tabPP" href="./index.html?m=pyprice"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><line x1="7" y1="11" x2="7" y2="15"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="17" y1="11" x2="17" y2="15"/><circle cx="12" cy="5" r="2.4"/></svg>평당가 랭킹</a>
       </div>
     </div>
     <div class="tab-grp">
@@ -2743,7 +2742,6 @@ function setMode(m, fromRestore){
   document.getElementById('tabLTR').classList.toggle('on', m==='longtermrise');
   document.getElementById('tabJLTR').classList.toggle('on', m==='jeonselongtermrise');
   document.getElementById('tabPBR').classList.toggle('on', m==='pricebandrise');
-  document.getElementById('tabPP').classList.toggle('on', m==='pyprice');
   document.getElementById('tabV').classList.toggle('on', m==='volume');
   document.getElementById('tabSU').classList.toggle('on', m==='shortval');
   document.getElementById('tabP').classList.toggle('on', m==='peak');
@@ -5428,6 +5426,9 @@ async function runSearch(opts){
           d = {found:false, note:'선택한 조건에 맞는 거래가 없습니다. 기간이나 평형을 조정해 보세요.'};
         } else {
           d = analyzeRegion(items, months);
+          // 단지 랭킹 화면에 평당가 랭킹도 함께 보여준다. 기존 평당가 탭과
+          // 동일한 계산 함수를 사용해 두 랭킹의 기준을 일치시킨다.
+          d.pyPrice = analyzePricePerPyeong(items, months).pyPrice;
           if(mode==='volume')d.mode='volume';
           d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
           d.buildYear = buildYearLabel();
@@ -7074,6 +7075,14 @@ function renderRegion(d){
   const rows = (arr, fmt) => arr.length
     ? arr.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>${fmt(x)}</div>${rkSep(i,arr.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">표시할 거래 데이터가 없습니다</div>';
+  const pyPrice = d.pyPrice || [];
+  const pyMultiRegion = regionMulti(pyPrice);
+  const pyRows = pyPrice.length
+    ? pyPrice.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(pyMultiRegion&&x.gu)?`${esc(guShort(x.gu, pyMultiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/공급평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>
+      </div>${rkSep(i,pyPrice.length)}`).join('')
+    : '<div class="rng" style="padding:6px 0">조건에 맞는 평당가 데이터가 없습니다</div>';
   const html = `
   <div class="card">
     <div class="card-hd">
@@ -7088,6 +7097,11 @@ function renderRegion(d){
       ${rows(d.highDeals, x=>`
         <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
+    </div>
+    <div class="sec">
+      <h3>평당가 랭킹</h3>
+      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">단지당 평당가가 가장 높은 평형을 대표 표시 · 최근 3년 최고가 기준</div>
+      ${pyRows}
     </div>
 
   </div>
