@@ -6461,7 +6461,7 @@ function selectComplexMapPlace(places,d,alias,region,nameKey){
   const matches=places.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시'))&&names.has(key(x.place_name))&&String(x.address_name||'').split(/\s+/).includes(d.umd)&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
   return matches.length===1?matches[0]:null;
 }
-async function geocodeSchoolRows(maps,rows,d,lawd){
+async function geocodeSchoolRows(maps,rows,d,lawd,center){
   if(!Array.isArray(rows)||!rows.length||!maps.services?.Places)return rows||[];
   const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
   const placeSearch=new maps.services.Places();
@@ -6470,11 +6470,20 @@ async function geocodeSchoolRows(maps,rows,d,lawd){
   for(const row of rows){
     if(validSchoolCoordinate(row))continue;
     const items=await search(`${row.name} ${d.umd||''}`.trim());
-    const exact=items.find(x=>{
-      const addr=String(x.address_name||'');
-      return String(x.place_name||'').replace(/\s/g,'')===String(row.name||'').replace(/\s/g,'')
-        && regionParts.every(part=>addr.split(/\s+/).some(token=>token===part||token===part+'시'));
-    })||items.find(x=>String(x.place_name||'').replace(/\s/g,'')===String(row.name||'').replace(/\s/g,''))||items[0];
+    const rowName=String(row.name||'').replace(/\s/g,'');
+    const named=items.filter(x=>String(x.place_name||'').replace(/\s/g,'')===rowName&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
+    const scoped=named.filter(x=>{
+      const tokens=String(x.address_name||'').split(/\s+/);
+      return regionParts.every(part=>tokens.some(token=>token===part||token===part+'시'))
+        && (!d.umd||tokens.includes(d.umd));
+    });
+    const candidates=scoped.length?scoped:named.filter(x=>regionParts.every(part=>String(x.address_name||'').split(/\s+/).some(token=>token===part||token===part+'시')));
+    const distance=(x)=>{
+      if(!center)return 0;
+      const dy=Number(x.y)-Number(center.lat),dx=Number(x.x)-Number(center.lng);
+      return dy*dy+dx*dx;
+    };
+    const exact=(candidates.length?candidates:named).sort((a,b)=>distance(a)-distance(b))[0];
     if(exact&&validSchoolCoordinate({lat:Number(exact.y),lng:Number(exact.x)})){row.lat=Number(exact.y);row.lng=Number(exact.x);}
   }
   return rows;
@@ -6493,7 +6502,7 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       const {naverNameKey}=await import('/shared/naver-name-match.mjs');
       const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
       if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
-      const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd);
+      const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:Number(place.y),lng:Number(place.x)});
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:schoolRows,nearby:[]});
       body.querySelector('button').click();
     }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 다시 눌러 주세요.';}
