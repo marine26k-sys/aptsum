@@ -2734,6 +2734,7 @@ function setMode(m, fromRestore){
   document.documentElement.classList.remove('analysis-menu');document.documentElement.classList.add('analysis-page');
   const currentTab=[...document.querySelectorAll('.tabs a.tab[href]')].find(a=>{try{const p=new URL(a.href).searchParams;return p.get('m')===(m==='listingrise'?'listingtrend':m)&&(m!=='listingbudget'||(p.get('individual')==='1')===isIndividualListing())&&(m!=='newhigh'||(p.get('nh7')==='1')===newHighWeekOnly);}catch{return false;}});
   document.querySelector('.brand-description').textContent=currentTab?.textContent.trim()||'실거래 · 실매물 · 아파트 분석';
+  if(['shortval','longpeak','inversion'].includes(m)) document.querySelector('.brand-description').textContent='저평가';
 
   document.getElementById('searchBox').style.display = '';
   document.getElementById('tabC').classList.toggle('on', m==='complex');
