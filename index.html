@@ -1004,6 +1004,10 @@ try {
       <button id="regionFavBtn" onclick="toggleFavRegion()" title="이 지역 즐겨찾기" style="flex:0 0 auto;width:38px;background:#fff;border:1.5px solid var(--line);border-radius:12px;color:#D97706;font-size:15px;cursor:pointer">☆</button>
     </div>
     <div id="regionChips" style="display:none"></div>
+    <div id="regionRankPicker" role="tablist" aria-label="랭킹 종류 선택" style="display:none;gap:6px;margin:4px 0 6px">
+      <button id="regionRankComplexBtn" type="button" role="tab" onclick="setRegionRankView('complex')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">단지 랭킹</button>
+      <button id="regionRankPriceBtn" type="button" role="tab" onclick="setRegionRankView('pyprice')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평당가 랭킹</button>
+    </div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <div id="recentCompareComplexes" hidden style="margin:5px 0 8px"></div>
@@ -2723,6 +2727,8 @@ function setMode(m, fromRestore){
   closeExpandedComplexMap();
   const floatingHead=document.getElementById('cmpSummaryFloatingHead');if(floatingHead)floatingHead.hidden=true;
   mode = m;
+  if(m==='region'&&!fromRestore) regionRankView='complex';
+  syncRegionRankPicker();
   renderRecentComplexes();
   document.getElementById('searchBox').dataset.mode=m;
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
@@ -5652,7 +5658,6 @@ async function runSearch(opts){
       if(myToken!==searchToken) return;
     }
     lastData = d;
-    if(d.mode==='region') regionRankView='complex';
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
     // 내용만 단지분석으로 바뀌어서 화면 중간(차트 아래쪽 등)부터 보이고, 그 위에 있는 평형별 요약표가 안 보이는
@@ -7071,9 +7076,20 @@ function appendMolitMore(d){
 }
 
 let regionRankView = 'complex';
+function syncRegionRankPicker(){
+  const box=document.getElementById('regionRankPicker');
+  if(!box)return;
+  box.style.display=mode==='region'?'flex':'none';
+  const complex=document.getElementById('regionRankComplexBtn'),price=document.getElementById('regionRankPriceBtn');
+  if(!complex||!price)return;
+  const isPrice=regionRankView==='pyprice';
+  complex.style.background=isPrice?'#fff':'var(--teal)';complex.style.color=isPrice?'var(--teal-dark)':'#fff';complex.setAttribute('aria-selected',String(!isPrice));
+  price.style.background=isPrice?'var(--teal)':'#fff';price.style.color=isPrice?'#fff':'var(--teal-dark)';price.setAttribute('aria-selected',String(isPrice));
+}
 function setRegionRankView(view){
   if(view!=='complex'&&view!=='pyprice')return;
   regionRankView=view;
+  syncRegionRankPicker();
   if(lastData?.mode==='region')renderRegion(lastData);
 }
 function renderRegion(d){
