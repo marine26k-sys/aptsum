@@ -6357,6 +6357,7 @@ function placeComplexSchools(wrapper){
 }
 
 const nearbySchoolCache=new Map();
+const richgoSchoolCache=new Map();
 function matchNearbySchools(items,d,alias,nameKey){
   const norm=nameKey|| (n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,''));
   if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
@@ -6516,12 +6517,29 @@ async function loadComplexSchools(panel,d,lawd){
     const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
     let rows=matched?.schools||[];
     let schoolSource='운영자 제공 학교 위치 자료';
-    if(!rows.length){
-      const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+    const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+    const richKey=JSON.stringify([d.name,region,d.umd||'']);
+    let richgo=richgoSchoolCache.get(richKey);
+    if(!richgo){
       const qs=new URLSearchParams({name:d.name,region,umd:d.umd||''});
-      const fallback=await fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
-      if(fallback?.schools?.length){rows=fallback.schools;schoolSource='리치고 학군 자료';}
+      richgo=await fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
+      richgoSchoolCache.set(richKey,richgo||{schools:[]});
     }
+    const richSchools=Array.isArray(richgo?.schools)?richgo.schools:[];
+    const normSchool=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/학교$/,'').toLowerCase();
+    let enriched=0;
+    if(rows.length&&richSchools.length){
+      const richByName=new Map(richSchools.map(x=>[normSchool(x.name),x]));
+      rows=rows.map(row=>{
+        const rich=richByName.get(normSchool(row.name));
+        if(!rich?.grade)return row;
+        enriched++;
+        return {...row,grade:rich.grade,rank:rich.rank||row.rank,source:'리치고'};
+      });
+    }else if(!rows.length&&richSchools.length){
+      rows=richSchools;schoolSource='리치고 학군 자료';
+    }
+    if(enriched)schoolSource='운영자 제공 학교 위치 자료 · 리치고 학군 등급 보완';
     body.innerHTML=rows.length?['초','중','고'].map(level=>{
       const schools=rows.filter(x=>x.level===level).sort((a,b)=>a.distance-b.distance);
       return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}${x.grade?` <small style="color:var(--teal-dark)">학군 ${esc(x.grade)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
