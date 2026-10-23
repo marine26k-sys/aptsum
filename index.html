@@ -5486,6 +5486,7 @@ async function runSearch(opts){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
         d = analyzeRegion(items, months);
+        if(mode==='region') d.pyPrice = analyzePricePerPyeong(items, months).pyPrice;
         if(mode==='volume') d.mode = 'volume';
         d.pyBand = pyBandMultiSel.length ? pyBandMultiLabel() : null;
         d.buildYear = buildYearLabel();
