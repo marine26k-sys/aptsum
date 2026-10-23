@@ -6474,7 +6474,9 @@ function addComplexSchoolMap(body,matched){
   const expand=document.createElement('button');expand.type='button';expand.textContent='지도 크게 보기';expand.style.cssText='padding:8px;border:1px solid var(--teal);border-radius:8px;background:#fff;color:var(--teal-dark);cursor:pointer';
   controls.append(expand);
   const external=document.createElement('a');external.href=complexExternalMapURL(matched);external.target='_blank';external.rel='noopener noreferrer';external.textContent='카카오맵에서 단지 위치 보기 ↗';external.hidden=true;external.style.cssText='display:none;margin-top:8px;padding:10px;border:1px solid var(--teal);border-radius:10px;color:var(--teal-dark);font-weight:800;text-align:center;text-decoration:none';
-  section.append(button,status,external,controls,container);body.prepend(section);
+  // 지도는 주변 학교·지하철 정보를 펼치면 항상 바로 보이도록 한다.
+  // 기존의 지도 보기/접기 토글은 화면에 노출하지 않고 초기화용으로만 사용한다.
+  section.append(status,external,controls,container);body.prepend(section);
   let map=null,loading=false;
   button.onclick=async()=>{
     if(loading)return;
@@ -6515,6 +6517,8 @@ function addComplexSchoolMap(body,matched){
     }catch(error){map=null;container.replaceChildren();container.hidden=true;status.textContent='내장 지도를 불러오지 못했습니다. 카카오맵에서 단지 위치를 확인할 수 있습니다.';external.hidden=false;external.style.display='block';button.textContent='지도 다시 보기';}
     finally{loading=false;button.disabled=false;}
   };
+  // 버튼은 화면에 표시하지 않고 지도 초기화 트리거로만 사용한다.
+  button.click();
 }
 function selectComplexMapPlace(places,d,alias,region,nameKey){
   const norm=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/\(\d{4}년\d{1,2}월예정\)$/,'').replace(/아파트$/,'');
@@ -6570,8 +6574,8 @@ function attachRegionalSchoolCoordinates(rows,items){
   });
 }
 function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
-  const button=document.createElement('button');button.type='button';button.textContent='단지·학교 지도 보기';button.style.cssText='width:100%;padding:10px;margin-bottom:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:800;cursor:pointer';body.prepend(button);
-  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');button.after(status);
+  const button=document.createElement('button');button.type='button';
+  const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');body.prepend(status);
   button.onclick=async()=>{
     button.disabled=true;status.textContent='단지 위치를 확인하는 중…';
     try{
@@ -6585,10 +6589,11 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
       const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:Number(place.y),lng:Number(place.x)});
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:schoolRows,nearby:[]});
-      body.querySelector('button').click();
-    }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 다시 눌러 주세요.';}
+    }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
     finally{button.disabled=false;}
   };
+  // 좌표가 없는 단지도 별도 버튼 없이 자동으로 카카오 장소 검색을 시작한다.
+  button.click();
 }
 async function loadComplexSchools(panel,d,lawd){
   if(!panel.open||panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
@@ -6666,8 +6671,8 @@ function renderComplex(d){
     </div>
 
     <div class="sec" style="padding-top:12px;padding-bottom:0">
-      <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
-        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 펼쳐보기</summary>
+      <details id="complexNearbySchools" open style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철</summary>
         <div class="nearby-school-body" style="padding-top:8px"></div>
       </details>
     </div>
@@ -6679,14 +6684,13 @@ function renderComplex(d){
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교·지하철 · 접기':'주변 학교·지하철 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
   placeComplexSchools(schoolPanel.parentElement);
+  loadComplexSchools(schoolPanel,d,schoolLawd);
   document.getElementById('complexMapButton').onclick=async event=>{
     const button=event.currentTarget;button.disabled=true;
     try{
       schoolPanel.open=true;
       await loadComplexSchools(schoolPanel,d,schoolLawd);
       if(!schoolPanel.isConnected)return;
-      const mapButton=schoolPanel.querySelector('.nearby-school-body button');
-      if(mapButton&&mapButton.textContent!=='지도 접기')mapButton.click();
       schoolPanel.scrollIntoView({behavior:'smooth',block:'start'});
     }finally{button.disabled=false;}
   };
