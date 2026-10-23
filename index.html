@@ -1363,6 +1363,9 @@ function stopSearch(){
 
 // ── 뒤로가기 복원: 검색 결과를 스택에 쌓고 popstate로 복원 ──
 const viewStack = [];
+// 랭킹 목록에서 단지 상세로 이동하기 직전의 화면을 별도로 보관한다.
+// 인앱 브라우저가 pushState 상태를 누락해도 뒤로가기 시 목록을 복원할 수 있게 하는 안전망.
+let pendingReturnView = null;
 function captureViewInputs(){
   return {
     mode, lawd: sel.value,
@@ -1807,6 +1810,14 @@ function restoreView(vi){
   // 복원된 화면을 도로 덮어쓰는 것을 막기 위해 토큰을 무효화한다.
   searchToken++;
   const v = viewStack[vi];
+  if((!v || !v.data) && pendingReturnView){
+    const fallback = pendingReturnView;
+    pendingReturnView = null;
+    viewStack.push(fallback);
+    restoreView(viewStack.length - 1);
+    requestAnimationFrame(()=>window.scrollTo(0, fallback.scrollY || 0));
+    return;
+  }
   if(!v || !v.data){
     // 일부 브라우저/인앱 브라우저에서는 첫 검색 결과를 pushState 하기 전에
     // 뒤로가기가 처리되어 vi:-1(또는 data가 없는 상태)로 돌아오는 경우가 있다.
@@ -4838,6 +4849,9 @@ setTimeout(initializeAptsumPage, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
+  if(mode!=='complex' && lastData){
+    try{ pendingReturnView = {data:lastData, inputs:captureViewInputs(), scrollY:window.scrollY}; }catch(e){ pendingReturnView = null; }
+  }
   setMode('complex');
   if(guName){
     const opt = [...sel.options].find(o=>o.textContent===guName);
