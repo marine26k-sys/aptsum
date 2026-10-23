@@ -5652,6 +5652,7 @@ async function runSearch(opts){
       if(myToken!==searchToken) return;
     }
     lastData = d;
+    if(d.mode==='region') regionRankView='complex';
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
     // 내용만 단지분석으로 바뀌어서 화면 중간(차트 아래쪽 등)부터 보이고, 그 위에 있는 평형별 요약표가 안 보이는
@@ -7069,6 +7070,12 @@ function appendMolitMore(d){
   document.getElementById('result').appendChild(button);
 }
 
+let regionRankView = 'complex';
+function setRegionRankView(view){
+  if(view!=='complex'&&view!=='pyprice')return;
+  regionRankView=view;
+  if(lastData?.mode==='region')renderRegion(lastData);
+}
 function renderRegion(d){
   d=molitPageData(d,"highDeals",renderRegion);
   const multiRegion = regionMulti(d.highDeals);
@@ -7084,6 +7091,14 @@ function renderRegion(d){
         <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/공급평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>
       </div>${rkSep(i,pyPrice.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 평당가 데이터가 없습니다</div>';
+  const rankTabs = `<div class="chips" role="tablist" aria-label="단지 랭킹 종류" style="margin-bottom:10px">
+    <button type="button" role="tab" aria-selected="${regionRankView==='complex'}" onclick="setRegionRankView('complex')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:10px;background:${regionRankView==='complex'?'var(--teal)':'#fff'};color:${regionRankView==='complex'?'#fff':'var(--teal-dark)'};font:inherit;font-weight:800">단지 랭킹</button>
+    <button type="button" role="tab" aria-selected="${regionRankView==='pyprice'}" onclick="setRegionRankView('pyprice')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:10px;background:${regionRankView==='pyprice'?'var(--teal)':'#fff'};color:${regionRankView==='pyprice'?'#fff':'var(--teal-dark)'};font:inherit;font-weight:800">평당가 랭킹</button>
+  </div>`;
+  const complexSection = `<div class="sec"><h3>기간 최고가 거래</h3>${rows(d.highDeals, x=>`
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="val" style="color:var(--teal)">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}</div>`;
+  const priceSection = `<div class="sec"><h3>평당가 랭킹</h3><div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">단지당 평당가가 가장 높은 평형을 대표 표시 · 최근 3년 최고가 기준</div>${pyRows}</div>`;
   const html = `
   <div class="card">
     <div class="card-hd">
@@ -7092,18 +7107,8 @@ function renderRegion(d){
       <div class="meta">${esc(d.period)} (${d.years})${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}</div>
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
-
-    <div class="sec">
-      <h3>기간 최고가 거래</h3>
-      ${rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
-        <span class="val" style="color:var(--teal)">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}
-    </div>
-    <div class="sec">
-      <h3>평당가 랭킹</h3>
-      <div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">단지당 평당가가 가장 높은 평형을 대표 표시 · 최근 3년 최고가 기준</div>
-      ${pyRows}
-    </div>
+    ${rankTabs}
+    ${regionRankView==='pyprice'?priceSection:complexSection}
 
   </div>
   <div class="src-note">출처: 국토교통부 (해제거래 제외)</div>`;
