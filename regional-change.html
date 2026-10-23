@@ -126,7 +126,7 @@ function renderYtdRanking(){
  const startSelect=rangeSelect('rankingStart','시작 월'),endSelect=rangeSelect('rankingEnd','끝 월');
  const defaultEnd=previousEnd||data.periods.monthly[0].label;
  const defaultStart=(Number(defaultEnd.slice(0,4))-1)+defaultEnd.slice(4);
- startSelect.value=previousStart||defaultStart;endSelect.value=defaultEnd;panel.append(range);
+ startSelect.value=previousStart||defaultStart;endSelect.value=defaultEnd;panel.append(range);range.hidden=document.getElementById('ytdView').getAttribute('aria-pressed')!=='true';
  const toolbar=document.createElement('div');toolbar.className='ytd-toolbar';
  const filterLabel=document.createElement('label');filterLabel.textContent='지역';filterLabel.htmlFor='ytdProvince';
  const filter=document.createElement('select');filter.id='ytdProvince';
