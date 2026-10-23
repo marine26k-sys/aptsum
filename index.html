@@ -6380,6 +6380,23 @@ function expandComplexMap(container,map,section){
 }
 let complexMapSDKPromise=null;
 function validSchoolCoordinate(x){return Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)&&x.lat>=25&&x.lat<=45&&x.lng>=120&&x.lng<=135;}
+function straightDistanceM(a,b){
+  const rad=Math.PI/180,lat1=Number(a.lat)*rad,lat2=Number(b.lat)*rad;
+  const dLat=(Number(b.lat)-Number(a.lat))*rad,dLng=(Number(b.lng)-Number(a.lng))*rad;
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return Math.round(6371000*2*Math.asin(Math.sqrt(h)));
+}
+function searchNearbySubwayStations(maps,center){
+  if(!maps.services?.Places||!validSchoolCoordinate(center))return Promise.resolve([]);
+  return new Promise(resolve=>{
+    const places=new maps.services.Places();
+    places.categorySearch('SW8',(items,result)=>{
+      if(result!==maps.services.Status.OK){resolve([]);return;}
+      const rows=items.map(x=>({name:x.place_name,lat:Number(x.y),lng:Number(x.x),distance:straightDistanceM(center,{lat:Number(x.y),lng:Number(x.x)}),address:x.address_name||''})).filter(validSchoolCoordinate).sort((a,b)=>a.distance-b.distance);
+      resolve(rows.slice(0,3));
+    },{location:new maps.LatLng(center.lat,center.lng),radius:3000,sort:maps.services.SortBy.DISTANCE});
+  });
+}
 function loadComplexMapSDK(){
   if(window.kakao?.maps?.Map)return Promise.resolve(window.kakao.maps);
   if(complexMapSDKPromise)return complexMapSDKPromise;
@@ -6429,8 +6446,13 @@ function addComplexSchoolMap(body,matched){
       map.setZoomable(true);
       map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
       const bounds=new maps.LatLngBounds();
-      const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706'};
+      const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706',역:'#0F766E'};
       const points=[{...matched,level:'단지'},...(matched.schools||[]).filter(validSchoolCoordinate)];
+      const stations=await searchNearbySubwayStations(maps,matched);
+      const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
+      stationSummary.innerHTML=stations.length?`가까운 지하철역 · ${stations.map(x=>`${esc(x.name)} ${x.distance.toLocaleString()}m`).join(' · ')}<br><small>직선거리 기준 · 실제 도보거리는 다를 수 있습니다.</small>`:'주변 3km 이내 지하철역을 찾지 못했습니다.';
+      container.before(stationSummary);
+      stations.forEach(station=>points.push({...station,level:'역'}));
       let info=null;
       points.forEach(point=>{
         const position=new maps.LatLng(point.lat,point.lng);bounds.extend(position);
