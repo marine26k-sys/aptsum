@@ -76,7 +76,7 @@ function snapshotItems(s){return Array.isArray(s?.items)?s.items:[]}
 function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+'T00:00:00Z');if(Number.isNaN(d.getTime()))return null;const monday=new Date(d);monday.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));const thursday=new Date(monday);thursday.setUTCDate(monday.getUTCDate()+3);const first=new Date(Date.UTC(thursday.getUTCFullYear(),thursday.getUTCMonth(),1));const firstThursday=new Date(first);firstThursday.setUTCDate(1+(4-first.getUTCDay()+7)%7);const week=1+Math.round((thursday-firstThursday)/604800000);const sunday=new Date(monday);sunday.setUTCDate(monday.getUTCDate()+6);return {key:monday.toISOString().slice(0,10),label:`${thursday.getUTCFullYear()}년 ${thursday.getUTCMonth()+1}월 ${week}주차`,range:`${monday.getUTCMonth()+1}/${monday.getUTCDate()}~${sunday.getUTCMonth()+1}/${sunday.getUTCDate()}`};}
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
-async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'default'});if(!r.ok)throw Error(String(r.status));return r.json()}
+async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error(String(r.status));return r.json()}
 async function loadRegion(province,name,lawd){
  try{
   const metric=await fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&askMap=1`);
@@ -128,14 +128,5 @@ function selectView(view){state.view=view;const ranking=view==='period';$('#mont
 $('#monthlyView').onclick=()=>selectView('weekly');$('#ytdView').onclick=()=>selectView('period');
 
 function cleanLegacyNotes(){document.querySelectorAll('.notes li').forEach(item=>{if(item.textContent.includes('표본 부족')||item.textContent.includes('상위 30단지'))item.remove();item.innerHTML=item.innerHTML.replaceAll('전체 표본','전체 단지');});}
-async function bootOptimized(){
- $('#updated').textContent='자료를 불러오는 중…';render();
- const payload=await fetchJson('/api/listings?askMap=1&all=1');
- const byLawd=new Map((payload.regions||[]).map(item=>[String(item.lawd),item]));
- for(const [province,regions] of REGIONS)for(const [name,lawd] of regions){const metric=byLawd.get(String(lawd));state.data.set(String(lawd),{province,name,lawd,...(metric||{rate:null,count:0,weekly:[],error:true})});if(metric?.asOf&&(!state.asOf||metric.asOf>state.asOf))state.asOf=metric.asOf;if(metric?.previousAsOf&&(!state.previousAsOf||metric.previousAsOf>state.previousAsOf))state.previousAsOf=metric.previousAsOf;}
- $('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`;
- period.replaceChildren();const weeks=new Map();for(const row of state.data.values())for(const w of row.weekly||[])if(w.previousAsOf)weeks.set(w.weekStart,w);for(const [key,w] of [...weeks].sort((a,b)=>b[0].localeCompare(a[0]))){const o=document.createElement('option');o.value=key;o.textContent=weekInfo(w.asOf)?.label.replace(/^\d+년 /,'')||key;period.append(o)}
- render();if(state.view==='period')renderWeeklyRanking();
-}
-bootOptimized().then(cleanLegacyNotes).catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
+boot().then(cleanLegacyNotes).catch(()=>{$('#title').textContent='호가 자료를 불러오지 못했습니다.';$('#updated').textContent='잠시 후 다시 시도해 주세요.'});
 </script></body></html>

@@ -143,27 +143,8 @@ export default async (request) => {
       return json({items,failedRegions:failed,floorMissing,trial});
     }
     const lawd = q.get("lawd") || "";
-    if (!LAWDS.has(lawd) && !(q.get("askMap")==="1" && q.get("all")==="1")) return json({ error: "invalid_lawd" }, 400);
+    if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
     // 공개 지도는 원본 매물 대신 단지별 동일 비중의 집계만 제공한다.
-    if(q.get("askMap")==="1" && q.get("all")==="1"){
-      const build = async lawd => {
-        const index=(await store.get(historyIndexKey(lawd),{type:"json",consistency:"strong"}))||[];
-        const weeks=new Map();
-        for(const entry of index){
-          const data=await store.get(historyKey(lawd,entry.uploadId),{type:"json",consistency:"strong"});
-          if(!data)continue;
-          const date=new Date(String(data.asOf).replaceAll('.','-')+'T00:00:00Z');if(!Number.isFinite(+date))continue;
-          date.setUTCDate(date.getUTCDate()-((date.getUTCDay()+6)%7));const key=date.toISOString().slice(0,10);
-          if(!weeks.has(key))weeks.set(key,{last:data.asOf,items:new Map()});const week=weeks.get(key);if(data.asOf>week.last)week.last=data.asOf;
-          for(const item of listingItemsForFloor(data.items,'available','mid')){if(!(item.ask>0))continue;const k=String(item.nid)+'|'+item.ex;const values=week.items.get(k)||[];values.push(item.ask);week.items.set(k,values);}
-        }
-        const groups=[...weeks.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-        const weekly=groups.map(([weekStart,week],i)=>{const prev=groups[i-1]?.[1],byComplex=new Map();if(prev)for(const [key,values] of week.items){const old=prev.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const list=byComplex.get(nid)||[];list.push((mean(values)/before-1)*100);byComplex.set(nid,list);}const values=[...byComplex.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);return {weekStart,asOf:week.last,previousAsOf:prev?.last||null,count:values.length,rate:values.length?values.reduce((x,y)=>x+y,0)/values.length:null};});
-        const current=weekly.at(-1),previous=weekly.at(-2);return {lawd,rate:current?.rate??null,count:current?.count||0,asOf:current?.asOf||null,previousAsOf:previous?.asOf||null,weekly};
-      };
-      const regions=await Promise.all([...LAWDS].map(async lawd=>{try{return await build(lawd)}catch{return {lawd,rate:null,count:0,asOf:null,previousAsOf:null,weekly:[],error:true}}}));
-      return json({regions});
-    }
     if(q.get("askMap")==="1"){
       const index=(await store.get(historyIndexKey(lawd),{type:"json",consistency:"strong"}))||[];
       const weeks=new Map();
