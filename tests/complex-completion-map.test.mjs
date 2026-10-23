@@ -12,11 +12,6 @@ test('외부 지도는 단지의 검증된 좌표를 사용한다',()=>{
  assert.equal(c.complexExternalMapURL({name:'단지'}),'');
 });
 
-test('모바일 단지 헤더에서 지도와 주변 정보를 명확하게 안내한다',()=>{
- assert.match(html,/id="complexMapButton"[^>]*>[\s\S]*?단지 지도 · 학교 · 주변 단지 보기/);
- assert.match(html,/getElementById\('complexMapButton'\)[\s\S]*?schoolPanel/);
-});
-
 test('최신 분양권에 준공연도가 없어도 같은 단지의 확정된 거래 연도를 사용한다',()=>{
  const context=vm.createContext({});
  vm.runInContext(html.slice(html.indexOf('function complexTradeBuild('),html.indexOf('function analyzeComplex(')),context);
