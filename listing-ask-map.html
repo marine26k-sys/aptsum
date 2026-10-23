@@ -48,20 +48,20 @@ body{font-family:'Noto Sans KR',sans-serif;line-height:1.6}header{display:block}
     </button>
   </header><div class="controls" aria-label="호가 통계 화면"><button id="monthlyView" type="button" aria-pressed="true">주간 변동률</button><button id="ytdView" type="button" aria-pressed="false">기간 변동률</button></div><div id="monthlyPeriodControls" class="controls"><button id="monthly" aria-pressed="true">주간</button><select id="period" aria-label="비교 기준 기간"></select></div><p class="meta" id="updated"></p><section id="monthlyPanel" class="card"><div class="card-hd"><div class="hd-top"><span class="hd-logo"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="#83D1D2" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="#83D1D2" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="#83D1D2"/></svg><span>아파트썸</span></span><span class="hd-badge">호가 통계</span></div><h2 id="title">불러오는 중…</h2><div class="meta" id="comparisonPeriod" style="color:#f1f5f9;opacity:1;font-size:12px;font-weight:700;margin-top:8px">중층 이상 최저매물 호가 비교</div><div id="monthlyVs" class="regional-vs"></div></div><div class="grid" id="grid"></div><div class="legend">하락 <span style="color:#2563eb">■</span> · 보합 □ · 상승 <span style="color:#ef4444">■</span></div></section><section id="ytdRankingPanel" class="card" hidden aria-labelledby="ytdRankingTitle"></section><div class="notes"><b>이렇게 읽어주세요</b><ul><li><b>표본:</b> <span id="sampleDescription">전체 평형·전체 단지 표본</span><br><b>변동률:</b> 중층 이상 최저매물 호가를 단지별로 주간 평균한 뒤, 직전 주간 평균과 비교합니다. 단지 안에서 동일 전용면적의 주간 평균 호가 변동률을 평균한 뒤, 지역은 단지별 동일 비중으로 평균합니다.</li><li><b>단지 수:</b> 두 주차 모두 비교 가능한 평형이 있는 단지 수. 같은 단지의 여러 평형은 하나의 단지로 집계합니다.</li><li><b>표본 부족:</b> 비교 가능한 단지가 3개 미만인 지역</li></ul><details class="calculation-guide"><summary>계산 기준 자세히 보기</summary>
 <div class="guide-section"><h3>비교 방법</h3><ul>
-<li><b>평수 제한 없이 모든 평형</b>을 포함합니다.</li><li><b>같은 단지 · 같은 공급평형</b>끼리 비교합니다.</li>
-<li>거래가 없는 달은 <b>직전 거래월의 월평균 시세</b>를 이어받습니다. 첫 거래 이전은 채우지 않습니다.</li>
-<li><b>단지 안:</b> 비교월 기준 <b>평당가가 가장 높은 평형 하나</b>를 선택해 같은 평형의 전월 시세 대비 변동률을 구합니다. <b>지역:</b> 단지별 동일 비중으로 평균합니다.</li>
-<li>선택 평형의 전월 시세가 없는 단지는 계산에서 제외합니다.</li>
+<li><b>평수 제한 없이 모든 평형</b>을 포함합니다.</li><li><b>같은 단지 · 같은 전용면적</b>끼리 비교합니다.</li>
+<li>각 주차에 수집된 매물의 호가를 평형별로 평균합니다.</li>
+<li><b>중층 이상 최저매물 호가</b>를 사용해 이번 주와 직전 주의 평균을 비교합니다.</li>
+<li><b>단지 안:</b> 평형별 변동률을 평균합니다. <b>지역:</b> 단지별 동일 비중으로 평균합니다.</li>
 </ul></div>
 <div class="guide-section"><h3>표본과 가격 기준</h3><ul>
-<li><b>전체 표본:</b> 평수 제한 없이 실거래 이력이 있는 전체 단지 목록</li>
-<li><b>공급면적:</b> 네이버 매칭 자료 우선 · 없으면 추정 평형 사용</li>
-<li><b>거래 기준:</b> 국토부 아파트 매매 · 직거래·해제·분양권·입주권 제외</li>
+<li><b>전체 단지:</b> 호가 이력이 있는 전체 단지 목록</li>
+<li><b>호가 기준:</b> 입주 가능 매물 중 중층 이상 최저 호가</li>
+<li><b>비교 단위:</b> 단지·전용면적별 주간 평균 호가</li>
 </ul></div>
 <div class="guide-section"><h3>알아두세요</h3><ul>
 <li>같은 평형 안에서도 타입·층 차이는 남을 수 있습니다.</li>
-<li>아파트썸 자체 집계입니다. 신고 지연·취소로 과거 수치도 바뀔 수 있습니다.</li>
-<li><b>실거래 수집 배치 후 갱신</b>됩니다.</li>
+<li>아파트썸 자체 집계이며, 매물 등록·삭제·호가 변경에 따라 과거 수치도 바뀔 수 있습니다.</li>
+<li><b>주간 매물 수집 후 갱신</b>됩니다. 현재 주차는 수집일 기준 잠정치입니다.</li>
 </ul></div></details></div></main><script type="module">
 import {REGIONS} from '/shared/regions.mjs';
 import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
