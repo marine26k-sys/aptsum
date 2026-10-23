@@ -72,7 +72,7 @@ export default async (request) => {
     const search = await callTool(1, 'search_apartments', { query: [region, umd, name].filter(Boolean).join(' ') });
     const apartment = pickApartment(search?.results, region, umd, name);
     if (!apartment?.danji_id) return Response.json({ error: 'apartment_not_found', schools: [] }, { status: 404 });
-    const district = await callTool(2, 'get_school_district', { danji_id: apartment.danji_id, per_level: 5 });
+    const district = await callTool(2, 'get_school_district', { danji_id: apartment.danji_id, per_level: 10 });
     const data = {
       source: '리치고(Richgo) m.richgo.ai',
       danjiId: apartment.danji_id,
