@@ -26,9 +26,9 @@ test('empty months carry historical prices and preserve zero actual trade counts
  const r=regionalChange(rows,p);assert.equal(r.groups,3);assert.equal(r.rate,3.33);
  const a=r.comparisons.find(x=>x.name==='A');assert.equal(a.previousPrice,.5);assert.equal(a.currentPrice,.5);assert.equal(a.currentTrades,0);assert.equal(a.previousTrades,0);assert.equal(a.rate,0);
 });
-test('future prices never fill past months and new highest types have no backwards fill',()=>{
+test('future prices never fill past months while older matched types still carry',()=>{
  const rows=[t('new','202609',25,1),t('future','202610',30,3),t('A','202608',20,.5),t('A','202609',80,.8)];
- assert.equal(regionalChange(rows,p).groups,0);
+ assert.equal(regionalChange(rows,p).groups,1);
 });
 test('a carried highest-price type is not replaced by a newly traded cheaper type',()=>{
  const a=regionalChange([t('A','202601',15,1),t('A','202609',70,.6)],p).comparisons[0];
@@ -66,6 +66,6 @@ test('custom month ranges include all matched types without future leakage',asyn
  assert.equal(matrix['2025-12|2026-10'].groups,4);
  assert.equal(matrix['2026-09|2026-10'].rate,19.79);
  assert.equal(matrix['2026-10|2026-09'],undefined);
- const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,2);assert.equal(filtered['2025-12|2026-10'].rate,51.25);
+ const filtered=regionalPeriodMatrix(rows,months,{},[JSON.stringify(['동','A'])]);assert.equal(filtered['2025-12|2026-10'].groups,2);assert.equal(filtered['2025-12|2026-10'].rate,null);
  const missing=regionalPeriodMatrix(rows,months,{},null,new Set(['202512']));assert.equal(missing['2025-12|2026-10'].missing,true);
 });
