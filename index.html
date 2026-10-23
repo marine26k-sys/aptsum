@@ -6469,9 +6469,16 @@ async function geocodeSchoolRows(maps,rows,d,lawd,center){
   const regionParts=String(region||'').split(/\s+/).filter(Boolean);
   for(const row of rows){
     if(validSchoolCoordinate(row))continue;
-    const items=await search(`${row.name} ${d.umd||''}`.trim());
+    let items=await search(`${row.name} ${d.umd||''}`.trim());
+    if(!items.length)items=await search(`${region} ${row.name}`.trim());
+    if(!items.length)items=await search(row.name);
     const rowName=String(row.name||'').replace(/\s/g,'');
-    const named=items.filter(x=>String(x.place_name||'').replace(/\s/g,'')===rowName&&validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)}));
+    const named=items.filter(x=>{
+      const placeName=String(x.place_name||'').replace(/\s/g,'');
+      const category=String(x.category_name||'');
+      return (placeName===rowName||(placeName.includes(rowName)&&category.includes('학교')))
+        && validSchoolCoordinate({lat:Number(x.y),lng:Number(x.x)});
+    });
     const scoped=named.filter(x=>{
       const tokens=String(x.address_name||'').split(/\s+/);
       return regionParts.every(part=>tokens.some(token=>token===part||token===part+'시'))
