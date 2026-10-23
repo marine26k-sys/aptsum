@@ -888,8 +888,7 @@ try {
     <div class="tab-grp">
       <div class="tab-grp-name">저평가</div>
       <div class="tab-grp-tabs">
-          <a class="tab" id="tabSU" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>단기</a>
-          <a class="tab" id="tabLP" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>연간</a>
+          <a class="tab" id="tabUV" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 9 12l3 3 7-8"/><path d="M15 7h4v4"/></svg>저평가</a>
           <a class="tab" id="tabINV" href="./index.html?m=inversion"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>평형 비교</a>
       </div>
     </div>
@@ -1002,6 +1001,11 @@ try {
     <div id="regionRankPicker" role="tablist" aria-label="랭킹 종류 선택" style="display:none;gap:6px;margin:4px 0 6px">
       <button id="regionRankComplexBtn" type="button" role="tab" onclick="setRegionRankView('complex')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">단지 랭킹</button>
       <button id="regionRankPriceBtn" type="button" role="tab" onclick="setRegionRankView('pyprice')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평당가 랭킹</button>
+    </div>
+    <div id="undervaluePicker" role="tablist" aria-label="저평가 기간 선택" style="display:none;gap:6px;margin:4px 0 6px">
+      <button id="uvShortBtn" type="button" role="tab" onclick="chooseUndervalueMode('shortval')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">단기</button>
+      <button id="uvHalfBtn" type="button" role="tab" onclick="chooseUndervalueMode('peak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">반기</button>
+      <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">연간</button>
     </div>
     <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
@@ -2724,6 +2728,7 @@ function setMode(m, fromRestore){
   mode = m;
   if(m==='region'&&!fromRestore) regionRankView='complex';
   syncRegionRankPicker();
+  syncUndervaluePicker();
   renderRecentComplexes();
   document.getElementById('searchBox').dataset.mode=m;
   document.documentElement.classList.toggle('complex-analysis',m==='complex');
@@ -2744,9 +2749,8 @@ function setMode(m, fromRestore){
   document.getElementById('tabJLTR').classList.toggle('on', m==='jeonselongtermrise');
   document.getElementById('tabPBR').classList.toggle('on', m==='pricebandrise');
   document.getElementById('tabV').classList.toggle('on', m==='volume');
-  document.getElementById('tabSU').classList.toggle('on', m==='shortval');
+  document.getElementById('tabUV').classList.toggle('on', m==='shortval'||m==='peak'||m==='longpeak');
   document.getElementById('tabP').classList.toggle('on', m==='peak');
-  document.getElementById('tabLP').classList.toggle('on', m==='longpeak');
   document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabLPL').classList.toggle('on', m==='longpeaklisting');
   document.getElementById('tabLFAV').classList.toggle('on', m==='listingfavorites');
@@ -7086,6 +7090,18 @@ function setRegionRankView(view){
   regionRankView=view;
   syncRegionRankPicker();
   if(lastData?.mode==='region')renderRegion(lastData);
+}
+function syncUndervaluePicker(){
+  const box=document.getElementById('undervaluePicker');
+  if(!box)return;
+  const active=['shortval','peak','longpeak'].includes(mode);
+  box.style.display=active?'flex':'none';
+  const ids=[['uvShortBtn','shortval'],['uvHalfBtn','peak'],['uvYearBtn','longpeak']];
+  ids.forEach(([id,m])=>{const b=document.getElementById(id);if(!b)return;const on=mode===m;b.style.background=on?'var(--teal)':'#fff';b.style.color=on?'#fff':'var(--teal-dark)';b.setAttribute('aria-selected',String(on));});
+}
+function chooseUndervalueMode(next){
+  if(!['shortval','peak','longpeak'].includes(next))return;
+  if(setMode(next,true))syncUndervaluePicker();
 }
 function renderRegion(d){
   d=molitPageData(d,"highDeals",renderRegion);
