@@ -1807,7 +1807,23 @@ function restoreView(vi){
   // 복원된 화면을 도로 덮어쓰는 것을 막기 위해 토큰을 무효화한다.
   searchToken++;
   const v = viewStack[vi];
-  if(!v){ // 초기 화면
+  if(!v || !v.data){
+    // 일부 브라우저/인앱 브라우저에서는 첫 검색 결과를 pushState 하기 전에
+    // 뒤로가기가 처리되어 vi:-1(또는 data가 없는 상태)로 돌아오는 경우가 있다.
+    // 이때 조건 URL이 남아 있는데 필터 화면만 보여주면 사용자는 결과가 사라진 것으로
+    // 인식하므로, 현재 URL의 공유 조건을 기준으로 해당 탭 결과를 다시 조회한다.
+    // 지역 랭킹뿐 아니라 모든 목록형 탭에 공통 적용한다.
+    const urlParams = new URLSearchParams(location.search);
+    const requestedMode = urlParams.get('m');
+    const hasSharedQuery = ['r','rs','q','c','lnq'].some(key=>Boolean(urlParams.get(key)?.trim()));
+    const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
+    if(requestedMode && URL_MODES.includes(requestedMode) && hasSharedQuery && !restoreView._urlRecovery){
+      restoreView._urlRecovery = true;
+      initFromURL().finally(()=>{ restoreView._urlRecovery = false; });
+      return;
+    }
+    // 공유 조건이 없는 진입이면 기존처럼 필터/메인 화면만 복원한다.
+    if(!v){
     document.getElementById('result').classList.remove('on');
     document.getElementById('result').innerHTML='';
     document.getElementById('searchBox').style.display = '';
@@ -1816,6 +1832,12 @@ function restoreView(vi){
     // 어긋난 상태로 남음 — 2026.09 운영자 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
     const initialMode=new URLSearchParams(location.search).get('m');
     if(initialMode)setMode(initialMode,true);else restoreMainMenu();
+    return;
+    }
+    // 스냅샷이 비어 있으면 URL 복원이 실패한 상태이므로 안전하게 초기 화면으로 돌아간다.
+    document.getElementById('result').classList.remove('on');
+    document.getElementById('result').replaceChildren();
+    restoreMainMenu();
     return;
   }
   const inp = v.inputs;
