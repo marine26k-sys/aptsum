@@ -36,6 +36,50 @@ const str = (v, max = 200) => String(v ?? "").slice(0, max);
 const num = (v) => (Number.isFinite(+v) ? +v : null);
 const historyKey = (lawd, uploadId) => `history:${lawd}:${uploadId}`;
 const historyIndexKey = (lawd) => `history-index:${lawd}`;
+const askMapKey = (lawd) => `ask-map:${lawd}`;
+
+// 업로드 완료 시 한 번만 계산해 저장하는 공개 지도용 집계입니다.
+export async function buildAskMap(store, lawd) {
+  const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
+  const weeks = new Map();
+  for (const entry of index) {
+    const data = await store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" });
+    if (!data) continue;
+    const date = new Date(String(data.asOf).replaceAll('.', '-') + 'T00:00:00Z');
+    if (!Number.isFinite(+date)) continue;
+    date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+    const key = date.toISOString().slice(0, 10);
+    if (!weeks.has(key)) weeks.set(key, { last: data.asOf, items: new Map() });
+    const week = weeks.get(key);
+    if (data.asOf > week.last) week.last = data.asOf;
+    for (const item of listingItemsForFloor(data.items, 'available', 'mid')) {
+      if (!(item.ask > 0)) continue;
+      const itemKey = String(item.nid) + '|' + item.ex;
+      const values = week.items.get(itemKey) || [];
+      values.push(item.ask);
+      week.items.set(itemKey, values);
+    }
+  }
+  const groups = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const weekly = groups.map(([weekStart, week], i) => {
+    const previous = groups[i - 1]?.[1], byComplex = new Map();
+    if (previous) for (const [itemKey, values] of week.items) {
+      const old = previous.items.get(itemKey);
+      if (!old?.length) continue;
+      const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
+      const before = mean(old);
+      if (!(before > 0)) continue;
+      const nid = itemKey.split('|')[0];
+      const rates = byComplex.get(nid) || [];
+      rates.push((mean(values) / before - 1) * 100);
+      byComplex.set(nid, rates);
+    }
+    const values = [...byComplex.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
+    return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null };
+  });
+  const current = weekly.at(-1), previous = weekly.at(-2);
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly };
+}
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
 // 원본 스냅샷과 색인은 모두 보존한다.
@@ -143,30 +187,23 @@ export default async (request) => {
       return json({items,failedRegions:failed,floorMissing,trial});
     }
     const lawd = q.get("lawd") || "";
-    if (!LAWDS.has(lawd)) return json({ error: "invalid_lawd" }, 400);
+    if (!LAWDS.has(lawd) && !(q.get("askMap") === "1" && q.get("all") === "1")) return json({ error: "invalid_lawd" }, 400);
     // 공개 지도는 원본 매물 대신 단지별 동일 비중의 집계만 제공한다.
+    if (q.get("askMap") === "1" && q.get("all") === "1") {
+      const regions = await Promise.all([...LAWDS].map(async code => {
+        const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
+        if (cached) return cached;
+        try {
+          const aggregate = await buildAskMap(store, code);
+          await store.setJSON(askMapKey(code), aggregate);
+          return aggregate;
+        } catch { return { lawd: code, rate: null, count: 0, asOf: null, previousAsOf: null, weekly: [], error: true }; }
+      }));
+      return json({ regions });
+    }
     if(q.get("askMap")==="1"){
-      const index=(await store.get(historyIndexKey(lawd),{type:"json",consistency:"strong"}))||[];
-      const weeks=new Map();
-      for(const entry of index){
-        const data=await store.get(historyKey(lawd,entry.uploadId),{type:"json",consistency:"strong"});
-        if(!data)continue;
-        const date=new Date(String(data.asOf).replaceAll('.','-')+'T00:00:00Z');if(!Number.isFinite(+date))continue;
-        date.setUTCDate(date.getUTCDate()-((date.getUTCDay()+6)%7));const key=date.toISOString().slice(0,10);
-        if(!weeks.has(key))weeks.set(key,{last:data.asOf,items:new Map()});const week=weeks.get(key);if(data.asOf>week.last)week.last=data.asOf;
-        for(const item of listingItemsForFloor(data.items,'available','mid')){if(!(item.ask>0))continue;const k=String(item.nid)+'|'+item.ex;const values=week.items.get(k)||[];values.push(item.ask);week.items.set(k,values);}
-      }
-      const groups=[...weeks.entries()].sort((a,b)=>a[0].localeCompare(b[0]));const current=groups.at(-1)?.[1],previous=groups.at(-2)?.[1];const complexes=new Map();
-      if(current&&previous)for(const [key,values] of current.items){const old=previous.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const rates=complexes.get(nid)||[];rates.push((mean(values)/before-1)*100);complexes.set(nid,rates);}
-      const rates=[...complexes.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);
-      // 저장된 전체 이력의 주차별 통계를 유지한다.
-      const weekly=groups.map(([weekStart,week],i)=>{
-        const prev=groups[i-1]?.[1],byComplex=new Map();
-        if(prev)for(const [key,values] of week.items){const old=prev.items.get(key);if(!old?.length)continue;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;const before=mean(old);if(!(before>0))continue;const nid=key.split('|')[0];const list=byComplex.get(nid)||[];list.push((mean(values)/before-1)*100);byComplex.set(nid,list);}
-        const values=[...byComplex.values()].map(a=>a.reduce((x,y)=>x+y,0)/a.length);
-        return {weekStart,asOf:week.last,previousAsOf:prev?.last||null,count:values.length,rate:values.length?values.reduce((x,y)=>x+y,0)/values.length:null};
-      });
-      return json({rate:rates.length?rates.reduce((x,y)=>x+y,0)/rates.length:null,count:rates.length,asOf:current?.last||null,previousAsOf:previous?.last||null,weekly});
+      const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
+      return json(cached || await buildAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
@@ -222,7 +259,23 @@ export default async (request) => {
     const removed = [];
     for (const b of blobs) {
       const lawd = b.key.slice(5);
-      if (!keep.has(lawd)) { await store.delete(b.key); removed.push(lawd); }
+      if (!keep.has(lawd)) {
+        await store.delete(b.key);
+        await store.delete(askMapKey(lawd));
+        removed.push(lawd);
+      }
+    }
+    const cachedMaps = await store.list({ prefix: "ask-map:" });
+    for (const b of cachedMaps.blobs) {
+      if (!keep.has(b.key.slice(8))) await store.delete(b.key);
+    }
+    // 지도 화면은 접속 때 원본 이력을 다시 계산하지 않도록 업로드 완료 시 집계한다.
+    const cacheEntries = [...keep];
+    for (let start = 0; start < cacheEntries.length; start += 8) {
+      await Promise.all(cacheEntries.slice(start, start + 8).map(async lawd => {
+        const aggregate = await buildAskMap(store, lawd);
+        await store.setJSON(askMapKey(lawd), aggregate);
+      }));
     }
     const meta = {
       uploadId, asOf, uploadedAt: new Date().toISOString(), regions: keep.size,
