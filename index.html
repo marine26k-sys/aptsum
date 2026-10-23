@@ -1813,6 +1813,7 @@ function restoreView(vi){
   if((!v || !v.data) && pendingReturnView){
     const fallback = pendingReturnView;
     pendingReturnView = null;
+    try{ sessionStorage.removeItem('aptsum:return-ranking'); }catch(e){}
     viewStack.push(fallback);
     restoreView(viewStack.length - 1);
     requestAnimationFrame(()=>window.scrollTo(0, fallback.scrollY || 0));
@@ -1827,6 +1828,18 @@ function restoreView(vi){
     const urlParams = new URLSearchParams(location.search);
     const requestedMode = urlParams.get('m');
     const hasSharedQuery = ['r','rs','q','c','lnq'].some(key=>Boolean(urlParams.get(key)?.trim()));
+    // 일부 모바일 브라우저는 popstate 직전에 페이지를 새 문서로 복원해
+    // 메모리(viewStack/pendingReturnView)를 비운다. 단지 클릭 직전에 저장한 랭킹 URL이
+    // 현재 주소와 같으면 조건 화면을 거치지 않고 해당 랭킹을 다시 조회한다.
+    let storedReturn = null;
+    try{ storedReturn = JSON.parse(sessionStorage.getItem('aptsum:return-ranking')||'null'); }catch(e){}
+    const currentURL = location.pathname + location.search;
+    if(storedReturn?.url === currentURL && requestedMode && requestedMode !== 'complex' && !restoreView._urlRecovery){
+      try{ sessionStorage.removeItem('aptsum:return-ranking'); }catch(e){}
+      restoreView._urlRecovery = true;
+      initFromURL().finally(()=>{ restoreView._urlRecovery = false; });
+      return;
+    }
     const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
     if(requestedMode && URL_MODES.includes(requestedMode) && hasSharedQuery && !restoreView._urlRecovery){
       restoreView._urlRecovery = true;
@@ -4850,7 +4863,11 @@ setTimeout(initializeAptsumPage, 0);
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
 function quick(n, guName){
   if(mode!=='complex' && lastData){
-    try{ pendingReturnView = {data:lastData, inputs:captureViewInputs(), scrollY:window.scrollY}; }catch(e){ pendingReturnView = null; }
+    try{
+      const inputs = captureViewInputs();
+      pendingReturnView = {data:lastData, inputs, scrollY:window.scrollY};
+      sessionStorage.setItem('aptsum:return-ranking',JSON.stringify({url:buildShareURL(inputs),scrollY:window.scrollY}));
+    }catch(e){ pendingReturnView = null; }
   }
   setMode('complex');
   if(guName){
