@@ -6392,8 +6392,14 @@ function searchNearbySubwayStations(maps,center){
     const places=new maps.services.Places();
     places.categorySearch('SW8',(items,result)=>{
       if(result!==maps.services.Status.OK){resolve([]);return;}
-      const rows=items.map(x=>({name:x.place_name,lat:Number(x.y),lng:Number(x.x),distance:straightDistanceM(center,{lat:Number(x.y),lng:Number(x.x)}),address:x.address_name||''})).filter(validSchoolCoordinate).sort((a,b)=>a.distance-b.distance);
-      resolve(rows.slice(0,3));
+      const rows=items.map(x=>({name:x.place_name,lat:Number(x.y),lng:Number(x.x),distance:straightDistanceM(center,{lat:Number(x.y),lng:Number(x.x)}),address:x.address_name||''})).filter(validSchoolCoordinate).sort((a,b)=>a.distance-b.distance).slice(0,3);
+      Promise.all(rows.map(async row=>{
+        const qs=new URLSearchParams({startX:center.lng,startY:center.lat,endX:row.lng,endY:row.lat});
+        const route=await fetch(`/api/kakao-walk?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
+        if(route?.distance)row.walkDistance=route.distance;
+        if(route?.duration)row.walkTime=Math.round(route.duration/60);
+        return row;
+      })).then(resolve);
     },{location:new maps.LatLng(center.lat,center.lng),radius:3000,sort:maps.services.SortBy.DISTANCE});
   });
 }
@@ -6450,7 +6456,7 @@ function addComplexSchoolMap(body,matched){
       const points=[{...matched,level:'단지'},...(matched.schools||[]).filter(validSchoolCoordinate)];
       const stations=await searchNearbySubwayStations(maps,matched);
       const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
-      stationSummary.innerHTML=stations.length?`가까운 지하철역 · ${stations.map(x=>`${esc(x.name)} ${x.distance.toLocaleString()}m`).join(' · ')}<br><small>직선거리 기준 · 실제 도보거리는 다를 수 있습니다.</small>`:'주변 3km 이내 지하철역을 찾지 못했습니다.';
+      stationSummary.innerHTML=stations.length?`가까운 지하철역 · ${stations.map(x=>`${esc(x.name)} ${x.walkDistance?`도보 ${x.walkDistance.toLocaleString()}m · ${x.walkTime}분`:`직선 ${x.distance.toLocaleString()}m`}`).join(' · ')}<br><small>${stations.some(x=>x.walkDistance)?'카카오 도보 최단경로 기준':'도보 API 키 미설정으로 직선거리 기준'}</small>`:'주변 3km 이내 지하철역을 찾지 못했습니다.';
       container.before(stationSummary);
       stations.forEach(station=>points.push({...station,level:'역'}));
       let info=null;
@@ -6461,7 +6467,7 @@ function addComplexSchoolMap(body,matched){
         marker.onclick=()=>{
           if(info)info.setMap(null);
           const label=document.createElement('div');label.style.cssText='background:#fff;border:1px solid #00828A;border-radius:8px;padding:9px 12px;font-size:12px;white-space:nowrap;box-shadow:0 2px 5px #0003';
-          label.textContent=point.name+(point.level==='단지'?'':` · 직선 ${point.distance.toLocaleString()}m`);
+          label.textContent=point.name+(point.level==='단지'?'':point.level==='역'?(point.walkDistance?` · 도보 ${point.walkDistance.toLocaleString()}m · ${point.walkTime}분`:` · 직선 ${point.distance.toLocaleString()}m`):` · 직선 ${point.distance.toLocaleString()}m`);
           info=new maps.CustomOverlay({map,position,content:label,yAnchor:2.5,zIndex:10});
         };
       });
