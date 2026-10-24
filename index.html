@@ -4897,8 +4897,8 @@ function redevelopmentRegionMatch(site,target){
   // 지역 셀렉트는 "안양 만안구"처럼 시·군을 줄여 표시하지만 리치고는
   // "경기 안양시 만안구"처럼 행정구역 접미사를 포함한다. 구·군 토큰으로
   // 한 번 더 비교해 같은 권역의 사업지를 놓치지 않는다.
-  const district = name.match(/([가-힣]+(?:구|군))(?:$|[^가-힣])/);
-  return !!district && region.includes(district[1]);
+  const district = String(target?.name||'').trim().split(/\s+/).findLast(part=>/[구군]$/.test(part));
+  return !!district && region.includes(district);
 }
 async function searchRedevelopment(){
   const myToken=++searchToken; beginSearchRequests();
