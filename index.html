@@ -8695,6 +8695,7 @@ function listingNameChanged(){
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
   if(listingNameSelected){
+    document.getElementById('listingNameQuery').value=listingNameSelected.apt;
     acHide();
     document.querySelectorAll('#listingNameCandidates button').forEach((button,i)=>{
       const selected=i===index,action=button.lastElementChild;
