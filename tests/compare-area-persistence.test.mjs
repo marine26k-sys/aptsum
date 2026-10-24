@@ -49,7 +49,7 @@ test('recent comparison complexes persist up to five distinct entries with selec
 });
 test('recent complex fills an empty compare row and restores area without overwriting four filled rows',()=>{
  const c=page(),rows=[];
- const makeRow=(name='')=>{const input={value:name,focus(){}},select={value:''};return{input,select,querySelector:q=>q==='input'?input:select};};
+ const makeRow=(name='')=>{const input={value:name,dataset:{},focus(){}},select={value:''};return{input,select,querySelector:q=>q==='input'?input:select};};
  rows.push(makeRow('다른 단지'),makeRow());
  c.document={getElementById:()=>null,querySelectorAll:()=>rows};c.setCmpRowLawd=(r,v)=>r.select.value=v;c.addCmpRow=()=>rows.push(makeRow());c.isAllScope=()=>false;c.showError=message=>{c.error=message;};
  const recent={...data.complexes[0],area:59};c.addRecentCompareComplex(recent);
