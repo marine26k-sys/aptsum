@@ -1,6 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';import {REGIONS} from '../shared/regions.mjs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),entries=JSON.parse(readFileSync(new URL('../data/complex-index.json',import.meta.url),'utf8')).entries;
 test('exact complex name finds only its district before fetching trades',async()=>{const c=vm.createContext({complexSearchIndex:entries});vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);const targets=REGIONS.flatMap(([,r])=>r.map(([name,lawd])=>({name,lawd})));const r=await c.complexSearchTargets('래미안원베일리',targets);assert.deepEqual(Array.from(r.targets,t=>t.lawd),['11650']);assert.ok(r.hits.every(x=>x.names.some(n=>n.replace(/\s/g,'')==='래미안원베일리')));assert.equal((await c.complexSearchTargets('래미안원베일리',targets.filter(t=>t.lawd==='11680'))).targets.length,0);});
+test('지역명+단지명 검색은 단지 공식명이 짧아도 해당 지역 후보만 찾는다',async()=>{
+ const c=vm.createContext({complexSearchIndex:entries,regionNameByLawd:code=>code==='11620'?'관악구':'성북구'});
+ vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
+ const result=await c.complexSearchTargets('봉천 두산',[],true);
+ assert.deepEqual(Array.from(result.hits,x=>`${x.lawd}|${x.umd}|${x.name}`),['11620|봉천동|두산']);
+});
 test('단지 비교 자동완성은 호가 매물이 없는 퍼스니티도 단지 검색 색인에서 찾는다',async()=>{
  const c=vm.createContext({complexSearchIndex:entries});vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
  const result=await c.complexSearchTargets('평촌자이',[],true);
