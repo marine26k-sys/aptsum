@@ -2899,7 +2899,7 @@ function setMode(m, fromRestore){
   restoreQueriedSliders(m);
   document.getElementById('monthsN').value = analysisMonthsForMode(m,document.getElementById('monthsN').value);
   document.getElementById('monthsN').disabled = false;
-  document.getElementById('btn').textContent = '분석';
+  document.getElementById('btn').textContent = '조회';
   // 지역 초기화는 필터 슬라이더가 없는 단지 분석 탭에서도 항상 사용할 수 있어야 한다.
   const resetRow=document.getElementById('sliderFilterResetRow'),filterReset=document.getElementById('listingFilterReset');
   if(resetRow){
