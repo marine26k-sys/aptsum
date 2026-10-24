@@ -67,6 +67,11 @@
   .inc li::before{content:'✓';position:absolute;left:0;top:1px;color:var(--teal);font-weight:900;font-size:15px}
   .inc-head{font-weight:800;color:var(--navy);font-size:14.5px;line-height:1.4}
   .inc-sub{margin-top:5px;color:var(--ink);font-size:12.5px;line-height:1.7}
+  .mail-fields{display:grid;gap:7px;margin-top:9px}
+  .mail-field-group{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:start;gap:6px}
+  .mail-field-label{padding-top:3px;color:var(--sub);font-size:10px;font-weight:800}
+  .mail-field-list{display:flex;flex-wrap:wrap;gap:4px}
+  .mail-field-list span{padding:2px 7px;border:1px solid #dce9ec;border-radius:6px;background:#fff;color:#365466;font-size:10px;line-height:1.5;white-space:nowrap}
   .inc-update{margin-top:7px;color:var(--teal-dark);font-size:12px;font-weight:800}
   .inc-trial{display:inline-block;margin-top:7px;font-size:11.5px;font-weight:800;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.4);border-radius:10px;padding:3px 10px}
   .steps{display:flex;gap:4px;margin-top:10px;font-size:10.5px;font-weight:700;color:var(--gold-ink)}
@@ -136,7 +141,11 @@
         </li>
         <li id="mailBenefit" hidden>
           <div class="inc-head">아파트썸 개인 맞춤 단지 선별 메일 (1회)</div>
-          <div class="inc-sub">지역, 연차, 세대수, 단지명, 공급·전용면적, 매매가, 전고점, 변동률, 평당가, 동, 층, 방향, 용적률, 건폐율, 매물 URL</div>
+          <div class="mail-fields" aria-label="선별 메일 제공 항목">
+            <div class="mail-field-group"><span class="mail-field-label">단지</span><div class="mail-field-list"><span>지역</span><span>단지명</span><span>연차</span><span>세대수</span><span>지하철 거리</span></div></div>
+            <div class="mail-field-group"><span class="mail-field-label">가격</span><div class="mail-field-list"><span>평형</span><span>매매가</span><span>전고점</span><span>변동률</span><span>평당가</span></div></div>
+            <div class="mail-field-group"><span class="mail-field-label">매물</span><div class="mail-field-list"><span>동</span><span>층</span><span>방향</span><span>용적률</span><span>건폐율</span><span>매물 URL</span></div></div>
+          </div>
         </li>
       </ul>
       <div class="steps"><div>① 신청서<br>작성</div><div>② 결제</div><div>③ 접근 코드<br>바로 발급</div><div id="mailStep" hidden>④ 메일<br>3일 이내 발송</div></div>
