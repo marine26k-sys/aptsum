@@ -454,7 +454,7 @@ try {
   .analysis-select-slider .ls-numbers{width:100%}
   .analysis-select-slider input[type=range]{display:block;width:100%;margin:6px 0 2px;accent-color:var(--teal)}
   #listingGapInvestmentFilters .slider-form-control .ls-dual{width:100%}
-  #listingGapFilters .ls-row label{display:grid;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:10px}
+  #listingGapFilters .ls-row label{display:grid;width:100%;min-width:0;box-sizing:border-box;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:10px}
   #listingGapFilters .analysis-select-slider{width:auto;margin:0;padding:0;border:0;background:transparent;box-shadow:none}
   #listingGapFilters .analysis-select-slider .ls-hd{display:none}
   #listingBudgetFavorites{padding:8px 10px}
@@ -1218,7 +1218,7 @@ try {
     </div>
     <div id="listingGapFilters" class="ls-filters" style="display:none">
       <div class="ls-hd"><span>비교 평형</span><b id="listingGapText">20평대 → 30평대</b></div>
-      <div class="ls-row" style="display:flex;gap:8px">
+      <div class="ls-row" style="display:flex;flex-direction:column;gap:8px">
         <label style="flex:1;min-width:0">작은 평형
           <select id="listingGapSmall" style="width:100%;margin-top:4px" onchange="listingGapApply('small')">
             <option value="10">10평대</option><option value="20" selected>20평대</option><option value="30">30평대</option><option value="40">40평대</option><option value="50">50평대</option>
