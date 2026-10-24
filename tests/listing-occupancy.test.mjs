@@ -19,6 +19,14 @@ test('업로드 요약과 API 저장은 역거리(분)를 보존하고 빈 값�
  assert.equal(Object.hasOwn(withoutDistance,'subwayMinutes'),false);
  assert.equal(Object.hasOwn(cleanItem(withoutDistance),'subwayMinutes'),false);
  assert.equal(cleanItem({...withDistance,subwayMinutes:-2}).subwayMinutes,undefined);
+ const aliasDistance=summarize([{...base,'지하철(분)':7}]).regions['서울시|강남구'][0];
+ assert.equal(aliasDistance.subwayMinutes,7);
+});
+test('업로드 기준일은 파일명 날짜를 우선하고 날짜 없는 파일은 엑셀 기준일을 쓴다',()=>{
+ const start=stats.indexOf('function listingUploadAsOf('),end=stats.indexOf('\nasync function uploadListingFile(',start);
+ const ctx=vm.createContext({});vm.runInContext(stats.slice(start,end),ctx);
+ assert.equal(ctx.listingUploadAsOf('부동산_최종_매매_20261024_074214.xlsx','2026.10.23'),'2026.10.24');
+ assert.equal(ctx.listingUploadAsOf('listing.xlsx','2026.10.23'),'2026.10.23');
 });
 test('upload keeps separate cheapest eligible offers with a shared historical peak',()=>{
  const d=summarize([base,{...base,'입주구분':'세안고','매매가(억)':12},{...base,'입주구분':'세안고','매매가(억)':13},{...base,'층구분':'저층','매매가(억)':8,'실거래최고가(억)':22},{...base,'입주구분':'미정','매매가(억)':7}]);
