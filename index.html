@@ -8003,7 +8003,7 @@ async function previewListingGapInvestmentMax(){
 }
 function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;listingManualFacets.add('gap');const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
 function listingGapInvestmentNumberApply(input){const slider=document.getElementById(input.id.replace('Number',''));if(!slider)return;const n=Number(input.value);if(Number.isFinite(n))slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(n*10)/10));listingGapInvestmentRangeSync(slider);listingGapInvestmentApply();}
-function listingGapInvestmentApply(){listingManualFacets.add('gap');listingGapInvestmentSync();if(mode==='listingbudget'&&lastData?.mode==='listingbudget')search({silentScroll:true});}
+function listingGapInvestmentApply(){listingManualFacets.add('gap');listingGapInvestmentSync();}
 function setListingGapInvestmentBand(band){listingGapInvestmentBand=listingGapInvestmentBand===band?null:band;listingGapInvestmentApply();}
 function renderListingGapInvestmentBands(rows){
   const boxes=[...document.querySelectorAll('#listingGapInvestmentBands,#listingGapInvestmentResultBands')];if(!boxes.length)return;
@@ -8540,7 +8540,7 @@ function lsSubwayMatch(x,v=lsGet()){
   return Number.isFinite(n)&&n>=0&&n<=v.sw;
 }
 function lsSubwaySync(){const slider=document.getElementById('lsSubwayMax'),index=Math.max(0,Math.min(LS_SUBWAY_STEPS.length-1,Math.round(Number(slider.value)))),value=LS_SUBWAY_STEPS[index];slider.value=index;document.getElementById('lsSubwayTxt').textContent=value===LS_SUBWAY_ALL?'전체':`${value}분 이내`;document.querySelectorAll('#lsSubwaySteps span').forEach((step,i)=>step.classList.toggle('on',i===index));}
-function lsSubwayApply(){lsSubwaySync();if(mode==='listingbudget'&&!isIndividualListing()&&lastData?.mode==='listingbudget')search({silentScroll:true});}
+function lsSubwayApply(){lsSubwaySync();}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
 function lsAgeText(v){return v.a0===v.a1?`${v.a0}년차`:!lsFacetActive('age',v)?'전체':`${v.a0}~${v.a1}년차`;}
 function lsHhActive(v){return lsFacetActive('hh',v);}
@@ -8607,7 +8607,7 @@ function lsApply(){
     lsDataBounds(listingFilterSourceItems,mode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);
     if(mode==='listingbudget')listingGapInvestmentSetMax(listingFilterSourceItems.filter(x=>lsMatch(x,lsGet())));
   }
-  if(lastData && (lastData.mode === 'listingbudget' || lastData.mode === 'listingurgent' || (lastData.mode==='listingtrend'||lastData.mode==='listingrise') || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
+  if(lastData && (lastData.mode === 'listingurgent' || (lastData.mode==='listingtrend'||lastData.mode==='listingrise') || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 function getListingBudgetFavorites(){
   try{const items=JSON.parse(localStorage.getItem('apc:budgetConditions')||'[]');return Array.isArray(items)?items.filter(x=>x && typeof x.name==='string' && x.conditions?.ls).slice(0,20):[];}catch(e){return [];}
