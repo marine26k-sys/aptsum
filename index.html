@@ -1416,6 +1416,7 @@ function captureViewInputs(){
     by: document.getElementById('buildYear').value,
     sliderLimits:lsSavedLimits(),
     ls: lsGet(), // 실매물 탭 연식·세대수·변동률 슬라이더
+    lsManualFacets:[...listingManualFacets],
     lg: listingGapBands(),
     occupancy: listingOccupancy(),
     trendUpload: listingTrendUploadId,
@@ -1924,7 +1925,8 @@ function restoreView(vi){
   document.getElementById('floorMin').value = inp.fM;
   setBuildYearValue(inp.by || '');
   lsRestoreLimits(inp.sliderLimits);
-  lsSet(inp.ls);
+  lsRestoreManualFacets(inp.lsManualFacets);
+  lsSet(inp.ls);lsAlignUnadjustedToBounds();
   document.getElementById('listingOccupancy').value = normalizeListingOccupancy(inp.occupancy,inp.mode);
   restoreListingSelectionInputs(inp);
   if(inp.mode==='listinggap') listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
@@ -2332,7 +2334,8 @@ function applyNativeRegionInputs(inp){
   for(const [id,key] of [['q','q'],['monthsN','mN'],['floorMin','fM'],['buildYear','by'],['risePeriodN','rp'],['priceBandPeriodN','pbp'],['priceBandN','pb'],['priceBandBasis','pbb']])
     if(inp[key]!==undefined){if(id==='buildYear')setBuildYearValue(inp[key]);else document.getElementById(id).value=id==='monthsN'?analysisMonthsForMode(inp.mode,inp[key]):inp[key];}
   lsRestoreLimits(inp.sliderLimits);
-  lsSet(inp.ls);listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
+  lsRestoreManualFacets(inp.lsManualFacets);
+  lsSet(inp.ls);lsAlignUnadjustedToBounds();listingGapSet(inp.lg?.smallBand,inp.lg?.largeBand);
   document.getElementById('listingOccupancy').value=normalizeListingOccupancy(inp.occupancy,inp.mode);
   restoreListingSelectionInputs(inp);
   regionSel=(inp.regionSel||[]).slice(0, regionSelMax());saveRegionSel();renderRegionChips();
@@ -2465,7 +2468,7 @@ function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
-  if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.gap=listingGapBands();}
+  if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
 function resetQueriedSliderDefaults(m){
@@ -2476,6 +2479,7 @@ function resetQueriedSliderDefaults(m){
     const el=document.getElementById(id);el.value=el.querySelector('option[selected]')?.value??el.options[0].value;
   }
   if(isListingMode(m)){
+    listingManualFacets.clear();
     const defaults={py:[10,60],ask:[0,50],age:[1,LS_AGE_MAX],hh:[lsHhBase(),5000],rate:[LS_RATE_MIN,LS_RATE_MAX]};
     for(const [name,[min,max]] of Object.entries(defaults))for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=min;el.max=max;el.disabled=false;}
     lsSet();listingGapSet(20,30);
@@ -2492,7 +2496,13 @@ function restoreQueriedSliders(m){
     if([...el.options].some(o=>o.value===restored))el.value=restored;
   }
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
-  if(isListingMode(m)&&v.ls){lsRestoreLimits(v.limits);lsSet(v.ls);}
+  if(isListingMode(m)&&v.ls){
+    lsRestoreLimits(v.limits);
+    lsRestoreManualFacets(v.manualFacets);
+    // 구버전 저장값은 자동 조정된 범위와 직접 설정한 필터를 구분할 수 없다.
+    if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();else lsSet(v.ls);
+    if(m==='listingbudget')lsAlignUnadjustedToBounds();
+  }
   if(m==='listinggap'&&v.gap)listingGapSet(v.gap.smallBand,v.gap.largeBand);
 }
 function getPyBandMultiPref(){
@@ -8445,8 +8455,14 @@ const LS_FACETS={
   hh:{ids:['lsHhMin','lsHhMax'],keys:['h','h1'],step:1,value:x=>x.hh},
   rate:{ids:['lsRateMin','lsRateMax'],keys:['r0','r1'],step:1,value:x=>x.peak>0?Math.round((x.ask-x.peak)/x.peak*100):NaN}
 };
+function lsRestoreManualFacets(facets){
+  listingManualFacets.clear();
+  if(!Array.isArray(facets))return;
+  for(const name of facets)if(LS_FACETS[name])listingManualFacets.add(name);
+}
+function lsAlignUnadjustedToBounds(){if(mode!=='listingbudget')return;for(const [name,facet] of Object.entries(LS_FACETS))if(!listingManualFacets.has(name)){const [lo,hi]=facet.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;}lsSync();}
 function lsFacetLimits(name){const el=document.getElementById(LS_FACETS[name].ids[0]);return {min:+el.min,max:+el.max};}
-function lsFacetActive(name,v){const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
+function lsFacetActive(name,v){if(mode==='listingbudget'&&!listingManualFacets.has(name))return false;const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
 function lsFacetMatch(name,x,v){if(!lsFacetActive(name,v))return true;const f=LS_FACETS[name],n=f.value(x);return Number.isFinite(n)&&n>=v[f.keys[0]]&&n<=v[f.keys[1]];}
 function lsDataBounds(items,names=['py','ask','age','hh','rate']){
   const v=lsGet(),active=Object.fromEntries(names.map(name=>[name,lsFacetActive(name,v)]));
@@ -8528,8 +8544,8 @@ function lsAskBounds(items){
  hi.value=oldHi>=oldMax?max:Math.max(+lo.value,Math.min(max,oldHi));
  lsSync();
 }
-function lsAskText(v){const {min,max}=lsAskLimits();return v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
-function lsAskMatch(x,v){const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
+function lsAskText(v){const {min,max}=lsAskLimits();return mode==='listingbudget'&&!listingManualFacets.has('ask')||v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
+function lsAskMatch(x,v){if(mode==='listingbudget'&&!listingManualFacets.has('ask'))return true;const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
 function lsPyActive(v){return listingManualFacets.has('py')&&lsFacetActive('py',v);}
 function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
@@ -8628,7 +8644,7 @@ function saveListingBudgetFavorite(){
   const name=input.value.trim();
   if(!name){msg.textContent='저장할 조건 이름을 입력해 주세요.';input.focus();return;}
   const items=getListingBudgetFavorites(),inp=captureViewInputs();
-  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,occupancy:inp.occupancy,listingFloor:inp.listingFloor,listingNameQuery:inp.listingNameQuery,listingNameKey:inp.listingNameKey,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel,askLimits:lsAskLimits(),sliderLimits:lsSavedLimits()};
+  const conditions={lawd:inp.lawd,regionSel:inp.regionSel,ls:inp.ls,manualFacets:inp.lsManualFacets,occupancy:inp.occupancy,listingFloor:inp.listingFloor,listingNameQuery:inp.listingNameQuery,listingNameKey:inp.listingNameKey,budgetNewOnly:inp.budgetNewOnly,band:listingBudgetSel,askLimits:lsAskLimits(),sliderLimits:lsSavedLimits()};
   const existing=items.findIndex(x=>x.name===name);
   if(existing<0 && items.length>=20){msg.textContent='조건은 최대 20개까지 저장할 수 있습니다.';return;}
   if(existing>=0)items[existing]={name,conditions};else items.push({name,conditions});
@@ -8641,7 +8657,7 @@ function loadListingBudgetFavorite(index){
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();
   if(c.askLimits){for(const id of ['lsAskMin','lsAskMax']){const el=document.getElementById(id);el.min=c.askLimits.min;el.max=c.askLimits.max;}}
   lsRestoreLimits(c.sliderLimits);
-  lsSet(c.ls);document.getElementById('listingOccupancy').value=normalizeListingOccupancy(c.occupancy,'listingbudget');
+  lsRestoreManualFacets(c.manualFacets);lsSet(c.ls);lsAlignUnadjustedToBounds();document.getElementById('listingOccupancy').value=normalizeListingOccupancy(c.occupancy,'listingbudget');
 listingBudgetSel=c.band||null;
   listingFloorScope=c.listingFloor==='all'?'all':'mid';syncListingFloor();
   document.getElementById('listingNameQuery').value=c.listingNameQuery||'';listingNameSelected=null;listingNameRestoreKey=c.listingNameKey||'';
