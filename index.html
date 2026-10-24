@@ -702,13 +702,15 @@ try {
         verified = true;
         reveal();
         if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(false);
-        updateListingComplexSearchHelp(false);
+        if(typeof updateListingComplexSearchHelp==='function')updateListingComplexSearchHelp(false);
+        else {const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='전 지역에서 검색한 뒤 단지를 선택해 주세요.';}
       };
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
         verified = false; master = false;
         if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(true);
-        updateListingComplexSearchHelp(true);
+        if(typeof updateListingComplexSearchHelp==='function')updateListingComplexSearchHelp(true);
+        else {const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.';}
         if (applyCta) applyCta.style.display = '';
         if(issueGroup) issueGroup.style.display='';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
@@ -4884,7 +4886,8 @@ function acPick(name,lawd,listingHit=null){
       if(row){
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
         if(listingHit){acInput.dataset.pickedKey=listingHit.key;acInput.dataset.pickedApt=listingHit.apt;}
-        setCmpRowLawd(row,lawd);
+        // 복원된 전체 권역 범위는 보존하고, 고른 단지의 실제 지역은 dataset에 따로 저장한다.
+        if(!isAllScope(row.querySelector('select').value))setCmpRowLawd(row,lawd);
       }
       else {
         // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.

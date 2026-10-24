@@ -108,6 +108,8 @@ test('build-year is restored for shared URLs and browser history', () => {
   assert.match(html, /setBuildYearValue\(inp\.by \|\| ''\)/);
 });
 
-test('complex comparison rejects named apartments without regions', () => {
-  assert.match(html, /filledCmpItems\.some\(x=>!x\.lawd\)[\s\S]*?각 단지의 지역을 선택해 주세요/);
+test('complex comparison requires selecting an autocomplete candidate, not a separate region', () => {
+  assert.match(html, /if\(!selected\)\{\s*needsCompareSelection=true;renderCompareCandidates/);
+  assert.match(html, /단지 호가 검색 결과에서 각 단지의 지역과 동을 확인해 선택한 뒤 비교 조회를 눌러 주세요/);
+  assert.doesNotMatch(html, /filledCmpItems\.some\(x=>!x\.lawd\)/);
 });
