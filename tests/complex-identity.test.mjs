@@ -19,6 +19,11 @@ test('명시적 이름 대응표와 공백 차이를 모든 단지에 적용한�
  const index=identity.indexEntries(source,{lawd:'11620'},names);assert.equal(index.length,2);
  assert.equal(identity.mergeSources(source,[],names,'11620')[0].apt,'새이름');
 });
+test('단지명이 법정동명으로만 들어온 원자료 행은 검색 색인에서 제외한다',()=>{
+ const index=identity.indexEntries([t('봉천동','봉천동'),t('봉천동아','봉천동')],{lawd:'11620'}, {'봉천동아|봉천동':'성현동아'});
+ assert.deepEqual(index.map(row=>row.name),['성현동아']);
+ assert.ok(index[0].names.includes('봉천동아'));
+});
 test('전체 검색 목록은 모든 별칭으로 자기 단지를 찾으며 동일 지역·동의 중복 표시가 없다',()=>{
  const entries=JSON.parse(readFileSync(new URL('../data/complex-index.json',import.meta.url),'utf8')).entries;
  const ids=new Set();

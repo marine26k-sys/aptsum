@@ -24,6 +24,9 @@
     const groups=new Map();
     for(const item of items){
       if(!item.apt||!item.umd)continue;
+      // 국토부 원자료에 단지명이 법정동명만으로 기록된 일부 거래가 있어
+      // 자동완성에서 '봉천동' 같은 행정동이 단지 후보로 노출되지 않게 한다.
+      if(key(item.apt)===key(item.umd))continue;
       const display=canonical(item.apt,item.umd,names,meta.lawd),id=JSON.stringify([key(display),item.umd]);
       const row=groups.get(id)||{...meta,umd:item.umd,name:display,names:new Set()};
       row.names.add(item.apt);row.names.add(display);groups.set(id,row);
