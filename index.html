@@ -447,6 +447,8 @@ try {
   #lsFilters .ls-hd{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
   #lsFilters .ls-dual{flex:1;min-width:0}
   #lsSubwayMax{display:block;width:100%;margin:6px 0 2px;accent-color:var(--teal)}
+  .ls-subway-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:0 0 3px;color:var(--sub);font-size:9px;line-height:1.2;text-align:center}
+  .ls-subway-steps .on{color:var(--teal-dark);font-weight:800}
   #analysisPyFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
   #analysisPyFilters .ls-hd,.analysis-select-slider .ls-hd{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
   #analysisPyFilters .ls-dual,.analysis-select-slider .ls-control{flex:1;min-width:0}
@@ -1177,8 +1179,8 @@ try {
       </div>
       <div class="ls-row" id="lsSubwayRow" style="display:none">
         <div class="ls-hd"><span>지하철</span><b id="lsSubwayTxt">전체</b></div>
-        <div class="ls-control"><input type="range" id="lsSubwayMax" min="20" max="60" step="1" value="60" oninput="lsSubwaySync(this)" onchange="lsSubwayApply()" aria-label="최대 지하철 도보시간(분)">
-          <div class="ls-numbers"><input type="number" id="lsSubwayMaxNumber" min="20" max="60" step="1" value="60" aria-label="최대 지하철 도보시간 직접 입력(분)" onchange="lsSubwayNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>분 이내</span></div>
+        <div class="ls-control"><input type="range" id="lsSubwayMax" min="0" max="4" step="1" value="0" oninput="lsSubwaySync(this)" onchange="lsSubwayApply()" aria-label="지하철 거리 기준: 전체, 20분, 15분, 10분, 5분">
+          <div class="ls-subway-steps" id="lsSubwaySteps" aria-hidden="true"><span class="on">전체</span><span>20분</span><span>15분</span><span>10분</span><span>5분</span></div>
         </div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
@@ -1446,7 +1448,7 @@ function buildShareURL(inp){
   if(((inp.mode==='listingtrend'||inp.mode==='listingrise')||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
-  if(inp.mode==='listingbudget' && new URLSearchParams(location.search).get('individual')!=='1' && Number.isFinite(inp.ls?.sw) && inp.ls.sw!==LS_SUBWAY_MAX) p.set('lsw', String(inp.ls.sw));
+  if(inp.mode==='listingbudget' && new URLSearchParams(location.search).get('individual')!=='1' && Number.isFinite(inp.ls?.sw) && inp.ls.sw!==LS_SUBWAY_ALL) p.set('lsw', String(inp.ls.sw));
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
@@ -7916,7 +7918,7 @@ function renderListingFavorites(d){
     const pct=change!==null?Math.abs(change)/x.previousAsk*100:null;
     const delta=change===null?'이전 기록 없음':pct>=30-1e-9?'변동률 30% 이상 · 변동 표시 제외':change===0?'변동 없음':`${change>0?'▲':'▼'} ${Math.abs(change).toFixed(2)}억 (${pct.toFixed(1)}%)`;
     const url=/^https:\/\/(?:fin\.land\.naver\.com|new\.land\.naver\.com)\//.test(x.url||'')?x.url:null;
-    return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(x.py)}평 (전용 ${esc(x.ex)})</b><b style="float:right;color:var(--teal-dark)">${x.ask.toFixed(2)}억</b><div class="rng" style="margin-top:6px">${delta}${x.previousAsk!==null?' · 이전 '+x.previousAsk.toFixed(2)+'억 ('+esc(x.previousDate||'-')+')':''}</div>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:7px">네이버 매물 보기 ↗</a>`:''}</div>`;
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(x.py)}평 (전용 ${esc(x.ex)})</b><b style="float:right;color:var(--teal-dark)">${x.ask.toFixed(2)}억</b><div class="rng" style="margin-top:5px">${listingInfoHTML(x,false,true)}</div><div class="rng" style="margin-top:3px">${delta}${x.previousAsk!==null?' · 이전 '+x.previousAsk.toFixed(2)+'억 ('+esc(x.previousDate||'-')+')':''}</div>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:7px">네이버 매물 보기 ↗</a>`:''}</div>`;
   }).join(''):`<div class="rng">${messages[f.status]||messages.missing}</div>${f.status==='locked'?SUBSCRIBER_APPLY_LINK:''}`}</div></div>`).join('');
   const r=document.getElementById('result');r.innerHTML=`<div class="rng" style="margin:12px 0">단지 분석에서 별표로 저장한 관심 단지 · ${listingOccupancyLabel()} · 중층 이상</div>${cards||'<div class="card"><div class="sec">저장한 관심 단지가 없습니다. 단지 분석에서 단지명 옆 ☆를 눌러 저장해 주세요.</div></div>'}<div class="src-note">관심 단지는 이 브라우저에 저장됩니다. 직전 업로드와 같은 단지·전용면적의 최저 호가를 비교하며, 서로 다른 매물일 수 있습니다. 자료가 없거나 연결이 모호한 단지는 가격을 표시하지 않습니다.</div>`;r.classList.add('on');
 }
@@ -8383,7 +8385,10 @@ function listingBudgetBandOf(ask){
 const LS_AGE_MAX = 40;
 // 평형 슬라이더 범위 — 10평 이하·60평 이상은 "그 이하/이상 전부"(기존 체크박스 목록의 17~51평 범위를 넉넉히 포함)
 const LS_PY_MIN = 10, LS_PY_MAX = 60;
-const LS_SUBWAY_MIN = 20, LS_SUBWAY_MAX = 60; // 60분은 전체(필터 해제)
+const LS_SUBWAY_ALL = 60;
+const LS_SUBWAY_STEPS = [LS_SUBWAY_ALL,20,15,10,5];
+function lsSubwayValue(){return LS_SUBWAY_STEPS[+document.getElementById('lsSubwayMax').value]??LS_SUBWAY_ALL;}
+function lsSubwayIndex(value){if(!Number.isFinite(value)||value>=LS_SUBWAY_ALL)return 0;let best=1;for(let i=2;i<LS_SUBWAY_STEPS.length;i++)if(Math.abs(LS_SUBWAY_STEPS[i]-value)<Math.abs(LS_SUBWAY_STEPS[best]-value))best=i;return best;}
 // 세대수 슬라이더의 왼쪽 끝(= 필터 없음) — 예산별 실매물은 100세대, 급매 선별은 300세대
 function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH; }
 // 변동률(예산별 실매물 전용, 2026.09 운영자 요청) — 전고점 대비 호가 %(화면 표기와 같은 정수 반올림) 최소~최대.
@@ -8393,7 +8398,7 @@ function lsGet(){
   return { q0:+document.getElementById('lsAskMin').value, q1:+document.getElementById('lsAskMax').value, a0:+document.getElementById('lsAgeMin').value, a1:+document.getElementById('lsAgeMax').value, h:+document.getElementById('lsHhMin').value, h1:+document.getElementById('lsHhMax').value,
     r0:+document.getElementById('lsRateMin').value, r1:+document.getElementById('lsRateMax').value,
     p0:+document.getElementById('lsPyMin').value, p1:+document.getElementById('lsPyMax').value,
-    sw:+document.getElementById('lsSubwayMax').value };
+    sw:lsSubwayValue() };
 }
 function lsSet(v){
   v = v || {};
@@ -8408,9 +8413,8 @@ function lsSet(v){
   document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
   document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
   const subwayMax=document.getElementById('lsSubwayMax');
-  subwayMax.value=Number.isFinite(v.sw)?Math.max(LS_SUBWAY_MIN,Math.min(LS_SUBWAY_MAX,v.sw)):LS_SUBWAY_MAX;
-  document.getElementById('lsSubwayMaxNumber').value=subwayMax.value;
-  document.getElementById('lsSubwayTxt').textContent=+subwayMax.value===LS_SUBWAY_MAX?'전체':`${subwayMax.value}분 이내`;
+  subwayMax.value=lsSubwayIndex(v.sw);
+  lsSubwaySync();
   lsSync();
 }
 const LS_FACETS={
@@ -8509,10 +8513,9 @@ function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
-function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw>=LS_SUBWAY_MIN&&v.sw<LS_SUBWAY_MAX;}
+function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw<LS_SUBWAY_ALL;}
 function lsSubwayMatch(x,v=lsGet()){if(!lsSubwayActive(v))return true;const raw=x?.subwayMinutes;if(raw===null||raw===undefined||String(raw).trim()===''||String(raw).trim()==='-')return true;const n=Number(raw);return !Number.isFinite(n)||n<0||n<=v.sw;}
-function lsSubwaySync(el){const slider=document.getElementById('lsSubwayMax'),number=document.getElementById('lsSubwayMaxNumber');if(el===number&&number.value.trim()!==''&&Number.isFinite(Number(number.value)))slider.value=Math.max(LS_SUBWAY_MIN,Math.min(LS_SUBWAY_MAX,Math.round(Number(number.value))));else if(el===number)number.value=slider.value;number.min=slider.min;number.max=slider.max;number.value=slider.value;document.getElementById('lsSubwayTxt').textContent=+slider.value===LS_SUBWAY_MAX?'전체':`${slider.value}분 이내`;}
-function lsSubwayNumberApply(input){lsSubwaySync(input);lsSubwayApply();}
+function lsSubwaySync(){const slider=document.getElementById('lsSubwayMax'),index=Math.max(0,Math.min(LS_SUBWAY_STEPS.length-1,Math.round(Number(slider.value)))),value=LS_SUBWAY_STEPS[index];slider.value=index;document.getElementById('lsSubwayTxt').textContent=value===LS_SUBWAY_ALL?'전체':`${value}분 이내`;document.querySelectorAll('#lsSubwaySteps span').forEach((step,i)=>step.classList.toggle('on',i===index));}
 function lsSubwayApply(){lsSubwaySync();if(mode==='listingbudget'&&!isIndividualListing()&&lastData?.mode==='listingbudget')search({silentScroll:true});}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
 function lsAgeText(v){return v.a0===v.a1?`${v.a0}년차`:!lsFacetActive('age',v)?'전체':`${v.a0}~${v.a1}년차`;}
