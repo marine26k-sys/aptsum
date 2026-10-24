@@ -4752,6 +4752,23 @@ async function acShow(input){
     }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
     return;
   }
+  if(cmpRow&&mode==='compare'){
+    try{
+      const searchQuery=input.dataset.pickedApt||input.value.trim().replace(/\s*\[[^\]]+\]\s*$/,'');
+      if(searchQuery.replace(/\s/g,'').length<2){ac.innerHTML='<div class="ac-msg">단지명을 두 글자 이상 입력해 주세요.</div>';return;}
+      const result=await searchListingComplexNames(searchQuery,searchToken);
+      if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
+      ac.replaceChildren();
+      if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
+      result.slice(0,30).forEach(hit=>{
+        const item=document.createElement('div');item.className='ac-item';item.setAttribute('role','option');
+        const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
+        item.addEventListener('mousedown',event=>{event.preventDefault();acPick(`${hit.apt} [${hit.umd}]`,hit.lawd,hit);});ac.append(item);
+      });
+      if(result.length>30){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';ac.append(note);}
+    }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
+    return;
+  }
   if(targets.length){
     try{
       const result=await complexSearchTargets(input.value.trim(),targets,true);
@@ -4828,6 +4845,7 @@ function acPick(name,lawd,listingHit=null){
       const row=acInput.closest('.cmp-row');
       if(row){
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(listingHit){acInput.dataset.pickedKey=listingHit.key;acInput.dataset.pickedApt=listingHit.apt;}
         setCmpRowLawd(row,lawd);
       }
       else {
@@ -4852,6 +4870,8 @@ document.addEventListener('input', e=>{
         delete e.target.dataset.pickedName;delete e.target.dataset.pickedLawd;
         delete e.target.dataset.pickedKey;delete e.target.dataset.pickedApt;
       }
+      clearTimeout(acTimer);
+      const t=e.target;acTimer=setTimeout(()=>acShow(t),180);
     }else{
       clearTimeout(acTimer);
       const t = e.target;
@@ -4864,7 +4884,7 @@ document.addEventListener('input', e=>{
   }
 });
 document.addEventListener('focusin', e=>{
-  if((e.target.matches('#q') || (e.target.matches('.cmp-row input')&&mode!=='compare')) && e.target.value.trim()) acShow(e.target);
+  if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
 });
 // 모바일 키보드가 올라올 때 입력창이 가려지는 문제 방지.
 // scrollIntoView({block:'center'})만 쓰던 이전 버전은 인스타그램 인앱 브라우저(웹뷰)에서 잘 안 먹는다는
