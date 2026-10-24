@@ -5082,8 +5082,8 @@ function loadStationWalkLookup(){
       if(!byIdentity.has(key))byIdentity.set(key,[]);
       byIdentity.get(key).push(String(item.id));
     }
-    return {minutesByComplexId:walkData?.minutesByComplexId||{},byIdentity};
-  }).catch(()=>({minutesByComplexId:{},byIdentity:new Map()}));
+    return {minutesByComplexId:walkData?.minutesByComplexId||{},minutesByIdentity:walkData?.minutesByIdentity||{},byIdentity};
+  }).catch(()=>({minutesByComplexId:{},minutesByIdentity:{},byIdentity:new Map()}));
   return stationWalkLookupPromise;
 }
 // 원본 JSON의 station_walk_minutes를 네이버 단지 ID로 조회한다.
@@ -5092,6 +5092,10 @@ async function stationWalkMinutesFor(lawd,names,umd){
   const lookup=await loadStationWalkLookup();
   const wanted=[...new Set((Array.isArray(names)?names:[names]).map(naverKey).filter(Boolean))];
   if(!wanted.length)return null;
+  for(const name of wanted){
+    const minutes=Number(lookup.minutesByIdentity[`${lawd}|${umd||''}|${name}`]);
+    if(Number.isFinite(minutes)&&minutes>=0)return minutes;
+  }
   for(const name of wanted){
     const ids=lookup.byIdentity.get(`${lawd}|${umd||''}|${name}`)||[];
     if(ids.length!==1)continue;
