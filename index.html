@@ -1169,6 +1169,7 @@ try {
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><span id="listingNameTrialBadge" hidden style="flex:none;padding:3px 9px;border-radius:10px;background:#39FF14;color:#0B3D02;font-size:11px;font-weight:800;white-space:nowrap">강남구 무료체험</span></div>
       <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 또는 지역 + 단지명 (예: 성수동 동아)" aria-label="전 지역 단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
+      <div id="listingNameAutocomplete" aria-live="polite" style="position:relative;z-index:61"></div>
       <div id="listingNameSearchHelp" class="rng" style="margin:8px 0">전 지역에서 검색한 뒤 단지를 선택해 주세요.</div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
@@ -4733,22 +4734,6 @@ async function acShow(input){
   if(q.length < 1){ acHide(); return; }
   ac.innerHTML = '<div class="ac-msg">단지 목록 확인 중…</div>';
   ac.classList.add('on');
-  if(input.matches('#listingNameQuery')){
-    try{
-      if(q.length<2){ac.innerHTML='<div class="ac-msg">단지명을 두 글자 이상 입력해 주세요.</div>';return;}
-      const result=await searchListingComplexNames(input.value.trim(),searchToken,{occupancy:listingOccupancy(),floorScope:listingFloor(),trial:isListingTrial()});
-      if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
-      listingNameChoices=result;ac.replaceChildren();
-      if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
-      result.slice(0,30).forEach((hit,index)=>{
-        const item=document.createElement('div');item.className='ac-item';item.setAttribute('role','option');
-        const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
-        item.addEventListener('mousedown',event=>{event.preventDefault();chooseListingName(index);});ac.append(item);
-      });
-      if(result.length>30){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';ac.append(note);}
-    }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
-    return;
-  }
   const scope=acLawdOf(input);
   const cmpRow=input.closest('.cmp-row');
   const targets=cmpRow ? (isAllScope(scope)?lawdsOfScope(scope):[])
@@ -4901,7 +4886,7 @@ document.addEventListener('input', e=>{
   }
 });
 document.addEventListener('focusin', e=>{
-  if((e.target.matches('#q') || e.target.matches('.cmp-row input') || e.target.matches('#listingNameQuery')) && e.target.value.trim()) acShow(e.target);
+  if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
 });
 // 모바일 키보드가 올라올 때 입력창이 가려지는 문제 방지.
 // scrollIntoView({block:'center'})만 쓰던 이전 버전은 인스타그램 인앱 브라우저(웹뷰)에서 잘 안 먹는다는
@@ -4923,7 +4908,7 @@ function scheduleKeyboardScroll(el){
   [50, 200, 350, 500, 700].forEach(ms => setTimeout(()=> scrollAboveKeyboard(el), ms)); // 여러 시점에 나눠서 재보정
 }
 document.addEventListener('focusin', e=>{
-  if(e.target.matches('#q') || e.target.matches('.cmp-row input') || e.target.matches('input.q')){
+  if(e.target.matches('#q') || e.target.matches('.cmp-row input') || (e.target.matches('input.q')&&!e.target.matches('#listingNameQuery'))){
     scheduleKeyboardScroll(e.target);
   }
 });
@@ -4931,7 +4916,7 @@ document.addEventListener('focusin', e=>{
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ()=>{
     const active = document.activeElement;
-    if(active && (active.matches('#q') || active.matches('.cmp-row input') || active.matches('input.q'))){
+    if(active && (active.matches('#q') || active.matches('.cmp-row input') || (active.matches('input.q')&&!active.matches('#listingNameQuery')))){
       scrollAboveKeyboard(active);
     }
   });
@@ -5931,7 +5916,7 @@ async function attachHHCountsAsync(d, myToken, lawd){
         await Promise.all(arr.map(async c=>{ c.hh = map[c.name] || null; await loadCompletionFallback(c,c.lawd); }));
       }));
       // renderCompare(d) 대신 drawCompare(d)만 다시 그려서, 사용자가 이미 선택해둔 단지별 평형(cmpPyMap)을 유지한다.
-      if(myToken===searchToken && document.getElementById('cmpChart')) drawCompare(d);
+      if(myToken===searchToken && document.getElementById('cmpChart')){d.complexes.forEach(c=>compareNearbyCache.delete(`${c.lawd}|${c.name}|${c.umd||''}`));drawCompare(d);loadCompareNearby(d,myToken);}
     }
   }catch(e){ /* 세대수 조회 실패는 무시 — 메인 표는 이미 떠 있으므로 화면엔 영향 없음 */ }
 }
@@ -6623,6 +6608,33 @@ function searchNearbySubwayStations(maps,center){
     },{location:new maps.LatLng(center.lat,center.lng),radius:3000,sort:maps.services.SortBy.DISTANCE});
   });
 }
+const compareNearbyCache=new Map();
+async function loadCompareNearby(d,token=searchToken){
+  const box=document.getElementById('cmpNearby');if(!box||!Array.isArray(d?.complexes))return;
+  const levels=['초','중','고'];
+  const escCell=value=>esc(String(value??''));
+  const render=()=>{
+    if(!box.isConnected||token!==searchToken)return;
+    const rows=[['지하철','역 도보거리'],...levels.map(level=>[level,`${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'} 거리`])];
+    box.innerHTML=`<table style="width:100%;min-width:${Math.max(520,180+d.complexes.length*170)}px;border-collapse:collapse;font-size:13px"><thead><tr><th style="position:sticky;left:0;background:#F1F5F9;text-align:left;padding:10px;border:1px solid var(--line)">비교 항목</th>${d.complexes.map((c,i)=>`<th style="background:#F1F5F9;text-align:left;padding:10px;border:1px solid var(--line);color:${CMP_COLORS[i%4]}">${escCell(c.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th style="position:sticky;left:0;background:#F8FAFC;text-align:left;padding:10px;border:1px solid var(--line);white-space:nowrap">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td style="padding:10px;border:1px solid var(--line);vertical-align:top;line-height:1.55">${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+  };
+  render();
+  await Promise.all(d.complexes.map(async c=>{
+    const key=`${c.lawd}|${c.name}|${c.umd||''}`;let entry=compareNearbyCache.get(key);
+    if(!entry){entry={promise:null,value:null};compareNearbyCache.set(key,entry);entry.promise=(async()=>{
+      const result={stations:[],schools:{},fallback:c.hh?.subwayWalk||''};
+      const [schoolData,point]=await Promise.all([fetch(`/data/nearby-schools/${encodeURIComponent(c.lawd)}.json`).then(r=>r.ok?r.json():{items:[]}).catch(()=>({items:[]})),findNaverComplexCoordinate({name:c.name,umd:c.umd,hh:c.hh},c.lawd,c.apt||c.name)]);
+      const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+      const matched=matchNearbySchools(schoolData.items||[],{...c,hh:c.hh,umd:c.umd},c.alias||c.apt||c.name,naverNameKey);
+      for(const school of matched?.schools||[]){if(!levels.includes(school.level))continue;const old=result.schools[school.level];if(!old||Number(school.distance)<Number(old.distance))result.schools[school.level]=school;}
+      if(validSchoolCoordinate(point)){try{const maps=await loadComplexMapSDK();result.stations=await searchNearbySubwayStations(maps,{lat:Number(point.lat),lng:Number(point.lng)});}catch{}}
+      if(!result.fallback&&c.hh?.subwayWalk)result.fallback=c.hh.subwayWalk;
+      return result;
+    })().then(value=>{entry.value=value;return value;}).catch(()=>{entry.value={stations:[],schools:{},fallback:c.hh?.subwayWalk||''};return entry.value;});}
+    await entry.promise;
+  }));
+  render();
+}
 function loadComplexMapSDK(){
   if(window.kakao?.maps?.Map)return Promise.resolve(window.kakao.maps);
   if(complexMapSDKPromise)return complexMapSDKPromise;
@@ -7200,11 +7212,17 @@ function renderCompare(d,areas){
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
       <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 최근 시세는 현재월 월평균가 · 기간별 변동 금액(변동률)은 각 시점의 월평균가 대비 · 무거래월은 직전 평균가 유지 · 직거래·기존 저가 이상치 제외 · — 자료 없음.</div>
     </div>
+    <div class="sec">
+      <h3>지하철·학교 비교</h3>
+      <div id="cmpNearby" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="비교 단지의 지하철과 주변 학교 정보, 좌우로 스크롤">주변 정보를 불러오는 중…</div>
+      <div class="chart-note">지하철은 카카오맵 기준 가장 가까운 역까지의 도보 거리·시간, 학교는 가장 가까운 학교와 직선거리입니다. 배정 학교나 실제 통학 경로를 뜻하지 않습니다.</div>
+    </div>
   </div>
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   drawCompare(d);
+  loadCompareNearby(d,searchToken);
 }
 
 const molitPageCounts = new WeakMap();
@@ -8505,7 +8523,7 @@ function openListingRecentComplex(entry){
   if(isListingTrial()&&entry.lawd!==LISTING_TRIAL_LAWD){showError(LISTING_TRIAL_MSG);return;}
   document.getElementById('listingNameQuery').value=entry.apt;listingNameChanged();listingNameRestoreKey=entry.key;search({silentScroll:true,scrollToListingResult:true});
 }
-let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
+let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[],listingAutocompleteToken=0;
 function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
 function openListingNameSearch(focusInput=true){document.getElementById('listingIndividualSearch').style.display='';if(focusInput)document.getElementById('listingNameQuery').focus();}
 function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
@@ -8513,10 +8531,29 @@ function listingNameActive(){return ['listingbudget','listingtrend','listingrise
 function listingNameChanged(){
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
+  const autocomplete=document.getElementById('listingNameAutocomplete');autocomplete?.replaceChildren();
+  acHide();
   clearTimeout(acTimer);
   const input=document.getElementById('listingNameQuery');
-  if(input.value.trim())acTimer=setTimeout(()=>acShow(input),180);else acHide();
   listingOccupancyApply();
+  if(input.value.trim().length>=2){const token=++listingAutocompleteToken;acTimer=setTimeout(()=>loadListingNameAutocomplete(input,token),180);}
+}
+async function loadListingNameAutocomplete(input,token){
+  const box=document.getElementById('listingNameAutocomplete');if(!box)return;
+  const query=input.value.trim();if(token!==listingAutocompleteToken||query.length<2)return;
+  box.innerHTML='<div class="ac-msg" style="margin-top:6px;border:1px solid var(--line);border-radius:10px;background:#fff">단지 호가 자료에서 검색 중…</div>';
+  try{
+    const result=await searchListingComplexNames(query,searchToken,{occupancy:listingOccupancy(),floorScope:listingFloor(),trial:isListingTrial()});
+    if(token!==listingAutocompleteToken||input.value.trim()!==query)return;
+    listingNameChoices=result;box.replaceChildren();
+    if(!result.length){box.innerHTML='<div class="ac-msg" style="margin-top:6px;border:1px solid var(--line);border-radius:10px;background:#fff">일치하는 단지를 찾지 못했습니다</div>';return;}
+    result.slice(0,20).forEach((hit,index)=>{
+      const button=document.createElement('button');button.type='button';button.className='ac-item';button.style.cssText='width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;margin-top:5px;text-align:left;color:var(--navy);font:inherit';button.setAttribute('role','option');
+      const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;button.append(title,detail);
+      button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('click',()=>chooseListingName(index));box.append(button);
+    });
+    if(result.length>20){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 지역명이나 단지명을 더 입력해 주세요.';box.append(note);}
+  }catch(error){if(token===listingAutocompleteToken&&input.value.trim()===query)box.innerHTML=`<div class="ac-msg" style="margin-top:6px;border:1px solid var(--line);border-radius:10px;background:#fff">${esc(error.message)}</div>`;}
 }
 function chooseListingName(index){
   listingNameSelected=listingNameChoices[index]||null;
