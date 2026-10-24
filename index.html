@@ -5141,30 +5141,31 @@ function parseSubwayWalk(raw){
   const open = /이상|초과/.test(raw);
   return open ? { min: nums[0], max: Infinity } : { min: 0, max: nums[0] };
 }
-// 역세권 탭은 최근 3개월의 실거래를 전용면적 구간·단지별 평균으로 표시한다.
-// 같은 구간 안에서도 면적이 다른 평형은 섞지 않고, 구간 중심 면적에 가장 가까운 평형을 대표로 고른다.
-// 직거래·저가 이상치는 단지와 전용면적별로 제외한다.
-function averageByAreaRecent(trades, minA, maxA){
-  const recentMonths = lastMonthsYm(3), recentSet = new Set(recentMonths);
+// 역세권 탭은 단지 분석의 현재월 시세와 같은 월평균 계산을 사용한다.
+// 현재월 거래가 없으면 직전 거래월 평균을 이어받고, 직거래·저가 이상치는 단지·전용면적별로 제외한다.
+// 같은 구간 안에서는 면적이 다른 평형을 섞지 않고, 구간 중심에 가장 가까운 평형을 대표로 고른다.
+function averageByAreaCurrentMonth(trades, minA, maxA){
+  const historyMonths = lastMonthsYm(73), historySet = new Set(historyMonths);
+  const currentMonth = calendarMonths(1);
   const groups = new Map();
   trades.forEach(t=>{
     const area = Math.floor(Number(t.area));
-    if(t.kind || !Number.isFinite(area) || area < minA || area > maxA || !recentSet.has(t.ym)) return;
+    if(t.kind || !Number.isFinite(area) || area < minA || area > maxA || !historySet.has(t.ym)) return;
     const apt = t.apt.replace(/\s/g, ''), key = `${apt}|${area}`;
     if(!groups.has(key)) groups.set(key, {apt, area, trades:[]});
     groups.get(key).trades.push(t);
   });
   const map = {};
   for(const {apt, area, trades:areaTrades} of groups.values()){
-    const valid = markOutliers(areaTrades, recentMonths).filter(t=>!t.direct && Number.isFinite(t.amt) && t.amt>0);
-    if(!valid.length) continue;
-    const avg = valid.reduce((sum,t)=>sum+t.amt,0)/valid.length;
+    const valid = markOutliers(areaTrades, historyMonths).filter(t=>!t.direct && Number.isFinite(t.amt) && t.amt>0);
+    const avg = monthlyPriceAverage(valid, currentMonth);
+    if(!avg) continue;
     const current = map[apt];
     const center = (minA+maxA)/2;
     if(!current || Math.abs(area-center)<Math.abs(current.area-center) ||
-       (Math.abs(area-center)===Math.abs(current.area-center) && valid.length>current.n)){
+       (Math.abs(area-center)===Math.abs(current.area-center) && avg.n>current.n)){
       const representative = valid.slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)))[0];
-      map[apt] = {...representative, amt:avg, area, py:representative.py, n:valid.length};
+      map[apt] = {...representative, amt:avg.v, area, py:representative.py, n:avg.n};
     }
   }
   return map;
@@ -5213,7 +5214,7 @@ async function subwayRowsForRegion(lawd,maxWalk){
       .map(it => ({ ...it, walk: parseSubwayWalk(it.subwayWalk) }))
       .filter(it => it.walk && it.walk.max <= maxWalk);
 
-    // 최근 3개월 평균가 기준 평당가 + 전용면적 구간별 시세 조회 — 실패해도 목록 자체는 보여주고 도보시간 순으로만 정렬
+    // 단지 분석과 같은 현재월 월평균가 기준 평당가 + 전용면적 구간별 시세 조회
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
     // "국민평형대"가 아닌 단지는 아무 가격도 안 뜨는 문제(예: 압구정미성2차, 전용74/118/140㎡) — 20~200㎡을
     // 빈틈없이 이어붙인 7구간으로 확장해서 어떤 평형대든 최소 하나는 걸리도록 함(운영자 요청)
@@ -5229,10 +5230,10 @@ async function subwayRowsForRegion(lawd,maxWalk){
     const bandMaps = {};
     let allAptNames = [], aptUmd = new Map();
     try{
-      const trades = await ensureMonths(lawd, 36);
+      const trades = await ensureMonths(lawd, 73);
       allAptNames = [...new Set(trades.map(t=>t.apt))];
       trades.forEach(t=>{ if(!aptUmd.has(t.apt)) aptUmd.set(t.apt, t.umd); });
-      AREA_BANDS.forEach(b => { bandMaps[b.key] = averageByAreaRecent(trades, b.min, b.max); });
+      AREA_BANDS.forEach(b => { bandMaps[b.key] = averageByAreaCurrentMonth(trades, b.min, b.max); });
     }catch(e){ /* 조회 실패 — 맵 비워둔 채 아래에서 도보시간 순으로 폴백, 가격 표시는 생략 */ }
 
     const naverIndex=new Map();
@@ -5356,13 +5357,13 @@ function renderSubway(d){
     <div class="card-hd">
       ${hdTop('역세권')}
       <h2>${esc(shortRegionLabel(d.regionName))}</h2>
-      <div class="meta">도보 ${d.maxWalk}분 이내 · 최근 3개월 평균가 기준 공급면적 평당가 높은 순</div>
+      <div class="meta">도보 ${d.maxWalk}분 이내 · 현재월 평균가 기준 공급면적 평당가 높은 순</div>
     </div>
     <div class="sec">
       ${rows}
     </div>
   </div>
-  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 국토교통부 실거래가 (전용면적별 최근 3개월 평균가, 직거래·저가 이상치 제외 · 국민평형 우선 최대 2개 표시)</div>`;
+  <div class="src-note">출처: 국토교통부 K-apt(세대수·지하철) · 국토교통부 실거래가 (전용면적별 현재월 평균가 · 거래가 없는 달은 직전 평균 유지 · 직거래·저가 이상치 제외 · 국민평형 우선 최대 2개 표시)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
