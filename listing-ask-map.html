@@ -118,7 +118,12 @@ function renderWeeklyRanking(){
  const periods=[...weekly.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
  const rangeSelect=(label,value)=>{const field=document.createElement('label');field.textContent=label;const select=document.createElement('select');for(const [key,week] of periods){const option=document.createElement('option');option.value=key;option.textContent=weekInfo(week.asOf)?.label.replace(/^\d+년 /,'')||key;select.append(option)}select.value=value||periods.at(-1)?.[0]||'';field.append(select);range.append(field);return select};
  const endKey=periods.find(([key,week])=>week.asOf===state.asOf)?.[0]||periods.at(-1)?.[0]||'';
- const startKey=periods.find(([key,week])=>week.asOf===state.previousAsOf)?.[0]||periods.at(-2)?.[0]||'';
+ const endIndex=periods.findIndex(([key])=>key===endKey);
+ const previousIndex=periods.findIndex(([key,week])=>week.asOf===state.previousAsOf);
+ // A region may expose the same asOf value for multiple weekStart keys. Keep
+ // the start strictly before the selected end week so the range never collapses.
+ const startIndex=previousIndex>=0&&previousIndex<endIndex?previousIndex:Math.max(0,endIndex-1);
+ const startKey=periods[startIndex]?.[0]||'';
  const startSelect=rangeSelect('시작 주차',startKey),endSelect=rangeSelect('끝 주차',endKey);
  const field=document.createElement('label');field.textContent='지역';const filter=document.createElement('select');for(const province of ['전체','서울','경기','인천','부산']){const o=document.createElement('option');o.value=province;o.textContent=province;filter.append(o)}field.append(filter);range.append(field);panel.before(range);
  const header=$('#monthlyPanel .card-hd').cloneNode(true);header.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));header.querySelector('h2').id='ytdRankingTitle';panel.append(header);
