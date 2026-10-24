@@ -8475,6 +8475,7 @@ function resetListingFilters(){
   try{localStorage.removeItem(queriedSliderKey(mode));}catch{}
   if(typeof listingManualFacets!=='undefined')listingManualFacets.clear();
   for(const f of Object.values(LS_FACETS)){const [lo,hi]=f.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;lo.disabled=hi.disabled=false;}
+  const subwayFilter=document.getElementById('lsSubwayMax');if(subwayFilter){subwayFilter.value=0;if(typeof lsSubwaySync==='function')lsSubwaySync(subwayFilter);}
   document.getElementById('listingOccupancy').value='available';
   document.getElementById('listingNameQuery').value='';
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
