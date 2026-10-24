@@ -1440,6 +1440,10 @@ function parseCmpShareItems(value){
     return match?[{lawd:match[1],name:match[2]}]:[];
   });
 }
+// 공유 URL과 뒤로가기 복원이 같은 탭 화이트리스트를 사용하도록 한 곳에서 관리한다.
+const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap',
+  'newhigh','newlow','pyprice','inversion',
+  'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
 async function initFromURL(){
   const p = new URLSearchParams(location.search);
   const m = p.get('m');
@@ -1452,9 +1456,6 @@ async function initFromURL(){
   // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평당가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
-  const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap',
-    'newhigh','newlow','pyprice','inversion',
-    'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
   newHighWeekOnly = requestedMode==='newhigh' && p.get('nh7')==='1';
   if(needsSubscriberSession(requestedMode) || isListingMode(requestedMode)) await aptsumSubscriberGate.ready;
@@ -1835,7 +1836,6 @@ function restoreView(vi){
       initFromURL().finally(()=>{ restoreView._urlRecovery = false; });
       return;
     }
-    const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
     if(requestedMode && URL_MODES.includes(requestedMode) && hasSharedQuery && !restoreView._urlRecovery){
       restoreView._urlRecovery = true;
       initFromURL().finally(()=>{ restoreView._urlRecovery = false; });
@@ -4871,63 +4871,6 @@ function quick(n, guName){
   }
   document.getElementById('q').value=n;
   search();
-}
-
-// ── 정비사업(비공개 탭) ──
-// 리치고 정비사업 스냅샷을 정적 JSON으로 읽는다. 조회 때마다 외부 API를 호출하지 않아
-// 비공개 탭에서도 빠르게 열리고, 수집일(asOf)을 함께 표시해 AI 예상 일정과 실제 인가일을 구분한다.
-let redevelopmentDataPromise = null;
-async function loadRedevelopmentData(){
-  if(!redevelopmentDataPromise) redevelopmentDataPromise = fetch('/data/redevelopment.json?v=20261024-2',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('정비사업 데이터 조회 실패')));
-  return redevelopmentDataPromise;
-}
-function redevelopmentTargets(lawd){
-  return regionSel.length ? regionSel.slice() : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{lawd,name:regionNameByLawd(lawd)}]);
-}
-function redevelopmentRegionMatch(site,target){
-  const region=String(site?.region||'').replace(/\s+/g,'');
-  const name=String(target?.name||'').replace(/\s+/g,'');
-  if(!region || !name) return false;
-  if(region.includes(name) || name.includes(region)) return true;
-  // 지역 셀렉트는 "안양 만안구"처럼 시·군을 줄여 표시하지만 리치고는
-  // "경기 안양시 만안구"처럼 행정구역 접미사를 포함한다. 구·군 토큰으로
-  // 한 번 더 비교해 같은 권역의 사업지를 놓치지 않는다.
-  const district = String(target?.name||'').trim().split(/\s+/).findLast(part=>/[구군]$/.test(part));
-  return !!district && region.includes(district);
-}
-async function searchRedevelopment(){
-  const myToken=++searchToken; beginSearchRequests();
-  const lawd=sel.value, targets=redevelopmentTargets(lawd);
-  document.getElementById('error').classList.remove('on');
-  const result=document.getElementById('result'); result.classList.remove('on'); result.innerHTML='';
-  document.getElementById('loading').classList.add('on'); document.getElementById('btn').disabled=true; showLookupProgress(0,1);
-  try{
-    const data=await loadRedevelopmentData(); if(myToken!==searchToken)return;
-    const sites=(data.sites||[]).filter(site=>targets.some(t=>redevelopmentRegionMatch(site,t)));
-    const view={mode:'redevelopment',regionName:regionScopeLabel(targets),sites,asOf:data.asOf||null};
-    renderRedevelopment(view); lastData=view; pushView(); saveLastRegionPref(lawd);
-  }catch(e){if(myToken===searchToken)showError('정비사업 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');}
-  finally{if(myToken===searchToken){document.getElementById('loading').classList.remove('on');document.getElementById('btn').disabled=false;}}
-}
-function redevelopmentDate(value){
-  if(!value)return '';
-  const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}.${m[2]}.${m[3]}`:String(value);
-}
-function renderRedevelopment(d){
-  const sites=[...(d.sites||[])].sort((a,b)=>String(a.region||'').localeCompare(String(b.region||''),'ko')||String(a.name||'').localeCompare(String(b.name||''),'ko'));
-  const cards=sites.length?sites.map(site=>{
-    const cur=site.current_stage||{}, ai=site.ai_expected_pass||{};
-    const timeline=(site.timeline||[]).filter(x=>x.status==='진행 중'||x.status==='예정').slice(0,4);
-    return `<article class="sec" style="margin-top:10px;padding:14px;border:1px solid var(--teal-light);border-radius:14px;background:#fff">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="min-width:0"><h3 style="margin:0 0 4px;color:var(--navy)">${esc(site.name||'정비사업')}</h3><div style="font-size:11px;color:var(--sub)">${esc(site.region||'')} · ${esc(site.kind||'정비사업')}</div></div><span class="extag" style="flex:none;color:var(--teal-dark);background:var(--teal-light-soft);border-color:var(--teal-light)">${esc(cur.name||'단계 확인 중')}</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"><div style="padding:9px;border-radius:10px;background:var(--teal-light-soft)"><small style="display:block;color:var(--sub)">현재 단계</small><b style="color:var(--teal-dark)">${esc(cur.name||'—')}</b></div><div style="padding:9px;border-radius:10px;background:var(--teal-light-soft)"><small style="display:block;color:var(--sub)">AI 예상 통과</small><b style="color:var(--teal-dark)">${esc(redevelopmentDate(ai.expected_date)||'—')}</b></div></div>
-      ${site.planned_households?`<div style="margin-top:9px;font-size:12px;color:var(--sub)">계획 세대수 <b style="color:var(--navy)">${Number(site.planned_households).toLocaleString()}세대</b>${cur.speed?` · 진행 속도 ${esc(cur.speed)}`:''}</div>`:''}
-      ${timeline.length?`<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">${timeline.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12px"><span>${esc(x.name)}</span><b style="color:${x.status==='진행 중'?'var(--teal-dark)':'var(--sub)'}">${esc(x.status)}${x.ai_expected_date?` · ${esc(redevelopmentDate(x.ai_expected_date))}`:''}</b></div>`).join('')}</div>`:''}
-      ${site.url?`<a href="${esc(site.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:11px;color:var(--teal-dark);font-weight:800">리치고 사업지 상세 ›</a>`:''}
-    </article>`;
-  }).join(''):`<div class="rng" style="padding:18px 4px;line-height:1.7"><b style="display:block;color:var(--navy);margin-bottom:4px">${esc(shortRegionLabel(d.regionName||'선택 지역'))} 정비사업 없음</b>현재 리치고 스냅샷에 등록된 재건축·재개발 사업지가 없습니다.<br><small>사업지가 있는 인접 지역은 지역을 바꿔 조회해 주세요.</small></div>`;
-  const html=`<div class="card"><div class="card-hd">${hdTop('정비사업')}<h2>${esc(shortRegionLabel(d.regionName||''))}</h2><div class="meta">재건축·재개발 단계와 예상 일정 · ${sites.length}개 사업지</div></div><div class="sec" style="padding-top:10px">${cards}</div></div><div class="src-note">기준일: ${esc(d.asOf?new Date(d.asOf).toLocaleDateString('ko-KR'): '확인 불가')} · AI 예상 일정은 리치고 모형 추정이며 실제 인가일과 다를 수 있습니다</div>`;
-  document.getElementById('loadMsg').textContent='조회 완료 100%'; document.getElementById('result').innerHTML=html; document.getElementById('result').classList.add('on');
 }
 
 // ── 지하철 검색(비공개 탭) ──
