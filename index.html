@@ -2920,11 +2920,12 @@ function renderCompareCandidates(input,hits){
   row.append(panel);
 }
 
-async function searchListingComplexNames(query,myToken){
-  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=available&floorScope=mid`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
+async function searchListingComplexNames(query,myToken,{occupancy='available',floorScope='mid',trial=false}={}){
+  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=${encodeURIComponent(occupancy)}&floorScope=${encodeURIComponent(floorScope)}${trial?'&trial=1':''}`,{credentials:'same-origin',cache:'no-store'});
   if(response.status===401)throw Object.assign(new Error('전국 단지 호가 검색은 실매물 이용권이 필요합니다.'),{auth:true});
   if(!response.ok)throw new Error(`단지 호가 검색에 실패했습니다 (HTTP ${response.status})`);
   const data=await response.json();if(myToken!==searchToken)return [];
+  if(data.floorMissing?.length)throw new Error('저층 포함 자료가 없어 엑셀 재업로드가 필요합니다. ('+data.floorMissing.join(', ')+')');
   const grouped=new Map();
   for(const x of data.items||[]){
     const key=`${x.lawd}|${x.nid}|${x.umd||''}`;
@@ -4732,6 +4733,22 @@ async function acShow(input){
   if(q.length < 1){ acHide(); return; }
   ac.innerHTML = '<div class="ac-msg">단지 목록 확인 중…</div>';
   ac.classList.add('on');
+  if(input.matches('#listingNameQuery')){
+    try{
+      if(q.length<2){ac.innerHTML='<div class="ac-msg">단지명을 두 글자 이상 입력해 주세요.</div>';return;}
+      const result=await searchListingComplexNames(input.value.trim(),searchToken,{occupancy:listingOccupancy(),floorScope:listingFloor(),trial:isListingTrial()});
+      if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
+      listingNameChoices=result;ac.replaceChildren();
+      if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
+      result.slice(0,30).forEach((hit,index)=>{
+        const item=document.createElement('div');item.className='ac-item';item.setAttribute('role','option');
+        const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
+        item.addEventListener('mousedown',event=>{event.preventDefault();chooseListingName(index);});ac.append(item);
+      });
+      if(result.length>30){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';ac.append(note);}
+    }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
+    return;
+  }
   const scope=acLawdOf(input);
   const cmpRow=input.closest('.cmp-row');
   const targets=cmpRow ? (isAllScope(scope)?lawdsOfScope(scope):[])
@@ -4884,7 +4901,7 @@ document.addEventListener('input', e=>{
   }
 });
 document.addEventListener('focusin', e=>{
-  if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
+  if((e.target.matches('#q') || e.target.matches('.cmp-row input') || e.target.matches('#listingNameQuery')) && e.target.value.trim()) acShow(e.target);
 });
 // 모바일 키보드가 올라올 때 입력창이 가려지는 문제 방지.
 // scrollIntoView({block:'center'})만 쓰던 이전 버전은 인스타그램 인앱 브라우저(웹뷰)에서 잘 안 먹는다는
@@ -4920,7 +4937,7 @@ if(window.visualViewport){
   });
 }
 document.addEventListener('click', e=>{
-  if(!e.target.closest('#ac') && !e.target.matches('#q') && !e.target.matches('.cmp-row input')) acHide();
+  if(!e.target.closest('#ac') && !e.target.matches('#q') && !e.target.matches('.cmp-row input') && !e.target.matches('#listingNameQuery')) acHide();
 });
 sel.addEventListener('change', ()=>acHide());
 renderFavs();
@@ -8496,6 +8513,9 @@ function listingNameActive(){return ['listingbudget','listingtrend','listingrise
 function listingNameChanged(){
   listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
   document.getElementById('listingNameCandidates').replaceChildren();
+  clearTimeout(acTimer);
+  const input=document.getElementById('listingNameQuery');
+  if(input.value.trim())acTimer=setTimeout(()=>acShow(input),180);else acHide();
   listingOccupancyApply();
 }
 function chooseListingName(index){
