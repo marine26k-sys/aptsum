@@ -6423,6 +6423,23 @@ function placeComplexSchools(wrapper){
 
 const nearbySchoolCache=new Map();
 const richgoSchoolCache=new Map();
+let complexCoordinatePromise=null;
+async function loadNaverComplexCoordinates(){
+  if(!complexCoordinatePromise)complexCoordinatePromise=fetch('/data/complex-coordinates.json',{cache:'force-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  return complexCoordinatePromise;
+}
+async function findNaverComplexCoordinate(d,lawd,alias){
+  const data=await loadNaverComplexCoordinates();
+  if(!Array.isArray(data?.items))return null;
+  const {naverNameKey}=await import('/shared/naver-name-match.mjs');
+  const names=new Set([d?.name,alias].map(x=>naverNameKey(x)).filter(Boolean));
+  const umd=String(d?.umd||'');
+  const rows=data.items.filter(x=>String(x.lawd)===String(lawd)&&String(x.umd||'')===umd&&names.has(naverNameKey(x.name)));
+  if(rows.length===1)return rows[0];
+  const hh=Number(d?.hh?.hhcnt||0);
+  const householdMatch=hh>0?rows.filter(x=>Number(x.hh||0)===hh):[];
+  return householdMatch.length===1?householdMatch[0]:null;
+}
 function matchNearbySchools(items,d,alias,nameKey){
   const norm=nameKey|| (n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,''));
   if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
@@ -6611,6 +6628,13 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
     try{
       const maps=await loadComplexMapSDK();
       if(!maps.services?.Places)throw Error('places unavailable');
+      const naverPoint=await findNaverComplexCoordinate(d,lawd,alias);
+      if(naverPoint){
+        const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:naverPoint.lat,lng:naverPoint.lng});
+        if(!body.isConnected)return;
+        button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:naverPoint.lat,lng:naverPoint.lng,schools:schoolRows,nearby:[]});
+        return;
+      }
       const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
       const places=await new Promise((resolve,reject)=>new maps.services.Places().keywordSearch(alias||d.name,(rows,result)=>result===maps.services.Status.OK?resolve(rows):result===maps.services.Status.ZERO_RESULT?resolve([]):reject(Error('place search'))));
       if(!body.isConnected)return;
@@ -6669,6 +6693,8 @@ async function loadComplexSchools(panel,d,lawd){
       return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}${x.grade?` <small style="color:var(--teal-dark)">학군 ${esc(x.grade)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
     }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
     body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">직선거리는 단지와 학교 사이의 거리입니다. 배정 학교·통학구역·실제 보행 경로를 의미하지 않습니다.</div>');
+    const naverPoint=await findNaverComplexCoordinate(d,lawd,naverNameOf(lawd,d.name,d.umd));
+    if(matched&&naverPoint){matched.lat=naverPoint.lat;matched.lng=naverPoint.lng;}
     if(validSchoolCoordinate(matched))addComplexSchoolMap(body,matched);
     else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd),rows);
     panel.dataset.loaded='1';
