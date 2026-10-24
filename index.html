@@ -702,13 +702,13 @@ try {
         verified = true;
         reveal();
         if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(false);
-        const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='전 지역에서 검색한 뒤 단지를 선택해 주세요.';
+        updateListingComplexSearchHelp(false);
       };
       // 구독 만료·해지·코드 재발급이 서버에서 확인되면 이미 열려 있는 페이지에서도 즉시 잠근다(2026.09).
       deactivate = () => {
         verified = false; master = false;
         if(typeof syncListingSearchTrialBadge==='function')syncListingSearchTrialBadge(true);
-        const help=document.getElementById('listingNameSearchHelp');if(help)help.textContent='무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.';
+        updateListingComplexSearchHelp(true);
         if (applyCta) applyCta.style.display = '';
         if(issueGroup) issueGroup.style.display='';
         subTabs.forEach(t => { t.style.display = 'none'; t.classList.remove('on'); });
@@ -2686,6 +2686,14 @@ function needsSubscriberSession(m){
 const LISTING_TRIAL_LAWD = '11680';
 function isListingMode(m){ return m==='listingfavorites'||m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingaskmap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
+function listingComplexSearchHelpHTML(trial=false){
+  const scope=trial?'무료 체험 검색 가능 지역: 강남구':'검색 가능 지역: 서울 · 경기 · 인천 · 부산';
+  return `<span class="search-help-icon" aria-hidden="true">?</span><span><b>검색 방법</b>　먼저 <b>단지명만</b> 입력하세요. 검색되지 않으면 <b>지역명 + 단지명</b>을 함께 입력해 보세요.<br><span style="color:var(--sub)">${scope}　|　예: ‘동아’ → 안 나오면 ‘성수동 동아’</span></span>`;
+}
+function updateListingComplexSearchHelp(trial=isListingTrial()){
+  const help=document.getElementById('listingNameSearchHelp');
+  if(help)help.innerHTML=listingComplexSearchHelpHTML(trial);
+}
 function syncListingSearchTrialBadge(trial){
   const box=document.getElementById('searchBox'),badge=document.getElementById('listingSearchTrial');
   if(!box||!badge)return;
@@ -2835,7 +2843,7 @@ function setMode(m, fromRestore){
   document.getElementById('listingNameQuery').placeholder='단지명 검색 (예: 동아 / 성수동 동아)';
   document.getElementById('listingNameQuery').setAttribute('aria-label','단지명 검색');
   document.getElementById('listingNameTrialBadge').hidden=!isListingTrial();
-  document.getElementById('listingNameSearchHelp').textContent=isListingTrial()?'무료 체험 · 강남구 단지를 검색할 수 있습니다. 전 지역 검색은 실매물 이용권이 필요합니다.':'전 지역에서 검색한 뒤 단지를 선택해 주세요.';
+  updateListingComplexSearchHelp(isListingTrial());
   const individualListing=new URLSearchParams(location.search).get('individual')==='1';
   document.getElementById('searchBox').dataset.individual=String(m==='listingbudget'&&individualListing);
   syncListingSearchTrialBadge(isListingTrial());
