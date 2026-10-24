@@ -11,6 +11,9 @@ test('reset requeries the currently selected region even when native region retu
 test('old Anyang result never determines reset search scope after Seoul is selected',()=>{
  const {c,calls}=setup({lastData:{mode:'listingbudget',scopeLabel:'안양시'}});c.resetListingFilters();assert.equal(calls.length,1);assert.equal(calls[0].value,'ALL:서울');
 });
+test('실매물 필터 초기화는 지하철 거리도 전체로 되돌린다',()=>{
+ const {c}=setup(),subway=c.document.getElementById('lsSubwayMax');subway.value=4;c.resetListingFilters();assert.equal(subway.value,0);
+});
 test('reset without a region or in individual listing analysis does not launch an incomplete search',()=>{
  for(const options of [{regionSel:[],value:''},{individual:true}]){const {c,calls}=setup(options);c.resetListingFilters();assert.equal(calls.length,0);}
 });

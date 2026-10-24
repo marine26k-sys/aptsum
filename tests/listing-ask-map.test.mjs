@@ -48,10 +48,12 @@ test('호가 통계 지도는 전주 대비 변동률을 표시한다',()=>{
   assert.match(out,/-1\.0%/);
 });
 
-test('호가 통계는 집계 자료가 준비될 때까지 지도를 숨긴다',()=>{
+test('호가 통계는 지역 단위로 제한 동시 조회하고 진행 상황을 표시한다',()=>{
   const standalone=readFileSync(new URL('../listing-ask-map.html',import.meta.url),'utf8');
-  assert.match(standalone,/\$\('#monthlyPanel'\)\.hidden=true/);
   assert.match(standalone,/자료를 불러오는 중/);
-  assert.match(standalone,/\$\('#monthlyPanel'\)\.hidden=state\.view==='period'/);
+  assert.match(standalone,/const worker=async\(\)=>\{while\(cursor<entries\.length\)/);
+  assert.match(standalone,/Array\.from\(\{length:8\},worker\)/);
+  assert.doesNotMatch(standalone,/fetchJson\('\/api\/listings\?askMap=1&all=1'\)/);
+  assert.match(standalone,/자료를 불러오는 중… \(\$\{done\}\/\$\{entries\.length\}\)/);
 });
 
