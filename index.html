@@ -2130,10 +2130,7 @@ function renderRegionChips(){
   const box = document.getElementById('regionChips');
   if(!(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='listingaskmap'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
   box.style.display = '';
-  if(mode==='complex'){
-    box.innerHTML=`<div class="rng" style="padding:2px 2px 0">지역 선택은 선택 사항입니다 · 단지명으로 모든 등록 지역을 검색합니다</div>`;
-    return;
-  }
+  if(mode==='complex'){box.style.display='none';return;}
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
     renderRecentRegionCache();
@@ -2759,7 +2756,7 @@ function setMode(m, fromRestore){
   document.getElementById('tabLASK').classList.toggle('on', m==='listingaskmap');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
-  document.getElementById('singleRow').style.display = (m==='compare'||m==='listingfavorites') ? 'none' : '';
+  document.getElementById('singleRow').style.display = (m==='complex'||m==='compare'||m==='listingfavorites') ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   if(typeof renderRecentCompareComplexes==='function')renderRecentCompareComplexes();
   document.getElementById('addRow').style.display = m==='compare' ? '' : 'none';
