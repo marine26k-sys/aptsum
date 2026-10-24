@@ -4883,7 +4883,7 @@ function quick(n, guName){
 // 비공개 탭에서도 빠르게 열리고, 수집일(asOf)을 함께 표시해 AI 예상 일정과 실제 인가일을 구분한다.
 let redevelopmentDataPromise = null;
 async function loadRedevelopmentData(){
-  if(!redevelopmentDataPromise) redevelopmentDataPromise = fetch('/data/redevelopment.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('정비사업 데이터 조회 실패')));
+  if(!redevelopmentDataPromise) redevelopmentDataPromise = fetch('/data/redevelopment.json?v=20261024-2',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('정비사업 데이터 조회 실패')));
   return redevelopmentDataPromise;
 }
 function redevelopmentTargets(lawd){
