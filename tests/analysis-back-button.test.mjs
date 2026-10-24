@@ -21,8 +21,8 @@ test('일반 금액대별 실매물의 뒤로가기는 탭 선택 화면으로 �
  assert.deepEqual(prevented,[true]);
 });
 
-test('단지 상세 화면은 이전 조회 위치를 복원한다',()=>{
+test('개별 단지 호가 화면의 뒤로가기는 검색 기록을 건너뛰고 탭 선택 화면으로 나간다',()=>{
  const {context,calls}=run('listingbudget',true,3);
- assert.equal(context.location.href,'');
- assert.deepEqual(calls,['back']);
+ assert.equal(context.location.href,'./index.html');
+ assert.deepEqual(calls,[]);
 });
