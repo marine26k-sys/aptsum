@@ -141,6 +141,7 @@ try {
      금액대별 3개 선택창이 카드 대부분을 차지해 탭보다 과하게 커 보였음. */
   .search-box{display:grid;gap:6px;margin-bottom:8px;background:#fff;border-radius:13px;padding:9px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
+  #searchBox[data-mode="complex"] #q{order:-1}
   .row2{display:flex;gap:6px}
   select,input.q{border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;font-weight:700;font-family:inherit;background:#fff}
   #optRow select{font-size:11.5px;padding:6px 7px}
@@ -1000,7 +1001,7 @@ try {
       <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">연간</button>
       <button id="uvInversionBtn" type="button" role="tab" onclick="chooseUndervalueMode('inversion')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평형 비교</button>
     </div>
-    <input class="q" id="q" type="text" placeholder="아파트 단지명만 입력 (예: 래미안)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
+    <input class="q" id="q" type="text" placeholder="전 지역 아파트 단지명 검색 (예: 래미안)" aria-label="전 지역 아파트 단지명 검색" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
     <div id="cmpRows" style="display:none"></div>
     <div id="recentCompareComplexes" hidden style="margin:5px 0 8px"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
@@ -2129,6 +2130,10 @@ function renderRegionChips(){
   const box = document.getElementById('regionChips');
   if(!(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='longpeaklisting'||mode==='listingurgent'||(mode==='listingtrend'||mode==='listingrise')||mode==='listinggap'||mode==='listingbudget'||mode==='listingaskmap'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise')){ box.style.display='none'; return; }
   box.style.display = '';
+  if(mode==='complex'){
+    box.innerHTML=`<div class="rng" style="padding:2px 2px 0">지역 선택은 선택 사항입니다 · 단지명으로 모든 등록 지역을 검색합니다</div>`;
+    return;
+  }
   if(!regionSel.length){
     box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
     renderRecentRegionCache();
@@ -4699,6 +4704,14 @@ async function acShow(input){
   const cmpRow=input.closest('.cmp-row');
   const targets=cmpRow ? (isAllScope(scope)?lawdsOfScope(scope):[])
     : (regionSel.length?regionSel:(isAllScope(scope)?lawdsOfScope(scope):[]));
+  if(!cmpRow&&mode==='complex'){
+    try{
+      const result=await complexSearchTargets(input.value.trim(),null,true);
+      if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
+      ac.innerHTML=result.hits.length?result.hits.slice(0,30).map(a=>`<div class="ac-item" onmousedown="acPick('${esc(a.name+' ['+a.umd+']')}','${esc(a.lawd)}')"><span>${esc(a.name)}</span><small>${esc(a.region)} · ${esc(a.umd)}</small></div>`).join('')+(result.hits.length>30?'<div class="ac-msg">후보가 많습니다. 단지명을 더 입력해 주세요.</div>':''):'<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';
+    }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
+    return;
+  }
   if(targets.length){
     try{
       const result=await complexSearchTargets(input.value.trim(),targets,true);
@@ -5177,13 +5190,14 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
 let complexSearchIndex=null;
 async function complexSearchTargets(name,targets,includePartial=false){
  if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
- const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(String(name).replace(/\s*\[[^\]]+\]\s*$/,'')),allowed=new Set(targets.map(t=>t.lawd));
+ const searchTargets=targets?.length?targets:[...new Map(complexSearchIndex.map(x=>[x.lawd,{lawd:x.lawd,name:x.region||regionNameByLawd(x.lawd)}])).values()];
+ const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(String(name).replace(/\s*\[[^\]]+\]\s*$/,'')),allowed=new Set(searchTargets.map(t=>t.lawd));
  const picked=typeof document==='undefined'?null:document.getElementById('q');
  const selectedLawd=!includePartial && typeof mode!=='undefined' && mode==='complex' && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
  const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
- return {targets:targets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
+ return {targets:searchTargets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
 function missingCompareInputs(inputs,narrowed,matched){
   return inputs.filter((input,i)=>!matched.some(hit=>hit.name===input.name && narrowed[i].some(target=>target.lawd===hit.lawd)));
@@ -5242,7 +5256,7 @@ async function runSearch(opts){
     cmpItems = filledCmpItems;
   }
   if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
-  if(mode!=='compare' && !listingNameActive() && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
+  if(mode!=='compare' && mode!=='complex' && !listingNameActive() && !lawd && regionSel.length===0){ showError('지역을 선택해 주세요.'); return; }
   if(mode==='pricebandrise'){
     if(!document.getElementById('priceBandPeriodN').value){ showError('비교할 시점을 선택해 주세요.'); return; }
     if(document.getElementById('priceBandN').value===''){ showError('비교할 금액대를 선택해 주세요.'); return; }
@@ -5251,7 +5265,7 @@ async function runSearch(opts){
   const r = document.getElementById('result'); r.classList.remove('on'); r.innerHTML='';
   // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
   if(isListingMode(mode) && !listingNameActive() && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
-  if(mode!=='compare' && !listingNameActive()){
+  if(mode!=='compare' && mode!=='complex' && !listingNameActive()){
     const queriedRegions = regionSel.length ? regionSel.slice() : (lawd && !isAllScope(lawd) ? [{lawd,name:regionNameByLawd(lawd)}] : []);
     saveRecentRegionSearch(queriedRegions);
   }
@@ -5292,14 +5306,18 @@ async function runSearch(opts){
   if(mode==='complex'){
     showLookupProgress(0,1);document.getElementById('loading').classList.add('on');
     try{
-      complexLookup=await complexSearchTargets(name,multiTargets.length?multiTargets:[{lawd,name:regionNameByLawd(lawd)}]);
+      complexLookup=await complexSearchTargets(name,null);
       if(myToken!==searchToken)return;
-      if(!complexLookup.targets.length){showError('선택한 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}
+      if(!complexLookup.targets.length){showError('등록된 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}
       if(complexLookup.hits.length>1){
         showError('여러 단지가 일치합니다. 검색 목록에서 조회할 단지를 선택해 주세요.');
         await acShow(document.getElementById('q'));return;
       }
-      if(multiTargets.length)multiTargets=complexLookup.targets;
+      lawd=complexLookup.targets[0].lawd;
+      sel.value=lawd;
+      regionSel=[];saveRegionSel();renderRegionChips();syncRegionPickBtn();
+      multiTargets=[];
+      saveRecentRegionSearch([{lawd,name:regionNameByLawd(lawd)}]);
     }catch(error){showError(esc(error.message));return;}finally{if(myToken===searchToken)document.getElementById('loading').classList.remove('on');}
   }
   const allScope = multiTargets.length > 0;
