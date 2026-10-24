@@ -66,6 +66,7 @@ import {REGIONS} from '/shared/regions.mjs';
 import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
 const $=s=>document.querySelector(s), grid=$('#grid'), period=$('#period');
 const state={view:'weekly',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
+const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
 $('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
 function fmt(n){return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(1)+'%':'자료 없음'}
 function color(n){if(!Number.isFinite(n))return '#f1f5f9';if(Math.abs(n)<.005)return '#fff';const a=Math.min(.62,.10+Math.abs(n)/18);return n>0?`rgba(239,68,68,${a})`:`rgba(59,130,246,${a})`}
@@ -76,14 +77,6 @@ function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'default'});if(!r.ok)throw Error(String(r.status));return r.json()}
-async function loadRegion(province,name,lawd){
- try{
-  const metric=await fetchJson(`/api/listings?lawd=${encodeURIComponent(lawd)}&askMap=1`);
-  state.data.set(String(lawd),{province,name,lawd,...metric});
-  if(metric.asOf&&(!state.asOf||metric.asOf>state.asOf))state.asOf=metric.asOf;
-  if(metric.previousAsOf&&(!state.previousAsOf||metric.previousAsOf>state.previousAsOf))state.previousAsOf=metric.previousAsOf;
- }catch{state.data.set(String(lawd),{province,name,lawd,rate:null,count:0,error:true})}
-}
 function render(){
  const title=$('#title');title.textContent=state.asOf?(weekInfo(state.asOf)?.label||'호가 주간 평균'):'호가 주간 평균';
  $('#comparisonPeriod').textContent='중층 이상 최저매물 호가 비교';
@@ -100,11 +93,18 @@ function render(){
 }
 async function boot(){
  $('#updated').textContent='자료를 불러오는 중…';
- const entries=REGIONS.flatMap(([province,regions])=>regions.map(([name,lawd])=>[province,name,lawd]));
- let cursor=0,done=0;
- const worker=async()=>{while(cursor<entries.length){const entry=entries[cursor++];await loadRegion(...entry);done++;if(done===1||done%8===0||done===entries.length){$('#updated').textContent=`자료를 불러오는 중… (${done}/${entries.length})`;render()}}};
- await Promise.all(Array.from({length:8},worker));
- $('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`;
+ // GitHub Actions가 미리 계산해 정적 배포한 지도 데이터만 읽는다.
+ const {regions=[],generatedAt}=await fetchJson('/data/listing-ask-map.json');
+ for(const metric of regions){
+  const lawd=String(metric.lawd||''),found=regionLookup.get(lawd);
+  if(!found)continue;
+  const {province,name}=found;
+  state.data.set(lawd,{province,name,...metric});
+  if(metric.asOf&&(!state.asOf||metric.asOf>state.asOf))state.asOf=metric.asOf;
+  if(metric.previousAsOf&&(!state.previousAsOf||metric.previousAsOf>state.previousAsOf))state.previousAsOf=metric.previousAsOf;
+ }
+ const generated=Date.parse(generatedAt||'');
+ $('#updated').textContent=`자료 기준일 ${state.asOf?weekLabel(state.asOf):'확인 중'}${Number.isFinite(generated)?` · 지도 갱신 ${new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(generated)}`:''} · 중층 이상 최저매물 호가 · 직전 주간 대비 평균`;
  const weeks=new Map();for(const row of state.data.values())for(const w of row.weekly||[])if(w.previousAsOf)weeks.set(w.weekStart,w);
  period.replaceChildren();for(const [key,w] of [...weeks].sort((a,b)=>b[0].localeCompare(a[0]))){const o=document.createElement('option');o.value=key;o.textContent=weekInfo(w.asOf)?.label.replace(/^\d+년 /,'')||key;period.append(o)}
  render();if(state.view==='period')renderWeeklyRanking();

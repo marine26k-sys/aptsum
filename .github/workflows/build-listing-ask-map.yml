@@ -1,0 +1,43 @@
+name: 호가 통계 지도 미리 생성
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aptsum-data-collect
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: GitHub Actions 계정 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 공개 주간 호가 통계 미리 계산
+        run: node scripts/build-listing-ask-map.mjs
+
+      - name: 지도 JSON 커밋 및 푸시
+        run: |
+          git add data/listing-ask-map.json
+          if git diff --cached --quiet; then
+            echo "지도 데이터 변경 없음"
+          else
+            git commit -m "chore: 호가 통계 지도 데이터 갱신 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
