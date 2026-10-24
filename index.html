@@ -1176,9 +1176,9 @@ try {
         </div><div class="ls-numbers"><input type="number" id="lsHhMinNumber" aria-label="최소 세대수 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsHhMaxNumber" aria-label="최대 세대수 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>세대</span></div></div>
       </div>
       <div class="ls-row" id="lsSubwayRow" style="display:none">
-        <div class="ls-hd"><span>지하철</span><b id="lsSubwayTxt">전체</b></div>
-        <div class="ls-control"><input type="range" id="lsSubwayMax" min="1" max="60" step="1" value="60" oninput="lsSubwaySync(this)" onchange="lsSubwayApply()" aria-label="최대 지하철 도보시간(분)">
-          <div class="ls-numbers"><input type="number" id="lsSubwayMaxNumber" min="1" max="60" step="1" value="60" aria-label="최대 지하철 도보시간 직접 입력(분)" onchange="lsSubwayNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>분 이내</span></div>
+        <div class="ls-hd"><span>지하철</span><b id="lsSubwayTxt">20분 이내</b></div>
+        <div class="ls-control"><input type="range" id="lsSubwayMax" min="1" max="20" step="1" value="20" oninput="lsSubwaySync(this)" onchange="lsSubwayApply()" aria-label="최대 지하철 도보시간(분)">
+          <div class="ls-numbers"><input type="number" id="lsSubwayMaxNumber" min="1" max="20" step="1" value="20" aria-label="최대 지하철 도보시간 직접 입력(분)" onchange="lsSubwayNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>분 이내</span></div>
         </div>
       </div>
       <!-- 변동률(전고점 대비 호가 %) — 예산별 실매물 전용(2026.09 운영자 요청). 양 끝(-30%·+30%)은 "그 이하/이상 전부" -->
@@ -1446,7 +1446,7 @@ function buildShareURL(inp){
   if(((inp.mode==='listingtrend'||inp.mode==='listingrise')||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
-  if(inp.mode==='listingbudget' && new URLSearchParams(location.search).get('individual')!=='1' && Number.isFinite(inp.ls?.sw) && inp.ls.sw<60) p.set('lsw', String(inp.ls.sw));
+  if(inp.mode==='listingbudget' && new URLSearchParams(location.search).get('individual')!=='1' && Number.isFinite(inp.ls?.sw) && inp.ls.sw<LS_SUBWAY_MAX) p.set('lsw', String(inp.ls.sw));
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
@@ -8377,7 +8377,7 @@ function listingBudgetBandOf(ask){
 const LS_AGE_MAX = 40;
 // 평형 슬라이더 범위 — 10평 이하·60평 이상은 "그 이하/이상 전부"(기존 체크박스 목록의 17~51평 범위를 넉넉히 포함)
 const LS_PY_MIN = 10, LS_PY_MAX = 60;
-const LS_SUBWAY_MAX = 60; // 60분은 지하철 거리 필터 없음
+const LS_SUBWAY_MAX = 20;
 // 세대수 슬라이더의 왼쪽 끝(= 필터 없음) — 예산별 실매물은 100세대, 급매 선별은 300세대
 function lsHhBase(){ return mode === 'listingbudget' ? LISTING_BUDGET_MIN_HH : LISTING_MIN_HH; }
 // 변동률(예산별 실매물 전용, 2026.09 운영자 요청) — 전고점 대비 호가 %(화면 표기와 같은 정수 반올림) 최소~최대.
@@ -8404,7 +8404,7 @@ function lsSet(v){
   const subwayMax=document.getElementById('lsSubwayMax');
   subwayMax.value=Number.isFinite(v.sw)?Math.max(+subwayMax.min,Math.min(LS_SUBWAY_MAX,v.sw)):LS_SUBWAY_MAX;
   document.getElementById('lsSubwayMaxNumber').value=subwayMax.value;
-  document.getElementById('lsSubwayTxt').textContent=+subwayMax.value===LS_SUBWAY_MAX?'전체':`${subwayMax.value}분 이내`;
+  document.getElementById('lsSubwayTxt').textContent=`${subwayMax.value}분 이내`;
   lsSync();
 }
 const LS_FACETS={
@@ -8503,9 +8503,9 @@ function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
-function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw<LS_SUBWAY_MAX;}
+function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw>=1&&v.sw<=LS_SUBWAY_MAX;}
 function lsSubwayMatch(x,v=lsGet()){if(!lsSubwayActive(v))return true;const n=Number(x?.subwayMinutes);return x?.subwayMinutes!==null&&x?.subwayMinutes!==undefined&&Number.isFinite(n)&&n>=0&&n<=v.sw;}
-function lsSubwaySync(el){const slider=document.getElementById('lsSubwayMax'),number=document.getElementById('lsSubwayMaxNumber');if(el===number&&number.value.trim()!==''&&Number.isFinite(Number(number.value)))slider.value=Math.max(+slider.min,Math.min(LS_SUBWAY_MAX,Math.round(Number(number.value))));else if(el===number)number.value=slider.value;number.min=slider.min;number.max=slider.max;number.value=slider.value;document.getElementById('lsSubwayTxt').textContent=+slider.value===LS_SUBWAY_MAX?'전체':`${slider.value}분 이내`;}
+function lsSubwaySync(el){const slider=document.getElementById('lsSubwayMax'),number=document.getElementById('lsSubwayMaxNumber');if(el===number&&number.value.trim()!==''&&Number.isFinite(Number(number.value)))slider.value=Math.max(+slider.min,Math.min(LS_SUBWAY_MAX,Math.round(Number(number.value))));else if(el===number)number.value=slider.value;number.min=slider.min;number.max=slider.max;number.value=slider.value;document.getElementById('lsSubwayTxt').textContent=`${slider.value}분 이내`;}
 function lsSubwayNumberApply(input){lsSubwaySync(input);lsSubwayApply();}
 function lsSubwayApply(){lsSubwaySync();if(mode==='listingbudget'&&!isIndividualListing()&&lastData?.mode==='listingbudget')search({silentScroll:true});}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
@@ -8816,7 +8816,7 @@ function listingSubwayHTML(x){
   if(raw===null||raw===undefined||String(raw).trim()==='')return '';
   const minutes=Number(raw);
   if(!Number.isFinite(minutes)||minutes<0)return '';
-  return ` · 지하철 ${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분`;
+  return ` · 지하철 <b>${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분</b>`;
 }
 // 여러 구가 섞인 결과에서 단지 옆에 구 이름을 붙일지 — 구가 1곳뿐이면 false.
 // 안양처럼 구 이름이 "안양 동안구"·"안양 만안구"로 같은 시로 시작하면 시 이름은 빼고 "동안구"만 보여준다
