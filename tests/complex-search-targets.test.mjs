@@ -6,6 +6,8 @@ test('지역명+단지명 검색은 단지 공식명이 짧아도 해당 지역 
  vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
  const result=await c.complexSearchTargets('봉천 두산',[],true);
  assert.deepEqual(Array.from(result.hits,x=>`${x.lawd}|${x.umd}|${x.name}`),['11620|봉천동|두산']);
+ const seongsu=await c.complexSearchTargets('성수동 동아',[],true);
+ assert.deepEqual(Array.from(seongsu.hits,x=>x.name).sort(),['동아','성수동아그린']);
 });
 test('단지 비교 자동완성은 호가 매물이 없는 퍼스니티도 단지 검색 색인에서 찾는다',async()=>{
  const c=vm.createContext({complexSearchIndex:entries});vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
