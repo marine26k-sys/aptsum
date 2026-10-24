@@ -33,6 +33,20 @@ test('저장된 최근 단지 키가 이름과 다르면 그 키의 다른 아�
  assert.equal(c.matchPickedComplexCandidate(candidates,'평촌래미안푸르지오',input).key,'41173|right|비산동');
  assert.equal(c.matchPickedComplexCandidate(candidates,'다른 단지',input),null);
 });
+test('랭킹에서 단지를 누르면 법정동·단지 식별자를 넘겨 상세분석을 바로 조회한다',()=>{
+ const input={value:'이전 단지',dataset:{pickedLawd:'11710',pickedName:'이전 단지'}};
+ const viewStack=[{data:{mode:'region'},inputs:{mode:'region'}}];
+ let searched=0;
+ const c=vm.createContext({mode:'region',lastData:{mode:'region'},viewStack,pendingReturnView:null,history:{state:{vi:0}},window:{scrollY:1840},sessionStorage:{setItem(){}},captureViewInputs:()=>({mode:'region'}),buildShareURL:()=>'/index.html?m=region',sel:{value:'41173',options:[{value:'41173',textContent:'안양 동안구'}]},regionSel:[],document:{getElementById:()=>input},setMode(){},saveRegionSel(){},renderRegionChips(){},syncRegionPickBtn(){},search(){searched++}});
+ vm.runInContext(extract('function quick(', '// ── 지하철 검색'),c);
+ c.quick('평촌더샵아이파크','안양 동안구','41173','호계동');
+ assert.equal(input.value,'평촌더샵아이파크 [호계동]');
+ assert.equal(input.dataset.pickedLawd,'41173');
+ assert.equal(input.dataset.pickedApt,'평촌더샵아이파크');
+ assert.equal(input.dataset.pickedKey,'41173|호계동|평촌더샵아이파크');
+ assert.equal(viewStack[0].scrollY,1840);
+ assert.equal(searched,1);
+});
 test('단지 분석 자동완성은 실거래 단지 인덱스의 준공 예정 단지도 검색한다',async()=>{
  const c=vm.createContext({complexSearchIndex:complexIndex,mode:'complex',document:{getElementById:()=>({dataset:{}})}});
  vm.runInContext(extract('async function complexSearchTargets(', 'function complexCandidateIdentityKey('),c);

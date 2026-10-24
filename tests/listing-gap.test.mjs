@@ -10,15 +10,25 @@ const ctx=vm.createContext({LISTING_MIN_HH:300});
 vm.runInContext(html.slice(start,end),ctx);
 const item=(nid,py,ask,extra={})=>({nid,apt:nid,py,ask,ex:py*2.5,hh:500,lawd:'11680',...extra});
 
-test('compares the cheapest eligible listing in each size band within one apartment',()=>{
+test('prefers listings nearest the representative exclusive areas before comparing each size band',()=>{
   const rows=ctx.analyzeListingGap([
-    item('A',25,9.5),item('A',26,9),item('A',33,10.2),item('A',35,10.5),
+    item('A',25,9.5,{ex:59}),item('A',26,9,{ex:65}),item('A',33,10.2,{ex:84}),item('A',35,10.5,{ex:90}),
     item('A',34,8,{hh:200}),item('B',25,7),
   ],20,30);
   assert.equal(rows.length,1);
-  assert.equal(rows[0].small.py,26);
+  assert.equal(rows[0].small.py,25);
   assert.equal(rows[0].large.py,33);
-  assert.equal(rows[0].gap,1.2);
+  assert.equal(rows[0].gap,0.7);
+});
+
+test('uses 109㎡ and 134㎡ as the representative areas for 40- and 50-pyeong bands',()=>{
+  const rows=ctx.analyzeListingGap([
+    item('A',45,8,{ex:100}),item('A',44,9,{ex:109}),
+    item('A',55,10,{ex:134}),item('A',56,7,{ex:150}),
+  ],40,50);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].small.ex,109);
+  assert.equal(rows[0].large.ex,134);
 });
 
 test('ranks by additional asking amount, includes equal and cheaper larger units',()=>{
