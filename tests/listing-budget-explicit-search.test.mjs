@@ -60,3 +60,14 @@ test('데이터가 조절한 범위는 직접 슬라이더를 움직이지 않�
  assert.equal(ctx.lsAskText(v),'3.0~40.0억');assert.equal(ctx.lsAskMatch({ask:1},v),false);
  assert.equal(ctx.lsAgeText(v),'3~40년차');assert.equal(ctx.lsHhText(v),'300~4,000세대');
 });
+
+test('최근 검색 지역을 다시 그려도 목록이 중복되지 않는다',()=>{
+ let rendered='';
+ const box={querySelector:selector=>selector==='#recentRegionCache'&&rendered?{remove(){rendered='';}}:null,insertAdjacentHTML(_position,html){rendered+=html;}};
+ const ctx=vm.createContext({document:{getElementById:id=>id==='regionChips'?box:null},regionSel:[],getRecentRegionCache:()=>[{lawd:'11305',name:'강북구'}],esc:x=>x});
+ const start=html.indexOf('function renderRecentRegionCache()'),end=html.indexOf('\nfunction selectRecentRegion(',start);
+ vm.runInContext(html.slice(start,end),ctx);
+ ctx.renderRecentRegionCache();ctx.renderRecentRegionCache();
+ assert.equal((rendered.match(/최근 검색 지역/g)||[]).length,1);
+ assert.equal((rendered.match(/강북구/g)||[]).length,1);
+});

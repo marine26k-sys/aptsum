@@ -2132,10 +2132,12 @@ function saveRecentRegionSearch(items){
 }
 function renderRecentRegionCache(){
   const box=document.getElementById('regionChips');
-  if(!box||regionSel.length)return;
+  if(!box)return;
+  box.querySelector('#recentRegionCache')?.remove();
+  if(regionSel.length)return;
   const rows=getRecentRegionCache();
   if(!rows.length)return;
-  box.insertAdjacentHTML('beforeend',`<div style="margin-top:6px"><div class="rng" style="padding:0 2px 3px;font-weight:700">최근 검색 지역</div><div style="display:flex;flex-wrap:wrap;gap:5px">${rows.map(x=>`<button type="button" onclick="selectRecentRegion('${esc(x.lawd)}')" style="border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer">${esc(x.name)}</button>`).join('')}</div></div>`);
+  box.insertAdjacentHTML('beforeend',`<div id="recentRegionCache" style="margin-top:6px"><div class="rng" style="padding:0 2px 3px;font-weight:700">최근 검색 지역</div><div style="display:flex;flex-wrap:wrap;gap:5px">${rows.map(x=>`<button type="button" onclick="selectRecentRegion('${esc(x.lawd)}')" style="border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer">${esc(x.name)}</button>`).join('')}</div></div>`);
 }
 function selectRecentRegion(lawd){
   const row=getRecentRegionCache().find(x=>x.lawd===lawd); if(!row)return;
