@@ -1987,27 +1987,11 @@ function restoreView(vi){
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 let analysisPopstateSequence=0;
-// 상세 화면의 상단 뒤로가기 버튼도 브라우저 뒤로가기와 같은 히스토리 복원 흐름을 사용한다.
-// 기존에는 ./index.html로 바로 이동해 조회 조건 화면만 다시 열렸고, 랭킹에서 들어온 경우에도
-// 사용자가 보고 있던 결과 목록/스크롤 위치를 잃었다.
+// 상단 화살표는 탭 선택 화면으로 나가는 명시적 이동 버튼이다.
+// 조회·필터 변경 이력은 브라우저의 뒤로가기로만 되짚고, 이 버튼은 모든 탭에서 한 번에 나간다.
 function handleAnalysisBack(event){
   event?.preventDefault();
-  // 금액대별 실매물(개별 단지 포함)의 뒤로가기는 검색 히스토리를 되감지 않고 탭 선택 화면으로 한 번에 나간다.
-  if(mode==='listingbudget'){
-    location.href='./index.html';
-    return false;
-  }
-  const state = history.state;
-  if(state && typeof state.vi === 'number' && state.vi >= 0){
-    const beforeURL=location.href,beforeVi=state.vi,beforePopstate=analysisPopstateSequence;
-    history.back();
-    // 모바일 인앱 브라우저가 간헐적으로 뒤로가기 요청을 무시하면 탭 화면으로 빠져나갈 수 있게 복구한다.
-    if(typeof setTimeout==='function')setTimeout(()=>{
-      if(analysisPopstateSequence===beforePopstate&&location.href===beforeURL&&history.state?.vi===beforeVi)location.href='./index.html';
-    },700);
-  }else{
-    location.href = './index.html';
-  }
+  location.href='./index.html';
   return false;
 }
 window.addEventListener('popstate', e=>{
