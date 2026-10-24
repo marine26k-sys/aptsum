@@ -2909,11 +2909,11 @@ function renderCompareCandidates(input,hits){
   hits.slice(0,30).forEach(hit=>{
     const button=document.createElement('button');button.type='button';
     const label=document.createElement('span');label.textContent=`${hit.apt} · ${hit.region} ${hit.umd}`;label.style.cssText='min-width:0;overflow-wrap:anywhere';
-    const action=document.createElement('span');action.textContent=input.dataset.pickedKey===hit.key?'선택됨 ✓':'선택하여 비교 ›';action.style.cssText='flex:none;font-size:12px;font-weight:800;color:var(--teal)';button.append(label,action);
-    button.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:8px;padding:14px;border:1.5px solid var(--teal-light);border-radius:12px;background:${input.dataset.pickedKey===hit.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer`;
+    const hitKey=hit.key||complexCandidateIdentityKey(hit),action=document.createElement('span');action.textContent=input.dataset.pickedKey===hitKey?'선택됨 ✓':'선택하여 비교 ›';action.style.cssText='flex:none;font-size:12px;font-weight:800;color:var(--teal)';button.append(label,action);
+    button.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:8px;padding:14px;border:1.5px solid var(--teal-light);border-radius:12px;background:${input.dataset.pickedKey===hitKey?'var(--teal-light-soft)':'#fff'};color:var(--navy);text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer`;
     button.onclick=()=>{
       input.value=`${hit.apt} [${hit.umd}]`;
-      input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=input.value;input.dataset.pickedKey=hit.key;input.dataset.pickedApt=hit.apt;
+      input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=input.value;input.dataset.pickedKey=hitKey;input.dataset.pickedApt=hit.apt;
       setCmpRowLawd(row,hit.lawd);document.getElementById('error').classList.remove('on');panel.replaceChildren();
       const selected=document.createElement('div');selected.textContent=`선택됨 · ${hit.apt} · ${hit.region} ${hit.umd}`;selected.style.cssText='color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(selected);
     };
@@ -4776,8 +4776,9 @@ async function acShow(input){
     try{
       const searchQuery=input.dataset.pickedApt||input.value.trim().replace(/\s*\[[^\]]+\]\s*$/,'');
       if(searchQuery.replace(/\s/g,'').length<2){ac.innerHTML='<div class="ac-msg">단지명을 두 글자 이상 입력해 주세요.</div>';return;}
-      const result=await searchListingComplexNames(searchQuery,searchToken);
+      const {hits}=await complexSearchTargets(searchQuery,[],true,input);
       if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
+      const result=hits.map(hit=>({...hit,key:complexCandidateIdentityKey(hit),apt:hit.name}));
       ac.replaceChildren();
       if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
       result.slice(0,30).forEach(hit=>{
@@ -5566,8 +5567,9 @@ async function runSearch(opts){
       let needsCompareSelection=false;
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
         const query=x.input.dataset.pickedApt||x.name.replace(/\s*\[[^\]]+\]\s*$/,'');
-        const candidates=await searchListingComplexNames(query,myToken);
+        const {hits}=await complexSearchTargets(query,[],true,x.input);
         if(myToken!==searchToken)return [];
+        const candidates=hits.map(hit=>({...hit,key:complexCandidateIdentityKey(hit),apt:hit.name}));
         let selected=x.input.dataset.pickedKey?candidates.find(hit=>hit.key===x.input.dataset.pickedKey):null;
         // 기존 공유 URL·최근 조회 기록에는 선택 키가 없을 수 있으므로 법정동·단지명으로 복원한다.
         if(!selected&&x.pickedLawd){
