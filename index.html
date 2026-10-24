@@ -1035,7 +1035,7 @@ try {
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;gap:6px;margin:4px 0 6px"><button id="listingRegionReset" type="button" onclick="resetListingRegion()" style="border:1px solid var(--teal-light);border-radius:8px;background:#fff;color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⌖ 지역 초기화</button><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
     <div class="row2" id="subwayRow" style="display:none">
-      <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)searchSubway()">
+      <select id="subwayWalkMax" style="flex:1;min-width:0" onchange="if(sel.value)search()">
         <option value="5">도보 5분 이내</option>
         <option value="10">도보 10분 이내</option>
         <option value="15">도보 15분 이내</option>
@@ -1980,6 +1980,7 @@ function restoreView(vi){
   if(Number.isFinite(v.scrollY)) requestAnimationFrame(()=>window.scrollTo(0,v.scrollY));
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
+let analysisPopstateSequence=0;
 // 상세 화면의 상단 뒤로가기 버튼도 브라우저 뒤로가기와 같은 히스토리 복원 흐름을 사용한다.
 // 기존에는 ./index.html로 바로 이동해 조회 조건 화면만 다시 열렸고, 랭킹에서 들어온 경우에도
 // 사용자가 보고 있던 결과 목록/스크롤 위치를 잃었다.
@@ -1992,11 +1993,11 @@ function handleAnalysisBack(event){
   }
   const state = history.state;
   if(state && typeof state.vi === 'number' && state.vi >= 0){
-    const beforeURL=location.href,beforeVi=state.vi;
+    const beforeURL=location.href,beforeVi=state.vi,beforePopstate=analysisPopstateSequence;
     history.back();
     // 모바일 인앱 브라우저가 간헐적으로 뒤로가기 요청을 무시하면 탭 화면으로 빠져나갈 수 있게 복구한다.
     if(typeof setTimeout==='function')setTimeout(()=>{
-      if(location.href===beforeURL&&history.state?.vi===beforeVi)location.href='./index.html';
+      if(analysisPopstateSequence===beforePopstate&&location.href===beforeURL&&history.state?.vi===beforeVi)location.href='./index.html';
     },700);
   }else{
     location.href = './index.html';
@@ -2004,6 +2005,7 @@ function handleAnalysisBack(event){
   return false;
 }
 window.addEventListener('popstate', e=>{
+  analysisPopstateSequence++;
   if(nativeRegionReturnRestored){nativeRegionReturnRestored=false;return;}
   if(e.state?.modal==='region'){
     regionPickerPushed = true;

@@ -56,5 +56,3 @@ test('관심 단지 실매물에도 세대수 뒤에 지하철 거리를 붙인�
  const render=html.slice(start,end);
  assert.match(render,/listingInfoHTML\(x,false,true\)/);
 });
-
-
