@@ -4983,7 +4983,7 @@ fillAds();
 setTimeout(initializeAptsumPage, 0);
 // guName이 주어지면(시·도 전체 통합 랭킹에서 클릭한 경우) 그 구로 지역을 먼저 전환한 뒤 단지 분석을 실행한다.
 // setMode('complex')가 '전체' 선택을 첫 번째 구로 자동 대체하므로, 그 이후에 정확한 구로 다시 지정해야 한다.
-function quick(n, guName){
+function quick(n, guName, pickedLawd, pickedDong){
   if(mode!=='complex' && lastData){
     try{
       const inputs = captureViewInputs();
@@ -4996,7 +4996,20 @@ function quick(n, guName){
     const opt = [...sel.options].find(o=>o.textContent===guName);
     if(opt){ sel.value = opt.value; regionSel=[{lawd:opt.value,name:opt.textContent}];saveRegionSel();renderRegionChips(); if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); } // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
   }
-  document.getElementById('q').value=n;
+  const input=document.getElementById('q');
+  input.value=n;
+  // 랭킹 행은 실거래 데이터에 등록된 정확한 단지·법정동 코드를 이미 알고 있다.
+  // 이름만 넣고 검색하면 자동완성에서 다시 고르라는 안내로 막히므로, 그 행의 식별자로
+  // 선택 상태를 복원해 상세분석을 바로 연다.
+  for(const key of ['pickedLawd','pickedName','pickedApt','pickedKey'])delete input.dataset[key];
+  if(pickedLawd&&pickedDong){
+    const pickedName=`${n} [${pickedDong}]`;
+    input.value=pickedName;
+    input.dataset.pickedLawd=pickedLawd;
+    input.dataset.pickedName=pickedName;
+    input.dataset.pickedApt=n;
+    input.dataset.pickedKey=`${pickedLawd}|${pickedDong}|${n}`;
+  }
   search();
 }
 
@@ -7348,7 +7361,7 @@ function renderRegion(d){
   const pyMultiRegion = regionMulti(pyPrice);
   const pyRows = pyPrice.length
     ? pyPrice.map((x,i)=>`<div class="rk"><span class="no${i+1<=3?' top3':''}">${i+1}</span>
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(pyMultiRegion&&x.gu)?`${esc(guShort(x.gu, pyMultiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}','${esc(x.gu||'')}','${esc(x.lawd||'')}','${esc(x.umd||'')}')">${esc(aptLabel(x))}</span></span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(pyMultiRegion&&x.gu)?`${esc(guShort(x.gu, pyMultiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)">${(x.pricePerPy/10000).toFixed(2)}억<span style="font-size:11px;font-weight:400">/공급평</span><small><b style="color:var(--teal)">${x.amt.toFixed(1)}억</b> · ${esc(x.date)}</small></span>
       </div>${rkSep(i,pyPrice.length)}`).join('')
     : '<div class="rng" style="padding:6px 0">조건에 맞는 평당가 데이터가 없습니다</div>';
@@ -7357,7 +7370,7 @@ function renderRegion(d){
     <button type="button" role="tab" aria-selected="${regionRankView==='pyprice'}" onclick="setRegionRankView('pyprice')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:10px;background:${regionRankView==='pyprice'?'var(--teal)':'#fff'};color:${regionRankView==='pyprice'?'#fff':'var(--teal-dark)'};font:inherit;font-weight:800">평당가 랭킹</button>
   </div>`;
   const complexSection = `<div class="sec"><h3>기간 최고가 거래</h3>${rows(d.highDeals, x=>`
-        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
+        <span class="nm"><span class="nm-title"><span class="clickable" onclick="quick('${esc(x.apt)}','${esc(x.gu||'')}','${esc(x.lawd||'')}','${esc(x.umd||'')}')">${esc(aptLabel(x))}</span>${x.isNew?'<span class="nh" style="background:#00828A">신규</span>':''}</span><small><b style="color:var(--teal-dark)">${esc(x.py)}${x.area?` (전용 ${Math.floor(x.area)})`:''}</b> · ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh?` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${x.floor?` · ${esc(x.floor)}층`:''}${x.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(x.kind)}</span>`:''}</small></span>
         <span class="val" style="color:var(--teal)">${x.amt.toFixed(1)}억<small>${esc(x.date)}</small></span>`)}</div>`;
   const priceSection = `<div class="sec"><h3>평당가 랭킹</h3><div class="rng" style="margin-bottom:8px;color:var(--teal-dark)">단지당 평당가가 가장 높은 평형을 대표 표시 · 최근 3년 최고가 기준</div>${pyRows}</div>`;
   const html = `
