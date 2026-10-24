@@ -8464,7 +8464,7 @@ function lsRestoreManualFacets(facets){
 }
 function lsAlignUnadjustedToBounds(){if(mode!=='listingbudget')return;for(const [name,facet] of Object.entries(LS_FACETS))if(!listingManualFacets.has(name)){const [lo,hi]=facet.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;}lsSync();}
 function lsFacetLimits(name){const el=document.getElementById(LS_FACETS[name].ids[0]);return {min:+el.min,max:+el.max};}
-function lsFacetActive(name,v){if(mode==='listingbudget'&&!listingManualFacets.has(name))return false;const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
+function lsFacetActive(name,v){if((mode==='listingbudget'||mode==='listingurgent')&&!listingManualFacets.has(name))return false;const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
 function lsFacetMatch(name,x,v){if(!lsFacetActive(name,v))return true;const f=LS_FACETS[name],n=f.value(x);return Number.isFinite(n)&&n>=v[f.keys[0]]&&n<=v[f.keys[1]];}
 function lsDataBounds(items,names=['py','ask','age','hh','rate']){
   const v=lsGet(),active=Object.fromEntries(names.map(name=>[name,lsFacetActive(name,v)]));
