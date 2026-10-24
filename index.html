@@ -2899,22 +2899,36 @@ function renderCompareCandidates(input,hits){
   const row=input.closest('.cmp-row');if(!row)return;
   row.querySelector('.cmp-candidates')?.remove();
   const panel=document.createElement('div');panel.className='cmp-candidates';
-  const heading=document.createElement('div');heading.textContent=hits.length?'단지를 선택해 주세요 · 지역과 동을 확인하세요':'검색 결과가 없습니다. 단지명을 더 입력해 주세요.';
+  const heading=document.createElement('div');heading.textContent=hits.length?'단지 호가 검색 결과 · 지역과 동을 확인해 선택하세요':'검색 결과가 없습니다. 단지명을 더 입력해 주세요.';
   heading.style.cssText='margin-bottom:7px;color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(heading);
   hits.slice(0,30).forEach(hit=>{
     const button=document.createElement('button');button.type='button';
-    button.textContent=`${hit.name} · ${hit.region} ${hit.umd}  선택`;
-    button.style.cssText='display:block;width:100%;margin-top:5px;padding:9px 10px;border:1px solid var(--teal-light);border-radius:9px;background:#fff;color:var(--navy);text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer';
+    const label=document.createElement('span');label.textContent=`${hit.apt} · ${hit.region} ${hit.umd}`;label.style.cssText='min-width:0;overflow-wrap:anywhere';
+    const action=document.createElement('span');action.textContent=input.dataset.pickedKey===hit.key?'선택됨 ✓':'선택하여 비교 ›';action.style.cssText='flex:none;font-size:12px;font-weight:800;color:var(--teal)';button.append(label,action);
+    button.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:8px;padding:14px;border:1.5px solid var(--teal-light);border-radius:12px;background:${input.dataset.pickedKey===hit.key?'var(--teal-light-soft)':'#fff'};color:var(--navy);text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer`;
     button.onclick=()=>{
-      input.value=`${hit.name} [${hit.umd}]`;
-      input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=input.value;
+      input.value=`${hit.apt} [${hit.umd}]`;
+      input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=input.value;input.dataset.pickedKey=hit.key;input.dataset.pickedApt=hit.apt;
       setCmpRowLawd(row,hit.lawd);document.getElementById('error').classList.remove('on');panel.replaceChildren();
-      const selected=document.createElement('div');selected.textContent=`선택됨 · ${hit.name} · ${hit.region} ${hit.umd}`;selected.style.cssText='color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(selected);
+      const selected=document.createElement('div');selected.textContent=`선택됨 · ${hit.apt} · ${hit.region} ${hit.umd}`;selected.style.cssText='color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(selected);
     };
     panel.append(button);
   });
   if(hits.length>30){const note=document.createElement('div');note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';note.style.cssText='margin-top:7px;color:var(--sub);font-size:11px';panel.append(note);}
   row.append(panel);
+}
+
+async function searchCompareListingNames(query,myToken){
+  const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=available&floorScope=mid`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
+  if(response.status===401)throw Object.assign(new Error('전국 단지 호가 검색은 실매물 이용권이 필요합니다.'),{auth:true});
+  if(!response.ok)throw new Error(`단지 호가 검색에 실패했습니다 (HTTP ${response.status})`);
+  const data=await response.json();if(myToken!==searchToken)return [];
+  const grouped=new Map();
+  for(const x of data.items||[]){
+    const key=`${x.lawd}|${x.nid}|${x.umd||''}`;
+    if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,region:x.gu,apt:x.apt,umd:x.umd||''});
+  }
+  return [...grouped.values()].sort((a,b)=>a.apt.localeCompare(b.apt,'ko')||a.region.localeCompare(b.region,'ko')||a.umd.localeCompare(b.umd,'ko'));
 }
 
 
@@ -4823,7 +4837,10 @@ document.addEventListener('input', e=>{
   if(e.target.matches('#q') || e.target.matches('.cmp-row input')){
     if(e.target.matches('.cmp-row input')&&mode==='compare'){
       const row=e.target.closest('.cmp-row');row.querySelector('.cmp-candidates')?.remove();
-      if(e.target.dataset.pickedName!==e.target.value.trim()){delete e.target.dataset.pickedName;delete e.target.dataset.pickedLawd;}
+      if(e.target.dataset.pickedName!==e.target.value.trim()){
+        delete e.target.dataset.pickedName;delete e.target.dataset.pickedLawd;
+        delete e.target.dataset.pickedKey;delete e.target.dataset.pickedApt;
+      }
     }else{
       clearTimeout(acTimer);
       const t = e.target;
@@ -5475,22 +5492,29 @@ async function runSearch(opts){
     } else if(mode==='compare'){
       let needsCompareSelection=false;
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
-        const lookup=await complexSearchTargets(x.name,null,false,x.input);
-        let candidates=lookup.hits;
-        if(x.pickedLawd)candidates=candidates.filter(hit=>hit.lawd===x.pickedLawd);
-        if(!x.pickedLawd||candidates.length!==1){
+        const query=x.input.dataset.pickedApt||x.name.replace(/\s*\[[^\]]+\]\s*$/,'');
+        const candidates=await searchCompareListingNames(query,myToken);
+        if(myToken!==searchToken)return [];
+        let selected=x.input.dataset.pickedKey?candidates.find(hit=>hit.key===x.input.dataset.pickedKey):null;
+        // 기존 공유 URL·최근 조회 기록에는 선택 키가 없을 수 있으므로 법정동·단지명으로 복원한다.
+        if(!selected&&x.pickedLawd){
+          const wanted=query.replace(/\s/g,'').toLowerCase();
+          const legacy=candidates.filter(hit=>hit.lawd===x.pickedLawd&&hit.apt.replace(/\s/g,'').toLowerCase()===wanted);
+          if(legacy.length===1)selected=legacy[0];
+        }
+        if(!selected){
           needsCompareSelection=true;renderCompareCandidates(x.input,candidates);
           return [];
         }
-        const selected=candidates[0];
         x.lawd=selected.lawd;
         setCmpRowLawd(x.input.closest('.cmp-row'),selected.lawd);
-        x.input.dataset.pickedLawd=selected.lawd;x.input.dataset.pickedName=x.name;
-        return [{...x,lawd:selected.lawd}];
+        x.input.value=`${selected.apt} [${selected.umd}]`;
+        x.input.dataset.pickedLawd=selected.lawd;x.input.dataset.pickedName=x.input.value;x.input.dataset.pickedKey=selected.key;x.input.dataset.pickedApt=selected.apt;
+        return [{...x,name:x.input.value,lawd:selected.lawd}];
       }));
       if(myToken!==searchToken)return;
       if(needsCompareSelection){
-        showError('각 단지의 검색 후보에서 지역과 동을 확인해 선택한 뒤 비교 조회를 눌러 주세요.');return;
+        showError('단지 호가 검색 결과에서 각 단지의 지역과 동을 확인해 선택한 뒤 비교 조회를 눌러 주세요.');return;
       }
       const missingInput=cmpItems.filter((_,i)=>!narrowedCmp[i].length);
       if(missingInput.length){showError('등록된 지역에서 찾지 못한 단지: '+missingInput.map(x=>esc(x.name)).join(', '));return;}
