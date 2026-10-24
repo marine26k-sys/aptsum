@@ -33,7 +33,7 @@ test('매물 정보에는 세대수 다음에 지하철 분을 표시하고 누�
  const start=html.indexOf('function listingSubwayHTML('),end=html.indexOf('// 여러 구가 섞인 결과',start);
  const c=vm.createContext({Number,esc:value=>String(value)});
  vm.runInContext(html.slice(start,end),c);
- assert.equal(c.listingSubwayHTML({subwayMinutes:10}),' · <b>지하철 10분</b>');
+ assert.equal(c.listingSubwayHTML({subwayMinutes:10}),' <span class="listing-subway-badge"><span>지하철</span> <strong>10분</strong></span>');
  assert.equal(c.listingSubwayHTML({}), '');
  assert.equal(c.listingSubwayHTML({subwayMinutes:'-'}), '');
  const infoStart=html.indexOf('function listingInfoHTML('),infoEnd=html.indexOf('\nfunction ',infoStart+10);
