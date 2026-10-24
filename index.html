@@ -435,14 +435,28 @@ try {
   .ls-control{flex:1;min-width:0}
   .ls-numbers{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--sub)}
   .ls-numbers input[type=number]{width:0;min-width:0;flex:1;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font-size:13px;text-align:center;box-sizing:border-box}
-  .ls-numbers[data-source="monthsN"],.ls-numbers[data-source="floorMin"],.ls-numbers[data-source="risePeriodN"],.ls-numbers[data-source="priceBandPeriodN"]{display:none}
-  #searchBox[data-mode="complex"] .ls-numbers,#searchBox[data-mode="subway"] .ls-numbers,#searchBox[data-mode="listinggap"] .ls-numbers{display:none}
+  #searchBox[data-mode="complex"] .ls-numbers,#searchBox[data-mode="subway"] .ls-numbers{display:none}
   .ls-numbers input:focus{outline:2px solid var(--teal);outline-offset:1px}
   .ls-numbers span{font-size:10px;white-space:nowrap}
   #lsFilters{padding:8px 10px}
+  .slider-form-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
+  .slider-form-label{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
+  .slider-form-label span{font-size:11px;color:var(--sub)}
+  .slider-form-label b{font-size:12px;color:var(--teal-dark)}
+  .slider-form-control{flex:1;min-width:0}
   #lsFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
   #lsFilters .ls-hd{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
   #lsFilters .ls-dual{flex:1;min-width:0}
+  #analysisPyFilters .ls-row{display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px}
+  #analysisPyFilters .ls-hd,.analysis-select-slider .ls-hd{flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35}
+  #analysisPyFilters .ls-dual,.analysis-select-slider .ls-control{flex:1;min-width:0}
+  .analysis-select-slider{display:flex;align-items:center;gap:10px}
+  .analysis-select-slider .ls-numbers{width:100%}
+  .analysis-select-slider input[type=range]{display:block;width:100%;margin:6px 0 2px;accent-color:var(--teal)}
+  #listingGapInvestmentFilters .slider-form-control .ls-dual{width:100%}
+  #listingGapFilters .ls-row label{display:grid;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:10px}
+  #listingGapFilters .analysis-select-slider{width:auto;margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+  #listingGapFilters .analysis-select-slider .ls-hd{display:none}
   #listingBudgetFavorites{padding:8px 10px}
   #listingBudgetFavorites summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)}
   #listingBudgetFavorites[open] summary{margin-bottom:8px}
@@ -1112,20 +1126,21 @@ try {
       </label>
     </div>
     <div id="listingGapInvestmentFilters" class="ls-filters" style="display:none">
-      <div class="ls-hd"><span>갭 금액</span><b id="listingGapInvestmentTxt">전체</b></div>
+      <div class="slider-form-row"><div class="slider-form-label"><span>갭 금액</span><b id="listingGapInvestmentTxt">전체</b></div><div class="slider-form-control">
       <div id="listingGapInvestmentBands" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px"></div>
-      <div class="ls-row" style="margin-top:7px"><div class="ls-control"><div class="ls-dual" id="listingGapInvestmentDual">
+      <div class="ls-dual" id="listingGapInvestmentDual">
         <input type="range" id="listingGapInvestmentMin" min="0" max="30" step="0.1" value="0" oninput="listingGapInvestmentRangeSync(this)" onchange="listingGapInvestmentApply()" aria-label="최소 갭 금액(억)">
         <input type="range" id="listingGapInvestmentMax" min="0" max="30" step="0.1" value="30" oninput="listingGapInvestmentRangeSync(this)" onchange="listingGapInvestmentApply()" aria-label="최대 갭 금액(억)">
-      </div><div class="ls-numbers"><input type="number" id="listingGapInvestmentMinNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최소 갭 금액(억) 직접 입력"><span>~</span><input type="number" id="listingGapInvestmentMaxNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최대 갭 금액(억) 직접 입력"><span>억</span></div></div></div>
+      </div><div class="ls-numbers"><input type="number" id="listingGapInvestmentMinNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최소 갭 금액(억) 직접 입력"><span>~</span><input type="number" id="listingGapInvestmentMaxNumber" step="0.1" onchange="listingGapInvestmentNumberApply(this)" aria-label="최대 갭 금액(억) 직접 입력"><span>억</span></div>
+      </div></div>
       <div class="rng">전세가는 최근 6개월 거래 평균 · 갭 = 매매가 − 전세가 · 선택 지역의 최대 갭까지 표시합니다.</div>
     </div>
     <div id="analysisPyFilters" class="ls-filters" style="display:none">
       <div class="ls-row"><div class="ls-hd"><span>평형</span><b id="analysisPyTxt">전체</b></div>
-      <div class="ls-dual" id="analysisPyDual">
+      <div class="slider-form-control"><div class="ls-dual" id="analysisPyDual">
         <input type="range" id="analysisPyMin" min="10" max="60" step="1" value="10" oninput="analysisPySync(this)" aria-label="최소 평형">
         <input type="range" id="analysisPyMax" min="10" max="60" step="1" value="60" oninput="analysisPySync(this)" aria-label="최대 평형">
-      </div></div>
+      </div></div></div>
     </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
 
@@ -2555,11 +2570,11 @@ function initializeAnalysisSelectSliders(){
   for(const [id,title] of [['monthsN','조회 기간'],['risePeriodN','비교 기간'],['priceBandPeriodN','비교 시점'],['floorMin','층수'],['subwayWalkMax','도보 시간'],['priceBandN','금액대'],['listingGapSmall','작은 평형'],['listingGapLarge','큰 평형']]){
     const select=document.getElementById(id),wrap=document.createElement('div');
     wrap.className='ls-filters analysis-select-slider';wrap.style.display='none';
-    wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><input type="range" min="0" step="1" aria-label="${title}">`;
+    wrap.innerHTML=`<div class="ls-hd"><span>${title}</span><b></b></div><div class="ls-control"><input type="range" min="0" step="1" aria-label="${title}"></div>`;
     select.after(wrap);
     const number=document.createElement('input');number.type='number';number.id=id+'Number';number.step='any';number.setAttribute('aria-label',title+' 직접 입력');
     const units={monthsN:'개월',risePeriodN:'개월 전',priceBandPeriodN:'개월 전',floorMin:'층 이상',subwayWalkMax:'분 이내',priceBandN:'억대',listingGapSmall:'평대',listingGapLarge:'평대'};
-    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.dataset.source=id;numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.append(numbers);
+    const numbers=document.createElement('div');numbers.className='ls-numbers';numbers.dataset.source=id;numbers.append(number);const unit=document.createElement('span');unit.textContent=units[id];numbers.append(unit);wrap.querySelector('.ls-control').append(numbers);
     number.addEventListener('change',()=>{
       const options=[...select.options].filter(o=>!o.disabled&&o.style.display!=='none'&&o.value!==''&&Number.isFinite(+o.value));
       if(number.value.trim()===''||!Number.isFinite(+number.value)||!options.length){number.value=select.value;return;}
@@ -2575,7 +2590,7 @@ function initializeAnalysisSelectSliders(){
     new MutationObserver(syncAnalysisSelectSliders).observe(select,{attributes:true,attributeFilter:['style','disabled'],subtree:true});
   }
   const ageSource=document.getElementById('buildYear'),ageWrap=document.createElement('div');ageWrap.id='analysisAgeFilters';ageWrap.className='ls-filters analysis-select-slider';
-  ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div>';
+  ageWrap.innerHTML='<div class="ls-hd"><span>연식</span><b id="analysisAgeTxt">전체</b></div><div class="ls-control"><div class="ls-dual" id="analysisAgeDual"><input type="range" id="analysisAgeMin" min="0" max="40" step="1" value="0" aria-label="최소 연식"><input type="range" id="analysisAgeMax" min="0" max="40" step="1" value="40" aria-label="최대 연식"></div></div>';
   ageSource.after(ageWrap);
   for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
   new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
