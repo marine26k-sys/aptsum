@@ -10,11 +10,11 @@ test('individual rows without price history keep transaction, high, floor and he
  assert.match(row,/34평 \(전용 84\)/);assert.match(row,/\(26.09\).*최신<\/span> <b>19.8억<\/b>.*\(12층\)/);assert.match(row,/\(25.01\).*전고점/);
  assert.ok(row.indexOf('최신')<row.indexOf('전고점'));assert.match(row,/직전 이력 없음/);assert.doesNotMatch(row,/보합|20260915/);
 });
-test('metadata moves area only in the new layout and highlights only its listing floor',()=>{
+test('metadata moves area only in the new layout and keeps floor text unaccented',()=>{
  const c=vm.createContext({esc:String,buildAgeLabel:()=> '10년차',guShort:x=>x,listingSubwayHTML:()=>''});vm.runInContext(html.slice(html.indexOf('function listingInfoHTML('),html.indexOf('function listingHeaderHTML(')),c);
  const item={py:34,ex:84,umd:'가상동',built:'201601',hh:500,fl:'중/25'};
  const normal=c.listingInfoHTML(item,false),moved=c.listingInfoHTML(item,false,true);
- assert.match(normal,/34평 \(전용 84\)/);assert.doesNotMatch(moved,/34평|전용 84/);assert.match(moved,/가상동.*10년차.*500세대/);assert.match(moved,/<b style="color:var\(--teal-dark\)">중\/25층<\/b>/);
+ assert.match(normal,/34평 \(전용 84\)/);assert.doesNotMatch(moved,/34평|전용 84/);assert.match(moved,/가상동.*10년차.*500세대.*중\/25층/);assert.doesNotMatch(moved,/<b[^>]*>중\/25층<\/b>/);
 });
 
 test('individual header contains common building details while rows keep only their own floor',()=>{
