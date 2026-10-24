@@ -42,8 +42,8 @@ const askMapKey = (lawd) => `ask-map:${lawd}`;
 export async function buildAskMap(store, lawd) {
   const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
   const weeks = new Map();
-  for (const entry of index) {
-    const data = await store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" });
+  const snapshots = await Promise.all(index.map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
+  for (const data of snapshots) {
     if (!data) continue;
     const date = new Date(String(data.asOf).replaceAll('.', '-') + 'T00:00:00Z');
     if (!Number.isFinite(+date)) continue;
@@ -250,7 +250,12 @@ export default async (request) => {
       const next = { asOf, uploadId, items: clean };
       await saveSnapshot(store, lawd, next);
       await store.setJSON(latestKey, next);
-      await store.delete(askMapKey(lawd));
+      // 화면을 열 때 과거 이력을 계산하지 않도록 업로드 직후 공개용 집계를 미리 갱신한다.
+      try {
+        await store.setJSON(askMapKey(lawd), await buildAskMap(store, lawd));
+      } catch {
+        await store.delete(askMapKey(lawd));
+      }
       saved.push(lawd);
     }
     return json({ saved, unknown });

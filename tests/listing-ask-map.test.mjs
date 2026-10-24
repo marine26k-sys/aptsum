@@ -48,12 +48,13 @@ test('호가 통계 지도는 전주 대비 변동률을 표시한다',()=>{
   assert.match(out,/-1\.0%/);
 });
 
-test('호가 통계는 지역 단위로 제한 동시 조회하고 진행 상황을 표시한다',()=>{
+test('호가 통계는 GitHub Actions가 만든 정적 지도 데이터를 불러온다',()=>{
   const standalone=readFileSync(new URL('../listing-ask-map.html',import.meta.url),'utf8');
   assert.match(standalone,/자료를 불러오는 중/);
-  assert.match(standalone,/const worker=async\(\)=>\{while\(cursor<entries\.length\)/);
-  assert.match(standalone,/Array\.from\(\{length:8\},worker\)/);
-  assert.doesNotMatch(standalone,/fetchJson\('\/api\/listings\?askMap=1&all=1'\)/);
-  assert.match(standalone,/자료를 불러오는 중… \(\$\{done\}\/\$\{entries\.length\}\)/);
+  assert.match(standalone,/fetchJson\('\/data\/listing-ask-map\.json'\)/);
+  assert.doesNotMatch(standalone,/async function loadRegion/);
+  const workflow=readFileSync(new URL('../.github/workflows/build-listing-ask-map.yml',import.meta.url),'utf8');
+  assert.match(workflow,/schedule:/);
+  assert.match(workflow,/node scripts\/build-listing-ask-map\.mjs/);
 });
 
