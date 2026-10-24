@@ -27,6 +27,6 @@ test('chart month selectors calculate amount and rate and constrain endpoint ord
  assert.match(nodes.chartRangeResult.innerHTML,/24.03 → 24.04/);
 });
 test('price slider bounds adjust to region and include exact upper boundary',()=>{
- const nodes={lsAskMin:{min:0,max:50,value:0},lsAskMax:{min:0,max:50,value:49}};const ctx=vm.createContext({document:{getElementById:id=>nodes[id]},lsHhBase:()=>300,lsSync(){}});
+ const nodes={lsAskMin:{min:0,max:50,value:0},lsAskMax:{min:0,max:50,value:49}};const ctx=vm.createContext({mode:'listingurgent',listingManualFacets:new Set(),document:{getElementById:id=>nodes[id]},lsHhBase:()=>300,lsSync(){}});
  vm.runInContext(html.slice(html.indexOf('function lsAskLimits('),html.indexOf('function lsPyActive(')),ctx);ctx.lsAskBounds([{ask:12,hh:400},{ask:17.3,hh:500}]);assert.equal(+nodes.lsAskMax.value,17.5);assert.equal(ctx.lsAskMatch({ask:14},{q0:12,q1:14}),true);assert.equal(ctx.lsAskMatch({ask:14.1},{q0:12,q1:14}),false);
 });

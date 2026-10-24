@@ -53,6 +53,14 @@ test('금액대별 공유 링크는 선택한 지하철 제한을 저장하고 �
  assert.equal(new URL('https://example.com'+c.buildShareURL({...base,ls:{sw:20}})).searchParams.get('lsw'),'20');
 });
 
+test('좌표 데이터에 없는 단지도 지역·법정동·단지명으로 거리값을 찾는다',async()=>{
+ const data=JSON.parse(readFileSync(new URL('../data/complex-station-walk-minutes.json',import.meta.url),'utf8'));
+ const start=html.indexOf('let stationWalkLookupPromise='),end=html.indexOf('// K-apt 원본 데이터 자체의 오기입을 보정',start);
+ const c=vm.createContext({fetch:async()=>({ok:true,json:async()=>data}),loadNaverComplexCoordinates:async()=>({items:[]}),naverKey:s=>String(s||'').replace(/\s/g,'').replace(/아파트$/,'')});
+ vm.runInContext(html.slice(start,end),c);
+ assert.equal(await c.stationWalkMinutesFor('11140','LIG서울역리가','만리동1가'),9);
+});
+
 test('관심 단지 실매물에도 세대수 뒤에 지하철 거리를 붙인다',()=>{
  const start=html.indexOf('function renderListingFavorites('),end=html.indexOf('\nlet listingFloorScope',start);
  const render=html.slice(start,end);
