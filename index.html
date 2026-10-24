@@ -8884,7 +8884,7 @@ function listingSubwayHTML(x){
   if(raw===null||raw===undefined||String(raw).trim()==='')return '';
   const minutes=Number(raw);
   if(!Number.isFinite(minutes)||minutes<0)return '';
-  return ` <span class="listing-subway-badge"><span>지하철</span> <strong>${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분</strong></span>`;
+  return `<br><span class="listing-subway-badge"><span>지하철</span> <strong>${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분</strong></span>`;
 }
 // 여러 구가 섞인 결과에서 단지 옆에 구 이름을 붙일지 — 구가 1곳뿐이면 false.
 // 안양처럼 구 이름이 "안양 동안구"·"안양 만안구"로 같은 시로 시작하면 시 이름은 빼고 "동안구"만 보여준다
