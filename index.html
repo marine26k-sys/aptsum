@@ -8529,7 +8529,13 @@ function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
 function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw<LS_SUBWAY_ALL;}
-function lsSubwayMatch(x,v=lsGet()){if(!lsSubwayActive(v))return true;const raw=x?.subwayMinutes;if(raw===null||raw===undefined||String(raw).trim()===''||String(raw).trim()==='-')return true;const n=Number(raw);return !Number.isFinite(n)||n<0||n<=v.sw;}
+function lsSubwayMatch(x,v=lsGet()){
+  if(!lsSubwayActive(v))return true; // 전체 선택이면 비역세권(공란·-) 단지도 포함
+  const raw=x?.subwayMinutes;
+  if(raw===null||raw===undefined||String(raw).trim()===''||String(raw).trim()==='-')return false;
+  const n=Number(raw);
+  return Number.isFinite(n)&&n>=0&&n<=v.sw;
+}
 function lsSubwaySync(){const slider=document.getElementById('lsSubwayMax'),index=Math.max(0,Math.min(LS_SUBWAY_STEPS.length-1,Math.round(Number(slider.value)))),value=LS_SUBWAY_STEPS[index];slider.value=index;document.getElementById('lsSubwayTxt').textContent=value===LS_SUBWAY_ALL?'전체':`${value}분 이내`;document.querySelectorAll('#lsSubwaySteps span').forEach((step,i)=>step.classList.toggle('on',i===index));}
 function lsSubwayApply(){lsSubwaySync();if(mode==='listingbudget'&&!isIndividualListing()&&lastData?.mode==='listingbudget')search({silentScroll:true});}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}

@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 
-test('지하철 필터는 전체 기본값과 전체·20·15·10·5분 단계를 사용하며 누락 단지를 포함한다',()=>{
+test('지하철 필터는 전체 기본값에서만 비역세권을 포함하고 시간 제한에서는 제외한다',()=>{
  const start=html.indexOf('function lsSubwayActive('),end=html.indexOf('function lsNumberApply(',start);
  const c=vm.createContext({mode:'listingbudget',isIndividualListing:()=>false,LS_SUBWAY_ALL:60});
  vm.runInContext(html.slice(start,end),c);
@@ -13,11 +13,12 @@ test('지하철 필터는 전체 기본값과 전체·20·15·10·5분 단계를
  assert.equal(c.lsSubwayActive(v),true);
  assert.equal(c.lsSubwayMatch({subwayMinutes:20},v),true);
  assert.equal(c.lsSubwayMatch({subwayMinutes:21},v),false);
- assert.equal(c.lsSubwayMatch({},v),true);
- assert.equal(c.lsSubwayMatch({subwayMinutes:'-'},v),true);
- assert.equal(c.lsSubwayMatch({subwayMinutes:-1},v),true);
+ assert.equal(c.lsSubwayMatch({},v),false);
+ assert.equal(c.lsSubwayMatch({subwayMinutes:'-'},v),false);
+ assert.equal(c.lsSubwayMatch({subwayMinutes:-1},v),false);
  assert.equal(c.lsSubwayActive({sw:60}),false);
  assert.equal(c.lsSubwayMatch({subwayMinutes:10},{sw:60}),true);
+ assert.equal(c.lsSubwayMatch({}, {sw:60}),true);
  c.isIndividualListing=()=>true;
  assert.equal(c.lsSubwayMatch({},v),true);
  const stepsStart=html.indexOf('const LS_SUBWAY_ALL ='),stepsEnd=html.indexOf('const LS_RATE_MIN',stepsStart);
