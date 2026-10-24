@@ -8045,6 +8045,7 @@ function listingGapApply(changed){
 }
 function analyzeListingGap(items, smallBand, largeBand){
   if(![10,20,30,40,50].includes(smallBand) || ![20,30,40,50,60].includes(largeBand) || smallBand>=largeBand) return [];
+  const targetExArea = {20:59,30:84,40:109,50:134};
   const groups = new Map();
   for(const x of items){
     if(!x.nid || !(x.ask>0) || !(x.ex>0) || !(x.py>0) || !(x.hh>=LISTING_MIN_HH)) continue;
@@ -8053,7 +8054,9 @@ function analyzeListingGap(items, smallBand, largeBand){
     if(!side) continue;
     const key = `${x.lawd}|${x.nid}`;
     const g = groups.get(key) || {};
-    if(!g[side] || x.ask<g[side].ask || (x.ask===g[side].ask && x.ex<g[side].ex)) g[side]=x;
+    const target=targetExArea[band],distance=target===undefined?Infinity:Math.abs(x.ex-target);
+    const previous=g[side],previousDistance=previous&&target!==undefined?Math.abs(previous.ex-target):Infinity;
+    if(!previous || distance<previousDistance || (distance===previousDistance && (x.ask<previous.ask || (x.ask===previous.ask && x.ex<previous.ex)))) g[side]=x;
     groups.set(key,g);
   }
   return [...groups.values()].filter(g=>g.small && g.large && g.large.ex>g.small.ex && g.large.py>g.small.py)
@@ -9042,10 +9045,10 @@ function renderListingGap(d){
     }).join('');
   const html=`<div class="card">${listingHeaderHTML(d,'평형 갭',null,null)}<div class="sec">
     <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">${esc(d.filterLabel||'선택한 두 평형대')}의 같은 단지 최저 호가 비교</div>
-    ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 큰 평형으로 넓히는 호가 차이 적은 순`)}
+    ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 전용 59·84·109·134㎡에 가까운 매물 우선 · 호가 차이 적은 순`)}
     ${listingLinkLegend()}
     <div class="rng" style="margin:6px 0;color:#036B31">평형·가격 옆 ↗를 누르면 해당 네이버 매물로 이동합니다.</div>
-    ${body}</div></div><div class="src-note">각 평형대 안에서 가장 낮은 호가를 비교합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
+    ${body}</div></div><div class="src-note">20·30·40·50평대는 각각 전용 59·84·109·134㎡에 가장 가까운 매물을 우선 비교하며, 면적 차이가 같으면 호가가 낮은 매물을 선택합니다. 해당 기준 면적이 없는 10평대·60평 이상은 호가가 낮은 매물을 선택합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 function renderListingTrend(d){
