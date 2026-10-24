@@ -4758,15 +4758,15 @@ async function acShow(input){
     : (regionSel.length?regionSel:(isAllScope(scope)?lawdsOfScope(scope):[]));
   if(!cmpRow&&mode==='complex'){
     try{
-      const searchQuery=input.dataset.pickedApt||input.value.trim().replace(/\s*\[[^\]]+\]\s*$/,'');
-      const result=await searchListingComplexNames(searchQuery,searchToken);
+      if(q.length<2){ac.innerHTML='<div class="ac-msg">단지명을 두 글자 이상 입력해 주세요.</div>';return;}
+      const {hits:result}=await complexSearchTargets(input.value.trim(),[],true,input);
       if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
       ac.replaceChildren();
       if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
       result.slice(0,30).forEach(hit=>{
         const item=document.createElement('div');item.className='ac-item';item.setAttribute('role','option');
-        const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
-        item.addEventListener('mousedown',event=>{event.preventDefault();acPick(`${hit.apt} [${hit.umd}]`,hit.lawd,hit);});ac.append(item);
+        const title=document.createElement('span');title.textContent=hit.name;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
+        item.addEventListener('mousedown',event=>{event.preventDefault();const value=`${hit.name} [${hit.umd}]`;input.value=value;input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=value;input.dataset.pickedApt=hit.name;input.dataset.pickedKey=complexCandidateIdentityKey(hit);acHide();});ac.append(item);
       });
       if(result.length>30){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';ac.append(note);}
     }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
@@ -5292,12 +5292,13 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
  return {targets:searchTargets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
+function complexCandidateIdentityKey(hit){return `${hit.lawd}|${hit.umd||''}|${hit.name||hit.apt||''}`;}
 function matchPickedComplexCandidate(candidates,query,input){
  const norm=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').toLowerCase();
  const wanted=norm(query),dong=String(input?.value||'').match(/\[([^\]]+)\]\s*$/)?.[1]||'';
- const exact=hit=>hit.lawd===input?.dataset?.pickedLawd&&norm(hit.apt)===wanted&&(!dong||norm(hit.umd)===norm(dong));
+ const exact=hit=>hit.lawd===input?.dataset?.pickedLawd&&[hit.name,...(hit.names||[]),hit.apt].some(name=>norm(name)===wanted)&&(!dong||norm(hit.umd)===norm(dong));
  const key=input?.dataset?.pickedKey||'';
- const byKey=key?candidates.find(hit=>hit.key===key&&exact(hit)):null;
+ const byKey=key?candidates.find(hit=>(hit.key===key||complexCandidateIdentityKey(hit)===key)&&exact(hit)):null;
  if(byKey)return byKey;
  const matches=candidates.filter(exact);
  return matches.length===1?matches[0]:null;
@@ -5411,7 +5412,7 @@ async function runSearch(opts){
     try{
       const qInput=document.getElementById('q');
       const query=qInput.dataset.pickedApt||name.replace(/\s*\[[^\]]+\]\s*$/,'');
-      const candidates=await searchListingComplexNames(query,myToken);
+      const {hits:candidates}=await complexSearchTargets(qInput.value.trim(),[],false,qInput);
       if(myToken!==searchToken)return;
       const savedKey=qInput.dataset.pickedKey||'';
       const selected=matchPickedComplexCandidate(candidates,query,qInput);
@@ -5421,8 +5422,8 @@ async function runSearch(opts){
         showError(candidates.length?'검색 목록에서 지역과 동을 확인해 단지를 선택한 뒤 분석을 눌러 주세요.':'단지 호가 검색에서 일치하는 단지를 찾지 못했습니다. 단지명이나 동 이름을 확인해 주세요.');
         return;
       }
-      name=`${selected.apt} [${selected.umd}]`;
-      qInput.value=name;qInput.dataset.pickedLawd=selected.lawd;qInput.dataset.pickedName=name;qInput.dataset.pickedKey=selected.key;qInput.dataset.pickedApt=selected.apt;
+      name=`${selected.name} [${selected.umd}]`;
+      qInput.value=name;qInput.dataset.pickedLawd=selected.lawd;qInput.dataset.pickedName=name;qInput.dataset.pickedKey=complexCandidateIdentityKey(selected);qInput.dataset.pickedApt=selected.name;
       lawd=selected.lawd;
       sel.value=lawd;
       regionSel=[];saveRegionSel();renderRegionChips();syncRegionPickBtn();

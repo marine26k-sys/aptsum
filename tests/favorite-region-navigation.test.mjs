@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const complexIndex=JSON.parse(readFileSync(new URL('../data/complex-index.json',import.meta.url),'utf8')).entries;
 const extract=(start,end)=>html.slice(html.indexOf(start),html.indexOf(end,html.indexOf(start)));
 test('즐겨찾기와 최근 단지는 이전 지역과 자동완성 선택을 함께 교체한 후 조회한다',async()=>{
  for(const action of ['favGo','openRelatedComplex']){
@@ -27,8 +28,14 @@ test('최근 본 단지는 법정동과 단지 키를 보존하고 이전 단지
 });
 test('저장된 최근 단지 키가 이름과 다르면 그 키의 다른 아파트를 열지 않는다',()=>{
  const candidates=[{key:'41173|wrong|안양동',lawd:'41173',apt:'래미안안양메가트리아',umd:'안양동'},{key:'41173|right|비산동',lawd:'41173',apt:'평촌래미안푸르지오',umd:'비산동'}];
- const c=vm.createContext({});vm.runInContext(extract('function matchPickedComplexCandidate(', 'function missingCompareInputs('),c);
+ const c=vm.createContext({});vm.runInContext(extract('function complexCandidateIdentityKey(', 'function missingCompareInputs('),c);
  const input={value:'평촌래미안푸르지오 [비산동]',dataset:{pickedLawd:'41173',pickedApt:'평촌래미안푸르지오',pickedKey:'41173|wrong|안양동'}};
  assert.equal(c.matchPickedComplexCandidate(candidates,'평촌래미안푸르지오',input).key,'41173|right|비산동');
  assert.equal(c.matchPickedComplexCandidate(candidates,'다른 단지',input),null);
+});
+test('단지 분석 자동완성은 실거래 단지 인덱스의 준공 예정 단지도 검색한다',async()=>{
+ const c=vm.createContext({complexSearchIndex:complexIndex,mode:'complex',document:{getElementById:()=>({dataset:{}})}});
+ vm.runInContext(extract('async function complexSearchTargets(', 'function complexCandidateIdentityKey('),c);
+ const result=await c.complexSearchTargets('평촌자이',[],true,{dataset:{}});
+ assert.ok(result.hits.some(x=>x.name==='평촌자이퍼스니티'&&x.lawd==='41173'&&x.umd==='비산동'));
 });
