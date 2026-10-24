@@ -2920,7 +2920,7 @@ function renderCompareCandidates(input,hits){
   row.append(panel);
 }
 
-async function searchCompareListingNames(query,myToken){
+async function searchListingComplexNames(query,myToken){
   const response=await fetch(`/api/listings?search=${encodeURIComponent(query)}&occupancy=available&floorScope=mid`,{credentials:'same-origin',cache:'no-store',signal:searchAbortController?.signal});
   if(response.status===401)throw Object.assign(new Error('전국 단지 호가 검색은 실매물 이용권이 필요합니다.'),{auth:true});
   if(!response.ok)throw new Error(`단지 호가 검색에 실패했습니다 (HTTP ${response.status})`);
@@ -4738,9 +4738,17 @@ async function acShow(input){
     : (regionSel.length?regionSel:(isAllScope(scope)?lawdsOfScope(scope):[]));
   if(!cmpRow&&mode==='complex'){
     try{
-      const result=await complexSearchTargets(input.value.trim(),null,true,input);
+      const searchQuery=input.dataset.pickedApt||input.value.trim().replace(/\s*\[[^\]]+\]\s*$/,'');
+      const result=await searchListingComplexNames(searchQuery,searchToken);
       if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
-      ac.innerHTML=result.hits.length?result.hits.slice(0,30).map(a=>`<div class="ac-item" onmousedown="acPick('${esc(a.name+' ['+a.umd+']')}','${esc(a.lawd)}')"><span>${esc(a.name)}</span><small>${esc(a.region)} · ${esc(a.umd)}</small></div>`).join('')+(result.hits.length>30?'<div class="ac-msg">후보가 많습니다. 단지명을 더 입력해 주세요.</div>':''):'<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';
+      ac.replaceChildren();
+      if(!result.length){ac.innerHTML='<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';return;}
+      result.slice(0,30).forEach(hit=>{
+        const item=document.createElement('div');item.className='ac-item';item.setAttribute('role','option');
+        const title=document.createElement('span');title.textContent=hit.apt;const detail=document.createElement('small');detail.textContent=`${hit.region} · ${hit.umd}`;item.append(title,detail);
+        item.addEventListener('mousedown',event=>{event.preventDefault();acPick(`${hit.apt} [${hit.umd}]`,hit.lawd,hit);});ac.append(item);
+      });
+      if(result.length>30){const note=document.createElement('div');note.className='ac-msg';note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';ac.append(note);}
     }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
     return;
   }
@@ -4813,7 +4821,7 @@ async function mergeSplitSuggestions(hits, lawd, query){
   return res.sort((a,b)=>b.n-a.n);
 }
 
-function acPick(name,lawd){
+function acPick(name,lawd,listingHit=null){
   if(acInput){
     acInput.value = name;
     if(lawd){
@@ -4825,6 +4833,7 @@ function acPick(name,lawd){
       else {
         // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+        if(listingHit){acInput.dataset.pickedKey=listingHit.key;acInput.dataset.pickedApt=listingHit.apt;}
         if(regionSel.length<=1 && !isAllScope(sel.value)){
           sel.value=lawd;regionSel=[{lawd,name:regionNameByLawd(lawd)}];saveRegionSel();renderRegionChips();
         }
@@ -4846,6 +4855,10 @@ document.addEventListener('input', e=>{
     }else{
       clearTimeout(acTimer);
       const t = e.target;
+      if(t.matches('#q')&&t.dataset.pickedName!==t.value.trim()){
+        delete t.dataset.pickedName;delete t.dataset.pickedLawd;
+        delete t.dataset.pickedKey;delete t.dataset.pickedApt;
+      }
       acTimer = setTimeout(()=>acShow(t), 180);
     }
   }
@@ -5282,7 +5295,7 @@ async function runSearch(opts){
   { const r0 = document.getElementById('result'); r0.classList.remove('on'); r0.innerHTML=''; }
   updateRegionFavBtn();
   renderFavRegions();
-  const name = document.getElementById('q').value.trim();
+  let name = document.getElementById('q').value.trim();
   let lawd = sel.value;
   let cmpItems = [];
   if(mode==='compare'){
@@ -5346,14 +5359,24 @@ async function runSearch(opts){
   if(mode==='complex'){
     showLookupProgress(0,1);document.getElementById('loading').classList.add('on');
     try{
-      complexLookup=await complexSearchTargets(name,null);
+      const qInput=document.getElementById('q');
+      const query=qInput.dataset.pickedApt||name.replace(/\s*\[[^\]]+\]\s*$/,'');
+      const candidates=await searchListingComplexNames(query,myToken);
       if(myToken!==searchToken)return;
-      if(!complexLookup.targets.length){showError('등록된 지역에서 단지를 찾지 못했습니다. 단지명을 확인해 주세요.');return;}
-      if(complexLookup.hits.length>1){
-        showError('여러 단지가 일치합니다. 검색 목록에서 조회할 단지를 선택해 주세요.');
-        await acShow(document.getElementById('q'));return;
+      let selected=qInput.dataset.pickedKey?candidates.find(hit=>hit.key===qInput.dataset.pickedKey):null;
+      if(!selected&&qInput.dataset.pickedLawd){
+        const wanted=query.replace(/\s/g,'').toLowerCase();
+        const legacy=candidates.filter(hit=>hit.lawd===qInput.dataset.pickedLawd&&hit.apt.replace(/\s/g,'').toLowerCase()===wanted);
+        if(legacy.length===1)selected=legacy[0];
       }
-      lawd=complexLookup.targets[0].lawd;
+      if(!selected){
+        await acShow(qInput);
+        showError(candidates.length?'검색 목록에서 지역과 동을 확인해 단지를 선택한 뒤 분석을 눌러 주세요.':'단지 호가 검색에서 일치하는 단지를 찾지 못했습니다. 단지명이나 동 이름을 확인해 주세요.');
+        return;
+      }
+      name=`${selected.apt} [${selected.umd}]`;
+      qInput.value=name;qInput.dataset.pickedLawd=selected.lawd;qInput.dataset.pickedName=name;qInput.dataset.pickedKey=selected.key;qInput.dataset.pickedApt=selected.apt;
+      lawd=selected.lawd;
       sel.value=lawd;
       regionSel=[];saveRegionSel();renderRegionChips();syncRegionPickBtn();
       multiTargets=[];
@@ -5495,7 +5518,7 @@ async function runSearch(opts){
       let needsCompareSelection=false;
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
         const query=x.input.dataset.pickedApt||x.name.replace(/\s*\[[^\]]+\]\s*$/,'');
-        const candidates=await searchCompareListingNames(query,myToken);
+        const candidates=await searchListingComplexNames(query,myToken);
         if(myToken!==searchToken)return [];
         let selected=x.input.dataset.pickedKey?candidates.find(hit=>hit.key===x.input.dataset.pickedKey):null;
         // 기존 공유 URL·최근 조회 기록에는 선택 키가 없을 수 있으므로 법정동·단지명으로 복원한다.
