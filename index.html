@@ -676,7 +676,7 @@ try {
       document.addEventListener('DOMContentLoaded', function(){
       // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 무료 체험으로 조회할 수 있어 항상 노출 —
       // 여기(인증 시에만 노출·해지 시 숨김) 목록에서 뺐다. 지역 제한은 listingTrialBlocked()와 서버(/api/listings)가 건다.
-      const subTabs = ['tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabNH', 'tabNH7', 'tabPBR', 'tabLFAV'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabNH', 'tabNH7', 'tabPBR', 'tabLFAV', 'tabRD'].map(id => document.getElementById(id)).filter(Boolean);
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
       if (!subTabs.length) { resolveReady(false); return; }
 
@@ -933,6 +933,7 @@ try {
     <a class="tab subscriber" id="tabNH7" style="display:none" href="./index.html?m=newhigh&amp;nh7=1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</a>
     <a class="tab subscriber" id="tabPBR" style="display:none" href="./index.html?m=pricebandrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</a>
     <a class="tab subscriber" id="tabLFAV" style="display:none" href="./index.html?m=listingfavorites">관심 단지</a>
+    <a class="tab subscriber" id="tabRD" style="display:none" href="./index.html?m=redevelopment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V8l8-5 8 5v12M8 20v-6h8v6M3 20h18M12 3v4"/></svg>정비사업</a>
     <!-- 비공개 탭 원스톱 신청(2026.09) — 인증 안 된 사람에게만 보인다(인증되면 aptsumSubscriberGate가 숨김) -->
     <!-- 박스권 하락(tabBBD)은 2026.08 신설 직후 삭제 — "급하락" 탭과 개념이 거의 겹쳐서(둘 다 최근 거래 하나가
          평소 평균보다 크게 낮은지 확인) 운영자 판단으로 상승 쪽만 남김. 상승은 대응하는 다른 탭이 없어 고유한 가치 있음. -->
@@ -1452,7 +1453,7 @@ async function initFromURL(){
   // 예전엔 18단 중첩 삼항연산자였는데 탭을 새로 추가할 때마다 빠뜨리기 쉬워서(실제로 전용면적 평당가·
   // 기간별 변동률·연간 저평가(동일 권역) 세 탭이 누락돼 공유 링크가 단지 분석으로 열리는 버그가 있었음,
   // 2026.09 수정) 목록 하나만 관리하면 되는 형태로 바꿈 — 새 탭 추가 시 여기에 이름만 넣으면 된다.
-  const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap',
+  const URL_MODES = ['listingfavorites','complex','compare','region','volume','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','redevelopment',
     'newhigh','newlow','pyprice','inversion',
     'longtermrise','jeonselongtermrise','pricebandrise','gap','subway'];
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
@@ -1928,6 +1929,7 @@ function restoreView(vi){
   else if(v.data.mode==='pricebandrise') renderPriceBandRise(v.data);
   else if(v.data.mode==='gap') renderGap(v.data);
   else if(v.data.mode==='subway') renderSubway(v.data);
+  else if(v.data.mode==='redevelopment') renderRedevelopment(v.data);
   else renderRegion(v.data);
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
@@ -2664,7 +2666,7 @@ function pyBandMultiFilter(items){
 
 // 게이트
 function needsSubscriberSession(m){
-  return ['volume','gap','jeonselongtermrise','peak','listingfavorites','newhigh'].includes(m)||m==='newlow'||m==='longpeakdong'||m==='pricebandrise';
+  return ['volume','gap','jeonselongtermrise','peak','listingfavorites','newhigh','redevelopment'].includes(m)||m==='newlow'||m==='longpeakdong'||m==='pricebandrise';
 }
 // ═══ 네이버 실매물 기준 탭 무료 체험 (2026.09 운영자 요청) ═══
 // 비공개 탭 인증이 없어도 강남구 하나만은 조회할 수 있게 열어 둔다(서버 /api/listings도 같은 지역만 허용).
@@ -2754,6 +2756,7 @@ function setMode(m, fromRestore){
   document.getElementById('tabLASK').classList.toggle('on', m==='listingaskmap');
   document.getElementById('tabGap').classList.toggle('on', m==='gap');
   document.getElementById('tabSub').classList.toggle('on', m==='subway');
+  document.getElementById('tabRD').classList.toggle('on', m==='redevelopment');
   document.getElementById('singleRow').style.display = (m==='compare'||m==='listingfavorites') ? 'none' : '';
   document.getElementById('cmpRows').style.display = m==='compare' ? '' : 'none';
   if(typeof renderRecentCompareComplexes==='function')renderRecentCompareComplexes();
@@ -2768,7 +2771,7 @@ function setMode(m, fromRestore){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
+  const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='redevelopment'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
@@ -2780,7 +2783,7 @@ function setMode(m, fromRestore){
   // 칩(regionSel)으로 복수 지역을 고르는 탭 전체 — useMulti/renderRegionChips/multiTargets 등이 쓰는 목록과
   // 같은 집합이어야 한다. 예전엔 6개(longpeakdong·surge·inversion·turnover·jeonseupdown·gaptrend)가 빠져 있어
   // 그 탭들만 이전 탭에서 고른 지역을 칩으로 이어받지 못했음(2026.09 수정).
-  const multiModes = ['complex','volume','gap','subway','region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
+  const multiModes = ['complex','volume','gap','subway','redevelopment','region','shortval','peak','longpeak','longpeakdong','longpeaklisting','listingbudget','listingurgent','listingtrend','listingrise','listinggap','listingaskmap','newhigh','newlow','pyprice','inversion','longtermrise','jeonselongtermrise','pricebandrise'];
   const maxNow = regionSelMax();
   if(regionSel.length > maxNow){ regionSel = regionSel.slice(0, maxNow); saveRegionSel(); }
   if(multiModes.includes(m)){
@@ -4873,6 +4876,58 @@ function quick(n, guName){
   search();
 }
 
+// ── 정비사업(비공개 탭) ──
+// 리치고 정비사업 스냅샷을 정적 JSON으로 읽는다. 조회 때마다 외부 API를 호출하지 않아
+// 비공개 탭에서도 빠르게 열리고, 수집일(asOf)을 함께 표시해 AI 예상 일정과 실제 인가일을 구분한다.
+let redevelopmentDataPromise = null;
+async function loadRedevelopmentData(){
+  if(!redevelopmentDataPromise) redevelopmentDataPromise = fetch('/data/redevelopment.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('정비사업 데이터 조회 실패')));
+  return redevelopmentDataPromise;
+}
+function redevelopmentTargets(lawd){
+  return regionSel.length ? regionSel.slice() : (isAllScope(lawd) ? lawdsOfScope(lawd) : [{lawd,name:regionNameByLawd(lawd)}]);
+}
+function redevelopmentRegionMatch(site,target){
+  const region=String(site?.region||'').replace(/\s+/g,'');
+  const name=String(target?.name||'').replace(/\s+/g,'');
+  if(!region || !name) return false;
+  return region.includes(name) || name.includes(region);
+}
+async function searchRedevelopment(){
+  const myToken=++searchToken; beginSearchRequests();
+  const lawd=sel.value, targets=redevelopmentTargets(lawd);
+  document.getElementById('error').classList.remove('on');
+  const result=document.getElementById('result'); result.classList.remove('on'); result.innerHTML='';
+  document.getElementById('loading').classList.add('on'); document.getElementById('btn').disabled=true; showLookupProgress(0,1);
+  try{
+    const data=await loadRedevelopmentData(); if(myToken!==searchToken)return;
+    const sites=(data.sites||[]).filter(site=>targets.some(t=>redevelopmentRegionMatch(site,t)));
+    const view={mode:'redevelopment',regionName:regionScopeLabel(targets),sites,asOf:data.asOf||null};
+    renderRedevelopment(view); lastData=view; pushView(); saveLastRegionPref(lawd);
+  }catch(e){if(myToken===searchToken)showError('정비사업 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');}
+  finally{if(myToken===searchToken){document.getElementById('loading').classList.remove('on');document.getElementById('btn').disabled=false;}}
+}
+function redevelopmentDate(value){
+  if(!value)return '';
+  const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}.${m[2]}.${m[3]}`:String(value);
+}
+function renderRedevelopment(d){
+  const sites=[...(d.sites||[])].sort((a,b)=>String(a.region||'').localeCompare(String(b.region||''),'ko')||String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const cards=sites.length?sites.map(site=>{
+    const cur=site.current_stage||{}, ai=site.ai_expected_pass||{};
+    const timeline=(site.timeline||[]).filter(x=>x.status==='진행 중'||x.status==='예정').slice(0,4);
+    return `<article class="sec" style="margin-top:10px;padding:14px;border:1px solid var(--teal-light);border-radius:14px;background:#fff">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="min-width:0"><h3 style="margin:0 0 4px;color:var(--navy)">${esc(site.name||'정비사업')}</h3><div style="font-size:11px;color:var(--sub)">${esc(site.region||'')} · ${esc(site.kind||'정비사업')}</div></div><span class="extag" style="flex:none;color:var(--teal-dark);background:var(--teal-light-soft);border-color:var(--teal-light)">${esc(cur.name||'단계 확인 중')}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"><div style="padding:9px;border-radius:10px;background:var(--teal-light-soft)"><small style="display:block;color:var(--sub)">현재 단계</small><b style="color:var(--teal-dark)">${esc(cur.name||'—')}</b></div><div style="padding:9px;border-radius:10px;background:var(--teal-light-soft)"><small style="display:block;color:var(--sub)">AI 예상 통과</small><b style="color:var(--teal-dark)">${esc(redevelopmentDate(ai.expected_date)||'—')}</b></div></div>
+      ${site.planned_households?`<div style="margin-top:9px;font-size:12px;color:var(--sub)">계획 세대수 <b style="color:var(--navy)">${Number(site.planned_households).toLocaleString()}세대</b>${cur.speed?` · 진행 속도 ${esc(cur.speed)}`:''}</div>`:''}
+      ${timeline.length?`<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">${timeline.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12px"><span>${esc(x.name)}</span><b style="color:${x.status==='진행 중'?'var(--teal-dark)':'var(--sub)'}">${esc(x.status)}${x.ai_expected_date?` · ${esc(redevelopmentDate(x.ai_expected_date))}`:''}</b></div>`).join('')}</div>`:''}
+      ${site.url?`<a href="${esc(site.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:11px;color:var(--teal-dark);font-weight:800">리치고 사업지 상세 ›</a>`:''}
+    </article>`;
+  }).join(''):'<div class="rng" style="padding:18px 4px">선택한 지역에 등록된 정비사업 정보가 없습니다.</div>';
+  const html=`<div class="card"><div class="card-hd">${hdTop('정비사업')}<h2>${esc(shortRegionLabel(d.regionName||''))}</h2><div class="meta">재건축·재개발 단계와 예상 일정 · ${sites.length}개 사업지</div></div><div class="sec" style="padding-top:10px">${cards}</div></div><div class="src-note">기준일: ${esc(d.asOf?new Date(d.asOf).toLocaleDateString('ko-KR'): '확인 불가')} · AI 예상 일정은 리치고 모형 추정이며 실제 인가일과 다를 수 있습니다</div>`;
+  document.getElementById('loadMsg').textContent='조회 완료 100%'; document.getElementById('result').innerHTML=html; document.getElementById('result').classList.add('on');
+}
+
 // ── 지하철 검색(비공개 탭) ──
 // data/hhcnt/<lawd>.json은 매매 실거래 API와 무관한 별도 정적 배치(collect-hhcnt.mjs)라
 // 이 탭에서만 쓰는 전용 캐시(lawd → items[])를 따로 둔다. 필터(도보시간)를 바꿀 때마다
@@ -5207,6 +5262,7 @@ async function runSearch(opts){
   // 지하철 검색 탭은 실거래(analyze.mjs) 기반이 아니라 세대수 배치 데이터(data/hhcnt/<lawd>.json)만 쓰는
   // 완전히 별개의 조회라, 아래 매매·분양권 조회 파이프라인을 전혀 안 타고 여기서 바로 갈라진다.
   if(mode==='subway') return searchSubway();
+  if(mode==='redevelopment') return searchRedevelopment();
   const requestMode=mode, myToken=++searchToken;
   if(isListingMode(requestMode)){await aptsumSubscriberGate.recheck();if(myToken!==searchToken||mode!==requestMode)return;}
   if(needsSubscriberSession(requestMode)){

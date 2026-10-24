@@ -23,7 +23,7 @@ export const TAB_IDS = [
   "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange",
   "tabUV",
   "tabLPL", "tabLIC", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP", "tabLASK",
-  "tabNL", "tabLPD", "tabNH7", "tabPBR",
+  "tabNL", "tabLPD", "tabNH7", "tabPBR", "tabRD",
   "tabApply", "tabBusiness",
 ];
 const TAB_SET = new Set(TAB_IDS);
