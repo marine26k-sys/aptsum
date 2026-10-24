@@ -127,9 +127,12 @@ export function cleanItem(x) {
   if ((!(peak > 0) && x?.occupancy !== "presale") || !(ask > 0) || !(ex > 0)) return null;
   const latest=x.latestSale,latestDate=str(latest?.date,8);
   const validLatest=num(latest?.price)>0 && /^\d{6}(\d{2})?$/.test(latestDate) && Number(latestDate.slice(4,6))>=1 && Number(latestDate.slice(4,6))<=12;
+  const subwayRaw=x?.subwayMinutes;
+  const subwayMinutes=subwayRaw===null||subwayRaw===undefined||String(subwayRaw).trim()===""?null:num(subwayRaw);
   const url = str(x.url, 300);
   return {
     nid: str(x.nid, 20), apt: str(x.apt, 80), umd: str(x.umd, 30), hh: num(x.hh), built: str(x.built, 10),
+    ...(subwayMinutes!==null&&subwayMinutes>=0?{subwayMinutes}:{}),
     midAvailable:x.midAvailable!==false,
     ...(x.allFloors && num(x.allFloors.ask)>0 ? {allFloors:{ask:num(x.allFloors.ask),n:num(x.allFloors.n)||1,fl:str(x.allFloors.fl,12),dong:str(x.allFloors.dong,20),d:str(x.allFloors.d,8),urgent:x.allFloors.urgent?1:0,url:/^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(str(x.allFloors.url,300))?str(x.allFloors.url,300):""}}:{}),
     occupancy: ["tenant", "presale"].includes(x.occupancy) ? x.occupancy : "available",

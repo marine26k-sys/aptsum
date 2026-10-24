@@ -598,8 +598,8 @@ async function initTabClicks(){
 // 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터. 엑셀 원본은 서버·GitHub 어디에도 올리지 않고, 여기서 단지·전용면적
 // 단위로 요약한 결과만 /api/listings로 보낸다(서버가 "시|구"를 지역코드로 바꿔 Netlify Blobs에 저장).
 // 필요한 컬럼: 시, 구, 법정동, 단지명, 매매가(억), 실거래최고가(억), 실거래최고_시점, 면적(평), 전용면적(㎡),
-//             층, 층구분, 동, 매물링크, 단지ID, 세대수, 준공년월, 확인일, 급매
-const LISTING_COLS = ["시","구","법정동","단지명","매매가(억)","실거래최고가(억)","면적(평)","전용면적(㎡)","층구분","입주구분","단지ID"];
+//             층, 층구분, 동, 매물링크, 단지ID, 세대수, 준공년월, 확인일, 급매, 역거리 (분)
+const LISTING_COLS = ["시","구","법정동","단지명","매매가(억)","실거래최고가(억)","면적(평)","전용면적(㎡)","층구분","입주구분","단지ID","역거리 (분)"];
 const MID_UP = new Set(["중층","고층"]); // "중층 이상" — 저층·1층 매물은 호가가 구조적으로 낮아 제외
 // 입주가능·세안고·분양권을 각각 집계한다. 조건별 호가와 매물 링크를 섞지 않는다.
 // 최고가(실거래최고가)는 매물 상태와 무관한 평형 단위 값이라 모든 행에서 그대로 모은다.
@@ -643,6 +643,8 @@ function summarizeListings(rows){
     const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:+r["세대수"]||null,
       built:String(r["준공년월"]??""), ex, pyCnt:{}, peak:0, peakYm:"", offers:{} };
     g.set(k, x);
+    const subwayRaw=r["역거리 (분)"],subwayMinutes=subwayRaw===null||subwayRaw===undefined||String(subwayRaw).trim()===""||String(subwayRaw).trim()==="-"?NaN:Number(subwayRaw);
+    if(Number.isFinite(subwayMinutes)&&subwayMinutes>=0)x.subwayMinutes=subwayMinutes;
     const rentMean=Number(r["전세평균(억)"]),rentCount=Number(r["전세거래건수"]);
     if(Number.isFinite(rentMean)&&rentMean>0){x.rentMean=rentMean;x.rentCount=Number.isFinite(rentCount)&&rentCount>0?Math.floor(rentCount):null;}
     const py = +r["면적(평)"];

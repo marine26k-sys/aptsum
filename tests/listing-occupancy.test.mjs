@@ -11,6 +11,15 @@ function summarize(rows){
  return ctx.summarizeListings(rows);
 }
 const base={'시':'서울시','구':'강남구','법정동':'역삼동','단지명':'테스트','단지ID':123,'세대수':500,'전용면적(㎡)':84,'면적(평)':34,'실거래최고가(억)':20,'확인일':'20261002','층구분':'중층','입주구분':'입주가능','매매가(억)':15};
+test('업로드 요약과 API 저장은 역거리(분)를 보존하고 빈 값은 생략한다',()=>{
+ const withDistance=summarize([{...base,'역거리 (분)':10}]).regions['서울시|강남구'][0];
+ assert.equal(withDistance.subwayMinutes,10);
+ assert.equal(cleanItem(withDistance).subwayMinutes,10);
+ const withoutDistance=summarize([{...base,'역거리 (분)':'-'}]).regions['서울시|강남구'][0];
+ assert.equal(Object.hasOwn(withoutDistance,'subwayMinutes'),false);
+ assert.equal(Object.hasOwn(cleanItem(withoutDistance),'subwayMinutes'),false);
+ assert.equal(cleanItem({...withDistance,subwayMinutes:-2}).subwayMinutes,undefined);
+});
 test('upload keeps separate cheapest eligible offers with a shared historical peak',()=>{
  const d=summarize([base,{...base,'입주구분':'세안고','매매가(억)':12},{...base,'입주구분':'세안고','매매가(억)':13},{...base,'층구분':'저층','매매가(억)':8,'실거래최고가(억)':22},{...base,'입주구분':'미정','매매가(억)':7}]);
  const a=d.regions['서울시|강남구'];assert.equal(a.length,2);
