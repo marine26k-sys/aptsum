@@ -1945,6 +1945,8 @@ function restoreView(vi){
   else if(v.data.mode==='gap') renderGap(v.data);
   else if(v.data.mode==='subway') renderSubway(v.data);
   else renderRegion(v.data);
+  // 랭킹에서 단지 상세로 갔다가 돌아올 때는 목록을 눌렀던 위치를 복원한다.
+  if(Number.isFinite(v.scrollY)) requestAnimationFrame(()=>window.scrollTo(0,v.scrollY));
 }
 try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경 대비
 // 상세 화면의 상단 뒤로가기 버튼도 브라우저 뒤로가기와 같은 히스토리 복원 흐름을 사용한다.
@@ -4987,8 +4989,13 @@ function quick(n, guName, pickedLawd, pickedDong){
   if(mode!=='complex' && lastData){
     try{
       const inputs = captureViewInputs();
-      pendingReturnView = {data:lastData, inputs, scrollY:window.scrollY};
-      sessionStorage.setItem('aptsum:return-ranking',JSON.stringify({url:buildShareURL(inputs),scrollY:window.scrollY}));
+      const returnView = {data:lastData, inputs, scrollY:window.scrollY};
+      pendingReturnView = returnView;
+      // 현재 히스토리의 랭킹 스냅샷에 클릭 순간의 스크롤을 기록한다.
+      // 일반적인 뒤로가기는 이 스냅샷을 사용해 같은 목록 위치로 돌아온다.
+      const vi=history.state?.vi;
+      if(Number.isInteger(vi)&&vi>=0&&viewStack[vi])Object.assign(viewStack[vi],returnView);
+      sessionStorage.setItem('aptsum:return-ranking',JSON.stringify({url:buildShareURL(inputs),scrollY:returnView.scrollY}));
     }catch(e){ pendingReturnView = null; }
   }
   setMode('complex');
