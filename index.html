@@ -1977,6 +1977,12 @@ try{ history.replaceState({vi:-1}, ''); }catch(e){} // 샌드박스 미리보기
 // 사용자가 보고 있던 결과 목록/스크롤 위치를 잃었다.
 function handleAnalysisBack(event){
   event?.preventDefault();
+  // 금액대별 실매물 탭의 뒤로가기는 탭 선택 화면으로 나간다. 검색 히스토리가 쌓여 있어도
+  // 이 버튼은 조회 결과 간 이동이 아니라 분석 화면 종료 동작이다.
+  if(mode==='listingbudget'&&!isIndividualListing()){
+    location.href='./index.html';
+    return false;
+  }
   const state = history.state;
   if(state && typeof state.vi === 'number' && state.vi >= 0){
     history.back();
