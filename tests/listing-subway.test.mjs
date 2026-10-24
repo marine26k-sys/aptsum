@@ -13,7 +13,9 @@ test('금액대별 지하철 필터는 선택 분 이내를 포함하고 거리 
  assert.equal(c.lsSubwayActive(v),true);
  assert.equal(c.lsSubwayMatch({subwayMinutes:20},v),true);
  assert.equal(c.lsSubwayMatch({subwayMinutes:21},v),false);
- assert.equal(c.lsSubwayMatch({},v),false);
+ assert.equal(c.lsSubwayMatch({},v),true);
+ assert.equal(c.lsSubwayMatch({subwayMinutes:'-'},v),true);
+ assert.equal(c.lsSubwayMatch({subwayMinutes:-1},v),true);
  assert.equal(c.lsSubwayMatch({subwayMinutes:10},{sw:10}),true);
  c.isIndividualListing=()=>true;
  assert.equal(c.lsSubwayMatch({},v),true);

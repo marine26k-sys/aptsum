@@ -8504,7 +8504,7 @@ function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
 function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw>=1&&v.sw<=LS_SUBWAY_MAX;}
-function lsSubwayMatch(x,v=lsGet()){if(!lsSubwayActive(v))return true;const n=Number(x?.subwayMinutes);return x?.subwayMinutes!==null&&x?.subwayMinutes!==undefined&&Number.isFinite(n)&&n>=0&&n<=v.sw;}
+function lsSubwayMatch(x,v=lsGet()){if(!lsSubwayActive(v))return true;const raw=x?.subwayMinutes;if(raw===null||raw===undefined||String(raw).trim()===''||String(raw).trim()==='-')return true;const n=Number(raw);return !Number.isFinite(n)||n<0||n<=v.sw;}
 function lsSubwaySync(el){const slider=document.getElementById('lsSubwayMax'),number=document.getElementById('lsSubwayMaxNumber');if(el===number&&number.value.trim()!==''&&Number.isFinite(Number(number.value)))slider.value=Math.max(+slider.min,Math.min(LS_SUBWAY_MAX,Math.round(Number(number.value))));else if(el===number)number.value=slider.value;number.min=slider.min;number.max=slider.max;number.value=slider.value;document.getElementById('lsSubwayTxt').textContent=`${slider.value}분 이내`;}
 function lsSubwayNumberApply(input){lsSubwaySync(input);lsSubwayApply();}
 function lsSubwayApply(){lsSubwaySync();if(mode==='listingbudget'&&!isIndividualListing()&&lastData?.mode==='listingbudget')search({silentScroll:true});}
