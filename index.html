@@ -1554,7 +1554,9 @@ function rememberRecentComplex(lawd,d){
   if(!lawd)return;
   const norm=x=>String(x||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
-  rows.unshift({lawd,name:d.name,umd:d.umd||''});
+  const picked=document.getElementById('q');
+  const key=picked?.dataset.pickedLawd===lawd&&picked.dataset.pickedApt===d.name?picked.dataset.pickedKey||'':'';
+  rows.unshift({lawd,name:d.name,umd:d.umd||'',key});
   try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,RECENT_COMPLEX_MAX)));}catch{}
   renderRecentComplexes();
 }
@@ -1565,14 +1567,15 @@ function renderRecentComplexes(){
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin:8px 0';header.textContent='최근 본 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('apc:recentComplexes');}catch{}renderRecentComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=x.name+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name);chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=x.name+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
 }
-function openRelatedComplex(lawd,name){
+function openRelatedComplex(lawd,name,umd='',key=''){
   if(![...sel.options].some(o=>o.value===lawd))return;
   closeExpandedComplexMap();setMode('complex');sel.value=lawd;
   regionSel=[{lawd,name:[...sel.options].find(o=>o.value===lawd).textContent}];saveRegionSel();renderRegionChips();syncRegionPickBtn();
-  const input=document.getElementById('q');input.value=name;
-  input.dataset.pickedLawd=lawd;input.dataset.pickedName=name;search();
+  const input=document.getElementById('q');const displayName=umd?`${name} [${umd}]`:name;input.value=displayName;
+  ['pickedLawd','pickedName','pickedKey','pickedApt'].forEach(k=>delete input.dataset[k]);
+  input.dataset.pickedLawd=lawd;input.dataset.pickedName=displayName;input.dataset.pickedApt=name;if(key)input.dataset.pickedKey=key;search();
 }
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
 function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
@@ -5400,10 +5403,12 @@ async function runSearch(opts){
       const query=qInput.dataset.pickedApt||name.replace(/\s*\[[^\]]+\]\s*$/,'');
       const candidates=await searchListingComplexNames(query,myToken);
       if(myToken!==searchToken)return;
-      let selected=qInput.dataset.pickedKey?candidates.find(hit=>hit.key===qInput.dataset.pickedKey):null;
-      if(!selected&&qInput.dataset.pickedLawd){
+      const savedKey=qInput.dataset.pickedKey||'';
+      let selected=savedKey?candidates.find(hit=>hit.key===savedKey):null;
+      if(!selected&&!savedKey&&qInput.dataset.pickedLawd){
         const wanted=query.replace(/\s/g,'').toLowerCase();
-        const legacy=candidates.filter(hit=>hit.lawd===qInput.dataset.pickedLawd&&hit.apt.replace(/\s/g,'').toLowerCase()===wanted);
+        const wantedDong=String(qInput.value).match(/\[([^\]]+)\]\s*$/)?.[1]||'';
+        const legacy=candidates.filter(hit=>hit.lawd===qInput.dataset.pickedLawd&&hit.apt.replace(/\s/g,'').toLowerCase()===wanted&&(!wantedDong||hit.umd.replace(/\s/g,'')===wantedDong.replace(/\s/g,'')));
         if(legacy.length===1)selected=legacy[0];
       }
       if(!selected){

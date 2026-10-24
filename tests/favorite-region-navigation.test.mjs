@@ -16,3 +16,12 @@ test('즐겨찾기와 최근 단지는 이전 지역과 자동완성 선택을 �
   assert.equal(searched,1);assert.equal(saved,1);assert.equal(rendered,1);
  }
 });
+
+test('최근 본 단지는 법정동과 단지 키를 보존하고 이전 단지 자동완성 값을 비운다',()=>{
+ const input={value:'이전 아파트 [이전동]',dataset:{pickedLawd:'11710',pickedName:'이전 아파트 [이전동]',pickedApt:'이전 아파트',pickedKey:'11710|old|이전동'}};
+ const c=vm.createContext({sel:{value:'11710',options:[{value:'11710',textContent:'송파구'},{value:'11680',textContent:'서울 강남구'}]},regionSel:[],document:{getElementById:()=>input},closeExpandedComplexMap(){},setMode(){},saveRegionSel(){},renderRegionChips(){},syncRegionPickBtn(){},search(){}});
+ vm.runInContext(extract('function openRelatedComplex(', 'function getFavs('),c);
+ c.openRelatedComplex('11680','래미안블레스티지','개포동','11680|12345|개포동');
+ assert.equal(input.value,'래미안블레스티지 [개포동]');
+ assert.equal(input.dataset.pickedLawd,'11680');assert.equal(input.dataset.pickedApt,'래미안블레스티지');assert.equal(input.dataset.pickedKey,'11680|12345|개포동');
+});
