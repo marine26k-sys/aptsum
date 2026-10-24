@@ -5292,6 +5292,16 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
  return {targets:searchTargets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
+function matchPickedComplexCandidate(candidates,query,input){
+ const norm=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').toLowerCase();
+ const wanted=norm(query),dong=String(input?.value||'').match(/\[([^\]]+)\]\s*$/)?.[1]||'';
+ const exact=hit=>hit.lawd===input?.dataset?.pickedLawd&&norm(hit.apt)===wanted&&(!dong||norm(hit.umd)===norm(dong));
+ const key=input?.dataset?.pickedKey||'';
+ const byKey=key?candidates.find(hit=>hit.key===key&&exact(hit)):null;
+ if(byKey)return byKey;
+ const matches=candidates.filter(exact);
+ return matches.length===1?matches[0]:null;
+}
 function missingCompareInputs(inputs,narrowed,matched){
   return inputs.filter((input,i)=>!matched.some(hit=>hit.name===input.name && narrowed[i].some(target=>target.lawd===hit.lawd)));
 }
@@ -5404,14 +5414,9 @@ async function runSearch(opts){
       const candidates=await searchListingComplexNames(query,myToken);
       if(myToken!==searchToken)return;
       const savedKey=qInput.dataset.pickedKey||'';
-      let selected=savedKey?candidates.find(hit=>hit.key===savedKey):null;
-      if(!selected&&!savedKey&&qInput.dataset.pickedLawd){
-        const wanted=query.replace(/\s/g,'').toLowerCase();
-        const wantedDong=String(qInput.value).match(/\[([^\]]+)\]\s*$/)?.[1]||'';
-        const legacy=candidates.filter(hit=>hit.lawd===qInput.dataset.pickedLawd&&hit.apt.replace(/\s/g,'').toLowerCase()===wanted&&(!wantedDong||hit.umd.replace(/\s/g,'')===wantedDong.replace(/\s/g,'')));
-        if(legacy.length===1)selected=legacy[0];
-      }
+      const selected=matchPickedComplexCandidate(candidates,query,qInput);
       if(!selected){
+        if(savedKey&&qInput.dataset.pickedLawd){showError('선택한 최근 단지를 현재 자료에서 정확히 확인하지 못했습니다. 단지명과 동을 확인해 다시 조회해 주세요.');return;}
         await acShow(qInput);
         showError(candidates.length?'검색 목록에서 지역과 동을 확인해 단지를 선택한 뒤 분석을 눌러 주세요.':'단지 호가 검색에서 일치하는 단지를 찾지 못했습니다. 단지명이나 동 이름을 확인해 주세요.');
         return;

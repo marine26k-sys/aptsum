@@ -25,3 +25,10 @@ test('최근 본 단지는 법정동과 단지 키를 보존하고 이전 단지
  assert.equal(input.value,'래미안블레스티지 [개포동]');
  assert.equal(input.dataset.pickedLawd,'11680');assert.equal(input.dataset.pickedApt,'래미안블레스티지');assert.equal(input.dataset.pickedKey,'11680|12345|개포동');
 });
+test('저장된 최근 단지 키가 이름과 다르면 그 키의 다른 아파트를 열지 않는다',()=>{
+ const candidates=[{key:'41173|wrong|안양동',lawd:'41173',apt:'래미안안양메가트리아',umd:'안양동'},{key:'41173|right|비산동',lawd:'41173',apt:'평촌래미안푸르지오',umd:'비산동'}];
+ const c=vm.createContext({});vm.runInContext(extract('function matchPickedComplexCandidate(', 'function missingCompareInputs('),c);
+ const input={value:'평촌래미안푸르지오 [비산동]',dataset:{pickedLawd:'41173',pickedApt:'평촌래미안푸르지오',pickedKey:'41173|wrong|안양동'}};
+ assert.equal(c.matchPickedComplexCandidate(candidates,'평촌래미안푸르지오',input).key,'41173|right|비산동');
+ assert.equal(c.matchPickedComplexCandidate(candidates,'다른 단지',input),null);
+});
