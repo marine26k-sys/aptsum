@@ -2191,7 +2191,7 @@ function renderRegionChips(){
   box.style.display = '';
   if(mode==='complex'){box.style.display='none';return;}
   if(!regionSel.length){
-    box.innerHTML = `<div class="rng" style="padding:2px 2px 0">지역을 고르면 여기에 쌓입니다 · 아무것도 없으면 위에 선택된 지역 하나만 조회</div>`;
+    box.innerHTML = '';
     renderRecentRegionCache();
     return;
   }
