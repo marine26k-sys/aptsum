@@ -15,7 +15,7 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
 //
-// 요청 본문 한도(약 6MB) 때문에 put은 클라이언트가 1MB 안팎으로 쪼개 보낸다.
+// Blob 이력 저장이 길어지지 않도록 put은 지역별로 나눠 보낸다.
 export const config = {
   path: "/api/listings",
 };
@@ -250,6 +250,7 @@ export default async (request) => {
       const next = { asOf, uploadId, items: clean };
       await saveSnapshot(store, lawd, next);
       await store.setJSON(latestKey, next);
+      await store.delete(askMapKey(lawd));
       saved.push(lawd);
     }
     return json({ saved, unknown });
@@ -272,14 +273,8 @@ export default async (request) => {
     for (const b of cachedMaps.blobs) {
       if (!keep.has(b.key.slice(8))) await store.delete(b.key);
     }
-    // 지도 화면은 접속 때 원본 이력을 다시 계산하지 않도록 업로드 완료 시 집계한다.
-    const cacheEntries = [...keep];
-    for (let start = 0; start < cacheEntries.length; start += 8) {
-      await Promise.all(cacheEntries.slice(start, start + 8).map(async lawd => {
-        const aggregate = await buildAskMap(store, lawd);
-        await store.setJSON(askMapKey(lawd), aggregate);
-      }));
-    }
+    // 지도 집계는 조회 시 필요한 지역만 계산한다. 전체 지역 이력을 여기서 다시 읽으면
+    // 업로드 마무리가 시간 제한을 넘길 수 있다. put 단계에서 기존 캐시는 이미 지웠다.
     const meta = {
       uploadId, asOf, uploadedAt: new Date().toISOString(), regions: keep.size,
       rows: num(body.rows), types: num(body.types), fileName: str(body.fileName, 120),

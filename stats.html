@@ -720,21 +720,17 @@ async function uploadListingFile(file){
     if(!keys.length) throw new Error("비교 가능한 평형이 없습니다(입주가능·세안고는 실거래최고가, 분양권은 중층 이상 매물 확인 필요).");
 
     const uploadId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-    // 요청 본문 한도(약 6MB)를 넉넉히 피하도록 약 1MB씩 묶어서 보낸다.
-    const batches = []; let cur = {}, size = 0;
-    for(const k of keys){
-      const len = JSON.stringify(regions[k]).length;
-      if(size && size + len > 1_000_000){ batches.push(cur); cur = {}; size = 0; }
-      cur[k] = regions[k]; size += len;
-    }
-    if(size) batches.push(cur);
+    // 지역마다 저장 이력도 갱신하므로 한 요청에 여러 지역을 넣지 않아야 서버 함수가 시간 초과되지 않는다.
+    const batches = keys.map(k=>({[k]:regions[k]}));
 
     const lawds = [], unknown = [];
-    for(let i=0;i<batches.length;i++){
-      status.textContent = `${rows.length.toLocaleString()}행 → ${types.toLocaleString()}개 평형 요약 완료\n서버에 저장 중… (${i+1}/${batches.length})`;
-      const r = await postListings({ action:"put", uploadId, asOf, regions: batches[i] });
-      lawds.push(...r.saved); unknown.push(...r.unknown);
+    for(let i=0;i<batches.length;i+=3){
+      const end=Math.min(i+3,batches.length);
+      status.textContent = `${rows.length.toLocaleString()}행 → ${types.toLocaleString()}개 평형 요약 완료\n서버에 저장 중… (${end}/${batches.length})`;
+      const results=await Promise.all(batches.slice(i,end).map(regions=>postListings({action:"put",uploadId,asOf,regions})));
+      for(const r of results){lawds.push(...r.saved);unknown.push(...r.unknown);}
     }
+    status.textContent = `${lawds.length}개 지역 저장 완료\n업로드를 마무리하는 중…`;
     const fin = await postListings({ action:"finish", uploadId, asOf, lawds, rows: rows.length, types, fileName: file.name });
     status.innerHTML = `<b style="color:var(--teal-dark)">업로드 완료</b> — ${esc(asOf)} 기준 · ${lawds.length}개 지역 · ${types.toLocaleString()}개 평형`
       + (unknown.length ? `<br><span style="color:#d95d5d">지역코드를 못 찾아 제외: ${esc(unknown.join(", "))}</span>` : "")
