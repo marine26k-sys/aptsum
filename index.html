@@ -369,11 +369,12 @@ try {
   .listing-gap-prices small{display:block;margin-top:2px;font-size:9px;font-weight:400;color:var(--sub)}
   .listing-gap-prices a:hover{text-decoration:underline}
 
-  .cmp-row{display:flex;gap:6px;margin-bottom:6px}
-  .cmp-row select{flex:0 0 128px}
-  .cmp-row input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;font-weight:700;font-family:inherit}
+  .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px;margin-bottom:8px}
+  .cmp-row select{display:none}
+  .cmp-row input{grid-column:1;min-width:0;width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;font-weight:700;font-family:inherit}
   .cmp-row input:focus{outline:none;border-color:var(--teal)}
-  .cmp-row .rm{flex:none;width:30px;border:none;background:var(--slate-bg);border-radius:10px;color:var(--sub);font-size:13px;cursor:pointer}
+  .cmp-row .rm{grid-column:2;grid-row:1;width:30px;border:none;background:var(--slate-bg);border-radius:10px;color:var(--sub);font-size:13px;cursor:pointer}
+  .cmp-candidates{grid-column:1/-1;padding:10px;border:1px solid var(--teal-light);border-radius:12px;background:var(--teal-light-soft)}
   .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}
   .legend span{font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
   .legend i{width:14px;height:3.5px;border-radius:2px;display:inline-block}
@@ -1489,7 +1490,7 @@ async function initFromURL(){
   if(m==='compare'){
     const items = parseCmpShareItems(p.get('c'));
     document.getElementById('cmpRows').innerHTML='';
-    items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
+    items.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1],input=r.querySelector('input'); setCmpRowLawd(r, c.lawd); input.value=c.name;input.dataset.pickedLawd=c.lawd;input.dataset.pickedName=c.name; });
     while(document.querySelectorAll('.cmp-row').length<2)addCmpRow();
     if(hasSharedQuery && items.length>=2) search();
   } else {
@@ -1892,7 +1893,7 @@ function restoreView(vi){
   if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
-    inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1]; setCmpRowLawd(r, c.lawd); r.querySelector('input').value=c.name; });
+    inp.cmp.forEach(c=>{ addCmpRow(); const rows=document.querySelectorAll('.cmp-row'); const r=rows[rows.length-1],input=r.querySelector('input'); setCmpRowLawd(r, c.lawd); input.value=c.name;input.dataset.pickedLawd=c.lawd;input.dataset.pickedName=c.name; });
   }
   document.getElementById('listingNameQuery').value=inp.listingNameQuery||'';
   listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';
@@ -2275,7 +2276,7 @@ function applyNativeRegionInputs(inp){
   pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
-    for(const c of inp.cmp||[]){addCmpRow();const rows=document.querySelectorAll('.cmp-row'),row=rows[rows.length-1];setCmpRowLawd(row,c.lawd);row.querySelector('input').value=c.name;}
+    for(const c of inp.cmp||[]){addCmpRow();const rows=document.querySelectorAll('.cmp-row'),row=rows[rows.length-1],input=row.querySelector('input');setCmpRowLawd(row,c.lawd);input.value=c.name;input.dataset.pickedLawd=c.lawd;input.dataset.pickedName=c.name;}
   }
   syncRegionPickBtn();return true;
 }
@@ -2861,7 +2862,7 @@ function setMode(m, fromRestore){
   // 지역 초기화는 필터 슬라이더가 없는 단지 분석 탭에서도 항상 사용할 수 있어야 한다.
   const resetRow=document.getElementById('sliderFilterResetRow'),filterReset=document.getElementById('listingFilterReset');
   if(resetRow){
-    resetRow.style.display=m==='listingfavorites'?'none':'flex';
+    resetRow.style.display=(m==='listingfavorites'||m==='compare')?'none':'flex';
     if(filterReset)filterReset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'':'none';
   }
   if(m==='compare'){
@@ -2887,15 +2888,33 @@ function addCmpRow(){
   if(rows.length >= 4) return;
   const div = document.createElement('div');
   div.className = 'cmp-row';
-  // 다른 탭과 동일한 "지역 선택" 버튼 + 모달 피커를 재사용(2026.08 — 예전엔 이 행만 밋밋한 <select> 드롭다운이었음).
-  // 기존 코드(search()·URL 공유 복원·즐겨찾기 복원 등)가 전부 `.cmp-row select`.value를 읽으므로,
-  // 그 select는 그대로 두되 화면엔 안 보이게 숨기고 버튼만 노출한다.
-  div.innerHTML = `<button type="button" class="rgpick" style="flex:0 0 128px" onclick="openRegionPicker(this.nextElementSibling)"><span class="rgpick-txt">지역 선택</span><b>▼</b></button><select style="display:none">${regionSelectHTML()}</select>
-    <input type="text" placeholder="단지명만 입력" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" autocomplete="off">
+  // 조회 범위는 전국 자동완성 후보로 정하고, 기존 공유 링크 복원을 위해 지역 코드는 hidden select에 보관한다.
+  div.innerHTML = `<select style="display:none">${regionSelectHTML()}</select>
+    <input type="text" placeholder="전 지역 단지명 검색" aria-label="전 지역 단지명 검색" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" autocomplete="off">
     <button class="rm" onclick="this.parentNode.remove()">×</button>`;
-  const defaultLawd=rows.length?rows[rows.length-1].querySelector('select').value:'';
-  setCmpRowLawd(div, defaultLawd); // 새 행은 직전 비교 행의 지역 범위를 유지한다.
+  setCmpRowLawd(div, '');
   document.getElementById('cmpRows').appendChild(div);
+}
+function renderCompareCandidates(input,hits){
+  const row=input.closest('.cmp-row');if(!row)return;
+  row.querySelector('.cmp-candidates')?.remove();
+  const panel=document.createElement('div');panel.className='cmp-candidates';
+  const heading=document.createElement('div');heading.textContent=hits.length?'단지를 선택해 주세요 · 지역과 동을 확인하세요':'검색 결과가 없습니다. 단지명을 더 입력해 주세요.';
+  heading.style.cssText='margin-bottom:7px;color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(heading);
+  hits.slice(0,30).forEach(hit=>{
+    const button=document.createElement('button');button.type='button';
+    button.textContent=`${hit.name} · ${hit.region} ${hit.umd}  선택`;
+    button.style.cssText='display:block;width:100%;margin-top:5px;padding:9px 10px;border:1px solid var(--teal-light);border-radius:9px;background:#fff;color:var(--navy);text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer';
+    button.onclick=()=>{
+      input.value=`${hit.name} [${hit.umd}]`;
+      input.dataset.pickedLawd=hit.lawd;input.dataset.pickedName=input.value;
+      setCmpRowLawd(row,hit.lawd);document.getElementById('error').classList.remove('on');panel.replaceChildren();
+      const selected=document.createElement('div');selected.textContent=`선택됨 · ${hit.name} · ${hit.region} ${hit.umd}`;selected.style.cssText='color:var(--teal-dark);font-size:12px;font-weight:800';panel.append(selected);
+    };
+    panel.append(button);
+  });
+  if(hits.length>30){const note=document.createElement('div');note.textContent='후보가 많습니다. 단지명을 더 입력해 주세요.';note.style.cssText='margin-top:7px;color:var(--sub);font-size:11px';panel.append(note);}
+  row.append(panel);
 }
 
 
@@ -4703,7 +4722,7 @@ async function acShow(input){
     : (regionSel.length?regionSel:(isAllScope(scope)?lawdsOfScope(scope):[]));
   if(!cmpRow&&mode==='complex'){
     try{
-      const result=await complexSearchTargets(input.value.trim(),null,true);
+      const result=await complexSearchTargets(input.value.trim(),null,true,input);
       if(acInput!==input || input.value.trim().replace(/\s/g,'')!==q)return;
       ac.innerHTML=result.hits.length?result.hits.slice(0,30).map(a=>`<div class="ac-item" onmousedown="acPick('${esc(a.name+' ['+a.umd+']')}','${esc(a.lawd)}')"><span>${esc(a.name)}</span><small>${esc(a.region)} · ${esc(a.umd)}</small></div>`).join('')+(result.hits.length>30?'<div class="ac-msg">후보가 많습니다. 단지명을 더 입력해 주세요.</div>':''):'<div class="ac-msg">일치하는 단지를 찾지 못했습니다</div>';
     }catch(e){if(acInput===input)ac.innerHTML='<div class="ac-msg">'+esc(e.message)+'</div>';}
@@ -4785,7 +4804,7 @@ function acPick(name,lawd){
       const row=acInput.closest('.cmp-row');
       if(row){
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
-        if(!isAllScope(row.querySelector('select').value))setCmpRowLawd(row,lawd);
+        setCmpRowLawd(row,lawd);
       }
       else {
         // 전체/복수 지역 선택은 유지하고 선택한 단지의 조회 지역만 기억한다.
@@ -4802,13 +4821,18 @@ function acPick(name,lawd){
 
 document.addEventListener('input', e=>{
   if(e.target.matches('#q') || e.target.matches('.cmp-row input')){
-    clearTimeout(acTimer);
-    const t = e.target;
-    acTimer = setTimeout(()=>acShow(t), 180);
+    if(e.target.matches('.cmp-row input')&&mode==='compare'){
+      const row=e.target.closest('.cmp-row');row.querySelector('.cmp-candidates')?.remove();
+      if(e.target.dataset.pickedName!==e.target.value.trim()){delete e.target.dataset.pickedName;delete e.target.dataset.pickedLawd;}
+    }else{
+      clearTimeout(acTimer);
+      const t = e.target;
+      acTimer = setTimeout(()=>acShow(t), 180);
+    }
   }
 });
 document.addEventListener('focusin', e=>{
-  if((e.target.matches('#q') || e.target.matches('.cmp-row input')) && e.target.value.trim()) acShow(e.target);
+  if((e.target.matches('#q') || (e.target.matches('.cmp-row input')&&mode!=='compare')) && e.target.value.trim()) acShow(e.target);
 });
 // 모바일 키보드가 올라올 때 입력창이 가려지는 문제 방지.
 // scrollIntoView({block:'center'})만 쓰던 이전 버전은 인스타그램 인앱 브라우저(웹뷰)에서 잘 안 먹는다는
@@ -5185,12 +5209,12 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
 }
 
 let complexSearchIndex=null;
-async function complexSearchTargets(name,targets,includePartial=false){
+async function complexSearchTargets(name,targets,includePartial=false,input=null){
  if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
  const searchTargets=targets?.length?targets:[...new Map(complexSearchIndex.map(x=>[x.lawd,{lawd:x.lawd,name:x.region||regionNameByLawd(x.lawd)}])).values()];
  const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(String(name).replace(/\s*\[[^\]]+\]\s*$/,'')),allowed=new Set(searchTargets.map(t=>t.lawd));
- const picked=typeof document==='undefined'?null:document.getElementById('q');
- const selectedLawd=!includePartial && typeof mode!=='undefined' && mode==='complex' && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
+ const picked=input|| (typeof document==='undefined'?null:document.getElementById('q'));
+ const selectedLawd=!includePartial && typeof mode!=='undefined' && (mode==='complex'||mode==='compare') && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
  const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),exact=rows.filter(x=>x.names.some(n=>norm(n)===q));
  const hits=!includePartial&&exact.length?exact:rows.filter(x=>x.names.some(n=>norm(n).includes(q)));
@@ -5246,10 +5270,10 @@ async function runSearch(opts){
     const filledCmpItems = [...document.querySelectorAll('.cmp-row')].map(r=>({
       lawd: r.querySelector('select').value,
       name: r.querySelector('input').value.trim(),
+      input:r.querySelector('input'),
       pickedLawd:r.querySelector('input').dataset.pickedName===r.querySelector('input').value.trim()?r.querySelector('input').dataset.pickedLawd:null
     })).filter(x=>x.name.length>=2);
     if(filledCmpItems.length<2){ showError('비교할 단지를 2개 이상 입력해 주세요.'); return; }
-    if(filledCmpItems.some(x=>!x.lawd)){ showError('비교할 각 단지의 지역을 선택해 주세요.'); return; }
     cmpItems = filledCmpItems;
   }
   if(mode==='complex' && name.length<2){ showError('단지명을 2자 이상 입력해 주세요.'); return; }
@@ -5449,14 +5473,27 @@ async function runSearch(opts){
         }
       }
     } else if(mode==='compare'){
+      let needsCompareSelection=false;
       const narrowedCmp=await Promise.all(cmpItems.map(async x=>{
-        if(!isAllScope(x.lawd))return [x];
-        const lookup=await complexSearchTargets(x.name,lawdsOfScope(x.lawd));
-        return lookup.targets.filter(t=>!x.pickedLawd||t.lawd===x.pickedLawd).map(t=>({...x,lawd:t.lawd}));
+        const lookup=await complexSearchTargets(x.name,null,false,x.input);
+        let candidates=lookup.hits;
+        if(x.pickedLawd)candidates=candidates.filter(hit=>hit.lawd===x.pickedLawd);
+        if(!x.pickedLawd||candidates.length!==1){
+          needsCompareSelection=true;renderCompareCandidates(x.input,candidates);
+          return [];
+        }
+        const selected=candidates[0];
+        x.lawd=selected.lawd;
+        setCmpRowLawd(x.input.closest('.cmp-row'),selected.lawd);
+        x.input.dataset.pickedLawd=selected.lawd;x.input.dataset.pickedName=x.name;
+        return [{...x,lawd:selected.lawd}];
       }));
       if(myToken!==searchToken)return;
+      if(needsCompareSelection){
+        showError('각 단지의 검색 후보에서 지역과 동을 확인해 선택한 뒤 비교 조회를 눌러 주세요.');return;
+      }
       const missingInput=cmpItems.filter((_,i)=>!narrowedCmp[i].length);
-      if(missingInput.length){showError('선택한 지역에서 찾지 못한 단지: '+missingInput.map(x=>esc(x.name)).join(', '));return;}
+      if(missingInput.length){showError('등록된 지역에서 찾지 못한 단지: '+missingInput.map(x=>esc(x.name)).join(', '));return;}
       const expandedCmp=narrowedCmp.flat();
       const uniq = [...new Set(expandedCmp.map(x=>x.lawd))];
       // 단지 분석과 동일하게 매매+분양권을 병렬로 함께 조회 — 매매 실거래가 없는 분양권 전용(신축) 단지도 비교 가능하도록
@@ -6824,7 +6861,7 @@ function addRecentCompareComplex(x){
   })||rows.find(r=>!r.querySelector('input').value.trim());
   if(!row&&rows.length<4){addCmpRow();rows=[...document.querySelectorAll('.cmp-row')];row=rows.at(-1);}
   if(!row){showError('비교 단지는 최대 4개입니다. 기존 단지를 삭제한 뒤 추가해 주세요.');return;}
-  setCmpRowLawd(row,x.lawd);row.querySelector('input').value=query;
+  const input=row.querySelector('input');setCmpRowLawd(row,x.lawd);input.value=query;input.dataset.pickedLawd=x.lawd;input.dataset.pickedName=query;
   if(x.area){
     persistCmpArea(x,x.area);
     try{const url=new URL(location.href),areas=parseCmpAreas(url.searchParams.get('ca')||'{}');areas[cmpAreaKey(x)]=x.area;url.searchParams.set('ca',JSON.stringify(areas));history.replaceState(history.state,'',url.pathname+url.search+url.hash);}catch{}
