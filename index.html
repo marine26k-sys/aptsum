@@ -5290,7 +5290,7 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  const picked=input|| (typeof document==='undefined'?null:document.getElementById('q'));
  const selectedLawd=!includePartial && typeof mode!=='undefined' && (mode==='complex'||mode==='compare') && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
- const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
+ const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&norm(x.name)!==norm(x.umd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
  let hits=!includePartial&&exact.length?exact:rows.filter(x=>aptNames(x).some(n=>norm(n).includes(q)));
  // 지역명과 단지명을 함께 입력한 경우(예: "봉천 두산") 연속 문자열 검색만으로는
  // 단지의 공식명이 "두산"인 후보를 찾지 못하므로, 모든 입력어가 지역 또는 단지명에
