@@ -141,13 +141,13 @@ try {
   .search-box{display:grid;gap:6px;margin-bottom:8px;background:#fff;border-radius:13px;padding:9px;box-shadow:0 2px 14px rgba(15,43,61,.07)}
   .search-box > *{min-width:0}
   #searchBox[data-mode="complex"] #q{order:-1}
-  .complex-search-help{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 10px;padding:10px 12px;border:1px solid #d8eaeb;border-radius:10px;background:#f7fbfb;color:var(--navy);font-size:11.5px;line-height:1.45}
-  .complex-search-help .search-help-title{font-weight:800;color:var(--teal-dark)}
-  .complex-search-help .search-help-scope{justify-self:end;color:var(--sub);font-size:10px;white-space:nowrap}
-  .complex-search-help .search-help-copy,.complex-search-help .search-help-example{grid-column:1/-1}
+  .complex-search-help{flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;border:1px solid #d8eaeb;border-radius:10px;background:#f7fbfb;color:var(--navy);font-size:11.5px;line-height:1.45}
+  .complex-search-help .search-help-step{display:flex;align-items:flex-start;gap:8px;min-width:0}
+  .complex-search-help .search-help-number{flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#e2f2f2;color:var(--teal-dark);font-size:10px;font-weight:900}
   .complex-search-help .search-help-copy b{color:var(--teal-dark)}
-  .complex-search-help .search-help-example{display:flex;align-items:center;gap:6px;color:var(--sub);font-size:10.5px}
+  .complex-search-help .search-help-example{display:inline-flex;align-items:center;gap:5px;color:var(--sub);font-size:10.5px}
   .complex-search-help .search-help-example code{padding:2px 7px;border-radius:6px;background:#e8f4f4;color:var(--teal-dark);font:inherit;font-weight:700}
+  .complex-search-help .search-help-scope{padding-left:26px;color:var(--sub);font-size:10px}
   #complexSearchHelp{display:none}
   #compareSearchHelp{display:none}
   .row2{display:flex;gap:6px}
@@ -1032,9 +1032,9 @@ try {
       <button id="uvInversionBtn" type="button" role="tab" onclick="chooseUndervalueMode('inversion')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평형 비교</button>
     </div>
     <input class="q" id="q" type="text" placeholder="단지명 검색 (예: 동아 / 성수동 동아)" aria-label="단지명 검색" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
-    <div id="complexSearchHelp" class="complex-search-help" role="note"><span class="search-help-title">검색 팁</span><span class="search-help-scope">서울 · 경기 · 인천 · 부산</span><span class="search-help-copy"><b>단지명만</b> 먼저 검색하고, 결과가 없으면 <b>지역명 + 단지명</b>으로 다시 검색해 보세요.</span><span class="search-help-example"><span>예시</span><code>동아</code><span>→</span><code>성수동 동아</code></span></div>
+    <div id="complexSearchHelp" class="complex-search-help" role="note"><div class="search-help-step"><span class="search-help-number">1</span><span><b class="search-help-copy">단지명만</b> 입력해 검색</span></div><div class="search-help-step"><span class="search-help-number">2</span><span>결과가 없으면 <b class="search-help-copy">지역명 + 단지명</b>으로 검색</span></div><div class="search-help-step"><span class="search-help-number">3</span><span class="search-help-example"><code>동아</code><span>→</span><code>성수동 동아</code></span></div><div class="search-help-scope">서울 · 경기 · 인천 · 부산 검색 가능</div></div>
     <div id="cmpRows" style="display:none"></div>
-    <div id="compareSearchHelp" class="complex-search-help" role="note"><span class="search-help-title">검색 팁</span><span class="search-help-scope">서울 · 경기 · 인천 · 부산</span><span class="search-help-copy"><b>단지명만</b> 먼저 검색하고, 결과가 없으면 <b>지역명 + 단지명</b>으로 다시 검색해 보세요.</span><span class="search-help-example"><span>예시</span><code>동아</code><span>→</span><code>성수동 동아</code></span></div>
+    <div id="compareSearchHelp" class="complex-search-help" role="note"><div class="search-help-step"><span class="search-help-number">1</span><span><b class="search-help-copy">단지명만</b> 입력해 검색</span></div><div class="search-help-step"><span class="search-help-number">2</span><span>결과가 없으면 <b class="search-help-copy">지역명 + 단지명</b>으로 검색</span></div><div class="search-help-step"><span class="search-help-number">3</span><span class="search-help-example"><code>동아</code><span>→</span><code>성수동 동아</code></span></div><div class="search-help-scope">서울 · 경기 · 인천 · 부산 검색 가능</div></div>
     <div id="recentCompareComplexes" hidden style="margin:5px 0 8px"></div>
     <button id="addRow" onclick="addCmpRow()" style="display:none;background:none;border:1.5px dashed var(--line);border-radius:12px;padding:7px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer">+ 단지 추가 (최대 4개)</button>
       <div id="sliderFilterResetRow" style="display:none;justify-content:flex-end;gap:6px;margin:4px 0 6px"><button id="listingRegionReset" type="button" onclick="resetListingRegion()" style="border:1px solid var(--teal-light);border-radius:8px;background:#fff;color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⌖ 지역 초기화</button><button id="listingFilterReset" type="button" onclick="resetAllSliderFilters()" style="border:1px solid var(--teal-light);border-radius:8px;background:var(--teal-light-soft);color:var(--teal-dark);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">↺ 필터 초기화</button></div>
@@ -1205,7 +1205,7 @@ try {
     <section id="listingIndividualSearch" aria-labelledby="listingNameDialogTitle" style="display:none;margin:12px 0;padding:16px;border:1px solid var(--teal);border-radius:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><span id="listingNameTrialBadge" hidden style="flex:none;padding:3px 9px;border-radius:10px;background:#39FF14;color:#0B3D02;font-size:11px;font-weight:800;white-space:nowrap">강남구 무료체험</span></div>
       <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 (예: 동아 / 성수동 동아)" aria-label="단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
-      <div id="listingNameSearchHelp" class="complex-search-help" role="note" style="margin:8px 0"><span class="search-help-title">검색 팁</span><span class="search-help-scope">서울 · 경기 · 인천 · 부산</span><span class="search-help-copy"><b>단지명만</b> 먼저 검색하고, 결과가 없으면 <b>지역명 + 단지명</b>으로 다시 검색해 보세요.</span><span class="search-help-example"><span>예시</span><code>동아</code><span>→</span><code>성수동 동아</code></span></div>
+      <div id="listingNameSearchHelp" class="complex-search-help" role="note" style="margin:8px 0"><div class="search-help-step"><span class="search-help-number">1</span><span><b class="search-help-copy">단지명만</b> 입력해 검색</span></div><div class="search-help-step"><span class="search-help-number">2</span><span>결과가 없으면 <b class="search-help-copy">지역명 + 단지명</b>으로 검색</span></div><div class="search-help-step"><span class="search-help-number">3</span><span class="search-help-example"><code>동아</code><span>→</span><code>성수동 동아</code></span></div><div class="search-help-scope">서울 · 경기 · 인천 · 부산 검색 가능</div></div>
       <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">조회</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
       <div id="listingRecentComplexes" style="margin-top:12px"></div>
@@ -2738,8 +2738,8 @@ const LISTING_TRIAL_LAWD = '11680';
 function isListingMode(m){ return m==='listingfavorites'||m==='longpeaklisting'||m==='listingbudget'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingaskmap'; }
 function isListingTrial(){ return !aptsumSubscriberGate.isVerified(); }
 function listingComplexSearchHelpHTML(trial=false){
-  const scope=trial?'무료 체험 · 강남구':'서울 · 경기 · 인천 · 부산';
-  return `<span class="search-help-title">검색 팁</span><span class="search-help-scope">${scope}</span><span class="search-help-copy"><b>단지명만</b> 먼저 검색하고, 결과가 없으면 <b>지역명 + 단지명</b>으로 다시 검색해 보세요.</span><span class="search-help-example"><span>예시</span><code>동아</code><span>→</span><code>성수동 동아</code></span>`;
+  const scope=trial?'무료 체험 검색 가능 지역: 강남구':'서울 · 경기 · 인천 · 부산 검색 가능';
+  return `<div class="search-help-step"><span class="search-help-number">1</span><span><b class="search-help-copy">단지명만</b> 입력해 검색</span></div><div class="search-help-step"><span class="search-help-number">2</span><span>결과가 없으면 <b class="search-help-copy">지역명 + 단지명</b>으로 검색</span></div><div class="search-help-step"><span class="search-help-number">3</span><span class="search-help-example"><code>동아</code><span>→</span><code>성수동 동아</code></span></div><div class="search-help-scope">${scope}</div>`;
 }
 function updateListingComplexSearchHelp(trial=isListingTrial()){
   const help=document.getElementById('listingNameSearchHelp');
