@@ -1194,7 +1194,7 @@ try {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><b id="listingNameDialogTitle">단지 개별 검색</b><span id="listingNameTrialBadge" hidden style="flex:none;padding:3px 9px;border-radius:10px;background:#39FF14;color:#0B3D02;font-size:11px;font-weight:800;white-space:nowrap">강남구 무료체험</span></div>
       <input class="q" id="listingNameQuery" type="search" maxlength="80" placeholder="단지명 검색 (예: 동아 / 성수동 동아)" aria-label="단지명 검색" oninput="listingNameChanged()" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%;box-sizing:border-box" autocomplete="off">
       <div id="listingNameSearchHelp" class="complex-search-help" role="note" style="margin:8px 0"><span class="search-help-icon" aria-hidden="true">?</span><span><b>검색 방법</b>　먼저 <b>단지명만</b> 입력하세요. 검색되지 않으면 <b>지역명 + 단지명</b>을 함께 입력해 보세요.<br><span style="color:var(--sub)">검색 가능 지역: 서울 · 경기 · 인천 · 부산　|　예: ‘동아’ → 안 나오면 ‘성수동 동아’</span></span></div>
-      <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">검색 조회</button>
+      <button type="button" onclick="search()" style="width:100%;padding:10px;border:0;border-radius:10px;background:var(--teal);color:white;font:inherit;font-weight:800">조회</button>
       <div id="listingNameCandidates" aria-live="polite"></div>
       <div id="listingRecentComplexes" style="margin-top:12px"></div>
       <button type="button" onclick="clearListingNameSearch()" style="margin-top:12px">단지 선택 해제</button>
