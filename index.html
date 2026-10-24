@@ -4923,7 +4923,7 @@ function renderRedevelopment(d){
       ${timeline.length?`<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">${timeline.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12px"><span>${esc(x.name)}</span><b style="color:${x.status==='진행 중'?'var(--teal-dark)':'var(--sub)'}">${esc(x.status)}${x.ai_expected_date?` · ${esc(redevelopmentDate(x.ai_expected_date))}`:''}</b></div>`).join('')}</div>`:''}
       ${site.url?`<a href="${esc(site.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:11px;color:var(--teal-dark);font-weight:800">리치고 사업지 상세 ›</a>`:''}
     </article>`;
-  }).join(''):'<div class="rng" style="padding:18px 4px">선택한 지역에 등록된 정비사업 정보가 없습니다.</div>';
+  }).join(''):`<div class="rng" style="padding:18px 4px;line-height:1.7"><b style="display:block;color:var(--navy);margin-bottom:4px">${esc(shortRegionLabel(d.regionName||'선택 지역'))} 정비사업 없음</b>현재 리치고 스냅샷에 등록된 재건축·재개발 사업지가 없습니다.<br><small>사업지가 있는 인접 지역은 지역을 바꿔 조회해 주세요.</small></div>`;
   const html=`<div class="card"><div class="card-hd">${hdTop('정비사업')}<h2>${esc(shortRegionLabel(d.regionName||''))}</h2><div class="meta">재건축·재개발 단계와 예상 일정 · ${sites.length}개 사업지</div></div><div class="sec" style="padding-top:10px">${cards}</div></div><div class="src-note">기준일: ${esc(d.asOf?new Date(d.asOf).toLocaleDateString('ko-KR'): '확인 불가')} · AI 예상 일정은 리치고 모형 추정이며 실제 인가일과 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%'; document.getElementById('result').innerHTML=html; document.getElementById('result').classList.add('on');
 }

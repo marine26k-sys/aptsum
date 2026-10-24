@@ -7,7 +7,7 @@ import { writeFile } from 'node:fs/promises';
 const ENDPOINT = 'https://m.richgo.ai/api/mcp';
 const QUERIES = process.env.RICHGO_REDEVELOPMENT_QUERIES
   ? process.env.RICHGO_REDEVELOPMENT_QUERIES.split(',').map(x => x.trim()).filter(Boolean)
-  : ['재건축', '재개발'];
+  : ['재건축', '재개발', '안양'];
 
 async function callTool(id, name, args) {
   const response = await fetch(ENDPOINT, {
