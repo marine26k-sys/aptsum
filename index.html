@@ -6907,7 +6907,7 @@ function addComplexSchoolMap(body,matched){
       const stations=await searchNearbySubwayStations(maps,matched);
       const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
       stationSummary.innerHTML=stations.length?`<div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:4px">지하철</div>${stations.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}</span><span style="flex:none;color:var(--teal-dark);font-weight:700">${x.walkDistance?`도보 ${x.walkDistance.toLocaleString()}m · ${x.walkTime}분`:`직선 ${x.distance.toLocaleString()}m`}</span></div>`).join('')}<small style="display:block;margin-top:6px">${stations.some(x=>x.walkDistance)?'카카오 도보 최단경로 기준':'도보 API 키 미설정으로 직선거리 기준'}</small>`:'<div style="font-size:13px;font-weight:800;color:var(--teal-dark)">지하철</div><div style="margin-top:6px">주변 3km 이내 지하철역을 찾지 못했습니다.</div>';
-      container.before(stationSummary);
+      container.after(stationSummary);
       stations.forEach(station=>points.push({...station,level:'역'}));
       let info=null;
       points.forEach(point=>{
