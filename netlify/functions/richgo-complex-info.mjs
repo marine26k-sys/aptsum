@@ -28,6 +28,10 @@ async function callTool(id, name, arguments_) {
 }
 
 function matchesIdentity(expected, overview, sourceName) {
+  const sourceAddress = normalize(`${overview.address?.road || ''} ${overview.address?.jibun || ''}`);
+  const district = normalize(expected.region.split(/\s+/).filter(Boolean).at(-1) || '');
+  if (expected.umd && !sourceAddress.includes(normalize(expected.umd))) return false;
+  if (district && !sourceAddress.includes(district)) return false;
   const expectedYear = Number.parseInt(expected.year, 10);
   const sourceYear = Number.parseInt(String(overview.construct_date || '').slice(0, 4), 10);
   const expectedHouseholds = Number(expected.households);
@@ -46,12 +50,12 @@ function matchesIdentity(expected, overview, sourceName) {
   return { identityMatches, exactName: normalize(sourceName) === normalize(expected.name), matchedFields: checks.filter(Boolean).length };
 }
 
-function findAreaCandidates(results, region, umd) {
+function findAreaCandidates(results, region) {
   const rows = Array.isArray(results) ? results : [];
   const district = normalize(region.split(/\s+/).filter(Boolean).at(-1) || '');
   return rows.filter((row) => {
     const address = normalize(row.address);
-    return (!umd || address.includes(normalize(umd))) && (!district || address.includes(district));
+    return !district || address.includes(district);
   });
 }
 
@@ -66,11 +70,11 @@ export default async (request) => {
 
   try {
     const search = await callTool(1, 'search_apartments', { query: [region, umd, name].filter(Boolean).join(' ') });
-    const areaCandidates = findAreaCandidates(search?.results, region, umd);
+    const areaCandidates = findAreaCandidates(search?.results, region);
     if (!areaCandidates.length) return Response.json({ error: 'apartment_not_found' }, { status: 404 });
     const exactCandidates = areaCandidates.filter((candidate) => normalize(candidate.name) === normalize(name));
     const candidates = exactCandidates.length ? exactCandidates : areaCandidates;
-    const expected = { name, year, households };
+    const expected = { name, region, umd, year, households };
     const profiles = await Promise.all(candidates.slice(0, 10).map(async (candidate) => {
       try {
         const overview = await callTool(2, 'get_apartment_overview', { danji_id: candidate.danji_id });
