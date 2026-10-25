@@ -69,8 +69,28 @@ export default async (request) => {
   if (!name) return Response.json({ error: 'name_required' }, { status: 400 });
 
   try {
-    const search = await callTool(1, 'search_apartments', { query: [region, umd, name].filter(Boolean).join(' ') });
-    const areaCandidates = findAreaCandidates(search?.results, region);
+    // Newer Korean administrative districts (for example, 화성 효행구) and
+    // 읍·면·리 addresses are not always indexed together by Richgo search.
+    // Retry with progressively shorter location terms; identity checks below
+    // still verify address, completion year, and household count before use.
+    const regionParts = region.split(/\s+/).filter(Boolean);
+    const umdParts = umd.split(/\s+/).filter(Boolean);
+    const queries = [
+      [region, umd, name],
+      [[...regionParts.slice(0, -1), umdParts[0]].filter(Boolean).join(' '), name],
+      [region, umdParts[0], name],
+      [umdParts[0], name],
+      [name],
+    ].map((parts) => parts.filter(Boolean).join(' ').trim()).filter(Boolean);
+    const searched = new Map();
+    for (const queryText of [...new Set(queries)]) {
+      const search = await callTool(1, 'search_apartments', { query: queryText });
+      for (const candidate of Array.isArray(search?.results) ? search.results : []) {
+        if (candidate?.danji_id) searched.set(candidate.danji_id, candidate);
+      }
+      if (findAreaCandidates([...searched.values()], region).length) break;
+    }
+    const areaCandidates = findAreaCandidates([...searched.values()], region);
     if (!areaCandidates.length) return Response.json({ error: 'apartment_not_found' }, { status: 404 });
     const exactCandidates = areaCandidates.filter((candidate) => normalize(candidate.name) === normalize(name));
     const candidates = exactCandidates.length ? exactCandidates : areaCandidates;
