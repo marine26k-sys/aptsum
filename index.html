@@ -7026,10 +7026,12 @@ async function loadComplexSchools(panel,d,lawd){
     const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
     let rows=matched?.schools||[];
     const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
-    const richKey=JSON.stringify([d.name,region,d.umd||'']);
+    const expectedYear=complexCompletionYear(d)||'';
+    const expectedHouseholds=d.hh?.hhcnt||'';
+    const richKey=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
     let richgo=richgoSchoolCache.get(richKey);
     if(!richgo){
-      const qs=new URLSearchParams({name:d.name,region,umd:d.umd||''});
+      const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
       richgo=await fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
       richgoSchoolCache.set(richKey,richgo||{schools:[]});
     }
