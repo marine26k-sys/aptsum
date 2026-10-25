@@ -6734,7 +6734,7 @@ function openRichgoComplexInfo(d,lawd){
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
   dialog.addEventListener('close',()=>dialog.remove(),{once:true});
   dialog.showModal();close.focus();
-  loadRichgoComplexInfo(d,lawd).then(info=>{
+  loadRichgoComplexInfo(d,lawd).then(async info=>{
     if(!dialog.isConnected)return;
     const address=info.address||{},parking=info.parking||{};
     const fields=[];
@@ -6748,6 +6748,15 @@ function openRichgoComplexInfo(d,lawd){
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
     body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
+    let mapUrl=`https://map.kakao.com/link/search/${encodeURIComponent([info.name,address.jibun||address.road].filter(Boolean).join(' '))}`;
+    try{
+      const alias=naverNameOf(lawd,d.name,d.umd);
+      const point=await findNaverComplexCoordinate(d,lawd,alias);
+      if(point)mapUrl=complexExternalMapURL({...point,name:info.name});
+    }catch{}
+    const mapLink=document.createElement('a');mapLink.href=mapUrl;mapLink.target='_blank';mapLink.rel='noopener noreferrer';mapLink.textContent='카카오맵에서 단지 위치 보기 ↗';
+    mapLink.style.cssText='display:block;margin-top:18px;padding:12px;border:1px solid #9ddfe2;border-radius:11px;background:#f2fbfb;color:#00656b;font-size:14px;font-weight:800;text-align:center;text-decoration:none';
+    body.append(mapLink);
   }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'리치고 검색 후보의 단지명·연차·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
