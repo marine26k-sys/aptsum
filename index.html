@@ -6747,7 +6747,7 @@ function openRichgoComplexInfo(d,lawd){
     if(info.heating)fields.push(['난방',info.heating]);
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
-    body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div><div style="margin-top:18px;padding-top:12px;border-top:1px solid #edf1f5;color:#8290a0;font-size:11px;line-height:1.6">리치고 단지 정보 · 관리사무소 전화번호는 제공 항목에 포함되지 않습니다.</div>`;
+    body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
   }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'리치고 검색 후보의 단지명·연차·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
