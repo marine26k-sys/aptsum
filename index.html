@@ -6720,16 +6720,16 @@ async function loadRichgoComplexInfo(d,lawd){
 function openRichgoComplexInfo(d,lawd){
   const dialog=document.createElement('dialog');
   dialog.setAttribute('aria-label',`${d.name} 단지 정보`);
-  dialog.style.cssText='width:calc(100vw - 28px);max-width:620px;max-height:min(82dvh,760px);padding:0;border:1px solid #dce5ee;border-radius:18px;background:#fff;color:#1d2939;box-shadow:0 18px 60px rgba(15,43,61,.28);overflow:auto';
+  dialog.style.cssText='width:calc(100vw - 28px);max-width:620px;max-height:min(82dvh,760px);padding:0;border:1px solid #dce5ee;border-radius:18px;background:#f4f8fb;color:#1d2939;box-shadow:0 18px 60px rgba(15,43,61,.28);overflow:auto';
   const style=document.createElement('style');
-  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.46)}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}.richgo-info-item{min-width:0}.richgo-info-label{display:block;margin-bottom:5px;color:#788392;font-size:13px}.richgo-info-value{display:block;color:#172b3d;font-size:16px;font-weight:750;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-grid{gap:12px 10px}.richgo-info-value{font-size:14px}}';
+  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.52)}.richgo-info-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#102f40;color:#fff}.richgo-info-title{min-width:0}.richgo-info-name{overflow:hidden;color:#a9c1ca;font-size:13px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.richgo-info-heading{margin-top:3px;font-size:20px;font-weight:900}.richgo-info-close{flex:none;padding:8px 12px;border:1px solid #ffffff40;border-radius:10px;background:#ffffff12;color:#fff;font-weight:750;cursor:pointer}.richgo-info-body{padding:14px}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.richgo-info-item{min-width:0;padding:13px;border:1px solid #e1e9ef;border-radius:12px;background:#fff}.richgo-info-label{display:block;margin-bottom:5px;color:#738295;font-size:12px}.richgo-info-value{display:block;color:#172b3d;font-size:15px;font-weight:750;line-height:1.5;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-body{padding:10px}.richgo-info-grid{gap:8px}.richgo-info-item{padding:11px}.richgo-info-value{font-size:14px}}';
   dialog.classList.add('richgo-info-dialog');
   const header=document.createElement('header');
-  header.style.cssText='position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;background:#fff;border-bottom:1px solid #e7edf2';
-  const title=document.createElement('div');title.innerHTML=`<div style="color:#758292;font-size:13px;font-weight:650">${esc(d.name)}</div><div style="margin-top:2px;font-size:21px;font-weight:900">단지 정보</div>`;
-  const close=document.createElement('button');close.type='button';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');close.style.cssText='flex:none;padding:8px 12px;border:1px solid #dce5ee;border-radius:10px;background:#f8fafc;color:#26384a;font-weight:750;cursor:pointer';close.onclick=()=>dialog.close();
+  header.className='richgo-info-header';
+  const title=document.createElement('div');title.className='richgo-info-title';title.innerHTML=`<div class="richgo-info-name">${esc(d.name)}</div><div class="richgo-info-heading">단지 정보</div>`;
+  const close=document.createElement('button');close.type='button';close.className='richgo-info-close';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');close.onclick=()=>dialog.close();
   header.append(title,close);
-  const body=document.createElement('div');body.style.cssText='padding:18px';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
+  const body=document.createElement('div');body.className='richgo-info-body';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
   dialog.append(style,header,body);document.body.append(dialog);
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
   dialog.addEventListener('close',()=>dialog.remove(),{once:true});
@@ -6748,15 +6748,6 @@ function openRichgoComplexInfo(d,lawd){
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
     body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
-    let mapUrl=`https://map.kakao.com/link/search/${encodeURIComponent([info.name,address.jibun||address.road].filter(Boolean).join(' '))}`;
-    try{
-      const alias=naverNameOf(lawd,d.name,d.umd);
-      const point=await findNaverComplexCoordinate(d,lawd,alias);
-      if(point)mapUrl=complexExternalMapURL({...point,name:info.name});
-    }catch{}
-    const mapLink=document.createElement('a');mapLink.href=mapUrl;mapLink.target='_blank';mapLink.rel='noopener noreferrer';mapLink.textContent='카카오맵에서 단지 위치 보기 ↗';
-    mapLink.style.cssText='display:block;margin-top:18px;padding:12px;border:1px solid #9ddfe2;border-radius:11px;background:#f2fbfb;color:#00656b;font-size:14px;font-weight:800;text-align:center;text-decoration:none';
-    body.append(mapLink);
   }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'리치고 검색 후보의 단지명·연차·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
