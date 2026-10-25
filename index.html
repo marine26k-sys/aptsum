@@ -1609,10 +1609,12 @@ function renderRecentComplexes(){
   const box=document.getElementById('recentComplexes');if(!box)return;
   box.replaceChildren();box.hidden=mode!=='complex';if(box.hidden)return;
   const rows=getRecentComplexes();if(!rows.length)return;
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>{if(mode==='complex')renderRecentComplexes();});
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin:8px 0';header.textContent='최근 본 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('apc:recentComplexes');}catch{}renderRecentComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=x.name+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
 }
 function openRelatedComplex(lawd,name,umd='',key=''){
   if(![...sel.options].some(o=>o.value===lawd))return;
@@ -1631,7 +1633,7 @@ function toggleFav(lawd, name){
     clearFavSeen(lawd, name);
   } else {
     const label = [...sel.options].find(o=>o.value===lawd)?.textContent || '';
-    favs.unshift({lawd, name, label});
+    favs.unshift({lawd, name, umd:lastData?.name===name?lastData.umd||'':'', label});
     favs = favs.slice(0,10);
     // 방금 추가한 즐겨찾기는 "지금까지의 거래건수"를 기준선으로 저장 → 다음 방문부터만 신규 거래 배지 표시
     favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{});
@@ -1647,7 +1649,7 @@ function renderFavs(){
   el.innerHTML = favs.map(x=>{
     const nb = favBadges[favKey(x.lawd,x.name)];
     const badge = nb>0 ? `<span class="nh">신규 ${nb}</span>` : '';
-    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(x.name)}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
+    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(complexDisplayName(x.lawd,x.name,x.umd))}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
   }).join('');
   const dashBtn = document.getElementById('favDashBtn');
   if(dashBtn) dashBtn.style.display = favs.length ? 'block' : 'none';
@@ -1658,7 +1660,7 @@ function renderFavs(){
 // 이미 refreshFavBadges()가 로드 시 각 즐겨찾기의 12개월치를 캐시해두므로 대부분 추가 API 호출 없이 즉시 뜬다.
 function favDashCard(f, inner){
   return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}')">
-    <div class="fdcard-hd"><b>${esc(f.name)}</b><span class="lb">${esc(f.label)}</span></div>
+    <div class="fdcard-hd"><b>${esc(complexDisplayName(f.lawd,f.name,f.umd))}</b><span class="lb">${esc(f.label)}</span></div>
     <div>${inner}</div>
   </div>`;
 }
@@ -1756,6 +1758,7 @@ async function favTradeCount(lawd, name){
 function refreshFavBadges(){
   const favs = getFavs();
   if(!favs.length) return;
+  Promise.all([...new Set(favs.map(f=>f.lawd).filter(Boolean))].map(ensureNaverNames)).then(()=>renderFavs()).catch(()=>{});
   const seen = getFavSeen();
   favs.forEach(f=>{
     favTradeCount(f.lawd, f.name).then(n=>{
@@ -3629,12 +3632,18 @@ function ensureNaverNames(lawd){
 }
 const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
 function naverNameOf(lawd,apt,umd){const name=aptsumComplexIdentity.canonical(apt,umd,NAVER_NAMES[lawd]||{},lawd);return name===apt?null:name;}
+function complexDisplayName(lawd,apt,umd,gu){
+  let code=lawd||'';
+  if(!code&&gu&&typeof REGIONS!=='undefined')code=REGIONS.flatMap(([,rows])=>rows).find(([name])=>name===gu)?.[1]||'';
+  if(!code&&typeof sel!=='undefined')code=sel.value||'';
+  return naverNameOf(code,apt,umd)||apt||'';
+}
 // 화면 표시용 단지명 — 국토부 실거래 기준 목록(랭킹·저평가·신고가 등)에서 실거래 등록명 대신 네이버 단지명을
 // 보여준다. 데이터(t.apt)는 그대로 두므로 세대수·공급면적처럼 실거래명으로 연결되는 데이터는 영향 없음.
 // 통합(여러 지역) 조회 행은 o.lawd, 단일 지역 조회는 현재 선택 지역 기준.
 function aptLabel(o, ctx){
   const lawd = (o && o.lawd) || (ctx && ctx.lawd) || (typeof sel!=='undefined' ? sel.value : '');
-  return naverNameOf(lawd, o.apt, o.umd || (ctx && ctx.umd)) || o.apt;
+  return complexDisplayName(lawd, o.apt, o.umd || (ctx && ctx.umd));
 }
 // 목록형 탭(랭킹·저평가 등)용 — 한 네이버 단지가 실거래에 여러 이름으로 나뉘어 등록된 경우("관악드림(삼성)"/
 // "관악드림(동아)" → 관악드림타운) 같은 줄로 집계되도록 거래의 단지명을 네이버 단지명으로 합친다.
@@ -6723,11 +6732,13 @@ function openRichgoComplexInfo(d,lawd){
   dialog.setAttribute('aria-label',`${d.name} 단지 정보`);
   dialog.style.cssText='box-sizing:border-box;width:calc(100vw - 12px);max-width:760px;max-height:min(90dvh,820px);padding:0;border:1px solid #dce5ee;border-radius:18px;background:#f4f8fb;color:#1d2939;box-shadow:0 18px 60px rgba(15,43,61,.28);overflow:auto';
   const style=document.createElement('style');
-  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.52)}.richgo-info-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#102f40;color:#fff}.richgo-info-title{min-width:0}.richgo-info-name{overflow:hidden;color:#a9c1ca;font-size:11px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.richgo-info-heading{margin-top:3px;font-size:16px;font-weight:900}.richgo-info-close{flex:none;padding:7px 11px;border:1px solid #ffffff40;border-radius:10px;background:#ffffff12;color:#fff;font-size:12px;font-weight:750;cursor:pointer}.richgo-info-body{padding:14px}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.richgo-info-item{min-width:0;padding:13px;border:1px solid #e1e9ef;border-radius:12px;background:#fff}.richgo-info-label{display:block;margin-bottom:5px;color:#738295;font-size:11px}.richgo-info-value{display:block;color:#172b3d;font-size:12.5px;font-weight:750;line-height:1.45;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-body{padding:9px}.richgo-info-grid{gap:7px}.richgo-info-item{padding:10px}.richgo-info-value{font-size:12px}}';
+  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.52)}.richgo-info-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#102f40;color:#fff}.richgo-info-title{min-width:0}.richgo-info-name{overflow:hidden;color:#a9c1ca;font-size:15px;font-weight:750;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}.richgo-info-heading{margin-top:3px;font-size:16px;font-weight:900}.richgo-info-close{flex:none;padding:7px 11px;border:1px solid #ffffff40;border-radius:10px;background:#ffffff12;color:#fff;font-size:12px;font-weight:750;cursor:pointer}.richgo-info-body{padding:14px}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.richgo-info-item{min-width:0;padding:13px;border:1px solid #e1e9ef;border-radius:12px;background:#fff}.richgo-info-label{display:block;margin-bottom:5px;color:#738295;font-size:11px}.richgo-info-value{display:block;color:#172b3d;font-size:12.5px;font-weight:750;line-height:1.45;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-body{padding:9px}.richgo-info-grid{gap:7px}.richgo-info-item{padding:10px}.richgo-info-value{font-size:12px}}';
   dialog.classList.add('richgo-info-dialog');
   const header=document.createElement('header');
   header.className='richgo-info-header';
-  const title=document.createElement('div');title.className='richgo-info-title';title.innerHTML=`<div class="richgo-info-name">${esc(d.name)}</div><div class="richgo-info-heading">단지 정보</div>`;
+  const infoName=complexDisplayName(d.lawd||d.splitLawd||lawd,d.name,d.umd);
+  dialog.setAttribute('aria-label',`${infoName} 단지 정보`);
+  const title=document.createElement('div');title.className='richgo-info-title';title.innerHTML=`<div class="richgo-info-name">${esc(infoName)}</div><div class="richgo-info-heading">단지 정보</div>`;
   const close=document.createElement('button');close.type='button';close.className='richgo-info-close';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');close.onclick=()=>dialog.close();
   header.append(title,close);
   const body=document.createElement('div');body.className='richgo-info-body';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
@@ -6828,7 +6839,7 @@ async function loadCompareNearby(d,token=searchToken){
   const render=()=>{
     if(!box.isConnected||token!==searchToken)return;
     const rows=[['지하철','역 도보거리'],...levels.map(level=>[level,`${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'} 거리`])];
-    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col" style="color:${CMP_COLORS[i%4]}">${escCell(c.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col" style="color:${CMP_COLORS[i%4]}">${escCell(complexDisplayName(c.lawd,c.name,c.umd))}</th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
     fitCompareSummaryTables();
   };
   render();
@@ -7074,6 +7085,7 @@ async function loadComplexSchools(panel,d,lawd){
 }
 function renderComplex(d){
   closeExpandedComplexMap();rememberRecentComplex(sel.value,d);
+  const complexName=complexDisplayName(d.lawd||d.splitLawd||sel.value,d.name,d.umd);
   selPy = -1;
   tradesShown = TRADES_PAGE_SIZE;
   complexView = 'sale';
@@ -7084,7 +7096,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexInfoButton" aria-label="${esc(d.name)} 단지 정보 보기" title="단지 정보 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
+      <h2 style="padding-right:70px;text-align:left">${esc(complexName)} <button type="button" id="complexInfoButton" aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -7206,11 +7218,13 @@ function renderRecentCompareComplexes(){
   const box=document.getElementById('recentCompareComplexes');if(!box)return;
   box.replaceChildren();box.hidden=mode!=='compare';if(box.hidden)return;
   const rows=getRecentCompareComplexes();if(!rows.length){box.hidden=true;return;}
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>{if(mode==='compare')renderRecentCompareComplexes();});
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;color:var(--sub)';
   const title=document.createElement('span');title.textContent='최근 조회한 단지';header.append(title);
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('aptsum:compare-recent');}catch{}renderRecentCompareComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  for(const x of rows){const button=document.createElement('button');button.type='button';button.className='chip';const region=(typeof REGIONS==='undefined'?[]:REGIONS).flatMap(([,arr])=>arr).find(([,lawd])=>lawd===x.lawd)?.[0]||'';button.textContent=x.name+' · '+[region,x.umd].filter(Boolean).join(' ');button.onclick=()=>addRecentCompareComplex(x);chips.append(button);}
+  for(const x of rows){const button=document.createElement('button');button.type='button';button.className='chip';const region=(typeof REGIONS==='undefined'?[]:REGIONS).flatMap(([,arr])=>arr).find(([,lawd])=>lawd===x.lawd)?.[0]||'';button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+[region,x.umd].filter(Boolean).join(' ');button.onclick=()=>addRecentCompareComplex(x);chips.append(button);}
   box.append(chips);
 }
 
@@ -7375,7 +7389,7 @@ function compareSummaryHTML(d){
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
   const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
-  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
+  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(complexDisplayName(c.lawd,c.name,c.umd))}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
     ${row('지역',c=>region(c))}
     ${row('준공·년차',c=>{const year=complexCompletionYear(c);return year?esc(complexBuildLabel(year)):esc(c.completionFallbackLabel||'—');})}
     ${row('세대수',c=>c.hh?.hhcnt>0?`${c.hh.hhcnt.toLocaleString()}세대`:'—')}
@@ -7401,9 +7415,9 @@ function drawCompare(d){
   document.getElementById('cmpLegend').innerHTML = d.complexes.map((c,i)=>{
     const opts = c.pys.slice().sort((a,b)=>a.area-b.area);
     const cur = cmpPyMap[i];
-    if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)} (거래 없음)</span>`;
+    if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(complexDisplayName(c.lawd,c.name,c.umd))} (거래 없음)</span>`;
     return `<span style="display:flex;align-items:center;flex-wrap:nowrap;gap:5px;width:100%;min-width:0">
-      <i style="background:${CMP_COLORS[i%4]};flex:none"></i><span class="cmp-legend-name" style="flex:1;min-width:0;white-space:nowrap">${esc(c.name)}</span>
+      <i style="background:${CMP_COLORS[i%4]};flex:none"></i><span class="cmp-legend-name" style="flex:1;min-width:0;white-space:nowrap">${esc(complexDisplayName(c.lawd,c.name,c.umd))}</span>
       <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:14px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:0 3px;background:#fff;width:128px;min-width:128px;max-width:100%;flex:none">
         ${opts.map(p=>`<option value="${p.area}"${p.area===cur?' selected':''}>${esc(p.py)} (전용 ${p.area})</option>`).join('')}
       </select>
@@ -8035,7 +8049,7 @@ async function searchListingFavorites(myToken){
 }
 function renderListingFavorites(d){
   const messages={locked:'이 지역은 실매물 이용권이 필요합니다.',failed:'자료를 불러오지 못했습니다. 다시 조회해 주세요.',missing:'매물 정보 없음',ambiguous:'동일한 이름의 단지가 여러 개여서 자동 연결하지 않았습니다.'};
-  const cards=d.cards.map(f=>`<div class="card"><div class="card-hd"><h2>${esc(f.name)}</h2><div class="meta">${esc(f.label||'')} ${f.asOf?' · 기준일 '+esc(f.asOf):''}</div></div><div class="sec">${f.status==='ok'?f.rows.map(x=>{
+  const cards=d.cards.map(f=>`<div class="card"><div class="card-hd"><h2>${esc(complexDisplayName(f.lawd,f.name))}</h2><div class="meta">${esc(f.label||'')} ${f.asOf?' · 기준일 '+esc(f.asOf):''}</div></div><div class="sec">${f.status==='ok'?f.rows.map(x=>{
     const change=x.previousAsk!==null?(x.ask-x.previousAsk):null;
     const pct=change!==null?Math.abs(change)/x.previousAsk*100:null;
     const delta=change===null?'이전 기록 없음':pct>=30-1e-9?'변동률 30% 이상 · 변동 표시 제외':change===0?'변동 없음':`${change>0?'▲':'▼'} ${Math.abs(change).toFixed(2)}억 (${pct.toFixed(1)}%)`;
@@ -8451,12 +8465,12 @@ function renderListingUndervalue(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
-      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
+      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -8769,7 +8783,7 @@ function getListingRecentComplexes(){
   try{const rows=JSON.parse(localStorage.getItem('aptsum:listing-recent-complexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.key==='string'&&x.key.length<=150&&/^\d{5}$/.test(x.lawd)&&typeof x.apt==='string'&&x.apt.length<=100&&typeof x.region==='string'&&x.region.length<=100).slice(0,5):[];}catch{return [];}
 }
 function rememberListingRecentComplex(selected){
-  const entry={key:selected.key,lawd:selected.lawd,apt:selected.apt,region:[selected.name,selected.umd].filter(Boolean).join(' ')};
+  const entry={key:selected.key,lawd:selected.lawd,apt:selected.apt,umd:selected.umd||'',region:[selected.name,selected.umd].filter(Boolean).join(' ')};
   const rows=[entry,...getListingRecentComplexes().filter(x=>x.key!==entry.key)].slice(0,5);
   try{localStorage.setItem('aptsum:listing-recent-complexes',JSON.stringify(rows));}catch{}
   renderListingRecentComplexes();
@@ -8777,11 +8791,13 @@ function rememberListingRecentComplex(selected){
 function renderListingRecentComplexes(){
   const box=document.getElementById('listingRecentComplexes');if(!box)return;box.replaceChildren();
   const rows=getListingRecentComplexes();if(!rows.length)return;
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>renderListingRecentComplexes());
   const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;color:var(--sub);font-size:11px';
   const title=document.createElement('span');title.textContent='최근 검색한 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);font:inherit;cursor:pointer';clear.onclick=()=>{try{localStorage.removeItem('aptsum:listing-recent-complexes');}catch{}renderListingRecentComplexes();};header.append(title,clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';button.textContent=x.apt+' · '+x.region;button.style.cssText='max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere';button.onclick=()=>openListingRecentComplex(x);chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';button.textContent=complexDisplayName(x.lawd,x.apt,x.umd||x.region.split(' ').at(-1))+' · '+x.region;button.style.cssText='max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere';button.onclick=()=>openListingRecentComplex(x);chips.append(button);});box.append(chips);
 }
 function openListingRecentComplex(entry){
   if(isListingTrial()&&entry.lawd!==LISTING_TRIAL_LAWD){showError(LISTING_TRIAL_MSG);return;}
@@ -8852,6 +8868,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('btn').disabled = true;
   try{
     if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){openListingNameSearch(false);return;}targets=[selected];}
+    await Promise.all([...new Set(targets.map(t=>t.lawd).filter(Boolean))].map(ensureNaverNames));
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
@@ -8964,7 +8981,7 @@ function listingLinkLegend(){
 function listingNameHTML(x, noUrgentBadge){
   const link = x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기" style="margin-left:4px;color:var(--sub)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
-  return `<span class="nm-title"><span>${esc(x.apt)}</span>${urgent}${link}</span>`;
+  return `<span class="nm-title"><span>${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span>${urgent}${link}</span>`;
 }
 function listingSubwayHTML(x,color='var(--teal-dark)'){
   const raw=x?.subwayMinutes;
@@ -9222,7 +9239,7 @@ function renderListingGap(d){
       const price=`${Math.abs(x.gap).toFixed(1)}억`;
       const gapLabel=x.gap<0 && Number(Math.abs(x.gap).toFixed(1))>0 ? `−${price}` : price;
       return `<div class="listing-gap-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-        <span class="nm"><span class="nm-title">${esc(x.apt)}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대${listingSubwayHTML(x)}</small></span>
+        <span class="nm"><span class="nm-title">${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대${listingSubwayHTML(x)}</small></span>
         <span class="val">${gapLabel}<small>${x.gap<0?'큰 평형이 더 저렴':x.gap===0?'동일 호가':'호가 차이'}</small></span></div>
         <div class="listing-gap-prices">${listingGapPriceHTML(x.small,false)}${listingGapPriceHTML(x.large,true)}</div></div>`;
     }).join('');
