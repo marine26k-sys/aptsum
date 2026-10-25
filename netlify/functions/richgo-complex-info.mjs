@@ -69,26 +69,41 @@ export default async (request) => {
   if (!name) return Response.json({ error: 'name_required' }, { status: 400 });
 
   try {
-    // Newer Korean administrative districts (for example, 화성 효행구) and
-    // 읍·면·리 addresses are not always indexed together by Richgo search.
-    // Retry with progressively shorter location terms; identity checks below
-    // still verify address, completion year, and household count before use.
+    // Richgo search may index a complex under a different spelling (for
+    // example, 에스클래스/S클래스) or omit newer administrative-district and
+    // ri-level terms. Search spelling/location variants, then rely on the
+    // address, completion-year, and household checks below before using data.
     const regionParts = region.split(/\s+/).filter(Boolean);
     const umdParts = umd.split(/\s+/).filter(Boolean);
-    const queries = [
-      [region, umd, name],
-      [[...regionParts.slice(0, -1), umdParts[0]].filter(Boolean).join(' '), name],
-      [region, umdParts[0], name],
-      [umdParts[0], name],
-      [name],
-    ].map((parts) => parts.filter(Boolean).join(' ').trim()).filter(Boolean);
+    const nameVariants = new Set([name]);
+    const buildingSuffix = /(?:제?\d{1,4}동|[A-Z]동)(?:[\s,·~∼\-]*(?:제?\d{1,4}동|[A-Z]동))*$/i;
+    for (const candidateName of [...nameVariants]) {
+      const withoutBuildings = candidateName.replace(buildingSuffix, '').trim();
+      if (withoutBuildings && withoutBuildings !== candidateName) nameVariants.add(withoutBuildings);
+    }
+    for (const candidateName of [...nameVariants]) {
+      nameVariants.add(candidateName.replace(/에스[\s-]*클래스/gi, 'S클래스'));
+      nameVariants.add(candidateName.replace(/에스[\s-]*클래스/gi, 'S-클래스'));
+      nameVariants.add(candidateName.replace(/S[\s-]*클래스/gi, '에스클래스'));
+    }
+    const locations = [
+      [region, umd],
+      [[...regionParts.slice(0, -1), umdParts[0]].filter(Boolean).join(' ')],
+      [region, umdParts[0]],
+      [umdParts[0]],
+      [],
+    ];
+    const queries = locations.flatMap((location) => [...nameVariants].map((candidateName) =>
+      [...location, candidateName].filter(Boolean).join(' ').trim(),
+    ));
     const searched = new Map();
-    for (const queryText of [...new Set(queries)]) {
+    for (const queryText of [...new Set(queries)].slice(0, 12)) {
       const search = await callTool(1, 'search_apartments', { query: queryText });
       for (const candidate of Array.isArray(search?.results) ? search.results : []) {
         if (candidate?.danji_id) searched.set(candidate.danji_id, candidate);
       }
-      if (findAreaCandidates([...searched.values()], region).length) break;
+      const localCandidates = findAreaCandidates([...searched.values()], region);
+      if (localCandidates.some((candidate) => normalize(candidate.name) === normalize(name))) break;
     }
     const areaCandidates = findAreaCandidates([...searched.values()], region);
     if (!areaCandidates.length) return Response.json({ error: 'apartment_not_found' }, { status: 404 });
