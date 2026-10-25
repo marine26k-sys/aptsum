@@ -6701,6 +6701,55 @@ function placeComplexSchools(wrapper){
 
 const nearbySchoolCache=new Map();
 const richgoSchoolCache=new Map();
+const richgoComplexInfoCache=new Map();
+async function loadRichgoComplexInfo(d,lawd){
+  const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+  const expectedYear=complexCompletionYear(d)||'';
+  const expectedHouseholds=d.hh?.hhcnt||'';
+  const key=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
+  if(!richgoComplexInfoCache.has(key)){
+    const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
+    richgoComplexInfoCache.set(key,fetch(`/api/richgo-complex-info?${qs}`).then(async response=>{
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||'complex_info_unavailable');
+      return data;
+    }).catch(error=>{richgoComplexInfoCache.delete(key);throw error;}));
+  }
+  return richgoComplexInfoCache.get(key);
+}
+function openRichgoComplexInfo(d,lawd){
+  const dialog=document.createElement('dialog');
+  dialog.setAttribute('aria-label',`${d.name} 단지 정보`);
+  dialog.style.cssText='width:calc(100vw - 28px);max-width:620px;max-height:min(82dvh,760px);padding:0;border:1px solid #dce5ee;border-radius:18px;background:#fff;color:#1d2939;box-shadow:0 18px 60px rgba(15,43,61,.28);overflow:auto';
+  const style=document.createElement('style');
+  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.46)}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}.richgo-info-item{min-width:0}.richgo-info-label{display:block;margin-bottom:5px;color:#788392;font-size:13px}.richgo-info-value{display:block;color:#172b3d;font-size:16px;font-weight:750;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-grid{gap:12px 10px}.richgo-info-value{font-size:14px}}';
+  dialog.classList.add('richgo-info-dialog');
+  const header=document.createElement('header');
+  header.style.cssText='position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;background:#fff;border-bottom:1px solid #e7edf2';
+  const title=document.createElement('div');title.innerHTML=`<div style="color:#758292;font-size:13px;font-weight:650">${esc(d.name)}</div><div style="margin-top:2px;font-size:21px;font-weight:900">단지 정보</div>`;
+  const close=document.createElement('button');close.type='button';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');close.style.cssText='flex:none;padding:8px 12px;border:1px solid #dce5ee;border-radius:10px;background:#f8fafc;color:#26384a;font-weight:750;cursor:pointer';close.onclick=()=>dialog.close();
+  header.append(title,close);
+  const body=document.createElement('div');body.style.cssText='padding:18px';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
+  dialog.append(style,header,body);document.body.append(dialog);
+  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  dialog.showModal();close.focus();
+  loadRichgoComplexInfo(d,lawd).then(info=>{
+    if(!dialog.isConnected)return;
+    const address=info.address||{},parking=info.parking||{};
+    const fields=[];
+    if(address.road)fields.push(['도로명 주소',address.road]);
+    if(address.jibun)fields.push(['지번 주소',address.jibun]);
+    if(info.constructDate)fields.push(['준공일',String(info.constructDate).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1.$2.$3')]);
+    if(info.floorAreaRatioPct!=null||info.buildingCoveragePct!=null)fields.push(['용적률 · 건폐율',`${info.floorAreaRatioPct!=null?`${Number(info.floorAreaRatioPct).toLocaleString()}%`:'-'} · ${info.buildingCoveragePct!=null?`${Number(info.buildingCoveragePct).toLocaleString()}%`:'-'}`]);
+    if(info.households!=null)fields.push(['세대수',`${Number(info.households).toLocaleString()}세대`]);
+    if(parking.total!=null)fields.push(['주차대수 (세대당)',`${Number(parking.total).toLocaleString()}대${parking.per_household!=null?` (${Number(parking.per_household).toLocaleString()}대)` : ''}`]);
+    if(info.heating)fields.push(['난방',info.heating]);
+    if(info.entranceType)fields.push(['현관구조',info.entranceType]);
+    if(info.builder)fields.push(['시공사',info.builder]);
+    body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div><div style="margin-top:18px;padding-top:12px;border-top:1px solid #edf1f5;color:#8290a0;font-size:11px;line-height:1.6">리치고 단지 정보 · 관리사무소 전화번호는 제공 항목에 포함되지 않습니다.</div>`;
+  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'리치고 검색 후보의 단지명·연차·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
+}
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
   if(!complexCoordinatePromise)complexCoordinatePromise=fetch('/data/complex-coordinates.json',{cache:'force-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -7024,7 +7073,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name)?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
+      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexInfoButton" aria-label="${esc(d.name)} 단지 정보 보기" title="단지 정보 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -7046,6 +7095,7 @@ function renderComplex(d){
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  document.getElementById('complexInfoButton').onclick=()=>openRichgoComplexInfo(d,d.lawd||d.splitLawd||sel.value);
   if(!d.stationWalkLoaded){
     const stationLawd=d.lawd||d.splitLawd||sel.value;
     const naverName=naverNameOf(stationLawd,d.name,d.umd);
