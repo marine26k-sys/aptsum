@@ -3390,7 +3390,7 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
 // 2026.10 18→19: 운영자 제공 10/4 엑셀의 누락 세대수 보완, 이전 미조회 캐시 갱신
-const HH_CACHE_VER = 22;
+const HH_CACHE_VER = 23;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -6748,7 +6748,7 @@ function openRichgoComplexInfo(d,lawd){
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
     body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
-  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'리치고 검색 후보의 단지명·연차·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
+  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'검색된 단지명·준공연도·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
@@ -7051,7 +7051,7 @@ async function loadComplexSchools(panel,d,lawd){
         const rich=richByName.get(normSchool(row.name));
         if(!rich?.grade)return row;
         enriched++;
-        return {...row,grade:rich.grade,rank:rich.rank||row.rank,source:'리치고'};
+        return {...row,grade:rich.grade,rank:rich.rank||row.rank};
       });
     }else if(!rows.length&&richSchools.length){
       rows=richSchools;

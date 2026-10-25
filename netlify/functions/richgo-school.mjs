@@ -74,7 +74,6 @@ function normalizeSchool(row) {
     type: '',
     grade: row.grade || null,
     rank: row.sd_rank || null,
-    source: '리치고',
   };
 }
 
@@ -114,7 +113,6 @@ export default async (request) => {
     const { candidate: apartment } = verified[0];
     const district = await callTool(3, 'get_school_district', { danji_id: apartment.danji_id, per_level: 10 });
     const data = {
-      source: '리치고(Richgo) m.richgo.ai',
       danjiId: apartment.danji_id,
       name: apartment.name,
       address: apartment.address || '',

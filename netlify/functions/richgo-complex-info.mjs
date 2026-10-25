@@ -127,7 +127,6 @@ export default async (request) => {
     if (best.length !== 1) return Response.json({ error: 'apartment_ambiguous' }, { status: 409 });
     const { candidate, overview } = best[0];
     return Response.json({
-      source: '리치고(Richgo) m.richgo.ai',
       danjiId: candidate.danji_id,
       name: overview.name || candidate.name,
       address: overview.address || {},

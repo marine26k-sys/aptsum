@@ -220,7 +220,14 @@ function matchKapt(list, name) {
     if (!candidates.has(k)) candidates.set(k, []);
     candidates.get(k).push(item);
   }
-  let hits = matchNaverTradeNames(candidates, name);
+  // Trade names can append building numbers to a whole complex (e.g. 201동202동).
+  // Prefer an exact K-apt complex-name match after removing only that trailing
+  // building suffix; keep the original broad matching path as a fallback.
+  const withoutBuildingSuffix = String(name || '').replace(/(?:제?\d{1,4}동|[A-Z]동)(?:[\s,·~∼\-]*(?:제?\d{1,4}동|[A-Z]동))*$/i, '').trim();
+  const exactBuildingBase = withoutBuildingSuffix && withoutBuildingSuffix !== name
+    ? candidates.get(naverNameKey(withoutBuildingSuffix))
+    : null;
+  let hits = exactBuildingBase?.length ? exactBuildingBase : matchNaverTradeNames(candidates, name);
   const nonRental = hits.filter(a => !a.kaptName.includes("임대"));
   if (nonRental.length) hits = nonRental;
   // 정규화로 동일해진 별개 관리단지는 자동 선택하지 않는다.
