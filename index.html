@@ -7087,8 +7087,8 @@ function renderComplex(d){
     </div>
 
     <div class="sec" style="padding-top:14px;padding-bottom:14px">
-      <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
-        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 펼쳐보기</summary>
+      <details id="complexNearbySchools" open style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 접기</summary>
         <div class="nearby-school-body" style="padding-top:8px"></div>
       </details>
     </div>
@@ -7113,6 +7113,7 @@ function renderComplex(d){
   }
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교·지하철 · 접기':'주변 학교·지하철 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
+  loadComplexSchools(schoolPanel,d,schoolLawd);
   placeComplexSchools(schoolPanel.parentElement);
   document.getElementById('complexMapButton').onclick=async event=>{
     const button=event.currentTarget;button.disabled=true;
