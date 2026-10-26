@@ -7071,6 +7071,7 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       const maps=await loadComplexMapSDK();
       if(!maps.services?.Places)throw Error('places unavailable');
       const naverPoint=await findNaverComplexCoordinate(d,lawd,alias);
+      if(!body.isConnected)return;
       if(naverPoint){
         const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:naverPoint.lat,lng:naverPoint.lng});
         if(!body.isConnected)return;
@@ -7083,11 +7084,13 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       if(!body.isConnected)return;
       const {naverNameKey}=await import('/shared/naver-name-match.mjs');
       const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
+      if(!body.isConnected)return;
       if(!place){document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
       const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:Number(place.y),lng:Number(place.x)});
+      if(!body.isConnected)return;
       showMapButton();
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:schoolRows,nearby:[]});
-    }catch(error){document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
+    }catch(error){if(!body.isConnected)return;document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
     finally{button.disabled=false;}
   };
   // 좌표가 없는 단지도 별도 버튼 없이 자동으로 카카오 장소 검색을 시작한다.
