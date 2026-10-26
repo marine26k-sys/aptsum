@@ -1586,8 +1586,12 @@ async function shareCurrent(){
 
 // ── 즐겨찾기 ──
 const RECENT_COMPLEX_MAX = 7;
+function isDongOnlyTradeName(item){
+  const normalize=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+  return !!(item?.apt&&item?.umd&&normalize(item.apt)===normalize(item.umd));
+}
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100&&!isDongOnlyTradeName({apt:x.name,umd:x.umd})).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
   if(!d||!d.name)return;
@@ -5263,7 +5267,7 @@ async function subwayRowsForRegion(lawd,maxWalk){
     const bandMaps = {};
     let allAptNames = [], aptUmd = new Map();
     try{
-      const trades = await ensureMonths(lawd, 73);
+      const trades = (await ensureMonths(lawd, 73)).filter(t=>!isDongOnlyTradeName(t));
       allAptNames = [...new Set(trades.map(t=>t.apt))];
       trades.forEach(t=>{ if(!aptUmd.has(t.apt)) aptUmd.set(t.apt, t.umd); });
       AREA_BANDS.forEach(b => { bandMaps[b.key] = averageByAreaCurrentMonth(trades, b.min, b.max); });
@@ -5405,7 +5409,14 @@ function renderSubway(d){
 // 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
 // (지역 복수 선택 통합 랭킹에서도 동일 로직을 써야 해서 2026.07 공용 함수로 분리)
 function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
-  return aptsumComplexIdentity.mergeSources(raw,rawP,NAVER_NAMES[lawd]||{},lawd);
+  // 국토부 원문에 단지명 대신 법정동명만 기록된 거래는 이름·세대수 매칭이 불가능하다.
+  // 짧은 문자열 유사 매칭으로 동명의 K-apt 단지(예: 봉천동 → 봉천동아제2)에 붙는 일을 막고
+  // 확인 가능한 단지명 거래만 전 탭의 분석·랭킹에 사용한다.
+  return aptsumComplexIdentity.mergeSources(
+    (raw||[]).filter(t=>!isDongOnlyTradeName(t)),
+    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)),
+    NAVER_NAMES[lawd]||{},lawd
+  );
 }
 
 let complexSearchIndex=null;
