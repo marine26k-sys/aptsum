@@ -132,12 +132,33 @@ const NAVER_DENY = new Set([
 function naverLookup(nv, lawd, name, umd = null, expectedHouseholds = null) {
   if (!nv) return null;
   const n = String(name || "").replace(/\s/g, "");
+  // A confirmed mapping-table alias is an exact identity match; don't let an older fuzzy-match deny rule
+  // suppress this verified record.
+  const masterHits = Object.values(nv.items || {}).filter((entry) => entry?.masterId
+    && (umd == null || entry.umd === umd)
+    && String(entry.name || "").replace(/\s/g, "") === n);
+  if (masterHits.length === 1) return masterHits[0];
   if (NAVER_DENY.has(`${lawd}|${n}`)) return null;
   // 구형 keyIndex는 이전 정규화 규칙으로 생성되어 공통 비교 함수로 재검증한다.
   return findNaverComplex(nv.items, n, { dong: umd || null, expectedHouseholds });
 }
 function applyFallback(fallback, lawd, name, result, umd = null) {
   const hit = naverLookup(fallback, lawd, name, umd, result?.hhcnt ?? null);
+  // The operator's confirmed mapping file is identity-linked by canonical complex name and legal dong.
+  // Its verified values take precedence over a conflicting fuzzy K-apt candidate.
+  if (hit?.masterId) {
+    const base = (result && result.found) ? result : { found: true, name };
+    const out = { ...base, found: true, name, hhcnt: hit.hh };
+    if (hit.dongCnt != null) out.dongCnt = hit.dongCnt;
+    if (hit.far != null) out.far = hit.far;
+    if (hit.bcr != null) out.bcr = hit.bcr;
+    if (hit.built) {
+      out.built = hit.built;
+      const [year, month] = String(hit.built).split('.');
+      if (year && month) out.useDate = `${year}${month.padStart(2, '0')}01`;
+    }
+    return out;
+  }
   // K-apt 정보는 유지하고, 같은 세대수로 연결된 네이버 보조 지표만 보완한다.
   if(result && result.found && result.hhcnt>0){
     if(!(hit && hit.hh === result.hhcnt))return result;
