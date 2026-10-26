@@ -7063,6 +7063,7 @@ function attachRegionalSchoolCoordinates(rows,items){
 }
 function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
   const button=document.createElement('button');button.type='button';
+  const showMapButton=()=>{const headerButton=document.getElementById('complexMapButton');if(headerButton){headerButton.hidden=false;headerButton.style.display='inline-flex';}};
   const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');body.prepend(status);
   button.onclick=async()=>{
     button.disabled=true;status.textContent='단지 위치를 확인하는 중…';
@@ -7073,6 +7074,7 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       if(naverPoint){
         const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:naverPoint.lat,lng:naverPoint.lng});
         if(!body.isConnected)return;
+        showMapButton();
         button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:naverPoint.lat,lng:naverPoint.lng,schools:schoolRows,nearby:[]});
         return;
       }
@@ -7083,6 +7085,7 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
       if(!place){document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
       const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:Number(place.y),lng:Number(place.x)});
+      showMapButton();
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:schoolRows,nearby:[]});
     }catch(error){document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
     finally{button.disabled=false;}
@@ -7139,7 +7142,7 @@ async function loadComplexSchools(panel,d,lawd){
     const coordinateIdentity={...d,hh:{...(d.hh||{}),hhcnt:d.hh?.hhcnt||matched?.hh||0}};
     const naverPoint=await findNaverComplexCoordinate(coordinateIdentity,lawd,naverNameOf(lawd,d.name,d.umd));
     const mapPoint=naverPoint||(validSchoolCoordinate(matched)?matched:null);
-    if(mapPoint)addComplexSchoolMap(body,{...(matched||{}),name:d.name,lat:mapPoint.lat,lng:mapPoint.lng,schools:rows});
+    if(mapPoint){const mapButton=document.getElementById('complexMapButton');if(mapButton){mapButton.hidden=false;mapButton.style.display='inline-flex';}addComplexSchoolMap(body,{...(matched||{}),name:d.name,lat:mapPoint.lat,lng:mapPoint.lng,schools:rows});}
     else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd),rows);
     panel.dataset.loaded='1';
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
@@ -7160,7 +7163,7 @@ function renderComplex(d){
       </div>
       <h2 style="padding-right:70px;text-align:left">${esc(complexName)}</h2>
       <div style="display:flex;justify-content:flex-start;align-items:center;gap:8px;margin:8px 0 10px">
-        <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);font-size:12px;font-weight:800;cursor:pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6 3 6-3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg><span>지도</span></button>
+        <button type="button" id="complexMapButton" hidden aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:none;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);font-size:12px;font-weight:800;cursor:pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6 3 6-3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg><span>지도</span></button>
         <button type="button" id="complexInfoButton" hidden aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:none;align-items:center;justify-content:center;height:36px;padding:0 12px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button>
       </div>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
