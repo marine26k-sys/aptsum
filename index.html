@@ -6652,6 +6652,9 @@ function complexDynamicHTML(){
       <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
       </details>
     </div>` : ''}
+    <div class="sec" style="padding-top:0">
+      <button type="button" id="complexInfoButton" hidden aria-label="${esc(d.name)} 단지 정보 펼쳐보기" title="단지 정보 펼쳐보기" style="display:none;width:100%;padding:11px 14px;border:1px solid var(--teal-light);border-radius:12px;background:var(--teal-light-soft);color:var(--teal-dark);font-size:13px;font-weight:800;text-align:left;cursor:pointer">▸ 단지 정보 · 펼쳐보기</button>
+    </div>
 
     <div class="sec">
       <h3>최근 ${priceLabel} 거래 내역</h3>
@@ -6713,6 +6716,12 @@ function setComplexView(v){
   const box = document.getElementById('complexDynamic');
   const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
+  const infoButton=document.getElementById('complexInfoButton');
+  if(infoButton&&lastData){
+    const infoLawd=lastData.lawd||lastData.splitLawd||sel.value;
+    infoButton.onclick=()=>openRichgoComplexInfo(lastData,infoLawd);
+    checkRichgoComplexInfoAvailability(lastData,infoLawd,infoButton);
+  }
   placeComplexSchools(schoolWrap);
 }
 
@@ -7166,8 +7175,7 @@ function renderComplex(d){
       </div>
       <h2 style="padding-right:70px;text-align:left">${esc(complexName)}</h2>
       <div style="display:flex;justify-content:flex-start;align-items:center;gap:8px;margin:8px 0 10px">
-        <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);font-size:12px;font-weight:800;cursor:pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6 3 6-3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg><span>지도</span></button>
-        <button type="button" id="complexInfoButton" hidden aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:none;align-items:center;justify-content:center;height:36px;padding:0 12px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button>
+        <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="지도 보기" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6 3 6-3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button>
       </div>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
