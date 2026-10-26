@@ -6732,6 +6732,24 @@ async function loadRichgoComplexInfo(d,lawd){
   }
   return richgoComplexInfoCache.get(key);
 }
+function richgoComplexInfoHasFields(info){
+  const address=info?.address||{},parking=info?.parking||{};
+  return Boolean(address.road||address.jibun||info?.constructDate||info?.floorAreaRatioPct!=null||info?.buildingCoveragePct!=null||info?.households!=null||parking.total!=null||info?.heating||info?.entranceType||info?.builder);
+}
+function isMissingRichgoComplexInfo(error){
+  return ['apartment_not_found','apartment_identity_mismatch','apartment_ambiguous'].includes(error?.message);
+}
+function setRichgoComplexInfoButton(button,visible){
+  button.hidden=!visible;button.style.display=visible?'inline-flex':'none';
+}
+function checkRichgoComplexInfoAvailability(d,lawd,button){
+  loadRichgoComplexInfo(d,lawd).then(info=>{
+    if(button.isConnected&&lastData===d)setRichgoComplexInfoButton(button,richgoComplexInfoHasFields(info));
+  }).catch(error=>{
+    // An upstream timeout is temporary; only hide the control for confirmed missing or unsafe matches.
+    if(button.isConnected&&lastData===d)setRichgoComplexInfoButton(button,!isMissingRichgoComplexInfo(error));
+  });
+}
 function openRichgoComplexInfo(d,lawd){
   const dialog=document.createElement('dialog');
   dialog.setAttribute('aria-label',`${d.name} 단지 정보`);
@@ -6776,10 +6794,21 @@ function openRichgoComplexInfo(d,lawd){
     if(info.heating)fields.push(['난방',info.heating]);
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
+    if(!fields.length){
+      const button=document.getElementById('complexInfoButton');if(button&&lastData===d)setRichgoComplexInfoButton(button,false);
+      dialog.close();return;
+    }
     body.innerHTML=fields.length
       ? `<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`
       : '<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">표시할 단지 정보가 없습니다.</div>';
-  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'검색된 단지명·준공연도·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':error.message==='apartment_not_found'?'이 단지의 상세 정보 자료를 찾지 못했습니다. 단지 연결 정보를 확인해 주세요.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
+  }).catch(error=>{
+    if(isMissingRichgoComplexInfo(error)){
+      const button=document.getElementById('complexInfoButton');if(button&&lastData===d)setRichgoComplexInfoButton(button,false);
+      if(dialog.isConnected)dialog.close();
+      return;
+    }
+    if(dialog.isConnected)body.innerHTML='<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>';
+  });
 }
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
@@ -7115,7 +7144,7 @@ function renderComplex(d){
         <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name, lastData.umd||'')" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name,d.umd||'')?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(complexName)} <button type="button" id="complexInfoButton" aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
+      <h2 style="padding-right:70px;text-align:left">${esc(complexName)} <button type="button" id="complexInfoButton" hidden aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:none;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -7137,7 +7166,9 @@ function renderComplex(d){
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
-  document.getElementById('complexInfoButton').onclick=()=>openRichgoComplexInfo(d,d.lawd||d.splitLawd||sel.value);
+  const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
+  infoButton.onclick=()=>openRichgoComplexInfo(d,infoLawd);
+  checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
   if(!d.stationWalkLoaded){
     const stationLawd=d.lawd||d.splitLawd||sel.value;
     const naverName=naverNameOf(stationLawd,d.name,d.umd);
