@@ -6959,7 +6959,7 @@ function addComplexSchoolMap(body,matched){
       map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
       const bounds=new maps.LatLngBounds();
       const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706',역:'#0F766E'};
-      const nearestSchools=['초','중','고'].map(level=>(matched.schools||[]).filter(x=>x.level===level&&validSchoolCoordinate(x)&&Number(x.distance)<=1800).sort((a,b)=>Number(a.distance)-Number(b.distance))[0]).filter(Boolean);
+      const nearestSchools=['초','중','고'].flatMap(level=>(matched.schools||[]).filter(x=>x.level===level&&validSchoolCoordinate(x)&&Number(x.distance)<=1800).sort((a,b)=>Number(a.distance)-Number(b.distance)).slice(0,3));
       const points=[{...matched,level:'단지'},...nearestSchools];
       const stations=await searchNearbySubwayStations(maps,matched);
       const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
