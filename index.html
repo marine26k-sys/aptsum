@@ -1625,31 +1625,32 @@ function openRelatedComplex(lawd,name,umd='',key=''){
   input.dataset.pickedLawd=lawd;input.dataset.pickedName=displayName;input.dataset.pickedApt=name;if(key)input.dataset.pickedKey=key;search();
 }
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
-function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
-function toggleFav(lawd, name){
+function isFav(lawd, name, umd=''){ return getFavs().some(x=>x.lawd===lawd && x.name===name && (!umd||!x.umd||x.umd===umd)); }
+function toggleFav(lawd, name, umd=lastData?.name===name?lastData.umd||'':''){
   let favs = getFavs();
-  if(isFav(lawd,name)){
-    favs = favs.filter(x=>!(x.lawd===lawd && x.name===name));
-    clearFavSeen(lawd, name);
+  const existing=favs.find(x=>x.lawd===lawd&&x.name===name&&(!umd||!x.umd||x.umd===umd));
+  if(existing){
+    favs = favs.filter(x=>x!==existing);
+    clearFavSeen(lawd, name, existing.umd||umd);
   } else {
     const label = [...sel.options].find(o=>o.value===lawd)?.textContent || '';
-    favs.unshift({lawd, name, umd:lastData?.name===name?lastData.umd||'':'', label});
+    favs.unshift({lawd, name, umd, label});
     favs = favs.slice(0,10);
     // 방금 추가한 즐겨찾기는 "지금까지의 거래건수"를 기준선으로 저장 → 다음 방문부터만 신규 거래 배지 표시
-    favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{});
+    favTradeCount(lawd, name, umd).then(n=>setFavSeenCount(lawd, name, n, umd)).catch(()=>{});
   }
   try{ localStorage.setItem('apc:favs', JSON.stringify(favs)); }catch(e){}
   renderFavs();
   const btn = document.getElementById('favBtn');
-  if(btn) btn.textContent = isFav(lawd,name)? '★':'☆';
+  if(btn) btn.textContent = isFav(lawd,name,umd)? '★':'☆';
 }
 function renderFavs(){
   const favs = getFavs();
   const el = document.getElementById('favs');
   el.innerHTML = favs.map(x=>{
-    const nb = favBadges[favKey(x.lawd,x.name)];
+    const nb = favBadges[favKey(x.lawd,x.name,x.umd||'')];
     const badge = nb>0 ? `<span class="nh">신규 ${nb}</span>` : '';
-    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(complexDisplayName(x.lawd,x.name,x.umd))}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
+    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}','${esc(x.umd||'')}')">★ ${esc(complexDisplayName(x.lawd,x.name,x.umd))}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
   }).join('');
   const dashBtn = document.getElementById('favDashBtn');
   if(dashBtn) dashBtn.style.display = favs.length ? 'block' : 'none';
@@ -1659,7 +1660,7 @@ function renderFavs(){
 // 등락 랭킹과 동일한 buildRepRows(대표 평형 최근 2개월 vs 이전 2개월 평균) 로직을 재사용해 일관성 유지.
 // 이미 refreshFavBadges()가 로드 시 각 즐겨찾기의 12개월치를 캐시해두므로 대부분 추가 API 호출 없이 즉시 뜬다.
 function favDashCard(f, inner){
-  return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}')">
+  return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}','${esc(f.umd||'')}')">
     <div class="fdcard-hd"><b>${esc(complexDisplayName(f.lawd,f.name,f.umd))}</b><span class="lb">${esc(f.label)}</span></div>
     <div>${inner}</div>
   </div>`;
@@ -1687,7 +1688,8 @@ async function renderFavDash(){
       try{ itemsP = await ensureMonthsP(f.lawd, 12); }catch(e){} // 매매 실거래가 없는 분양권 전용 즐겨찾기 단지도 요약에 반영
       await ensureNaverNames(f.lawd);
       const merged = mergeTradeAndPresaleForRanking(items,itemsP,f.lawd);
-      const m = matchComplex(merged, f.name, f.lawd);
+      const lookupName=f.umd?`${f.name} [${f.umd}]`:f.name;
+      const m = matchComplex(merged, lookupName, f.lawd);
       if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
       const rows = buildRepRows(m.hits, months);
       if(!rows.length){
@@ -1720,38 +1722,40 @@ async function renderFavDash(){
     `);
   }).join('');
 }
-function favGo(lawd, name){
-  openRelatedComplex(lawd, name);
-  favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
+function favGo(lawd, name, umd=''){
+  openRelatedComplex(lawd, name, umd);
+  favTradeCount(lawd, name, umd).then(n=>setFavSeenCount(lawd, name, n, umd)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
 }
 // ── 즐겨찾기 "신규 거래" 배지: 최근 12개월 거래건수를 마지막 확인 시점과 비교 ──
-const favBadges = {}; // "lawd|name" → 신규 거래 건수
-function favKey(lawd, name){ return lawd+'|'+name; }
+const favBadges = {}; // "lawd|name|umd" → 신규 거래 건수
+function favKey(lawd, name, umd=''){ return lawd+'|'+name+'|'+umd; }
 function getFavSeen(){ try{ return JSON.parse(localStorage.getItem('apc:favSeen')||'{}'); }catch(e){ return {}; } }
-function setFavSeenCount(lawd, name, n){
+function setFavSeenCount(lawd, name, n, umd=''){
   try{
     const seen = getFavSeen();
-    seen[favKey(lawd,name)] = n;
+    seen[favKey(lawd,name,umd)] = n;
     localStorage.setItem('apc:favSeen', JSON.stringify(seen));
   }catch(e){}
-  delete favBadges[favKey(lawd,name)];
+  delete favBadges[favKey(lawd,name,umd)];
 }
-function clearFavSeen(lawd, name){
+function clearFavSeen(lawd, name, umd=''){
   try{
     const seen = getFavSeen();
-    delete seen[favKey(lawd,name)];
+    delete seen[favKey(lawd,name,umd)];
+    if(!umd)delete seen[favKey(lawd,name)];
     localStorage.setItem('apc:favSeen', JSON.stringify(seen));
   }catch(e){}
-  delete favBadges[favKey(lawd,name)];
+  delete favBadges[favKey(lawd,name,umd)];
 }
-async function favTradeCount(lawd, name){
+async function favTradeCount(lawd, name, umd=''){
   const items = await ensureMonths(lawd, 12); // 층수 필터와 무관하게 표준 12개월 기준으로 비교
   let itemsP = [];
   try{ itemsP = await ensureMonthsP(lawd, 12); }catch(e){} // 분양권 전용(매매 실거래 없는) 단지도 신규 거래 배지 대상에 포함
   await ensureNaverNames(lawd);
-  const m = matchComplex(items, name, lawd);
-  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, name, lawd).hits || []).length;
-  const mp = matchComplex(itemsP, name, lawd);
+  const lookupName=umd?`${name} [${umd}]`:name;
+  const m = matchComplex(items, lookupName, lawd);
+  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, lookupName, lawd).hits || []).length;
+  const mp = matchComplex(itemsP, lookupName, lawd);
   return mp.hits ? mp.hits.length : 0;
 }
 // 재방문 시(앱 로드 시) 즐겨찾기별로 마지막 확인 이후 늘어난 거래건수를 조회해 배지 표시
@@ -1761,10 +1765,10 @@ function refreshFavBadges(){
   Promise.all([...new Set(favs.map(f=>f.lawd).filter(Boolean))].map(ensureNaverNames)).then(()=>renderFavs()).catch(()=>{});
   const seen = getFavSeen();
   favs.forEach(f=>{
-    favTradeCount(f.lawd, f.name).then(n=>{
-      const key = favKey(f.lawd, f.name);
-      const prev = seen[key];
-      if(prev===undefined){ setFavSeenCount(f.lawd, f.name, n); return; } // 최초 기준선
+    favTradeCount(f.lawd, f.name, f.umd||'').then(n=>{
+      const key = favKey(f.lawd, f.name, f.umd||'');
+      const prev = seen[key] ?? (!f.umd ? seen[favKey(f.lawd,f.name)] : undefined);
+      if(prev===undefined){ setFavSeenCount(f.lawd, f.name, n, f.umd||''); return; } // 최초 기준선
       const diff = n - prev;
       if(diff > 0){ favBadges[key] = diff; renderFavs(); }
     }).catch(()=>{}); // 배지는 부가 기능이므로 조회 실패는 조용히 무시
@@ -5942,8 +5946,8 @@ async function runSearch(opts){
     pushView();
     saveLastRegionPref(lawd);
     // 즐겨찾기 단지를 방금 확인했으므로, "신규 거래" 배지 기준선을 지금 시점으로 갱신
-    if(d.mode==='complex' && isFav(lawd, d.name)){
-      favTradeCount(lawd, d.name).then(n=>{ setFavSeenCount(lawd, d.name, n); renderFavs(); }).catch(()=>{});
+    if(d.mode==='complex' && isFav(lawd, d.name, d.umd||'')){
+      favTradeCount(lawd, d.name, d.umd||'').then(n=>{ setFavSeenCount(lawd, d.name, n, d.umd||''); renderFavs(); }).catch(()=>{});
     }
     // 세대수는 표시용 부가 정보라 화면을 막지 않고 렌더링 이후 비동기로 채워 넣는다 (2026.07)
     attachHHCountsAsync(d, myToken, lawd);
@@ -6772,7 +6776,9 @@ function openRichgoComplexInfo(d,lawd){
     if(info.heating)fields.push(['난방',info.heating]);
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
-    body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
+    body.innerHTML=fields.length
+      ? `<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`
+      : '<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">표시할 단지 정보가 없습니다.</div>';
   }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'검색된 단지명·준공연도·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':error.message==='apartment_not_found'?'이 단지의 상세 정보 자료를 찾지 못했습니다. 단지 연결 정보를 확인해 주세요.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
@@ -7106,7 +7112,7 @@ function renderComplex(d){
   <div class="card">
     <div class="card-hd">
       <div style="position:absolute;top:12px;right:14px;display:flex;gap:6px">
-        <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name)?'★':'☆'}</button>
+        <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name, lastData.umd||'')" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name,d.umd||'')?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
       <h2 style="padding-right:70px;text-align:left">${esc(complexName)} <button type="button" id="complexInfoButton" aria-label="${esc(complexName)} 단지 정보 보기" title="단지 정보 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;height:34px;margin-left:4px;padding:0 10px;border:1px solid #7FD4D9;border-radius:10px;background:#f2fbfb;color:#00656b;font-size:12px;font-weight:800;cursor:pointer">단지 정보</button> <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>

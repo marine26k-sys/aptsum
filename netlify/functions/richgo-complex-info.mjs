@@ -93,11 +93,14 @@ export default async (request) => {
       [[...regionParts.slice(0, -1), umdParts[0]].filter(Boolean).join(' ')],
       [region, umdParts[0]],
       [umdParts[0]],
-      [],
     ];
-    const queries = locations.flatMap((location) => [...nameVariants].map((candidateName) =>
+    const contextualQueries = locations.flatMap((location) => [...nameVariants].map((candidateName) =>
       [...location, candidateName].filter(Boolean).join(' ').trim(),
     ));
+    const bareNameQueries = [...nameVariants];
+    const queryLimit = 12;
+    const contextualLimit = Math.max(0, queryLimit - bareNameQueries.length);
+    const queries = [...new Set([...contextualQueries.slice(0, contextualLimit), ...bareNameQueries])].slice(0, queryLimit);
     const searched = new Map();
     for (const queryText of [...new Set(queries)].slice(0, 12)) {
       const search = await callTool(1, 'search_apartments', { query: queryText });
@@ -105,7 +108,7 @@ export default async (request) => {
         if (candidate?.danji_id) searched.set(candidate.danji_id, candidate);
       }
       const localCandidates = findAreaCandidates([...searched.values()], region);
-      if (localCandidates.some((candidate) => normalize(candidate.name) === normalize(name))) break;
+      if (localCandidates.some((candidate) => [...nameVariants].some((candidateName) => normalize(candidate.name) === normalize(candidateName)))) break;
     }
     const areaCandidates = findAreaCandidates([...searched.values()], region);
     if (!areaCandidates.length) return Response.json({ error: 'apartment_not_found' }, { status: 404 });

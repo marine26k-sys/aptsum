@@ -62,9 +62,11 @@ function identityMatch(expected, overview, sourceName) {
 
 function normalizeSchool(row) {
   const level = row?.level === 'elementary' ? '초' : row?.level === 'middle' ? '중' : row?.level === 'high' ? '고' : '';
-  const distance = Number.isFinite(Number(row?.straight_distance_m))
+  // The page labels this value as a straight-line distance. Do not substitute
+  // walking distance when the direct measurement is absent.
+  const distance = row?.straight_distance_m != null && Number.isFinite(Number(row.straight_distance_m))
     ? Number(row.straight_distance_m)
-    : Number.isFinite(Number(row?.walk_distance_m)) ? Number(row.walk_distance_m) : null;
+    : null;
   if (!level || !row?.name || !Number.isFinite(distance)) return null;
   return {
     id: row.school_id || null,
