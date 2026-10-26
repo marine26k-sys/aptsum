@@ -6874,7 +6874,11 @@ function searchNearbySubwayStations(maps,center){
         if(route?.distance)row.walkDistance=route.distance;
         if(route?.duration)row.walkTime=Math.round(route.duration/60);
         return row;
-      })).then(resolve);
+      })).then(routedRows=>resolve(routedRows.sort((a,b)=>{
+        const distanceA=Number.isFinite(a.walkDistance)?a.walkDistance:a.distance;
+        const distanceB=Number.isFinite(b.walkDistance)?b.walkDistance:b.distance;
+        return distanceA-distanceB;
+      })));
     },{location:new maps.LatLng(center.lat,center.lng),radius:3000,sort:maps.services.SortBy.DISTANCE});
   });
 }
