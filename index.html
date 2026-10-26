@@ -1597,6 +1597,7 @@ function rememberRecentComplex(lawd,d){
   if(!d||!d.name)return;
   const requestedLawd=lawd||'';
   const isScopeCode=x=>/^(ALL:|CITYALL:)/.test(String(x||''));
+  const searchScope=isScopeCode(requestedLawd)?requestedLawd:'';
   // 통합 지역으로 검색해도 최근 기록에는 실제 거래가 속한 구 코드를 저장한다.
   const resultLawd=d.splitLawd || (d.lawd && !isScopeCode(d.lawd) ? d.lawd : '');
   lawd=resultLawd || (!isScopeCode(requestedLawd) ? requestedLawd : '');
@@ -1605,7 +1606,7 @@ function rememberRecentComplex(lawd,d){
   const rows=getRecentComplexes().filter(x=>!((x.lawd===lawd||x.lawd===requestedLawd)&&norm(x.name)===norm(d.name)&&norm(x.umd)===norm(d.umd)));
   const picked=document.getElementById('q');
   const key=picked?.dataset.pickedLawd===lawd&&picked.dataset.pickedApt===d.name?picked.dataset.pickedKey||'':'';
-  rows.unshift({lawd,name:d.name,umd:d.umd||'',key});
+  rows.unshift({lawd,name:d.name,umd:d.umd||'',key,...(searchScope?{scope:searchScope}:{})});
   try{localStorage.setItem('apc:recentComplexes',JSON.stringify(rows.slice(0,RECENT_COMPLEX_MAX)));}catch{}
   renderRecentComplexes();
 }
@@ -1618,15 +1619,15 @@ function renderRecentComplexes(){
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin:8px 0';header.textContent='최근 본 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('apc:recentComplexes');}catch{}renderRecentComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=regionNameByLawd(x.scope||x.lawd);button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'',x.scope||'');chips.append(button);});box.append(chips);
 }
-function openRelatedComplex(lawd,name,umd='',key=''){
+function openRelatedComplex(lawd,name,umd='',key='',scope=''){
   if(![...sel.options].some(o=>o.value===lawd))return;
   closeExpandedComplexMap();setMode('complex');sel.value=lawd;
   regionSel=[{lawd,name:[...sel.options].find(o=>o.value===lawd).textContent}];saveRegionSel();renderRegionChips();syncRegionPickBtn();
   const input=document.getElementById('q');const displayName=umd?`${name} [${umd}]`:name;input.value=displayName;
   ['pickedLawd','pickedName','pickedKey','pickedApt'].forEach(k=>delete input.dataset[k]);
-  input.dataset.pickedLawd=lawd;input.dataset.pickedName=displayName;input.dataset.pickedApt=name;if(key)input.dataset.pickedKey=key;search();
+  input.dataset.pickedLawd=lawd;input.dataset.pickedName=displayName;input.dataset.pickedApt=name;if(key)input.dataset.pickedKey=key;if(scope)input.dataset.recentScope=scope;else delete input.dataset.recentScope;search();
 }
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
 function isFav(lawd, name, umd=''){ return getFavs().some(x=>x.lawd===lawd && x.name===name && (!umd||!x.umd||x.umd===umd)); }
@@ -4984,6 +4985,7 @@ document.addEventListener('input', e=>{
       if(t.matches('#q')&&t.dataset.pickedName!==t.value.trim()){
         delete t.dataset.pickedName;delete t.dataset.pickedLawd;
         delete t.dataset.pickedKey;delete t.dataset.pickedApt;
+        delete t.dataset.recentScope;
       }
       acTimer = setTimeout(()=>acShow(t), 180);
     }
@@ -7194,7 +7196,7 @@ async function loadComplexSchools(panel,d,lawd){
   finally{delete panel.dataset.loading;}
 }
 function renderComplex(d){
-  closeExpandedComplexMap();rememberRecentComplex(sel.value,d);
+  closeExpandedComplexMap();d.recentScope ||= document.getElementById('q')?.dataset.recentScope||sel.value;rememberRecentComplex(d.recentScope,d);
   const complexName=complexDisplayName(d.lawd||d.splitLawd||sel.value,d.name,d.umd);
   selPy = -1;
   tradesShown = TRADES_PAGE_SIZE;
