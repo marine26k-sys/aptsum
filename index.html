@@ -6652,8 +6652,11 @@ function complexDynamicHTML(){
       <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
       </details>
     </div>` : ''}
-    <div class="sec" style="padding-top:0">
-      <button type="button" id="complexInfoButton" hidden aria-label="${esc(d.name)} 단지 정보 펼쳐보기" title="단지 정보 펼쳐보기" style="display:none;width:100%;padding:11px 14px;border:1px solid var(--teal-light);border-radius:12px;background:var(--teal-light-soft);color:var(--teal-dark);font-size:13px;font-weight:800;text-align:left;cursor:pointer">▸ 단지 정보 · 펼쳐보기</button>
+    <div class="sec" style="padding-top:14px">
+      <details id="complexInfoButton" hidden style="display:none;border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단지 정보 · 펼쳐보기</summary>
+        <div class="richgo-info-inline" style="padding-top:10px"></div>
+      </details>
     </div>
 
     <div class="sec">
@@ -6719,7 +6722,7 @@ function setComplexView(v){
   const infoButton=document.getElementById('complexInfoButton');
   if(infoButton&&lastData){
     const infoLawd=lastData.lawd||lastData.splitLawd||sel.value;
-    infoButton.onclick=()=>openRichgoComplexInfo(lastData,infoLawd);
+    infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(lastData,infoLawd,infoButton);};
     checkRichgoComplexInfoAvailability(lastData,infoLawd,infoButton);
   }
   placeComplexSchools(schoolWrap);
@@ -6759,7 +6762,7 @@ function isMissingRichgoComplexInfo(error){
   return ['apartment_not_found','apartment_identity_mismatch','apartment_ambiguous'].includes(error?.message);
 }
 function setRichgoComplexInfoButton(button,visible){
-  button.hidden=!visible;button.style.display=visible?'inline-flex':'none';
+  button.hidden=!visible;button.style.display=visible?'block':'none';
 }
 function checkRichgoComplexInfoAvailability(d,lawd,button){
   loadRichgoComplexInfo(d,lawd).then(info=>{
@@ -6768,6 +6771,36 @@ function checkRichgoComplexInfoAvailability(d,lawd,button){
     // An upstream timeout is temporary; only hide the control for confirmed missing or unsafe matches.
     if(button.isConnected&&lastData===d)setRichgoComplexInfoButton(button,!isMissingRichgoComplexInfo(error));
   });
+}
+function richgoComplexInfoFields(info){
+  const address=info?.address||{},parking=info?.parking||{},fields=[];
+  if(address.road)fields.push(['도로명 주소',address.road]);
+  if(address.jibun)fields.push(['지번 주소',address.jibun]);
+  if(info?.constructDate)fields.push(['준공일',String(info.constructDate).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1.$2.$3')]);
+  if(info?.floorAreaRatioPct!=null||info?.buildingCoveragePct!=null)fields.push(['용적률 · 건폐율',`${info.floorAreaRatioPct!=null?`${Number(info.floorAreaRatioPct).toLocaleString()}%`:'-'} · ${info.buildingCoveragePct!=null?`${Number(info.buildingCoveragePct).toLocaleString()}%`:'-'}`]);
+  if(info?.households!=null)fields.push(['세대수',`${Number(info.households).toLocaleString()}세대`]);
+  if(parking.total!=null)fields.push(['주차대수 (세대당)',`${Number(parking.total).toLocaleString()}대${parking.per_household!=null?` (${Number(parking.per_household).toLocaleString()}대)` : ''}`]);
+  if(info?.heating)fields.push(['난방',info.heating]);
+  if(info?.entranceType)fields.push(['현관구조',info.entranceType]);
+  if(info?.builder)fields.push(['시공사',info.builder]);
+  return fields;
+}
+async function loadRichgoComplexInfoInline(d,lawd,panel){
+  if(panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
+  const body=panel.querySelector('.richgo-info-inline');if(!body)return;
+  panel.dataset.loading='1';body.innerHTML='<div class="rng" role="status">단지 정보를 불러오는 중…</div>';
+  try{
+    const info=await loadRichgoComplexInfo(d,lawd);
+    if(!panel.isConnected||lastData!==d)return;
+    const fields=richgoComplexInfoFields(info);
+    if(!fields.length){setRichgoComplexInfoButton(panel,false);return;}
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${fields.map(([label,value])=>`<div style="min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff"><span style="display:block;margin-bottom:4px;color:var(--sub);font-size:11px">${esc(label)}</span><strong style="display:block;color:var(--ink);font-size:12px;line-height:1.45;overflow-wrap:anywhere">${esc(value)}</strong></div>`).join('')}</div>`;
+    panel.dataset.loaded='1';
+  }catch(error){
+    if(!panel.isConnected||lastData!==d)return;
+    if(isMissingRichgoComplexInfo(error)){setRichgoComplexInfoButton(panel,false);return;}
+    body.innerHTML='<div class="rng" role="status">단지 정보를 불러오지 못했습니다. 잠시 후 다시 펼쳐 주세요.</div>';
+  }finally{delete panel.dataset.loading;}
 }
 function openRichgoComplexInfo(d,lawd){
   const dialog=document.createElement('dialog');
@@ -7197,7 +7230,7 @@ function renderComplex(d){
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
-  infoButton.onclick=()=>openRichgoComplexInfo(d,infoLawd);
+  infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
   checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
   if(!d.stationWalkLoaded){
     const stationLawd=d.lawd||d.splitLawd||sel.value;
