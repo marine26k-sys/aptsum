@@ -6773,7 +6773,7 @@ function openRichgoComplexInfo(d,lawd){
     if(info.entranceType)fields.push(['현관구조',info.entranceType]);
     if(info.builder)fields.push(['시공사',info.builder]);
     body.innerHTML=`<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`;
-  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'검색된 단지명·준공연도·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
+  }).catch(error=>{if(dialog.isConnected)body.innerHTML=`<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">${error.message==='apartment_ambiguous'||error.message==='apartment_identity_mismatch'?'검색된 단지명·준공연도·세대수가 일치하지 않아 정보를 연결하지 않았습니다.':error.message==='apartment_not_found'?'이 단지의 상세 정보 자료를 찾지 못했습니다. 단지 연결 정보를 확인해 주세요.':'단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}</div>`;});
 }
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
