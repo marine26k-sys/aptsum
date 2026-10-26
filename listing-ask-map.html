@@ -66,6 +66,7 @@ import {REGIONS} from '/shared/regions.mjs';
 import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
 const $=s=>document.querySelector(s), grid=$('#grid'), period=$('#period');
 const state={view:'weekly',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
+const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/main/data/listing-ask-map.json';
 const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
 $('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
 function fmt(n){return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(1)+'%':'자료 없음'}
@@ -76,7 +77,8 @@ function snapshotItems(s){return Array.isArray(s?.items)?s.items:[]}
 function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+'T00:00:00Z');if(Number.isNaN(d.getTime()))return null;const monday=new Date(d);monday.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));const thursday=new Date(monday);thursday.setUTCDate(monday.getUTCDate()+3);const first=new Date(Date.UTC(thursday.getUTCFullYear(),thursday.getUTCMonth(),1));const firstThursday=new Date(first);firstThursday.setUTCDate(1+(4-first.getUTCDay()+7)%7);const week=1+Math.round((thursday-firstThursday)/604800000);const sunday=new Date(monday);sunday.setUTCDate(monday.getUTCDate()+6);return {key:monday.toISOString().slice(0,10),label:`${thursday.getUTCFullYear()}년 ${thursday.getUTCMonth()+1}월 ${week}주차`,range:`${monday.getUTCMonth()+1}/${monday.getUTCDate()}~${sunday.getUTCMonth()+1}/${sunday.getUTCDate()}`};}
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
-async function fetchJson(url){const r=await fetch(url,{credentials:'same-origin',cache:'default'});if(!r.ok)throw Error(String(r.status));return r.json()}
+async function fetchJson(url,options={}){const r=await fetch(url,{credentials:'same-origin',cache:'default',...options});if(!r.ok)throw Error(String(r.status));return r.json()}
+async function loadAskMap(){try{return await fetchJson(liveAskMapUrl,{cache:'no-cache'})}catch{return fetchJson('/data/listing-ask-map.json')}}
 function render(){
  const title=$('#title');title.textContent=state.asOf?(weekInfo(state.asOf)?.label||'호가 주간 평균'):'호가 주간 평균';
  $('#comparisonPeriod').textContent='중층 이상 최저매물 호가 비교';
@@ -93,8 +95,8 @@ function render(){
 }
 async function boot(){
  $('#updated').textContent='자료를 불러오는 중…';
- // GitHub Actions가 미리 계산해 정적 배포한 지도 데이터만 읽는다.
- const {regions=[],generatedAt}=await fetchJson('/data/listing-ask-map.json');
+ // GitHub Actions가 갱신한 main 브랜치 데이터를 읽어 Netlify 재배포를 기다리지 않는다.
+ const {regions=[],generatedAt}=await loadAskMap();
  for(const metric of regions){
   const lawd=String(metric.lawd||''),found=regionLookup.get(lawd);
   if(!found)continue;

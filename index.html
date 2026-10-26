@@ -1586,8 +1586,12 @@ async function shareCurrent(){
 
 // ── 즐겨찾기 ──
 const RECENT_COMPLEX_MAX = 7;
+function isDongOnlyTradeName(item){
+  const normalize=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,'');
+  return !!(item?.apt&&item?.umd&&normalize(item.apt)===normalize(item.umd));
+}
 function getRecentComplexes(){
-  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
+  try{const rows=JSON.parse(localStorage.getItem('apc:recentComplexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.lawd==='string'&&typeof x.name==='string'&&x.name.length<=100&&!isDongOnlyTradeName({apt:x.name,umd:x.umd})).slice(0,RECENT_COMPLEX_MAX):[];}catch{return [];}
 }
 function rememberRecentComplex(lawd,d){
   if(!d||!d.name)return;
@@ -1609,10 +1613,12 @@ function renderRecentComplexes(){
   const box=document.getElementById('recentComplexes');if(!box)return;
   box.replaceChildren();box.hidden=mode!=='complex';if(box.hidden)return;
   const rows=getRecentComplexes();if(!rows.length)return;
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>{if(mode==='complex')renderRecentComplexes();});
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin:8px 0';header.textContent='최근 본 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('apc:recentComplexes');}catch{}renderRecentComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=x.name+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';const region=[...sel.options].find(o=>o.value===x.lawd)?.textContent||x.lawd;button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+region;button.onclick=()=>openRelatedComplex(x.lawd,x.name,x.umd||'',x.key||'');chips.append(button);});box.append(chips);
 }
 function openRelatedComplex(lawd,name,umd='',key=''){
   if(![...sel.options].some(o=>o.value===lawd))return;
@@ -1623,31 +1629,32 @@ function openRelatedComplex(lawd,name,umd='',key=''){
   input.dataset.pickedLawd=lawd;input.dataset.pickedName=displayName;input.dataset.pickedApt=name;if(key)input.dataset.pickedKey=key;search();
 }
 function getFavs(){ try{ return JSON.parse(localStorage.getItem('apc:favs')||'[]'); }catch(e){ return []; } }
-function isFav(lawd, name){ return getFavs().some(x=>x.lawd===lawd && x.name===name); }
-function toggleFav(lawd, name){
+function isFav(lawd, name, umd=''){ return getFavs().some(x=>x.lawd===lawd && x.name===name && (!umd||!x.umd||x.umd===umd)); }
+function toggleFav(lawd, name, umd=lastData?.name===name?lastData.umd||'':''){
   let favs = getFavs();
-  if(isFav(lawd,name)){
-    favs = favs.filter(x=>!(x.lawd===lawd && x.name===name));
-    clearFavSeen(lawd, name);
+  const existing=favs.find(x=>x.lawd===lawd&&x.name===name&&(!umd||!x.umd||x.umd===umd));
+  if(existing){
+    favs = favs.filter(x=>x!==existing);
+    clearFavSeen(lawd, name, existing.umd||umd);
   } else {
     const label = [...sel.options].find(o=>o.value===lawd)?.textContent || '';
-    favs.unshift({lawd, name, label});
+    favs.unshift({lawd, name, umd, label});
     favs = favs.slice(0,10);
     // 방금 추가한 즐겨찾기는 "지금까지의 거래건수"를 기준선으로 저장 → 다음 방문부터만 신규 거래 배지 표시
-    favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{});
+    favTradeCount(lawd, name, umd).then(n=>setFavSeenCount(lawd, name, n, umd)).catch(()=>{});
   }
   try{ localStorage.setItem('apc:favs', JSON.stringify(favs)); }catch(e){}
   renderFavs();
   const btn = document.getElementById('favBtn');
-  if(btn) btn.textContent = isFav(lawd,name)? '★':'☆';
+  if(btn) btn.textContent = isFav(lawd,name,umd)? '★':'☆';
 }
 function renderFavs(){
   const favs = getFavs();
   const el = document.getElementById('favs');
   el.innerHTML = favs.map(x=>{
-    const nb = favBadges[favKey(x.lawd,x.name)];
+    const nb = favBadges[favKey(x.lawd,x.name,x.umd||'')];
     const badge = nb>0 ? `<span class="nh">신규 ${nb}</span>` : '';
-    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}')">★ ${esc(x.name)}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
+    return `<span class="chip" onclick="favGo('${esc(x.lawd)}','${esc(x.name)}','${esc(x.umd||'')}')">★ ${esc(complexDisplayName(x.lawd,x.name,x.umd))}<span style="font-weight:400;color:var(--sub)"> ${esc(x.label)}</span>${badge}</span>`;
   }).join('');
   const dashBtn = document.getElementById('favDashBtn');
   if(dashBtn) dashBtn.style.display = favs.length ? 'block' : 'none';
@@ -1657,8 +1664,8 @@ function renderFavs(){
 // 등락 랭킹과 동일한 buildRepRows(대표 평형 최근 2개월 vs 이전 2개월 평균) 로직을 재사용해 일관성 유지.
 // 이미 refreshFavBadges()가 로드 시 각 즐겨찾기의 12개월치를 캐시해두므로 대부분 추가 API 호출 없이 즉시 뜬다.
 function favDashCard(f, inner){
-  return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}')">
-    <div class="fdcard-hd"><b>${esc(f.name)}</b><span class="lb">${esc(f.label)}</span></div>
+  return `<div class="fdcard" onclick="closeFavDash();favGo('${esc(f.lawd)}','${esc(f.name)}','${esc(f.umd||'')}')">
+    <div class="fdcard-hd"><b>${esc(complexDisplayName(f.lawd,f.name,f.umd))}</b><span class="lb">${esc(f.label)}</span></div>
     <div>${inner}</div>
   </div>`;
 }
@@ -1685,7 +1692,8 @@ async function renderFavDash(){
       try{ itemsP = await ensureMonthsP(f.lawd, 12); }catch(e){} // 매매 실거래가 없는 분양권 전용 즐겨찾기 단지도 요약에 반영
       await ensureNaverNames(f.lawd);
       const merged = mergeTradeAndPresaleForRanking(items,itemsP,f.lawd);
-      const m = matchComplex(merged, f.name, f.lawd);
+      const lookupName=f.umd?`${f.name} [${f.umd}]`:f.name;
+      const m = matchComplex(merged, lookupName, f.lawd);
       if(!m.hits || !m.hits.length) return { ...f, state:'nodata' };
       const rows = buildRepRows(m.hits, months);
       if(!rows.length){
@@ -1718,50 +1726,53 @@ async function renderFavDash(){
     `);
   }).join('');
 }
-function favGo(lawd, name){
-  openRelatedComplex(lawd, name);
-  favTradeCount(lawd, name).then(n=>setFavSeenCount(lawd, name, n)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
+function favGo(lawd, name, umd=''){
+  openRelatedComplex(lawd, name, umd);
+  favTradeCount(lawd, name, umd).then(n=>setFavSeenCount(lawd, name, n, umd)).catch(()=>{}); // 확인했으니 배지 기준선 갱신
 }
 // ── 즐겨찾기 "신규 거래" 배지: 최근 12개월 거래건수를 마지막 확인 시점과 비교 ──
-const favBadges = {}; // "lawd|name" → 신규 거래 건수
-function favKey(lawd, name){ return lawd+'|'+name; }
+const favBadges = {}; // "lawd|name|umd" → 신규 거래 건수
+function favKey(lawd, name, umd=''){ return lawd+'|'+name+'|'+umd; }
 function getFavSeen(){ try{ return JSON.parse(localStorage.getItem('apc:favSeen')||'{}'); }catch(e){ return {}; } }
-function setFavSeenCount(lawd, name, n){
+function setFavSeenCount(lawd, name, n, umd=''){
   try{
     const seen = getFavSeen();
-    seen[favKey(lawd,name)] = n;
+    seen[favKey(lawd,name,umd)] = n;
     localStorage.setItem('apc:favSeen', JSON.stringify(seen));
   }catch(e){}
-  delete favBadges[favKey(lawd,name)];
+  delete favBadges[favKey(lawd,name,umd)];
 }
-function clearFavSeen(lawd, name){
+function clearFavSeen(lawd, name, umd=''){
   try{
     const seen = getFavSeen();
-    delete seen[favKey(lawd,name)];
+    delete seen[favKey(lawd,name,umd)];
+    if(!umd)delete seen[favKey(lawd,name)];
     localStorage.setItem('apc:favSeen', JSON.stringify(seen));
   }catch(e){}
-  delete favBadges[favKey(lawd,name)];
+  delete favBadges[favKey(lawd,name,umd)];
 }
-async function favTradeCount(lawd, name){
+async function favTradeCount(lawd, name, umd=''){
   const items = await ensureMonths(lawd, 12); // 층수 필터와 무관하게 표준 12개월 기준으로 비교
   let itemsP = [];
   try{ itemsP = await ensureMonthsP(lawd, 12); }catch(e){} // 분양권 전용(매매 실거래 없는) 단지도 신규 거래 배지 대상에 포함
   await ensureNaverNames(lawd);
-  const m = matchComplex(items, name, lawd);
-  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, name, lawd).hits || []).length;
-  const mp = matchComplex(itemsP, name, lawd);
+  const lookupName=umd?`${name} [${umd}]`:name;
+  const m = matchComplex(items, lookupName, lawd);
+  if(m.hits && m.hits.length) return m.hits.length + (matchComplex(itemsP, lookupName, lawd).hits || []).length;
+  const mp = matchComplex(itemsP, lookupName, lawd);
   return mp.hits ? mp.hits.length : 0;
 }
 // 재방문 시(앱 로드 시) 즐겨찾기별로 마지막 확인 이후 늘어난 거래건수를 조회해 배지 표시
 function refreshFavBadges(){
   const favs = getFavs();
   if(!favs.length) return;
+  Promise.all([...new Set(favs.map(f=>f.lawd).filter(Boolean))].map(ensureNaverNames)).then(()=>renderFavs()).catch(()=>{});
   const seen = getFavSeen();
   favs.forEach(f=>{
-    favTradeCount(f.lawd, f.name).then(n=>{
-      const key = favKey(f.lawd, f.name);
-      const prev = seen[key];
-      if(prev===undefined){ setFavSeenCount(f.lawd, f.name, n); return; } // 최초 기준선
+    favTradeCount(f.lawd, f.name, f.umd||'').then(n=>{
+      const key = favKey(f.lawd, f.name, f.umd||'');
+      const prev = seen[key] ?? (!f.umd ? seen[favKey(f.lawd,f.name)] : undefined);
+      if(prev===undefined){ setFavSeenCount(f.lawd, f.name, n, f.umd||''); return; } // 최초 기준선
       const diff = n - prev;
       if(diff > 0){ favBadges[key] = diff; renderFavs(); }
     }).catch(()=>{}); // 배지는 부가 기능이므로 조회 실패는 조용히 무시
@@ -2103,7 +2114,16 @@ function getRecentRegionCache(){
   }catch(e){ return []; }
 }
 function saveRecentRegionSearch(items){
-  const incoming=(items||[]).filter(x=>x&&x.lawd&&x.name);
+  const selected=(items||[]).filter(x=>x&&x.lawd&&x.name);
+  const incoming=groupRegionChips(selected).flatMap(group=>{
+    if(!group.city)return group.lawd?[{lawd:group.lawd,name:group.name}]:[];
+    const codes=group.lawds||[];
+    const province=REGIONS.find(([,regions])=>regions.length===codes.length&&regions.every(([,lawd])=>codes.includes(lawd)))?.[0];
+    if(province)return [{lawd:ALL_PREFIX+province,name:(PROVINCE_DISPLAY[province]||province)+' 전체'}];
+    const city=GG_MULTI_CITIES.find(name=>{const regions=GG_CITY_MAP[name]||[];return regions.length===codes.length&&regions.every(([,lawd])=>codes.includes(lawd));});
+    if(city)return [{lawd:CITYALL_PREFIX+city,name:city+'시 전체'}];
+    return codes.map(lawd=>({lawd,name:selected.find(x=>x.lawd===lawd)?.name||regionNameByLawd(lawd)}));
+  });
   if(!incoming.length)return;
   const rows=getRecentRegionCache();
   incoming.slice().reverse().forEach(x=>{
@@ -3390,7 +3410,9 @@ const HH_TTL_MISS_MS = 1000*60*60*24;      // 1일
 // (2026.09 15→16: 전국 스캔 + K-apt 독립 재검증으로 확정한 오매칭 51건 NAVER_DENY 추가 —
 // "동 불일치 + 준공년도 5년↑ 차이"로 뽑은 142건 후보 중 K-apt 자체 매칭과도 세대수가 어긋나는 것만 추림)
 // 2026.10 18→19: 운영자 제공 10/4 엑셀의 누락 세대수 보완, 이전 미조회 캐시 갱신
-const HH_CACHE_VER = 22;
+// 2026.10 23→24: 네이버 보조 단지 데이터를 이름+법정동으로 저장해 구 안 동명이 단지의 세대수 오매칭 방지
+// 2026.10 24→25: 확인된 전체 단지 매핑표로 세대수·연식·용적률 등 로컬 캐시 갱신
+const HH_CACHE_VER = 25;
 let hhLS = null;
 function hhLSLoad(){
   if(hhLS) return hhLS;
@@ -3629,12 +3651,18 @@ function ensureNaverNames(lawd){
 }
 const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
 function naverNameOf(lawd,apt,umd){const name=aptsumComplexIdentity.canonical(apt,umd,NAVER_NAMES[lawd]||{},lawd);return name===apt?null:name;}
+function complexDisplayName(lawd,apt,umd,gu){
+  let code=lawd||'';
+  if(!code&&gu&&typeof REGIONS!=='undefined')code=REGIONS.flatMap(([,rows])=>rows).find(([name])=>name===gu)?.[1]||'';
+  if(!code&&typeof sel!=='undefined')code=sel.value||'';
+  return naverNameOf(code,apt,umd)||apt||'';
+}
 // 화면 표시용 단지명 — 국토부 실거래 기준 목록(랭킹·저평가·신고가 등)에서 실거래 등록명 대신 네이버 단지명을
 // 보여준다. 데이터(t.apt)는 그대로 두므로 세대수·공급면적처럼 실거래명으로 연결되는 데이터는 영향 없음.
 // 통합(여러 지역) 조회 행은 o.lawd, 단일 지역 조회는 현재 선택 지역 기준.
 function aptLabel(o, ctx){
   const lawd = (o && o.lawd) || (ctx && ctx.lawd) || (typeof sel!=='undefined' ? sel.value : '');
-  return naverNameOf(lawd, o.apt, o.umd || (ctx && ctx.umd)) || o.apt;
+  return complexDisplayName(lawd, o.apt, o.umd || (ctx && ctx.umd));
 }
 // 목록형 탭(랭킹·저평가 등)용 — 한 네이버 단지가 실거래에 여러 이름으로 나뉘어 등록된 경우("관악드림(삼성)"/
 // "관악드림(동아)" → 관악드림타운) 같은 줄로 집계되도록 거래의 단지명을 네이버 단지명으로 합친다.
@@ -5248,7 +5276,7 @@ async function subwayRowsForRegion(lawd,maxWalk){
     const bandMaps = {};
     let allAptNames = [], aptUmd = new Map();
     try{
-      const trades = await ensureMonths(lawd, 73);
+      const trades = (await ensureMonths(lawd, 73)).filter(t=>!isDongOnlyTradeName(t));
       allAptNames = [...new Set(trades.map(t=>t.apt))];
       trades.forEach(t=>{ if(!aptUmd.has(t.apt)) aptUmd.set(t.apt, t.umd); });
       AREA_BANDS.forEach(b => { bandMaps[b.key] = averageByAreaCurrentMonth(trades, b.min, b.max); });
@@ -5390,7 +5418,14 @@ function renderSubway(d){
 // 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
 // (지역 복수 선택 통합 랭킹에서도 동일 로직을 써야 해서 2026.07 공용 함수로 분리)
 function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
-  return aptsumComplexIdentity.mergeSources(raw,rawP,NAVER_NAMES[lawd]||{},lawd);
+  // 국토부 원문에 단지명 대신 법정동명만 기록된 거래는 이름·세대수 매칭이 불가능하다.
+  // 짧은 문자열 유사 매칭으로 동명의 K-apt 단지(예: 봉천동 → 봉천동아제2)에 붙는 일을 막고
+  // 확인 가능한 단지명 거래만 전 탭의 분석·랭킹에 사용한다.
+  return aptsumComplexIdentity.mergeSources(
+    (raw||[]).filter(t=>!isDongOnlyTradeName(t)),
+    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)),
+    NAVER_NAMES[lawd]||{},lawd
+  );
 }
 
 let complexSearchIndex=null;
@@ -5496,7 +5531,7 @@ async function runSearch(opts){
   // 저평가 실매물 (입주가능, 중층 이상): 실거래 조회 없이 운영자가 올린 실매물 요약(/api/listings)만으로 계산 — 아래 파이프라인을 타지 않는다
   if(isListingMode(mode) && !listingNameActive() && listingTrialBlocked(lawd)){ showError(LISTING_TRIAL_MSG); return; }
   if(mode!=='compare' && mode!=='complex' && !listingNameActive()){
-    const queriedRegions = regionSel.length ? regionSel.slice() : (lawd && !isAllScope(lawd) ? [{lawd,name:regionNameByLawd(lawd)}] : []);
+    const queriedRegions = regionSel.length ? regionSel.slice() : (lawd ? [{lawd,name:regionNameByLawd(lawd)}] : []);
     saveRecentRegionSearch(queriedRegions);
   }
   if(isListingMode(mode))saveQueriedSliders();
@@ -5933,8 +5968,8 @@ async function runSearch(opts){
     pushView();
     saveLastRegionPref(lawd);
     // 즐겨찾기 단지를 방금 확인했으므로, "신규 거래" 배지 기준선을 지금 시점으로 갱신
-    if(d.mode==='complex' && isFav(lawd, d.name)){
-      favTradeCount(lawd, d.name).then(n=>{ setFavSeenCount(lawd, d.name, n); renderFavs(); }).catch(()=>{});
+    if(d.mode==='complex' && isFav(lawd, d.name, d.umd||'')){
+      favTradeCount(lawd, d.name, d.umd||'').then(n=>{ setFavSeenCount(lawd, d.name, n, d.umd||''); renderFavs(); }).catch(()=>{});
     }
     // 세대수는 표시용 부가 정보라 화면을 막지 않고 렌더링 이후 비동기로 채워 넣는다 (2026.07)
     attachHHCountsAsync(d, myToken, lawd);
@@ -5969,13 +6004,14 @@ function complexBuildLabel(build){
   return age<1 ? `${year}년 준공 예정` : `${year}년 (${age}년차)`;
 }
 function complexCompletionYear(d){
-  const build=parseInt(d.build,10);
-  if(build>=1800 && build<=2200)return build;
   const date=String(d.hh?.useDate||'').replace(/[-.]/g,'');
-  if(!/^\d{8}$/.test(date))return null;
-  const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
-  const check=new Date(Date.UTC(year,month-1,day));
-  return year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day?year:null;
+  if(/^\d{8}$/.test(date)){
+    const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
+    const check=new Date(Date.UTC(year,month-1,day));
+    if(year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day)return year;
+  }
+  const build=parseInt(d.build,10);
+  return build>=1800 && build<=2200?build:null;
 }
 let complexCompletionFallbackPromise=null;
 async function loadCompletionFallback(d,lawd){
@@ -5988,12 +6024,9 @@ async function loadCompletionFallback(d,lawd){
  }catch{}
 }
 function complexMetaHTML(d){
-  // far(용적률)는 네이버 크롤링 데이터(서울·경기·인천·부산만 커버)로만 채워지므로 없는 단지가 훨씬 많음 —
-  // 그런 경우 이 조각 자체를 생략(기존처럼 세대수까지만 표시).
   const completionYear=complexCompletionYear(d);
   const completionLabel=completionYear?complexBuildLabel(completionYear):d.completionFallbackLabel||'';
-  const farMeta = (d.hh && d.hh.far != null) ? ` · 용적률 ${d.hh.far}%` : '';
-  return `${esc(d.umd)}${completionLabel? ` · ${esc(completionLabel)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${farMeta}${subwayMetaHTML(d.stationWalkMinutes,d.stationWalkLoaded)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
+  return `${esc(d.umd)}${completionLabel? ` · ${esc(completionLabel)}` : ''}${d.hh? ` · ${d.hh.hhcnt.toLocaleString()}세대` : ''}${subwayMetaHTML(d.stationWalkMinutes,d.stationWalkLoaded)} · <span style="display:inline-block;white-space:nowrap">조회 기간: ${esc(d.period)}</span>${d.floorMin? ` · <b style="color:#7FD4D9">${d.floorMin}층 이상</b>`:''}`;
 }
 
 // 세대수(HH count)는 목록 자체를 바꾸지 않는 부가 표시 정보라, 메인 화면이 뜬 뒤
@@ -6628,6 +6661,12 @@ function complexDynamicHTML(){
       <div id="floorBox">${p?floorPremiumHTML(d, ci):'<div class="rng" style="padding:6px 0">매매 거래 없음</div>'}</div>
       </details>
     </div>` : ''}
+    <div class="sec" style="padding-top:14px">
+      <details id="complexInfoButton" hidden style="display:none;border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">단지 정보 · 펼쳐보기</summary>
+        <div class="richgo-info-inline" style="padding-top:10px"></div>
+      </details>
+    </div>
 
     <div class="sec">
       <h3>최근 ${priceLabel} 거래 내역</h3>
@@ -6689,6 +6728,12 @@ function setComplexView(v){
   const box = document.getElementById('complexDynamic');
   const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
+  const infoButton=document.getElementById('complexInfoButton');
+  if(infoButton&&lastData){
+    const infoLawd=lastData.lawd||lastData.splitLawd||sel.value;
+    infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(lastData,infoLawd,infoButton);};
+    checkRichgoComplexInfoAvailability(lastData,infoLawd,infoButton);
+  }
   placeComplexSchools(schoolWrap);
 }
 
@@ -6701,6 +6746,131 @@ function placeComplexSchools(wrapper){
 
 const nearbySchoolCache=new Map();
 const richgoSchoolCache=new Map();
+const richgoComplexInfoCache=new Map();
+async function loadRichgoComplexInfo(d,lawd){
+  const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+  const expectedYear=complexCompletionYear(d)||'';
+  const expectedHouseholds=d.hh?.hhcnt||'';
+  const lookupName=naverNameOf(lawd,d.name,d.umd)||d.name;
+  const key=JSON.stringify([lookupName,region,d.umd||'',expectedYear,expectedHouseholds]);
+  if(!richgoComplexInfoCache.has(key)){
+    const qs=new URLSearchParams({name:lookupName,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
+    richgoComplexInfoCache.set(key,fetch(`/api/richgo-complex-info?${qs}`).then(async response=>{
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||'complex_info_unavailable');
+      return data;
+    }).catch(error=>{richgoComplexInfoCache.delete(key);throw error;}));
+  }
+  return richgoComplexInfoCache.get(key);
+}
+function richgoComplexInfoHasFields(info){
+  const address=info?.address||{},parking=info?.parking||{};
+  return Boolean(address.road||address.jibun||info?.constructDate||info?.floorAreaRatioPct!=null||info?.buildingCoveragePct!=null||info?.households!=null||parking.total!=null||info?.heating||info?.entranceType||info?.builder);
+}
+function isMissingRichgoComplexInfo(error){
+  return ['apartment_not_found','apartment_identity_mismatch','apartment_ambiguous'].includes(error?.message);
+}
+function setRichgoComplexInfoButton(button,visible){
+  button.hidden=!visible;button.style.display=visible?'block':'none';
+}
+function checkRichgoComplexInfoAvailability(d,lawd,button){
+  loadRichgoComplexInfo(d,lawd).then(info=>{
+    if(button.isConnected&&lastData===d)setRichgoComplexInfoButton(button,richgoComplexInfoHasFields(info));
+  }).catch(error=>{
+    // An upstream timeout is temporary; only hide the control for confirmed missing or unsafe matches.
+    if(button.isConnected&&lastData===d)setRichgoComplexInfoButton(button,!isMissingRichgoComplexInfo(error));
+  });
+}
+function richgoComplexInfoFields(info){
+  const address=info?.address||{},parking=info?.parking||{},fields=[];
+  if(address.road)fields.push(['도로명 주소',address.road]);
+  if(address.jibun)fields.push(['지번 주소',address.jibun]);
+  if(info?.constructDate)fields.push(['준공일',String(info.constructDate).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1.$2.$3')]);
+  if(info?.floorAreaRatioPct!=null||info?.buildingCoveragePct!=null)fields.push(['용적률 · 건폐율',`${info.floorAreaRatioPct!=null?`${Number(info.floorAreaRatioPct).toLocaleString()}%`:'-'} · ${info.buildingCoveragePct!=null?`${Number(info.buildingCoveragePct).toLocaleString()}%`:'-'}`]);
+  if(info?.households!=null)fields.push(['세대수',`${Number(info.households).toLocaleString()}세대`]);
+  if(parking.total!=null)fields.push(['주차대수 (세대당)',`${Number(parking.total).toLocaleString()}대${parking.per_household!=null?` (${Number(parking.per_household).toLocaleString()}대)` : ''}`]);
+  if(info?.heating)fields.push(['난방',info.heating]);
+  if(info?.entranceType)fields.push(['현관구조',info.entranceType]);
+  if(info?.builder)fields.push(['시공사',info.builder]);
+  return fields;
+}
+async function loadRichgoComplexInfoInline(d,lawd,panel){
+  if(panel.dataset.loaded==='1'||panel.dataset.loading==='1')return;
+  const body=panel.querySelector('.richgo-info-inline');if(!body)return;
+  panel.dataset.loading='1';body.innerHTML='<div class="rng" role="status">단지 정보를 불러오는 중…</div>';
+  try{
+    const info=await loadRichgoComplexInfo(d,lawd);
+    if(!panel.isConnected||lastData!==d)return;
+    const fields=richgoComplexInfoFields(info);
+    if(!fields.length){setRichgoComplexInfoButton(panel,false);return;}
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${fields.map(([label,value])=>`<div style="min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff"><span style="display:block;margin-bottom:4px;color:var(--sub);font-size:11px">${esc(label)}</span><strong style="display:block;color:var(--ink);font-size:12px;line-height:1.45;overflow-wrap:anywhere">${esc(value)}</strong></div>`).join('')}</div>`;
+    panel.dataset.loaded='1';
+  }catch(error){
+    if(!panel.isConnected||lastData!==d)return;
+    if(isMissingRichgoComplexInfo(error)){setRichgoComplexInfoButton(panel,false);return;}
+    body.innerHTML='<div class="rng" role="status">단지 정보를 불러오지 못했습니다. 잠시 후 다시 펼쳐 주세요.</div>';
+  }finally{delete panel.dataset.loading;}
+}
+function openRichgoComplexInfo(d,lawd){
+  const dialog=document.createElement('dialog');
+  dialog.setAttribute('aria-label',`${d.name} 단지 정보`);
+  dialog.style.cssText='box-sizing:border-box;width:calc(100vw - 12px);max-width:760px;max-height:min(90dvh,820px);padding:0;border:1px solid #dce5ee;border-radius:18px;background:#f4f8fb;color:#1d2939;box-shadow:0 18px 60px rgba(15,43,61,.28);overflow:auto';
+  const style=document.createElement('style');
+  style.textContent='dialog.richgo-info-dialog::backdrop{background:rgba(13,35,52,.52)}.richgo-info-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#102f40;color:#fff}.richgo-info-title{min-width:0}.richgo-info-name{overflow:hidden;color:#a9c1ca;font-size:15px;font-weight:750;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}.richgo-info-heading{margin-top:3px;font-size:16px;font-weight:900}.richgo-info-close{flex:none;padding:7px 11px;border:1px solid #ffffff40;border-radius:10px;background:#ffffff12;color:#fff;font-size:12px;font-weight:750;cursor:pointer}.richgo-info-body{padding:14px}.richgo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.richgo-info-item{min-width:0;padding:13px;border:1px solid #e1e9ef;border-radius:12px;background:#fff}.richgo-info-label{display:block;margin-bottom:5px;color:#738295;font-size:11px}.richgo-info-value{display:block;color:#172b3d;font-size:12.5px;font-weight:750;line-height:1.45;overflow-wrap:anywhere}@media(max-width:440px){.richgo-info-body{padding:9px}.richgo-info-grid{gap:7px}.richgo-info-item{padding:10px}.richgo-info-value{font-size:12px}}';
+  dialog.classList.add('richgo-info-dialog');
+  const header=document.createElement('header');
+  header.className='richgo-info-header';
+  const infoName=complexDisplayName(d.lawd||d.splitLawd||lawd,d.name,d.umd);
+  dialog.setAttribute('aria-label',`${infoName} 단지 정보`);
+  const title=document.createElement('div');title.className='richgo-info-title';title.innerHTML=`<div class="richgo-info-name">${esc(infoName)}</div><div class="richgo-info-heading">단지 정보</div>`;
+  const close=document.createElement('button');close.type='button';close.className='richgo-info-close';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');
+  header.append(title,close);
+  const body=document.createElement('div');body.className='richgo-info-body';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
+  dialog.append(style,header,body);document.body.append(dialog);
+  dialog.addEventListener('click',event=>{if(event.target===dialog)closeInfoDialog();});
+  const historyKey='__aptsumComplexInfoDialog',historyToken=`${Date.now()}-${Math.random()}`;
+  let hasDialogHistory=false;
+  try{history.pushState({...history.state,[historyKey]:historyToken},'',location.href);hasDialogHistory=true;}catch{}
+  const onDialogPopState=()=>{if(dialog.open)dialog.close();};
+  function closeInfoDialog(){
+    if(!dialog.open)return;
+    if(hasDialogHistory&&history.state?.[historyKey]===historyToken){history.back();setTimeout(()=>{if(dialog.open&&history.state?.[historyKey]===historyToken)dialog.close();},350);}
+    else dialog.close();
+  }
+  window.addEventListener('popstate',onDialogPopState);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();closeInfoDialog();});
+  close.onclick=closeInfoDialog;
+  dialog.addEventListener('close',()=>{window.removeEventListener('popstate',onDialogPopState);if(hasDialogHistory&&history.state?.[historyKey]===historyToken)history.back();dialog.remove();},{once:true});
+  dialog.showModal();close.focus();
+  loadRichgoComplexInfo(d,lawd).then(async info=>{
+    if(!dialog.isConnected)return;
+    const address=info.address||{},parking=info.parking||{};
+    const fields=[];
+    if(address.road)fields.push(['도로명 주소',address.road]);
+    if(address.jibun)fields.push(['지번 주소',address.jibun]);
+    if(info.constructDate)fields.push(['준공일',String(info.constructDate).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1.$2.$3')]);
+    if(info.floorAreaRatioPct!=null||info.buildingCoveragePct!=null)fields.push(['용적률 · 건폐율',`${info.floorAreaRatioPct!=null?`${Number(info.floorAreaRatioPct).toLocaleString()}%`:'-'} · ${info.buildingCoveragePct!=null?`${Number(info.buildingCoveragePct).toLocaleString()}%`:'-'}`]);
+    if(info.households!=null)fields.push(['세대수',`${Number(info.households).toLocaleString()}세대`]);
+    if(parking.total!=null)fields.push(['주차대수 (세대당)',`${Number(parking.total).toLocaleString()}대${parking.per_household!=null?` (${Number(parking.per_household).toLocaleString()}대)` : ''}`]);
+    if(info.heating)fields.push(['난방',info.heating]);
+    if(info.entranceType)fields.push(['현관구조',info.entranceType]);
+    if(info.builder)fields.push(['시공사',info.builder]);
+    if(!fields.length){
+      const button=document.getElementById('complexInfoButton');if(button&&lastData===d)setRichgoComplexInfoButton(button,false);
+      dialog.close();return;
+    }
+    body.innerHTML=fields.length
+      ? `<div class="richgo-info-grid">${fields.map(([label,value])=>`<div class="richgo-info-item"><span class="richgo-info-label">${esc(label)}</span><span class="richgo-info-value">${esc(value)}</span></div>`).join('')}</div>`
+      : '<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">표시할 단지 정보가 없습니다.</div>';
+  }).catch(error=>{
+    if(isMissingRichgoComplexInfo(error)){
+      const button=document.getElementById('complexInfoButton');if(button&&lastData===d)setRichgoComplexInfoButton(button,false);
+      if(dialog.isConnected)dialog.close();
+      return;
+    }
+    if(dialog.isConnected)body.innerHTML='<div role="status" style="padding:24px 8px;text-align:center;color:#68788d;line-height:1.7">단지 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>';
+  });
+}
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
   if(!complexCoordinatePromise)complexCoordinatePromise=fetch('/data/complex-coordinates.json',{cache:'force-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -6710,22 +6880,29 @@ async function findNaverComplexCoordinate(d,lawd,alias){
   const data=await loadNaverComplexCoordinates();
   if(!Array.isArray(data?.items))return null;
   const {naverNameKey}=await import('/shared/naver-name-match.mjs');
-  const names=new Set([d?.name,alias].map(x=>naverNameKey(x)).filter(Boolean));
+  const stripBuildingSuffix=value=>String(value||'').replace(/(?:제?\d{1,4}동|[A-Z]동)(?:[\s,·~∼\-]*(?:제?\d{1,4}동|[A-Z]동))*$/i,'').trim();
+  const names=new Set([d?.name,alias].flatMap(value=>[value,stripBuildingSuffix(value)]).map(x=>naverNameKey(x)).filter(Boolean));
   const umd=String(d?.umd||'');
-  const rows=data.items.filter(x=>String(x.lawd)===String(lawd)&&String(x.umd||'')===umd&&names.has(naverNameKey(x.name)));
+  const localRows=data.items.filter(x=>String(x.lawd)===String(lawd)&&String(x.umd||'')===umd);
+  const rows=localRows.filter(x=>names.has(naverNameKey(x.name)));
   if(rows.length===1)return rows[0];
   const hh=Number(d?.hh?.hhcnt||0);
-  const householdMatch=hh>0?rows.filter(x=>Number(x.hh||0)===hh):[];
+  const householdMatch=hh>0?localRows.filter(x=>Number(x.hh||0)===hh):[];
   return householdMatch.length===1?householdMatch[0]:null;
 }
 function matchNearbySchools(items,d,alias,nameKey){
   const norm=nameKey|| (n=>String(n||'').normalize('NFKC').replace(/\s/g,'').replace(/아파트$/,''));
   if(d.hh?.kaptCode){const exact=items.filter(x=>x.kaptCode===d.hh.kaptCode);if(exact.length===1)return exact[0];}
   if(!d.umd)return null;
-  const names=new Set([norm(d.name),norm(alias)].filter(Boolean));
-  const matches=items.filter(x=>norm(x.umd)===norm(d.umd)&&names.has(norm(x.name)));
-  // 같은 이름이라도 연결 후보가 둘 이상이면 임의로 고르지 않는다.
-  return matches.length===1?matches[0]:null;
+  const stripBuildingSuffix=value=>String(value||'').replace(/(?:제?\d{1,4}동|[A-Z]동)(?:[\s,·~∼\-]*(?:제?\d{1,4}동|[A-Z]동))*$/i,'').trim();
+  const names=new Set([d.name,alias].flatMap(value=>[value,stripBuildingSuffix(value)]).map(norm).filter(Boolean));
+  const localItems=items.filter(x=>norm(x.umd)===norm(d.umd));
+  const matches=localItems.filter(x=>names.has(norm(x.name)));
+  if(matches.length===1)return matches[0];
+  const households=Number(d.hh?.hhcnt||0);
+  const householdMatches=households>0?localItems.filter(x=>Number(x.hh||0)===households):[];
+  // 단지명 표기가 달라도 같은 법정동에서 세대수가 유일하게 일치할 때만 연결한다.
+  return householdMatches.length===1?householdMatches[0]:null;
 }
 let expandedComplexMap=null;
 function closeExpandedComplexMap(){if(expandedComplexMap)expandedComplexMap.close();}
@@ -6759,7 +6936,11 @@ function searchNearbySubwayStations(maps,center){
         if(route?.distance)row.walkDistance=route.distance;
         if(route?.duration)row.walkTime=Math.round(route.duration/60);
         return row;
-      })).then(resolve);
+      })).then(routedRows=>resolve(routedRows.sort((a,b)=>{
+        const distanceA=Number.isFinite(a.walkDistance)?a.walkDistance:a.distance;
+        const distanceB=Number.isFinite(b.walkDistance)?b.walkDistance:b.distance;
+        return distanceA-distanceB;
+      })));
     },{location:new maps.LatLng(center.lat,center.lng),radius:3000,sort:maps.services.SortBy.DISTANCE});
   });
 }
@@ -6771,7 +6952,7 @@ async function loadCompareNearby(d,token=searchToken){
   const render=()=>{
     if(!box.isConnected||token!==searchToken)return;
     const rows=[['지하철','역 도보거리'],...levels.map(level=>[level,`${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'} 거리`])];
-    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col" style="color:${CMP_COLORS[i%4]}">${escCell(c.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${escCell(complexDisplayName(c.lawd,c.name,c.umd))}</span></span></th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
     fitCompareSummaryTables();
   };
   render();
@@ -6844,22 +7025,22 @@ function addComplexSchoolMap(body,matched){
       map.addControl(new maps.ZoomControl(),maps.ControlPosition.RIGHT);
       const bounds=new maps.LatLngBounds();
       const colors={단지:'#00828A',초:'#2563EB',중:'#7C3AED',고:'#D97706',역:'#0F766E'};
-      const nearestSchools=['초','중','고'].map(level=>(matched.schools||[]).filter(x=>x.level===level&&validSchoolCoordinate(x)&&Number(x.distance)<=1800).sort((a,b)=>Number(a.distance)-Number(b.distance))[0]).filter(Boolean);
+      const nearestSchools=['초','중','고'].flatMap(level=>(matched.schools||[]).filter(x=>x.level===level&&validSchoolCoordinate(x)&&Number(x.distance)<=1800).sort((a,b)=>Number(a.distance)-Number(b.distance)).slice(0,3));
       const points=[{...matched,level:'단지'},...nearestSchools];
       const stations=await searchNearbySubwayStations(maps,matched);
       const stationSummary=document.createElement('div');stationSummary.className='rng';stationSummary.style.cssText='margin:8px 0;font-size:12px;line-height:1.6';
       stationSummary.innerHTML=stations.length?`<div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:4px">지하철</div>${stations.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}</span><span style="flex:none;color:var(--teal-dark);font-weight:700">${x.walkDistance?`도보 ${x.walkDistance.toLocaleString()}m · ${x.walkTime}분`:`직선 ${x.distance.toLocaleString()}m`}</span></div>`).join('')}<small style="display:block;margin-top:6px">${stations.some(x=>x.walkDistance)?'카카오 도보 최단경로 기준':'도보 API 키 미설정으로 직선거리 기준'}</small>`:'<div style="font-size:13px;font-weight:800;color:var(--teal-dark)">지하철</div><div style="margin-top:6px">주변 3km 이내 지하철역을 찾지 못했습니다.</div>';
-      container.before(stationSummary);
+      container.after(stationSummary);
       stations.forEach(station=>points.push({...station,level:'역'}));
       let info=null;
       points.forEach(point=>{
         const position=new maps.LatLng(point.lat,point.lng);if(point.level!=='역')bounds.extend(position);
-        const marker=document.createElement('button');marker.type='button';marker.textContent=point.level;marker.title=point.name;marker.setAttribute('aria-label',point.name+' 위치');marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
+        const marker=document.createElement('button');marker.type='button';marker.textContent=point.grade&&['초','중','고'].includes(point.level)?`${point.level} ${point.grade}`:point.level;marker.title=point.grade&&['초','중','고'].includes(point.level)?`${point.name} · 학군 ${point.grade}`:point.name;marker.setAttribute('aria-label',point.name+' 위치'+(point.grade&&['초','중','고'].includes(point.level)?` · 학군 ${point.grade}`:''));marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
         new maps.CustomOverlay({map,position,content:marker,yAnchor:1,zIndex:point.level==='단지'?5:2});
         marker.onclick=()=>{
           if(info)info.setMap(null);
           const label=document.createElement('div');label.style.cssText='background:#fff;border:1px solid #00828A;border-radius:8px;padding:9px 12px;font-size:12px;white-space:nowrap;box-shadow:0 2px 5px #0003';
-          label.textContent=point.name+(point.level==='단지'?'':point.level==='역'?(point.walkDistance?` · 도보 ${point.walkDistance.toLocaleString()}m · ${point.walkTime}분`:` · 직선 ${point.distance.toLocaleString()}m`):` · 직선 ${point.distance.toLocaleString()}m`);
+          label.textContent=point.name+(point.level==='단지'?'':point.level==='역'?(point.walkDistance?` · 도보 ${point.walkDistance.toLocaleString()}m · ${point.walkTime}분`:` · 직선 ${point.distance.toLocaleString()}m`):`${point.grade?` · 학군 ${point.grade}`:''} · 직선 ${point.distance.toLocaleString()}m`);
           info=new maps.CustomOverlay({map,position,content:label,yAnchor:2.5,zIndex:10});
         };
       });
@@ -6933,6 +7114,7 @@ function attachRegionalSchoolCoordinates(rows,items){
 }
 function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
   const button=document.createElement('button');button.type='button';
+  const showMapButton=()=>{const headerButton=document.getElementById('complexMapButton');if(headerButton){headerButton.hidden=false;headerButton.style.display='inline-flex';}};
   const status=document.createElement('div');status.className='rng';status.setAttribute('role','status');body.prepend(status);
   button.onclick=async()=>{
     button.disabled=true;status.textContent='단지 위치를 확인하는 중…';
@@ -6940,9 +7122,11 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       const maps=await loadComplexMapSDK();
       if(!maps.services?.Places)throw Error('places unavailable');
       const naverPoint=await findNaverComplexCoordinate(d,lawd,alias);
+      if(!body.isConnected)return;
       if(naverPoint){
         const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:naverPoint.lat,lng:naverPoint.lng});
         if(!body.isConnected)return;
+        showMapButton();
         button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:naverPoint.lat,lng:naverPoint.lng,schools:schoolRows,nearby:[]});
         return;
       }
@@ -6951,10 +7135,13 @@ function addUnmatchedComplexMap(body,d,lawd,alias,schools=[]){
       if(!body.isConnected)return;
       const {naverNameKey}=await import('/shared/naver-name-match.mjs');
       const place=selectComplexMapPlace(places,d,alias,region,naverNameKey);
-      if(!place){status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
+      if(!body.isConnected)return;
+      if(!place){document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}status.textContent='단지 위치를 정확히 확인하지 못했습니다. 확인 가능한 좌표가 등록되면 지도에 표시됩니다.';return;}
       const schoolRows=await geocodeSchoolRows(maps,schools,d,lawd,{lat:Number(place.y),lng:Number(place.x)});
+      if(!body.isConnected)return;
+      showMapButton();
       button.remove();status.remove();addComplexSchoolMap(body,{name:d.name,lat:Number(place.y),lng:Number(place.x),schools:schoolRows,nearby:[]});
-    }catch(error){if(body.isConnected)status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
+    }catch(error){if(!body.isConnected)return;document.getElementById('complexMapButton')?.remove();if(!schools?.length){body.closest('#complexNearbySchools')?.remove();return;}status.textContent='단지 위치를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.';}
     finally{button.disabled=false;}
   };
   // 좌표가 없는 단지도 별도 버튼 없이 자동으로 카카오 장소 검색을 시작한다.
@@ -6977,10 +7164,12 @@ async function loadComplexSchools(panel,d,lawd){
     const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
     let rows=matched?.schools||[];
     const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
-    const richKey=JSON.stringify([d.name,region,d.umd||'']);
+    const expectedYear=complexCompletionYear(d)||'';
+    const expectedHouseholds=d.hh?.hhcnt||'';
+    const richKey=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
     let richgo=richgoSchoolCache.get(richKey);
     if(!richgo){
-      const qs=new URLSearchParams({name:d.name,region,umd:d.umd||''});
+      const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
       richgo=await fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
       richgoSchoolCache.set(richKey,richgo||{schools:[]});
     }
@@ -6993,7 +7182,7 @@ async function loadComplexSchools(panel,d,lawd){
         const rich=richByName.get(normSchool(row.name));
         if(!rich?.grade)return row;
         enriched++;
-        return {...row,grade:rich.grade,rank:rich.rank||row.rank,source:'리치고'};
+        return {...row,grade:rich.grade,rank:rich.rank||row.rank};
       });
     }else if(!rows.length&&richSchools.length){
       rows=richSchools;
@@ -7001,12 +7190,13 @@ async function loadComplexSchools(panel,d,lawd){
     if(!matched&&rows.length)rows=attachRegionalSchoolCoordinates(rows,data.items);
     body.innerHTML=rows.length?['초','중','고'].map(level=>{
       const schools=rows.filter(x=>x.level===level).sort((a,b)=>a.distance-b.distance);
-      return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}${x.grade?` <small style="color:var(--teal-dark)">학군 ${esc(x.grade)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
+      return `<div style="margin-top:12px"><b>${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'}</b>${schools.length?schools.map(x=>`<div style="display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span>${esc(x.name)}${x.type?` <small style="color:var(--sub)">${esc(x.type)}</small>`:''}${x.grade?` <small style="display:inline-flex;align-items:center;margin-left:3px;padding:0 5px;border-radius:999px;background:#dff3f2;color:var(--teal-dark);font-size:10px;font-weight:800;line-height:1.6">학군 ${esc(x.grade)}</small>`:''}</span><span style="flex:none;color:var(--teal-dark)">직선 ${Number(x.distance).toLocaleString()}m</span></div>`).join(''):'<div class="rng" style="margin-top:6px">자료에 3km 이내 학교 정보가 없습니다.</div>'}</div>`;
     }).join(''):'<div class="rng">이 단지와 정확히 연결된 주변 학교 자료가 없습니다.</div>';
     body.insertAdjacentHTML('beforeend','<div class="rng" style="margin-top:12px;font-size:11px;line-height:1.6">직선거리는 단지와 학교 사이의 거리입니다. 배정 학교·통학구역·실제 보행 경로를 의미하지 않습니다.</div>');
-    const naverPoint=await findNaverComplexCoordinate(d,lawd,naverNameOf(lawd,d.name,d.umd));
-    if(matched&&naverPoint){matched.lat=naverPoint.lat;matched.lng=naverPoint.lng;}
-    if(validSchoolCoordinate(matched))addComplexSchoolMap(body,matched);
+    const coordinateIdentity={...d,hh:{...(d.hh||{}),hhcnt:d.hh?.hhcnt||matched?.hh||0}};
+    const naverPoint=await findNaverComplexCoordinate(coordinateIdentity,lawd,naverNameOf(lawd,d.name,d.umd));
+    const mapPoint=naverPoint||(validSchoolCoordinate(matched)?matched:null);
+    if(mapPoint){const mapButton=document.getElementById('complexMapButton');if(mapButton){mapButton.hidden=false;mapButton.style.display='inline-flex';}addComplexSchoolMap(body,{...(matched||{}),name:d.name,lat:mapPoint.lat,lng:mapPoint.lng,schools:rows});}
     else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd),rows);
     panel.dataset.loaded='1';
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
@@ -7014,6 +7204,7 @@ async function loadComplexSchools(panel,d,lawd){
 }
 function renderComplex(d){
   closeExpandedComplexMap();rememberRecentComplex(sel.value,d);
+  const complexName=complexDisplayName(d.lawd||d.splitLawd||sel.value,d.name,d.umd);
   selPy = -1;
   tradesShown = TRADES_PAGE_SIZE;
   complexView = 'sale';
@@ -7021,10 +7212,11 @@ function renderComplex(d){
   <div class="card">
     <div class="card-hd">
       <div style="position:absolute;top:12px;right:14px;display:flex;gap:6px">
-        <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name)" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name)?'★':'☆'}</button>
+        <button type="button" id="complexMapButton" aria-label="${esc(complexName)} 지도 보기" title="지도 보기" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6 3 6-3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button>
+        <button id="favBtn" onclick="toggleFav(lastData.lawd||lastData.splitLawd||sel.value, lastData.name, lastData.umd||'')" style="background:rgba(255,255,255,.14);border:none;border-radius:8px;width:30px;height:30px;color:#FFD666;font-size:15px;cursor:pointer">${isFav(d.lawd||d.splitLawd||sel.value,d.name,d.umd||'')?'★':'☆'}</button>
         <button onclick="shareCurrent()" aria-label="단지 분석 공유" title="단지 분석 공유" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;width:30px;height:30px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       </div>
-      <h2 style="padding-right:70px;text-align:left">${esc(d.name)} <button type="button" id="complexMapButton" aria-label="${esc(d.name)} 지도 보기" title="단지·학교 지도 보기" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:36px;height:36px;border:1px solid #7FD4D9;border-radius:10px;background:#00828A;color:#fff;box-shadow:0 0 0 3px rgba(127,212,217,.15);cursor:pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button></h2>
+      <h2 style="padding-right:120px;text-align:left">${esc(complexName)}</h2>
       <div class="meta" id="complexMeta" style="text-align:left">${complexMetaHTML(d)}</div>
     </div>
 
@@ -7036,8 +7228,8 @@ function renderComplex(d){
     </div>
 
     <div class="sec" style="padding-top:14px;padding-bottom:14px">
-      <details id="complexNearbySchools" style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
-        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 펼쳐보기</summary>
+      <details id="complexNearbySchools" open style="border:1px solid var(--teal-light);border-radius:12px;padding:12px;background:var(--teal-light-soft)">
+        <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--teal-dark)">주변 학교·지하철 · 접기</summary>
         <div class="nearby-school-body" style="padding-top:8px"></div>
       </details>
     </div>
@@ -7046,6 +7238,9 @@ function renderComplex(d){
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
+  infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
+  checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
   if(!d.stationWalkLoaded){
     const stationLawd=d.lawd||d.splitLawd||sel.value;
     const naverName=naverNameOf(stationLawd,d.name,d.umd);
@@ -7061,6 +7256,7 @@ function renderComplex(d){
   }
   const schoolPanel=document.getElementById('complexNearbySchools'),schoolLawd=d.lawd||d.splitLawd||sel.value;
   schoolPanel.addEventListener('toggle',()=>{schoolPanel.querySelector('summary').textContent=schoolPanel.open?'주변 학교·지하철 · 접기':'주변 학교·지하철 · 펼쳐보기';loadComplexSchools(schoolPanel,d,schoolLawd);});
+  loadComplexSchools(schoolPanel,d,schoolLawd);
   placeComplexSchools(schoolPanel.parentElement);
   document.getElementById('complexMapButton').onclick=async event=>{
     const button=event.currentTarget;button.disabled=true;
@@ -7144,11 +7340,13 @@ function renderRecentCompareComplexes(){
   const box=document.getElementById('recentCompareComplexes');if(!box)return;
   box.replaceChildren();box.hidden=mode!=='compare';if(box.hidden)return;
   const rows=getRecentCompareComplexes();if(!rows.length){box.hidden=true;return;}
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>{if(mode==='compare')renderRecentCompareComplexes();});
   const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;color:var(--sub)';
   const title=document.createElement('span');title.textContent='최근 조회한 단지';header.append(title);
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);cursor:pointer;font-size:11px';clear.onclick=()=>{try{localStorage.removeItem('aptsum:compare-recent');}catch{}renderRecentCompareComplexes();};header.append(clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  for(const x of rows){const button=document.createElement('button');button.type='button';button.className='chip';const region=(typeof REGIONS==='undefined'?[]:REGIONS).flatMap(([,arr])=>arr).find(([,lawd])=>lawd===x.lawd)?.[0]||'';button.textContent=x.name+' · '+[region,x.umd].filter(Boolean).join(' ');button.onclick=()=>addRecentCompareComplex(x);chips.append(button);}
+  for(const x of rows){const button=document.createElement('button');button.type='button';button.className='chip';const region=(typeof REGIONS==='undefined'?[]:REGIONS).flatMap(([,arr])=>arr).find(([,lawd])=>lawd===x.lawd)?.[0]||'';button.textContent=complexDisplayName(x.lawd,x.name,x.umd)+' · '+[region,x.umd].filter(Boolean).join(' ');button.onclick=()=>addRecentCompareComplex(x);chips.append(button);}
   box.append(chips);
 }
 
@@ -7313,7 +7511,7 @@ function compareSummaryHTML(d){
   const date=t=>t?.ym?`${ymLabel(t.ym)}${Number(t.day)>0?'.'+String(t.day).padStart(2,'0'):''}`:'—';
   const deal=t=>t?`${money(t.price)} <span class="cmp-price-date">(${esc(date(t))})</span>${Number.isFinite(Number(t.floor))&&t.floor!==null&&t.floor!==undefined&&t.floor!==''?`<br><span style="color:var(--sub)">${esc(t.floor)}층</span>`:''}`:'—';
   const row=(label,fn,ym=null,className='')=>`<tr${className?` class="${className}"`:''}><th scope="row">${esc(label)}${ym?`<br><span class="cmp-price-date" style="font-weight:400">(${esc(ymLabel(ym))})</span>`:''}</th>${chosen.map(({c,p})=>`<td>${fn(c,p)}</td>`).join('')}</tr>`;
-  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(c.name)}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
+  return `<table class="cmp-summary-table"><colgroup><col>${chosen.map(()=>'<col>').join('')}</colgroup><caption class="chart-note" style="text-align:left;padding:8px">단지별 선택 평형 기준 비교 · ${esc(d.period||'')}</caption><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${esc(complexDisplayName(c.lawd,c.name,c.umd))}</span></span></th>`).join('')}</tr>${row('평수',(_c,p)=>p?`${esc(p.py)} (전용 ${esc(p.area)})`:'—',null,'cmp-size-row')}</thead><tbody>
     ${row('지역',c=>region(c))}
     ${row('준공·년차',c=>{const year=complexCompletionYear(c);return year?esc(complexBuildLabel(year)):esc(c.completionFallbackLabel||'—');})}
     ${row('세대수',c=>c.hh?.hhcnt>0?`${c.hh.hhcnt.toLocaleString()}세대`:'—')}
@@ -7339,9 +7537,9 @@ function drawCompare(d){
   document.getElementById('cmpLegend').innerHTML = d.complexes.map((c,i)=>{
     const opts = c.pys.slice().sort((a,b)=>a.area-b.area);
     const cur = cmpPyMap[i];
-    if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(c.name)} (거래 없음)</span>`;
+    if(!opts.length) return `<span style="display:inline-flex;align-items:center;gap:5px;opacity:.4"><i style="background:${CMP_COLORS[i%4]}"></i>${esc(complexDisplayName(c.lawd,c.name,c.umd))} (거래 없음)</span>`;
     return `<span style="display:flex;align-items:center;flex-wrap:nowrap;gap:5px;width:100%;min-width:0">
-      <i style="background:${CMP_COLORS[i%4]};flex:none"></i><span class="cmp-legend-name" style="flex:1;min-width:0;white-space:nowrap">${esc(c.name)}</span>
+      <i style="background:${CMP_COLORS[i%4]};flex:none"></i><span class="cmp-legend-name" style="flex:1;min-width:0;white-space:nowrap">${esc(complexDisplayName(c.lawd,c.name,c.umd))}</span>
       <select onchange="selectCmpPyFor(${i}, this.value)" style="font-size:14px;font-weight:700;color:var(--navy);border:1.3px solid var(--line);border-radius:7px;padding:0 3px;background:#fff;width:128px;min-width:128px;max-width:100%;flex:none">
         ${opts.map(p=>`<option value="${p.area}"${p.area===cur?' selected':''}>${esc(p.py)} (전용 ${p.area})</option>`).join('')}
       </select>
@@ -7973,7 +8171,7 @@ async function searchListingFavorites(myToken){
 }
 function renderListingFavorites(d){
   const messages={locked:'이 지역은 실매물 이용권이 필요합니다.',failed:'자료를 불러오지 못했습니다. 다시 조회해 주세요.',missing:'매물 정보 없음',ambiguous:'동일한 이름의 단지가 여러 개여서 자동 연결하지 않았습니다.'};
-  const cards=d.cards.map(f=>`<div class="card"><div class="card-hd"><h2>${esc(f.name)}</h2><div class="meta">${esc(f.label||'')} ${f.asOf?' · 기준일 '+esc(f.asOf):''}</div></div><div class="sec">${f.status==='ok'?f.rows.map(x=>{
+  const cards=d.cards.map(f=>`<div class="card"><div class="card-hd"><h2>${esc(complexDisplayName(f.lawd,f.name))}</h2><div class="meta">${esc(f.label||'')} ${f.asOf?' · 기준일 '+esc(f.asOf):''}</div></div><div class="sec">${f.status==='ok'?f.rows.map(x=>{
     const change=x.previousAsk!==null?(x.ask-x.previousAsk):null;
     const pct=change!==null?Math.abs(change)/x.previousAsk*100:null;
     const delta=change===null?'이전 기록 없음':pct>=30-1e-9?'변동률 30% 이상 · 변동 표시 제외':change===0?'변동 없음':`${change>0?'▲':'▼'} ${Math.abs(change).toFixed(2)}억 (${pct.toFixed(1)}%)`;
@@ -8389,12 +8587,12 @@ function renderListingUndervalue(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
-      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(x.apt)}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
+      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
       <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(x.apt)}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(p.apt)}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -8707,7 +8905,7 @@ function getListingRecentComplexes(){
   try{const rows=JSON.parse(localStorage.getItem('aptsum:listing-recent-complexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.key==='string'&&x.key.length<=150&&/^\d{5}$/.test(x.lawd)&&typeof x.apt==='string'&&x.apt.length<=100&&typeof x.region==='string'&&x.region.length<=100).slice(0,5):[];}catch{return [];}
 }
 function rememberListingRecentComplex(selected){
-  const entry={key:selected.key,lawd:selected.lawd,apt:selected.apt,region:[selected.name,selected.umd].filter(Boolean).join(' ')};
+  const entry={key:selected.key,lawd:selected.lawd,apt:selected.apt,umd:selected.umd||'',region:[selected.name,selected.umd].filter(Boolean).join(' ')};
   const rows=[entry,...getListingRecentComplexes().filter(x=>x.key!==entry.key)].slice(0,5);
   try{localStorage.setItem('aptsum:listing-recent-complexes',JSON.stringify(rows));}catch{}
   renderListingRecentComplexes();
@@ -8715,11 +8913,13 @@ function rememberListingRecentComplex(selected){
 function renderListingRecentComplexes(){
   const box=document.getElementById('listingRecentComplexes');if(!box)return;box.replaceChildren();
   const rows=getListingRecentComplexes();if(!rows.length)return;
+  const missingLawds=[...new Set(rows.map(x=>x.lawd).filter(lawd=>lawd&&!NAVER_NAMES[lawd]))];
+  if(missingLawds.length)Promise.all(missingLawds.map(ensureNaverNames)).then(()=>renderListingRecentComplexes());
   const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;color:var(--sub);font-size:11px';
   const title=document.createElement('span');title.textContent='최근 검색한 단지 · 이 브라우저에 저장';
   const clear=document.createElement('button');clear.type='button';clear.textContent='기록 지우기';clear.style.cssText='border:0;background:none;color:var(--sub);font:inherit;cursor:pointer';clear.onclick=()=>{try{localStorage.removeItem('aptsum:listing-recent-complexes');}catch{}renderListingRecentComplexes();};header.append(title,clear);box.append(header);
   const chips=document.createElement('div');chips.className='chips';
-  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';button.textContent=x.apt+' · '+x.region;button.style.cssText='max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere';button.onclick=()=>openListingRecentComplex(x);chips.append(button);});box.append(chips);
+  rows.forEach(x=>{const button=document.createElement('button');button.type='button';button.className='chip';button.textContent=complexDisplayName(x.lawd,x.apt,x.umd||x.region.split(' ').at(-1))+' · '+x.region;button.style.cssText='max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere';button.onclick=()=>openListingRecentComplex(x);chips.append(button);});box.append(chips);
 }
 function openListingRecentComplex(entry){
   if(isListingTrial()&&entry.lawd!==LISTING_TRIAL_LAWD){showError(LISTING_TRIAL_MSG);return;}
@@ -8790,6 +8990,7 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
   document.getElementById('btn').disabled = true;
   try{
     if(nameSearch){const selected=await resolveListingName(myToken);if(!selected){openListingNameSearch(false);return;}targets=[selected];}
+    await Promise.all([...new Set(targets.map(t=>t.lawd).filter(Boolean))].map(ensureNaverNames));
     const failed = [], all = [], uncomparable=[];
     const newOnly=false;
     let asOf = null;
@@ -8902,7 +9103,7 @@ function listingLinkLegend(){
 function listingNameHTML(x, noUrgentBadge){
   const link = x.url ? `<a class="lnk" href="${esc(x.url)}" target="_blank" rel="noopener" title="네이버 매물 보기" aria-label="네이버 매물 보기" style="margin-left:4px;color:var(--sub)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>` : '';
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
-  return `<span class="nm-title"><span>${esc(x.apt)}</span>${urgent}${link}</span>`;
+  return `<span class="nm-title"><span>${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span>${urgent}${link}</span>`;
 }
 function listingSubwayHTML(x,color='var(--teal-dark)'){
   const raw=x?.subwayMinutes;
@@ -9160,7 +9361,7 @@ function renderListingGap(d){
       const price=`${Math.abs(x.gap).toFixed(1)}억`;
       const gapLabel=x.gap<0 && Number(Math.abs(x.gap).toFixed(1))>0 ? `−${price}` : price;
       return `<div class="listing-gap-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-        <span class="nm"><span class="nm-title">${esc(x.apt)}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대${listingSubwayHTML(x)}</small></span>
+        <span class="nm"><span class="nm-title">${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span><small>${multi?`${esc(guShort(x.gu,multi))} · `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''} · ${x.hh.toLocaleString()}세대${listingSubwayHTML(x)}</small></span>
         <span class="val">${gapLabel}<small>${x.gap<0?'큰 평형이 더 저렴':x.gap===0?'동일 호가':'호가 차이'}</small></span></div>
         <div class="listing-gap-prices">${listingGapPriceHTML(x.small,false)}${listingGapPriceHTML(x.large,true)}</div></div>`;
     }).join('');
