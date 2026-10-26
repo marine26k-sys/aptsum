@@ -6967,12 +6967,12 @@ function addComplexSchoolMap(body,matched){
       let info=null;
       points.forEach(point=>{
         const position=new maps.LatLng(point.lat,point.lng);if(point.level!=='역')bounds.extend(position);
-        const marker=document.createElement('button');marker.type='button';marker.textContent=point.level;marker.title=point.name;marker.setAttribute('aria-label',point.name+' 위치');marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
+        const marker=document.createElement('button');marker.type='button';marker.textContent=point.grade&&['초','중','고'].includes(point.level)?`${point.level} ${point.grade}`:point.level;marker.title=point.grade&&['초','중','고'].includes(point.level)?`${point.name} · 학군 ${point.grade}`:point.name;marker.setAttribute('aria-label',point.name+' 위치'+(point.grade&&['초','중','고'].includes(point.level)?` · 학군 ${point.grade}`:''));marker.style.cssText=`background:${colors[point.level]||colors.초};color:#fff;border:2px solid #fff;box-shadow:0 2px 5px #0004;border-radius:16px;padding:5px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`;
         new maps.CustomOverlay({map,position,content:marker,yAnchor:1,zIndex:point.level==='단지'?5:2});
         marker.onclick=()=>{
           if(info)info.setMap(null);
           const label=document.createElement('div');label.style.cssText='background:#fff;border:1px solid #00828A;border-radius:8px;padding:9px 12px;font-size:12px;white-space:nowrap;box-shadow:0 2px 5px #0003';
-          label.textContent=point.name+(point.level==='단지'?'':point.level==='역'?(point.walkDistance?` · 도보 ${point.walkDistance.toLocaleString()}m · ${point.walkTime}분`:` · 직선 ${point.distance.toLocaleString()}m`):` · 직선 ${point.distance.toLocaleString()}m`);
+          label.textContent=point.name+(point.level==='단지'?'':point.level==='역'?(point.walkDistance?` · 도보 ${point.walkDistance.toLocaleString()}m · ${point.walkTime}분`:` · 직선 ${point.distance.toLocaleString()}m`):`${point.grade?` · 학군 ${point.grade}`:''} · 직선 ${point.distance.toLocaleString()}m`);
           info=new maps.CustomOverlay({map,position,content:label,yAnchor:2.5,zIndex:10});
         };
       });
@@ -7122,7 +7122,7 @@ async function loadComplexSchools(panel,d,lawd){
     const coordinateIdentity={...d,hh:{...(d.hh||{}),hhcnt:d.hh?.hhcnt||matched?.hh||0}};
     const naverPoint=await findNaverComplexCoordinate(coordinateIdentity,lawd,naverNameOf(lawd,d.name,d.umd));
     const mapPoint=naverPoint||(validSchoolCoordinate(matched)?matched:null);
-    if(mapPoint)addComplexSchoolMap(body,{...matched,name:d.name,lat:mapPoint.lat,lng:mapPoint.lng});
+    if(mapPoint)addComplexSchoolMap(body,{...(matched||{}),name:d.name,lat:mapPoint.lat,lng:mapPoint.lng,schools:rows});
     else addUnmatchedComplexMap(body,d,lawd,naverNameOf(lawd,d.name,d.umd),rows);
     panel.dataset.loaded='1';
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
