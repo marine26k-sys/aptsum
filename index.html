@@ -6716,9 +6716,10 @@ async function loadRichgoComplexInfo(d,lawd){
   const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
   const expectedYear=complexCompletionYear(d)||'';
   const expectedHouseholds=d.hh?.hhcnt||'';
-  const key=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
+  const lookupName=naverNameOf(lawd,d.name,d.umd)||d.name;
+  const key=JSON.stringify([lookupName,region,d.umd||'',expectedYear,expectedHouseholds]);
   if(!richgoComplexInfoCache.has(key)){
-    const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
+    const qs=new URLSearchParams({name:lookupName,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
     richgoComplexInfoCache.set(key,fetch(`/api/richgo-complex-info?${qs}`).then(async response=>{
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.error||'complex_info_unavailable');
