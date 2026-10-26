@@ -16,9 +16,9 @@
 // 사용법:
 //   node scripts/build-hhcnt-naver.mjs --region=a.json --meta=b.json --high=c.json [--names=d.json]
 //
-// 매칭 단위를 "구"로 잡은 이유: /api/hhcnt는 {lawd, names[]}만 받고 동(umd)을 안 받는다. 동까지 쓰면
-// 커버리지가 59.5%, 구 단위면 58.0%로 1.5%p 차이뿐이라(서울 실거래 12개월 기준) API·클라이언트를
-// 건드리지 않는 쪽을 택했다. 구 안에서 이름이 겹치고 세대수까지 다르면 아예 저장하지 않아 K-apt로 폴백된다.
+// 같은 구 안에서도 법정동별로 동명이 단지가 있을 수 있으므로 저장 키는 이름+법정동으로 만든다.
+// hhcnt GET/POST는 법정동을 전달하며 findNaverComplex도 요청 법정동으로 후보를 먼저 좁힌다.
+// 구 단위 이름 하나로 합치면 봉천동 "현대"(2,134세대)가 현대M타운(16세대)에 밀리는 식의 오매칭이 생긴다.
 
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -44,7 +44,7 @@ const extraNames = args.names ? await J(args.names) : {};
 const guToLawd = new Map();
 for (const [si, list] of REGIONS) for (const [gu, code] of list) guToLawd.set(`${si}|${gu}`, code);
 
-// lawd -> 정규화명 -> [{hh, ...}]
+// lawd -> 정규화명+법정동 -> [{hh, ...}]
 const byLawd = new Map();
 let total = 0, noName = 0, noHh = 0, noRegion = 0;
 for (const id of Object.keys(region)) {
@@ -67,7 +67,7 @@ for (const id of Object.keys(region)) {
   };
   if (!byLawd.has(lawd)) byLawd.set(lawd, new Map());
   const bucket = byLawd.get(lawd);
-  const key = norm(name);
+  const key = `${norm(name)}\u0000${entry.umd || ""}`;
   if (!bucket.has(key)) bucket.set(key, []);
   bucket.get(key).push(entry);
 }
@@ -75,18 +75,30 @@ for (const id of Object.keys(region)) {
 await mkdir("data/hhcnt-naver", { recursive: true });
 let files = 0, saved = 0, dropped = 0;
 for (const [lawd, bucket] of byLawd) {
-  const items = {};
+  const resolved = [];
   for (const [key, arr] of bucket) {
-    // 같은 구 안에 같은 이름이 여럿인데 세대수까지 다르면 어느 쪽인지 정할 수 없다 → 저장 안 함(K-apt 폴백).
-    // 세대수가 전부 같으면(같은 단지가 동별로 쪼개져 등록된 경우 등) 하나만 남겨도 안전하다.
+    // 같은 법정동 안에 같은 이름이 여럿인데 세대수까지 다르면 어느 쪽인지 정할 수 없다 → 저장 안 함(K-apt 폴백).
+    // 법정동이 다르면 각각 저장하고 조회 시 요청 동으로 좁힌다.
     if (new Set(arr.map((x) => x.hh)).size > 1) { dropped += arr.length; continue; }
-    items[key] = arr[0];
+    resolved.push({ baseKey:key.slice(0,key.indexOf("\u0000")), entry:arr[0] });
     saved++;
+  }
+  const umdsByName = new Map();
+  for (const { baseKey, entry } of resolved) {
+    if (!umdsByName.has(baseKey)) umdsByName.set(baseKey, new Set());
+    umdsByName.get(baseKey).add(entry.umd || "");
+  }
+  const items = {};
+  for (const { baseKey, entry } of resolved) {
+    // Keep legacy keys for names unique in the district; add dong only when the same name
+    // exists in multiple dongs, so old consumers remain compatible without dropping either complex.
+    const key = umdsByName.get(baseKey).size > 1 ? `${baseKey}|${entry.umd || ""}` : baseKey;
+    items[key] = entry;
   }
   // nameKey(표기 차이를 지운 비교용 키)도 같이 저장해 서버가 매번 계산하지 않게 한다.
   const keyIndex = {};
-  for (const key of Object.keys(items)) {
-    const k = nameKey(key);
+  for (const [key, entry] of Object.entries(items)) {
+    const k = nameKey(entry.name);
     if (!keyIndex[k]) keyIndex[k] = key;
     else keyIndex[k] = null; // 비교키가 겹치면 모호 → 사용 안 함
   }
