@@ -6740,12 +6740,24 @@ function openRichgoComplexInfo(d,lawd){
   const infoName=complexDisplayName(d.lawd||d.splitLawd||lawd,d.name,d.umd);
   dialog.setAttribute('aria-label',`${infoName} 단지 정보`);
   const title=document.createElement('div');title.className='richgo-info-title';title.innerHTML=`<div class="richgo-info-name">${esc(infoName)}</div><div class="richgo-info-heading">단지 정보</div>`;
-  const close=document.createElement('button');close.type='button';close.className='richgo-info-close';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');close.onclick=()=>dialog.close();
+  const close=document.createElement('button');close.type='button';close.className='richgo-info-close';close.textContent='닫기';close.setAttribute('aria-label','단지 정보 닫기');
   header.append(title,close);
   const body=document.createElement('div');body.className='richgo-info-body';body.innerHTML='<div role="status" style="padding:30px 8px;text-align:center;color:#68788d">단지 정보를 불러오는 중…</div>';
   dialog.append(style,header,body);document.body.append(dialog);
-  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
-  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  dialog.addEventListener('click',event=>{if(event.target===dialog)closeInfoDialog();});
+  const historyKey='__aptsumComplexInfoDialog',historyToken=`${Date.now()}-${Math.random()}`;
+  let hasDialogHistory=false;
+  try{history.pushState({...history.state,[historyKey]:historyToken},'',location.href);hasDialogHistory=true;}catch{}
+  const onDialogPopState=()=>{if(dialog.open)dialog.close();};
+  function closeInfoDialog(){
+    if(!dialog.open)return;
+    if(hasDialogHistory&&history.state?.[historyKey]===historyToken){history.back();setTimeout(()=>{if(dialog.open&&history.state?.[historyKey]===historyToken)dialog.close();},350);}
+    else dialog.close();
+  }
+  window.addEventListener('popstate',onDialogPopState);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();closeInfoDialog();});
+  close.onclick=closeInfoDialog;
+  dialog.addEventListener('close',()=>{window.removeEventListener('popstate',onDialogPopState);if(hasDialogHistory&&history.state?.[historyKey]===historyToken)history.back();dialog.remove();},{once:true});
   dialog.showModal();close.focus();
   loadRichgoComplexInfo(d,lawd).then(async info=>{
     if(!dialog.isConnected)return;
