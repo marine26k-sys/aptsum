@@ -80,6 +80,8 @@ export default async (request) => {
     for (const candidateName of [...nameVariants]) {
       const withoutBuildings = candidateName.replace(buildingSuffix, '').trim();
       if (withoutBuildings && withoutBuildings !== candidateName) nameVariants.add(withoutBuildings);
+      const withoutComplexType = candidateName.replace(/\s*\((?:주상복합|아파트)\)\s*$/i, '').trim();
+      if (withoutComplexType && withoutComplexType !== candidateName) nameVariants.add(withoutComplexType);
     }
     for (const candidateName of [...nameVariants]) {
       nameVariants.add(candidateName.replace(/에스[\s-]*클래스/gi, 'S클래스'));
