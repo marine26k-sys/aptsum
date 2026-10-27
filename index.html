@@ -6747,6 +6747,17 @@ function placeComplexSchools(wrapper){
 const nearbySchoolCache=new Map();
 const richgoSchoolCache=new Map();
 const richgoComplexInfoCache=new Map();
+async function loadRichgoSchools(d,lawd){
+  const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
+  const expectedYear=complexCompletionYear(d)||'';
+  const expectedHouseholds=d.hh?.hhcnt||'';
+  const key=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
+  if(!richgoSchoolCache.has(key)){
+    const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
+    richgoSchoolCache.set(key,fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null).then(data=>data||{schools:[]}));
+  }
+  return richgoSchoolCache.get(key);
+}
 async function loadRichgoComplexInfo(d,lawd){
   const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
   const expectedYear=complexCompletionYear(d)||'';
@@ -6952,7 +6963,7 @@ async function loadCompareNearby(d,token=searchToken){
   const render=()=>{
     if(!box.isConnected||token!==searchToken)return;
     const rows=[['지하철','역 도보거리'],...levels.map(level=>[level,`${level==='초'?'초등학교':level==='중'?'중학교':'고등학교'} 거리`])];
-    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${escCell(complexDisplayName(c.lawd,c.name,c.umd))}</span></span></th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="color:var(--teal-dark)">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+    box.innerHTML=`<table class="cmp-summary-table cmp-nearby-table"><colgroup><col>${d.complexes.map(()=>'<col>').join('')}</colgroup><thead><tr><th scope="col">비교 항목</th>${d.complexes.map((c,i)=>`<th scope="col"><span class="cmp-summary-heading"><span class="cmp-summary-dot" style="background:${CMP_COLORS[i%4]}"></span><span class="cmp-summary-name">${escCell(complexDisplayName(c.lawd,c.name,c.umd))}</span></span></th>`).join('')}</tr></thead><tbody>${rows.map(([level,label])=>`<tr><th scope="row">${label}</th>${d.complexes.map(c=>{const item=compareNearbyCache.get(`${c.lawd}|${c.name}|${c.umd||''}`)?.value;let value='확인 중…';if(item){if(level==='지하철'){const station=item.stations?.[0];value=station?`${escCell(station.name)}<br><b>${station.walkDistance?`${station.walkDistance.toLocaleString()}m`:'도보거리 미확인'}${station.walkTime?` · 약 ${station.walkTime}분`:''}</b>`:((item.fallback||c.hh?.subwayWalk)?`도보 ${escCell(item.fallback||c.hh.subwayWalk)}`:'역 자료 없음');}else{const school=item.schools?.[level];value=school?`${escCell(school.name)}${school.grade?` <small style="display:inline-flex;align-items:center;margin-left:3px;padding:0 5px;border-radius:999px;background:#dff3f2;color:var(--teal-dark);font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">학군 ${escCell(school.grade)}</small>`:''}<br><b>직선 ${Number(school.distance).toLocaleString()}m</b>`:'자료 없음';}}return `<td>${value}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
     fitCompareSummaryTables();
   };
   render();
@@ -6963,7 +6974,10 @@ async function loadCompareNearby(d,token=searchToken){
       const [schoolData,point]=await Promise.all([fetch(`/data/nearby-schools/${encodeURIComponent(c.lawd)}.json`).then(r=>r.ok?r.json():{items:[]}).catch(()=>({items:[]})),findNaverComplexCoordinate({name:c.name,umd:c.umd,hh:c.hh},c.lawd,c.apt||c.name)]);
       const {naverNameKey}=await import('/shared/naver-name-match.mjs');
       const matched=matchNearbySchools(schoolData.items||[],{...c,hh:c.hh,umd:c.umd},c.alias||c.apt||c.name,naverNameKey);
-      for(const school of matched?.schools||[]){if(!levels.includes(school.level))continue;const old=result.schools[school.level];if(!old||Number(school.distance)<Number(old.distance))result.schools[school.level]=school;}
+      const richgo=await loadRichgoSchools(c,c.lawd);
+      const normalizeSchoolName=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').replace(/학교$/,'').toLowerCase();
+      const grades=new Map((Array.isArray(richgo?.schools)?richgo.schools:[]).filter(s=>s.grade).map(s=>[normalizeSchoolName(s.name),s.grade]));
+      for(const school of matched?.schools||[]){if(!levels.includes(school.level))continue;const enriched={...school,grade:grades.get(normalizeSchoolName(school.name))||school.grade||null};const old=result.schools[school.level];if(!old||Number(enriched.distance)<Number(old.distance))result.schools[school.level]=enriched;}
       if(validSchoolCoordinate(point)){try{const maps=await loadComplexMapSDK();result.stations=await searchNearbySubwayStations(maps,{lat:Number(point.lat),lng:Number(point.lng)});}catch{}}
       if(!result.fallback&&c.hh?.subwayWalk)result.fallback=c.hh.subwayWalk;
       return result;
@@ -7163,25 +7177,14 @@ async function loadComplexSchools(panel,d,lawd){
     const {naverNameKey}=await import('/shared/naver-name-match.mjs');
     const matched=matchNearbySchools(data.items,d,naverNameOf(lawd,d.name,d.umd),naverNameKey);
     let rows=matched?.schools||[];
-    const region=[...sel.options].find(o=>o.value===lawd)?.textContent||'';
-    const expectedYear=complexCompletionYear(d)||'';
-    const expectedHouseholds=d.hh?.hhcnt||'';
-    const richKey=JSON.stringify([d.name,region,d.umd||'',expectedYear,expectedHouseholds]);
-    let richgo=richgoSchoolCache.get(richKey);
-    if(!richgo){
-      const qs=new URLSearchParams({name:d.name,region,umd:d.umd||'',year:String(expectedYear),households:String(expectedHouseholds)});
-      richgo=await fetch(`/api/richgo-school?${qs}`).then(r=>r.ok?r.json():null).catch(()=>null);
-      richgoSchoolCache.set(richKey,richgo||{schools:[]});
-    }
+    const richgo=await loadRichgoSchools(d,lawd);
     const richSchools=Array.isArray(richgo?.schools)?richgo.schools:[];
     const normSchool=x=>String(x||'').normalize('NFKC').replace(/\s/g,'').replace(/학교$/,'').toLowerCase();
-    let enriched=0;
     if(rows.length&&richSchools.length){
       const richByName=new Map(richSchools.map(x=>[normSchool(x.name),x]));
       rows=rows.map(row=>{
         const rich=richByName.get(normSchool(row.name));
         if(!rich?.grade)return row;
-        enriched++;
         return {...row,grade:rich.grade,rank:rich.rank||row.rank};
       });
     }else if(!rows.length&&richSchools.length){
