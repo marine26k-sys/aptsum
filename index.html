@@ -2580,7 +2580,7 @@ function syncAnalysisSelectSliders(){
   syncAnalysisAgeSlider();
   for(const entry of analysisSelectSliders){
     const {select,wrap,input,label}=entry;
-    const enabled=select.style.display!=='none';
+    const enabled=select.style.display!=='none'&&select.parentElement?.style.display!=='none';
     select.classList.toggle('analysis-slider-source',enabled);
     wrap.style.display=enabled?'':'none';
     if(!enabled)continue;
@@ -3000,6 +3000,7 @@ function setMode(m, fromRestore){
       if(!r.querySelector('input').value.trim()) r.querySelector('select').value = sel.value;
     });
   }
+  syncAnalysisSelectSliders();
   syncAnalysisFilterGroup();
   renderRecentComplexes();
   return true;
