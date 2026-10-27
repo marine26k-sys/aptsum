@@ -2,7 +2,7 @@ name: Update apartment move-in supply
 
 on:
   schedule:
-    - cron: "0 0 1 3,9 *" # Twice yearly, after the expected public dataset release windows.
+    - cron: "0 0 5 * *" # Monthly, after the previous month's completion figures are published.
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,9 @@ jobs:
           node-version: 22
       - name: Download the latest Korea Real Estate Board dataset
         run: node scripts/collect-move-in.mjs
-      - name: Commit changed data
+      - name: Download monthly apartment completion history
+        run: node scripts/collect-move-in-history.mjs
+      - name: Commit changed move-in data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

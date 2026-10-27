@@ -61,6 +61,9 @@ const items = records.map(row => {
   .sort((a, b) => (a.month || '9999-99').localeCompare(b.month || '9999-99') || a.region.localeCompare(b.region, 'ko') || a.name.localeCompare(b.name, 'ko'));
 
 if (!items.length) throw new Error('서울·경기·인천·부산 자료가 비어 있어 기존 파일을 유지합니다.');
+const path = 'data/move-in.json';
+let previous;
+try { previous = JSON.parse(await readFile(path, 'utf8')); } catch {}
 const output = {
   source: '한국부동산원·부동산R114 공동주택 입주예정물량',
   sourceUrl: DATASET_URL,
@@ -68,13 +71,14 @@ const output = {
   updatedAt: new Date().toISOString(),
   householdMinimum: 30,
   regions: [...INCLUDED_REGIONS],
+  historicalSource: previous?.historicalSource || '국토교통부 주택건설실적통계(준공) · 주택유형별 주택건설 준공실적(월계)',
+  historicalSourceUrl: previous?.historicalSourceUrl || 'https://stat.molit.go.kr/portal/cate/statView.do?hRsId=468',
+  historicalAsOf: previous?.historicalAsOf || null,
+  history: previous?.history || [],
   items,
 };
 
 await mkdir('data', { recursive: true });
-const path = 'data/move-in.json';
-let previous;
-try { previous = JSON.parse(await readFile(path, 'utf8')); } catch {}
 const stable = value => JSON.stringify({ ...value, updatedAt: undefined });
 if (previous && stable(previous) === stable(output)) {
   console.log(`입주물량 변동 없음 (${output.sourceAsOf}, ${items.length}개 단지)`);
