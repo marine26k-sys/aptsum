@@ -6977,7 +6977,8 @@ async function loadCompareNearby(d,token=searchToken){
       const richgo=await loadRichgoSchools(c,c.lawd);
       const normalizeSchoolName=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').replace(/학교$/,'').toLowerCase();
       const grades=new Map((Array.isArray(richgo?.schools)?richgo.schools:[]).filter(s=>s.grade).map(s=>[normalizeSchoolName(s.name),s.grade]));
-      for(const school of matched?.schools||[]){if(!levels.includes(school.level))continue;const enriched={...school,grade:grades.get(normalizeSchoolName(school.name))||school.grade||null};const old=result.schools[school.level];if(!old||Number(enriched.distance)<Number(old.distance))result.schools[school.level]=enriched;}
+      const compareSchools=matched?.schools?.length?matched.schools:(Array.isArray(richgo?.schools)?richgo.schools:[]);
+      for(const school of compareSchools){if(!levels.includes(school.level))continue;const enriched={...school,grade:grades.get(normalizeSchoolName(school.name))||school.grade||null};const old=result.schools[school.level];if(!old||Number(enriched.distance)<Number(old.distance))result.schools[school.level]=enriched;}
       if(validSchoolCoordinate(point)){try{const maps=await loadComplexMapSDK();result.stations=await searchNearbySubwayStations(maps,{lat:Number(point.lat),lng:Number(point.lng)});}catch{}}
       return result;
     })().then(value=>{entry.value=value;return value;}).catch(()=>{entry.value={stations:[],schools:{}};return entry.value;});}
