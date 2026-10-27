@@ -8531,20 +8531,21 @@ async function searchListingTrend(myToken,lawd,silentScroll){
 }
 
 function analyzeListingUndervalue(all, priceFilter){
-  // 저평가 실매물은 지정된 세 평형 그룹 안에서만 비교한다.
-  const listingAreaGroup = py => {
-    const n = parseInt(py,10);
-    if(n>=23 && n<=27) return '23-27';
-    if(n>=28 && n<=31) return '28-31';
-    if(n>=32 && n<=37) return '32-37';
+  // 저평가 실매물 비교는 전용 59·72·84㎡ 기준 ±5㎡ 안에서만 한다.
+  const listingAreaGroup = ex => {
+    const n = Number(ex);
+    if(!Number.isFinite(n)) return null;
+    if(Math.abs(n-59)<=5) return 59;
+    if(Math.abs(n-72)<=5) return 72;
+    if(Math.abs(n-84)<=5) return 84;
     return null;
   };
-  const rows = all.filter(x=>{ const py = parseInt(x.py,10); return listingAreaGroup(py) && x.hh>=LISTING_MIN_HH && x.peak>0 && x.ask>0; });
+  const rows = all.filter(x=>listingAreaGroup(x.ex) && x.hh>=LISTING_MIN_HH && x.peak>0 && x.ask>0);
   const median = arr => { const s = arr.slice().sort((a,b)=>a-b), n = s.length, mid = n>>1; return n%2 ? s[mid] : (s[mid-1]+s[mid])/2; };
   const divergence = [];
   rows.forEach(r=>{
     const nearest = rows
-      .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && listingAreaGroup(o.py)===listingAreaGroup(r.py) // 같은 구·같은 지정 평형 그룹 안에서 비교
+      .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && listingAreaGroup(o.ex)===listingAreaGroup(r.ex) // 같은 구·같은 전용면적 기준 그룹 안에서 비교
         && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 3년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 3년치 중 최고가(2026.09 운영자가 엑셀 추출 기간을 5년→3년으로 변경)
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
@@ -8625,7 +8626,7 @@ function renderListingUndervalue(d){
   const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
   const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
   const body = !list.length
-    ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 23~27평 / 28~31평 / 32~37평 · 비교군 2곳 이상 필요)</div>`
+    ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 전용 59 / 72 / 84㎡ 기준 ±5㎡ · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)"><span style="min-width:0">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</span><b style="flex:none;white-space:nowrap;color:var(--teal-dark);font-size:11px">${x.py}평 (전용 ${x.area})</b></div>
@@ -8650,7 +8651,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평형 그룹 (23~27평, 28~31평, 32~37평)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 전용면적 그룹 (전용 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
