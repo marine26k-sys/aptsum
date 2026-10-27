@@ -6641,7 +6641,7 @@ function complexDynamicHTML(){
         <span class="chip on" onclick="selectPy(-1)">전체</span>
         ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
-      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — 최근 ${priceLabel} (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
+      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — 최근 분기 ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
     </div>
 
