@@ -1260,7 +1260,7 @@ try {
   <div id="staticAdArea"></div>
 </div>
 
-<div id="ac"></div>
+<div id="ac" role="listbox" aria-label="단지 검색 후보"></div>
 <div id="tip"></div>
 <div id="mpop" onclick="if(event.target===this)this.classList.remove('on')">
   <div class="mpop-box">
@@ -4803,7 +4803,42 @@ async function getApts(lawd){
   return aptMem[lawd];
 }
 
-function acHide(){ document.getElementById('ac').classList.remove('on'); acInput=null; }
+let acActiveIndex=-1;
+function acHide(){
+  document.getElementById('ac').classList.remove('on');
+  if(acInput){acInput.setAttribute('aria-expanded','false');acInput.removeAttribute('aria-activedescendant');}
+  acInput=null;acActiveIndex=-1;
+}
+function acMoveSelection(direction){
+  const ac=document.getElementById('ac'),items=[...ac.querySelectorAll('.ac-item')];
+  if(!items.length)return false;
+  acActiveIndex=acActiveIndex<0?(direction>0?0:items.length-1):(acActiveIndex+direction+items.length)%items.length;
+  items.forEach((item,index)=>{
+    item.id=item.id||`ac-option-${index}`;item.setAttribute('role','option');
+    item.setAttribute('aria-selected',String(index===acActiveIndex));item.classList.toggle('hl',index===acActiveIndex);
+  });
+  acInput?.setAttribute('aria-activedescendant',items[acActiveIndex].id);
+  items[acActiveIndex].scrollIntoView({block:'nearest'});
+  return true;
+}
+function acChooseSelection(){
+  const item=document.getElementById('ac').querySelectorAll('.ac-item')[acActiveIndex];
+  if(!item)return false;
+  item.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,view:window}));
+  return true;
+}
+document.addEventListener('keydown',event=>{
+  const input=event.target;
+  if(!input.matches('#q,.cmp-row input,#listingNameQuery')||acInput!==input)return;
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    if(!document.getElementById('ac').classList.contains('on'))return;
+    if(acMoveSelection(event.key==='ArrowDown'?1:-1)){event.preventDefault();event.stopImmediatePropagation();}
+  }else if(event.key==='Enter'&&!event.isComposing&&acActiveIndex>=0){
+    if(acChooseSelection()){event.preventDefault();event.stopImmediatePropagation();}
+  }else if(event.key==='Escape'&&document.getElementById('ac').classList.contains('on')){
+    event.preventDefault();event.stopImmediatePropagation();acHide();
+  }
+},true);
 function acPos(input){
   const r = input.getBoundingClientRect();
   const ac = document.getElementById('ac');
@@ -4826,6 +4861,7 @@ async function acShow(input){
   const q = input.value.trim().replace(/\s/g,'');
   const ac = document.getElementById('ac');
   acInput = input;
+  acActiveIndex=-1;input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','ac');input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedescendant');
   acPos(input);
   if(q.length < 1){ acHide(); return; }
   ac.innerHTML = '<div class="ac-msg">단지 목록 확인 중…</div>';
