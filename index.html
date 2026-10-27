@@ -4489,7 +4489,7 @@ function analyzeShortUndervalue(all, months, allUnfiltered){
     const r3median = median(nearest.map(o=>o.r3avg));
     const gapPct = Math.round((r.r3avg - r3median)/r3median*100);
     if(gapPct <= -5 && gapPct >= -15){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3avg:o.p3avg, r3avg:o.r3avg})).sort((a,b)=>b.r3avg-a.r3avg); // 비교 대상 단지 상세(표 정리용) · 최근가 높은순 정렬
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3avg:o.p3avg, r3avg:o.r3avg})).sort((a,b)=>a.r3avg-b.r3avg); // 비교군은 최근 평균가 낮은 순
       divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3avg), gapPct, groupN:group.length, peers }); // gapAmt는 항상 양수(중앙값-내값) — 화면에 "OO억 낮음"으로 표시되므로
     }
   });
@@ -4560,7 +4560,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
     const r3median = median(nearest.map(o=>o.r3max));
     const gapPct = Math.round((r.r3max - r3median)/r3median*100);
     if(gapPct <= -5 && gapPct >= -15){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>b.r3max-a.r3max); // 최근가 높은순 정렬
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>a.r3max-b.r3max); // 비교군은 최근 최고가 낮은 순
       divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3max), gapPct, groupN:group.length, peers }); // gapAmt는 항상 양수(중앙값-내값) — 화면에 "OO억 낮음"으로 표시되므로
     }
   });
@@ -4637,7 +4637,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     const r3median = median(nearest.map(o=>o.r3max));
     const gapPct = Math.round((r.r3max - r3median)/r3median*100);
     if(gapPct <= -5 && gapPct >= -15){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>b.r3max-a.r3max); // 최근가 높은순 정렬
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.area, p3max:o.p3max, r3max:o.r3max})).sort((a,b)=>a.r3max-b.r3max); // 비교군은 최근 최고가 낮은 순
       divergence.push({ ...r, r3median:R1(r3median), gapAmt:R1(r3median-r.r3max), gapPct, groupN:group.length, peers });
     }
   });
@@ -8579,7 +8579,7 @@ function analyzeListingUndervalue(all, priceFilter){
     // 5% 이상 낮으면 채택. 25% 넘게(-26% 이하) 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
     // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25% 넘게 — -25%까지는 표시.
     if(gapPct <= -5 && gapPct >= -25){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>b.ask-a.ask);
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
