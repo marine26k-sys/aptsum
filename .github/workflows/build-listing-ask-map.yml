@@ -2,7 +2,8 @@ name: 호가 통계 지도 미리 생성
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # 12:00 KST daily.
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
