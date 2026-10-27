@@ -6971,14 +6971,8 @@ async function loadCompareNearby(d,token=searchToken){
     const key=`${c.lawd}|${c.name}|${c.umd||''}`;let entry=compareNearbyCache.get(key);
     if(!entry){entry={promise:null,value:null};compareNearbyCache.set(key,entry);entry.promise=(async()=>{
       const result={stations:[],schools:{}};
-      const [schoolData,point]=await Promise.all([fetch(`/data/nearby-schools/${encodeURIComponent(c.lawd)}.json`).then(r=>r.ok?r.json():{items:[]}).catch(()=>({items:[]})),findNaverComplexCoordinate({name:c.name,umd:c.umd,hh:c.hh},c.lawd,c.apt||c.name)]);
-      const {naverNameKey}=await import('/shared/naver-name-match.mjs');
-      const matched=matchNearbySchools(schoolData.items||[],{...c,hh:c.hh,umd:c.umd},c.alias||c.apt||c.name,naverNameKey);
-      const richgo=await loadRichgoSchools(c,c.lawd);
-      const normalizeSchoolName=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').replace(/학교$/,'').toLowerCase();
-      const grades=new Map((Array.isArray(richgo?.schools)?richgo.schools:[]).filter(s=>s.grade).map(s=>[normalizeSchoolName(s.name),s.grade]));
-      const compareSchools=matched?.schools?.length?matched.schools:(Array.isArray(richgo?.schools)?richgo.schools:[]);
-      for(const school of compareSchools){if(!levels.includes(school.level))continue;const enriched={...school,grade:grades.get(normalizeSchoolName(school.name))||school.grade||null};const old=result.schools[school.level];if(!old||Number(enriched.distance)<Number(old.distance))result.schools[school.level]=enriched;}
+      const [richgo,point]=await Promise.all([loadRichgoSchools(c,c.lawd),findNaverComplexCoordinate({name:c.name,umd:c.umd,hh:c.hh},c.lawd,c.apt||c.name)]);
+      for(const school of richgo?.schools||[]){if(!levels.includes(school.level))continue;const old=result.schools[school.level];if(!old||Number(school.distance)<Number(old.distance))result.schools[school.level]=school;}
       if(validSchoolCoordinate(point)){try{const maps=await loadComplexMapSDK();result.stations=await searchNearbySubwayStations(maps,{lat:Number(point.lat),lng:Number(point.lng)});}catch{}}
       return result;
     })().then(value=>{entry.value=value;return value;}).catch(()=>{entry.value={stations:[],schools:{}};return entry.value;});}
