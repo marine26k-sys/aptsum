@@ -1197,6 +1197,15 @@ try {
         </div><div class="ls-numbers"><input type="number" id="lsRateMinNumber" aria-label="최소 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsRateMaxNumber" aria-label="최대 변동률(%) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>%</span></div></div>
       </div>
     </div>
+    <div id="molitUndervalueFilters" class="ls-filters" style="display:none">
+      <div class="slider-form-row">
+        <div class="slider-form-label"><span>최근 금액</span><b id="muvPriceTxt">전체</b></div>
+        <div class="slider-form-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
+          <input type="range" id="muvPriceMin" min="0" max="100" step="0.5" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
+          <input type="range" id="muvPriceMax" min="0" max="100" step="0.5" value="100" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최고 금액(억)">
+        </div></div>
+      </div>
+    </div>
     <div id="listingFloorFilters" class="ls-filters" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700">층수
         <button type="button" id="listingFloorMid" onclick="setListingFloor('mid')" style="flex:1;padding:9px;border:1px solid var(--teal);border-radius:12px">중층 이상</button>
@@ -1363,6 +1372,8 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
+const molitUndervaluePriceState=new Map();
+const molitUndervalueFilteredSources=new WeakSet();
 // "신고가 속보 (7일)" 탭용 플래그(2026.09 신설, 구독 전용) — 별도 mode를 새로 만들지 않고 기존 'newhigh'
 // 파이프라인(국토부 신고기한이 최대 30일이라 30일 창으로 수집)을 그대로 재사용하되, 결과 중 실제 계약일이
 // 최근 7일 이내인 것만(fresh7) 걸러 보여준다. 30일 창을 7일로 좁혀서 다시 수집하면 아직 신고 안 된
@@ -2467,6 +2478,7 @@ function getQueriedSliderPref(m){
     if(!v||typeof v!=='object'||Array.isArray(v))return null;
     if(!Array.isArray(v.bands)||v.bands.length>10||!v.bands.every(b=>{if(typeof b!=='string'||!/^\d{1,3}-\d{1,3}$/.test(b))return false;const [lo,hi]=b.split('-').map(Number);return lo<=hi&&hi<=999;}))return null;
     if(v.ls&&Object.values(v.ls).some(n=>!Number.isFinite(n)))return null;
+    if(v.muv&&['min','max','lo','hi'].some(k=>!Number.isFinite(v.muv[k])))return null;
     return v;
   }catch{return null;}
 }
@@ -2476,6 +2488,7 @@ function saveQueriedSliders(){
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
+  if(mode==='shortval'||mode==='longpeak'){const uv=molitUndervaluePriceStateFor(mode);v.muv={min:uv.min,max:uv.max,lo:uv.lo,hi:uv.hi,touched:uv.touched};}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
 function resetQueriedSliderDefaults(m){
@@ -2491,6 +2504,7 @@ function resetQueriedSliderDefaults(m){
     for(const [name,[min,max]] of Object.entries(defaults))for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=min;el.max=max;el.disabled=false;}
     lsSet();listingGapSet(20,30);
   }
+  if(m==='shortval'||m==='longpeak')resetMolitUndervaluePrice(m);
 }
 function restoreQueriedSliders(m){
   const v=getQueriedSliderPref(m);
@@ -2509,6 +2523,9 @@ function restoreQueriedSliders(m){
     // 구버전 저장값은 자동 조정된 범위와 직접 설정한 필터를 구분할 수 없다.
     if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();else lsSet(v.ls);
     if(m==='listingbudget')lsAlignUnadjustedToBounds();
+  }
+  if((m==='shortval'||m==='longpeak')&&v.muv){
+    const uv=molitUndervaluePriceStateFor(m);uv.min=v.muv.min;uv.max=v.muv.max;uv.lo=Math.max(uv.min,Math.min(uv.max,v.muv.lo));uv.hi=Math.max(uv.lo,Math.min(uv.max,v.muv.hi));uv.touched=!!v.muv.touched;uv.source=null;syncMolitUndervaluePriceUI(m);
   }
   if(m==='listinggap'&&v.gap)listingGapSet(v.gap.smallBand,v.gap.largeBand);
 }
@@ -2896,6 +2913,8 @@ function setMode(m, fromRestore){
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
+  document.getElementById('molitUndervalueFilters').style.display = (m==='shortval'||m==='longpeak') ? '' : 'none';
+  if(m==='shortval'||m==='longpeak')syncMolitUndervaluePriceUI(m);
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
   document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
@@ -7911,45 +7930,62 @@ function renderPricePerPyeong(d){
 
 
 
-const molitUndervaluePriceState=new Map();
-const molitUndervalueFilteredSources=new WeakSet();
 function molitUndervaluePriceMode(mode){return mode==='longpeakdong'?'longpeak':mode;}
 function molitUndervaluePriceValue(mode,row){return mode==='shortval'?row.r3avg:row.r3max;}
-function molitUndervaluePriceFilter(d){
-  const mode=molitUndervaluePriceMode(d.mode),isFilteredSource=molitUndervalueFilteredSources.has(d);
+function molitUndervaluePriceStateFor(mode){
+  mode=molitUndervaluePriceMode(mode);
   let state=molitUndervaluePriceState.get(mode);
-  if(!isFilteredSource&&(!state||state.source!==d)){
+  if(!state){state={source:null,min:0,max:100,lo:0,hi:100,touched:false};molitUndervaluePriceState.set(mode,state);}
+  return state;
+}
+function resetMolitUndervaluePrice(mode){
+  const state=molitUndervaluePriceStateFor(mode);
+  state.source=null;state.min=0;state.max=100;state.lo=0;state.hi=100;state.touched=false;
+  syncMolitUndervaluePriceUI(mode);
+}
+function syncMolitUndervaluePriceUI(mode){
+  mode=molitUndervaluePriceMode(mode);
+  if(mode!=='shortval'&&mode!=='longpeak')return;
+  const state=molitUndervaluePriceStateFor(mode),min=document.getElementById('muvPriceMin'),max=document.getElementById('muvPriceMax');
+  if(!min||!max)return;
+  min.min=max.min=state.min;min.max=max.max=state.max;min.value=state.lo;max.value=state.hi;
+  const span=state.max-state.min||1,loPct=(state.lo-state.min)/span*100,hiPct=(state.hi-state.min)/span*100;
+  const dual=document.getElementById('muvPriceDual');dual.style.setProperty('--lo',loPct+'%');dual.style.setProperty('--hi',hiPct+'%');
+  document.getElementById('muvPriceTxt').textContent=state.lo<=state.min&&state.hi>=state.max?'전체':`${state.lo.toFixed(1)}~${state.hi.toFixed(1)}억`;
+}
+function molitUndervaluePriceFilter(d){
+  const mode=molitUndervaluePriceMode(d.mode),isFilteredSource=molitUndervalueFilteredSources.has(d),state=molitUndervaluePriceStateFor(mode);
+  if(!isFilteredSource&&state.source!==d){
     const values=(d.divergence||[]).map(x=>molitUndervaluePriceValue(mode,x)).filter(n=>Number.isFinite(n)&&n>0);
-    if(!values.length)return {data:d,html:''};
-    const min=Math.floor(Math.min(...values)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...values)*2)/2);
-    state={source:d,min,max,lo:min,hi:max};molitUndervaluePriceState.set(mode,state);
+    if(values.length){
+      const min=Math.floor(Math.min(...values)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...values)*2)/2);
+      if(!state.touched){state.min=min;state.max=max;state.lo=min;state.hi=max;}
+      else{state.min=Math.min(0,min,state.lo);state.max=Math.max(100,max,state.hi);state.lo=Math.max(state.min,state.lo);state.hi=Math.max(state.lo,Math.min(state.max,state.hi));}
+    }
+    state.source=d;
+    syncMolitUndervaluePriceUI(mode);
   }
-  if(!state)return {data:d,html:''};
   let data=d;
   if(!isFilteredSource){
     data={...d,divergence:(d.divergence||[]).filter(x=>{const value=molitUndervaluePriceValue(mode,x);return Number.isFinite(value)&&value>=state.lo&&value<=state.hi;})};
     molitUndervalueFilteredSources.add(data);
   }
-  const lo=state.lo,hi=state.hi,lower=lo<=state.min,upper=hi>=state.max;
-  const label=lower&&upper?'전체':`${lo.toFixed(1)}~${hi.toFixed(1)}억`;
-  const range=(id,value,aria)=>`<input type="range" id="${id}" min="${state.min}" max="${state.max}" step="0.5" value="${value}" oninput="molitUndervaluePriceSync(this,'${mode}')" onchange="molitUndervaluePriceApply('${mode}')" aria-label="${aria}">`;
-  const span=state.max-state.min||1,fillLo=(lo-state.min)/span*100,fillHi=(hi-state.min)/span*100;
-  const html=`<div class="ls-filters" style="margin:8px 0 10px"><div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px"><div class="ls-hd" style="flex:0 0 86px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>최근 금액</span><b id="muvPriceTxt" style="color:var(--teal-dark);font-size:12px">${label}</b></div><div class="ls-control"><div class="ls-dual" id="muvPriceDual" style="--lo:${fillLo}%;--hi:${fillHi}%">${range('muvPriceMin',lo,'최저 금액(억)')}${range('muvPriceMax',hi,'최고 금액(억)')}</div></div></div></div>`;
-  return {data,html};
+  return {data};
 }
-function molitUndervaluePriceSync(input,mode){
-  const state=molitUndervaluePriceState.get(molitUndervaluePriceMode(mode));if(!state)return;
+function molitUndervaluePriceSync(input){
+  const currentMode=mode==='longpeak'?'longpeak':mode;
+  if(currentMode!=='shortval'&&currentMode!=='longpeak')return;
+  const state=molitUndervaluePriceStateFor(currentMode);
   const min=document.getElementById('muvPriceMin'),max=document.getElementById('muvPriceMax');let lo=+min.value,hi=+max.value;
   if(lo>hi){if(input===min)hi=lo;else lo=hi;min.value=lo;max.value=hi;}
-  state.lo=lo;state.hi=hi;
-  const dual=document.getElementById('muvPriceDual'),span=state.max-state.min||1;
-  dual.style.setProperty('--lo',((lo-state.min)/span*100)+'%');dual.style.setProperty('--hi',((hi-state.min)/span*100)+'%');
-  document.getElementById('muvPriceTxt').textContent=lo<=state.min&&hi>=state.max?'전체':`${lo.toFixed(1)}~${hi.toFixed(1)}억`;
+  state.lo=lo;state.hi=hi;state.touched=!(lo<=state.min&&hi>=state.max);
+  syncMolitUndervaluePriceUI(currentMode);
 }
-function molitUndervaluePriceApply(mode){
-  const state=molitUndervaluePriceState.get(molitUndervaluePriceMode(mode));if(!state||lastData!==state.source)return;
+function molitUndervaluePriceApply(){
+  if(mode!=='shortval'&&mode!=='longpeak')return;
+  const state=molitUndervaluePriceStateFor(mode);if(!state.source||lastData!==state.source)return;
+  saveQueriedSliders();
   if(mode==='shortval')renderShortUndervalue(lastData);
-  else if(mode==='peak')renderPeak(lastData);
   else renderLongPeak(lastData);
 }
 
@@ -8150,7 +8186,6 @@ function renderShortUndervalue(d){
 
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">시세가 비슷했던 단지보다 최근 3개월 5~15% 싸게 거래된 단지</div>
-      ${priceFilter.html}
       ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${divergenceHTML(d.divergence)}
     </div>
@@ -8187,7 +8222,6 @@ ${uvSep(i)}
 }
 
 function renderPeak(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
   d=molitPageData(d,"divergence",renderPeak);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
@@ -8202,7 +8236,6 @@ function renderPeak(d){
 
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">최고가가 비슷했던 단지보다 최근 6개월 최고가가 5~15% 낮은 단지</div>
-      ${priceFilter.html}
       ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${peakDivergenceHTML(d.divergence)}
     </div>
@@ -9634,7 +9667,6 @@ function renderLongPeak(d){
 
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">${d.sameDongOnly? '같은 동에서 ' : ''}${d.prevYearLabel} 최고가가 비슷했던 단지보다 ${d.recentYearLabel} 최고가가 5~15% 낮은 단지</div>
-      ${priceFilter.html}
       ${hint('실거래가 기준 · 호가와 다를 수 있음')}
       ${peakDivergenceHTML(d.divergence, `${d.prevYearLabel} 최고가`, `${d.recentYearLabel} 최고가`)}
     </div>
