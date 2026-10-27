@@ -3489,7 +3489,7 @@ function chgHTML(amt, pct){
   if(a === 0) return `<b style="color:var(--sub)">0.0억 (${p}%)</b>`;
   return amt > 0 ? `<b style="color:var(--red)">▲${a.toFixed(1)}억 (${p}%)</b>` : `<b style="color:var(--blue)">▼${a.toFixed(1)}억 (${p}%)</b>`;
 }
-// 저평가(단기/반기/연간)는 전용 59·72·84㎡ 각각 ±5㎡ 범위 안에서 비교
+// 저평가(단기/반기/연간)는 전용 49·59·72·84㎡ 각각 ±5㎡ 범위 안에서 비교
 const pyBand = py => { const n = parseInt(py,10); if(n>=20 && n<=29) return 20; if(n>=30 && n<=39) return 30; return null; };
 const avgA = arr => arr.length ? arr.reduce((s,t)=>s+t.amt,0)/arr.length : null;
 const dkey = t => `${t.ym}${t.d}`;
@@ -4451,10 +4451,11 @@ function analyzeGapRanking(saleAll, rentAll, months){
     rows: rows };
 }
 
-// 국토부 저평가 비교 평형: 전용 59·72·84㎡ 각각 ±5㎡ 범위만 같은 그룹으로 본다.
+// 국토부 저평가 비교 평형: 전용 49·59·72·84㎡ 각각 ±5㎡ 범위만 같은 그룹으로 본다.
 function undervalueAreaGroup(area){
   const n=Number(area);
   if(!Number.isFinite(n)) return null;
+  if(Math.abs(n-49)<=5) return 49;
   if(Math.abs(n-59)<=5) return 59;
   if(Math.abs(n-72)<=5) return 72;
   if(Math.abs(n-84)<=5) return 84;
@@ -4463,7 +4464,7 @@ function undervalueAreaGroup(area){
 
 // ═══ 단기 저평가 (2026.07 등락 랭킹에서 별도 탭으로 분리) ═══
 // - 매매 실거래만 사용(분양권·입주권은 준공 전 시세·전매 이슈 등 매매와 무관한 요인으로 움직여서 왜곡 소지가 큼 → 완전히 제외)
-// - 전용 59·72·84㎡ 각각 ±5㎡ 범위 안에서 비교
+// - 전용 49·59·72·84㎡ 각각 ±5㎡ 범위 안에서 비교
 // - 같은 전용면적 그룹에서 "이전 3개월 평균가가 나와 ±2% 이내인 단지 중 가격이 가장 가까운 최대 5개"
 //   (고정 구간 대신 상대 비율 기준이라, 경계값 근처에서 억지로 갈리는 문제가 없음)
 // → "최근 3개월 평균가"가 그 비교군 중앙값보다 5~15% 낮은 단지를 표시 (본인 포함 그룹원 3명 이상만 비교, 2026.08 -15% 초과 격차는 표본 왜곡 소지가 커 상한 추가)
@@ -4577,7 +4578,7 @@ function analyzePeakUndervalue(all, months, allUnfiltered){
 
 // ═══ 연간 저평가 — "반기 저평가"(peak, 2026.07 이전 명칭 "분기 저평가")와 완전히 동일한 로직, 6개월 구간(6vs6) 대신 1년 구간(올해 vs 작년, 12개월씩)만 다름 ═══
 // 반기 저평가가 "최근 신고가 흐름"을 못 따라간 단지를 잡는다면, 연간 저평가는 "지난 1년간 신고가 흐름"을 못 따라간 단지를 잡아내는 버전.
-// 20~39평 제한(층수 제한 없음), 전용 59·72·84㎡ 각각 ±5㎡ 그룹으로 비교, 비교군 구성(±2% 이내 최대 5개, 3명 이상), 5~15% 격차 기준 등 나머지 조건은 모두 동일.
+// 20~39평 제한(층수 제한 없음), 전용 49·59·72·84㎡ 각각 ±5㎡ 그룹으로 비교, 비교군 구성(±2% 이내 최대 5개, 3명 이상), 5~15% 격차 기준 등 나머지 조건은 모두 동일.
 function buildLongPeakRows(all, months){
   const byAptPy = {};
   for(const t of all){ const k=`${t.apt}|${t.umd}|${exclusiveAreaKey(t)}|${t.gu||''}`; (byAptPy[k]=byAptPy[k]||[]).push(t); }
@@ -8111,7 +8112,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 전용 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 전용 49㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8161,7 +8162,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교 (각 2건 이상 표본 필요) · 전용 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교 (각 2건 이상 표본 필요) · 전용 49㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8551,10 +8552,11 @@ async function searchListingTrend(myToken,lawd,silentScroll){
 }
 
 function analyzeListingUndervalue(all, priceFilter){
-  // 저평가 실매물 비교는 전용 59·72·84㎡ 기준 ±5㎡ 안에서만 한다.
+  // 저평가 실매물 비교는 전용 49·59·72·84㎡ 기준 ±5㎡ 안에서만 한다.
   const listingAreaGroup = ex => {
     const n = Number(ex);
     if(!Number.isFinite(n)) return null;
+    if(Math.abs(n-49)<=5) return 49;
     if(Math.abs(n-59)<=5) return 59;
     if(Math.abs(n-72)<=5) return 72;
     if(Math.abs(n-84)<=5) return 84;
@@ -8646,7 +8648,7 @@ function renderListingUndervalue(d){
   const nmCls = n => { const len = [...String(n||'')].length; return len >= 17 ? 'nm l3' : (len >= 13 ? 'nm l2' : 'nm'); };
   const nameSub = x => (x.umd || x.url) ? `<span class="dg">${esc(x.umd||'')}${listingLink(x)}</span>` : '';
   const body = !list.length
-    ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 전용 59 / 72 / 84㎡ 기준 ±5㎡ · 비교군 2곳 이상 필요)</div>`
+    ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 전용 49 / 59 / 72 / 84㎡ 기준 ±5㎡ · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)"><span style="min-width:0">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</span><b style="flex:none;white-space:nowrap;color:var(--teal-dark);font-size:11px">${x.py}평 (전용 ${x.area})</b></div>
@@ -8671,7 +8673,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 전용면적 그룹 (전용 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 전용면적 그룹 (전용 49㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -9590,7 +9592,7 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 49㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
