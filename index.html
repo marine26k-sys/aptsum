@@ -7469,15 +7469,15 @@ function chartMulti(series){
     return `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#E2E8F0"/>
     <text x="${P.l-5}" y="${gy+3.5}" text-anchor="end" font-size="9" fill="#94A3B8">${fmt(gv)}억</text>`;
   }).join('');
-  const endpoints=act.map(s=>{const last=s.monthly[s.monthly.length-1];return {s,last,x:x(last.ym),y:y(val(s,last))};});
+  const endpoints=act.map(s=>{const last=s.monthly[s.monthly.length-1];return {s,last,value:val(s,last),x:x(last.ym),y:y(val(s,last))};});
   const labelOffsets=endpoints.map(()=>-7);
   for(let i=0;i<endpoints.length;i++)for(let j=i+1;j<endpoints.length;j++){
     const a=endpoints[i],b=endpoints[j],sameArea=Math.abs(a.x-b.x)<34&&Math.abs(a.y-b.y)<12;
     if(!sameArea)continue;
-    // 끝점 값 라벨이 가까우면 한쪽은 위, 한쪽은 아래에 배치한다.
-    const lowerHalf=(a.y+b.y)/2>(P.t+H-P.b)/2;
-    labelOffsets[i]=lowerHalf?11:-7;
-    labelOffsets[j]=lowerHalf?-7:11;
+    // 끝점 값 라벨이 가까우면 높은 값은 위, 낮은 값은 아래에 배치한다.
+    const aIsHigher=a.value>=b.value;
+    labelOffsets[i]=aIsHigher?-7:11;
+    labelOffsets[j]=aIsHigher?11:-7;
   }
   const lines = act.map((s,index)=>{
     const pts = s.monthly.map(m=>`${x(m.ym).toFixed(1)},${y(val(s,m)).toFixed(1)}`).join(' ');
