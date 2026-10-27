@@ -1372,8 +1372,17 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
-const molitUndervaluePriceState=new Map();
+const molitUndervaluePriceState={sources:new Map(),min:0,max:100,lo:0,hi:100,touched:false};
 const molitUndervalueFilteredSources=new WeakSet();
+try{
+  const saved=JSON.parse(localStorage.getItem('apc:molitUndervaluePrice')||'null');
+  if(saved&&['min','max','lo','hi'].every(k=>Number.isFinite(saved[k]))&&saved.min<saved.max){
+    molitUndervaluePriceState.min=saved.min;molitUndervaluePriceState.max=saved.max;
+    molitUndervaluePriceState.lo=Math.max(saved.min,Math.min(saved.max,saved.lo));
+    molitUndervaluePriceState.hi=Math.max(molitUndervaluePriceState.lo,Math.min(saved.max,saved.hi));
+    molitUndervaluePriceState.touched=!!saved.touched;
+  }
+}catch{}
 // "신고가 속보 (7일)" 탭용 플래그(2026.09 신설, 구독 전용) — 별도 mode를 새로 만들지 않고 기존 'newhigh'
 // 파이프라인(국토부 신고기한이 최대 30일이라 30일 창으로 수집)을 그대로 재사용하되, 결과 중 실제 계약일이
 // 최근 7일 이내인 것만(fresh7) 걸러 보여준다. 30일 창을 7일로 좁혀서 다시 수집하면 아직 신고 안 된
@@ -2478,7 +2487,6 @@ function getQueriedSliderPref(m){
     if(!v||typeof v!=='object'||Array.isArray(v))return null;
     if(!Array.isArray(v.bands)||v.bands.length>10||!v.bands.every(b=>{if(typeof b!=='string'||!/^\d{1,3}-\d{1,3}$/.test(b))return false;const [lo,hi]=b.split('-').map(Number);return lo<=hi&&hi<=999;}))return null;
     if(v.ls&&Object.values(v.ls).some(n=>!Number.isFinite(n)))return null;
-    if(v.muv&&['min','max','lo','hi'].some(k=>!Number.isFinite(v.muv[k])))return null;
     return v;
   }catch{return null;}
 }
@@ -2488,7 +2496,6 @@ function saveQueriedSliders(){
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
-  if(mode==='shortval'||mode==='longpeak'){const uv=molitUndervaluePriceStateFor(mode);v.muv={min:uv.min,max:uv.max,lo:uv.lo,hi:uv.hi,touched:uv.touched};}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
 function resetQueriedSliderDefaults(m){
@@ -2504,7 +2511,6 @@ function resetQueriedSliderDefaults(m){
     for(const [name,[min,max]] of Object.entries(defaults))for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=min;el.max=max;el.disabled=false;}
     lsSet();listingGapSet(20,30);
   }
-  if(m==='shortval'||m==='longpeak')resetMolitUndervaluePrice(m);
 }
 function restoreQueriedSliders(m){
   const v=getQueriedSliderPref(m);
@@ -2523,9 +2529,6 @@ function restoreQueriedSliders(m){
     // 구버전 저장값은 자동 조정된 범위와 직접 설정한 필터를 구분할 수 없다.
     if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();else lsSet(v.ls);
     if(m==='listingbudget')lsAlignUnadjustedToBounds();
-  }
-  if((m==='shortval'||m==='longpeak')&&v.muv){
-    const uv=molitUndervaluePriceStateFor(m);uv.min=v.muv.min;uv.max=v.muv.max;uv.lo=Math.max(uv.min,Math.min(uv.max,v.muv.lo));uv.hi=Math.max(uv.lo,Math.min(uv.max,v.muv.hi));uv.touched=!!v.muv.touched;uv.source=null;syncMolitUndervaluePriceUI(m);
   }
   if(m==='listinggap'&&v.gap)listingGapSet(v.gap.smallBand,v.gap.largeBand);
 }
@@ -2913,8 +2916,9 @@ function setMode(m, fromRestore){
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
-  document.getElementById('molitUndervalueFilters').style.display = (m==='shortval'||m==='longpeak') ? '' : 'none';
-  if(m==='shortval'||m==='longpeak')syncMolitUndervaluePriceUI(m);
+  const isMolitUndervalue=['shortval','longpeak','inversion'].includes(m);
+  document.getElementById('molitUndervalueFilters').style.display = isMolitUndervalue ? '' : 'none';
+  if(isMolitUndervalue)syncMolitUndervaluePriceUI(m);
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
   document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
@@ -7931,21 +7935,30 @@ function renderPricePerPyeong(d){
 
 
 function molitUndervaluePriceMode(mode){return mode==='longpeakdong'?'longpeak':mode;}
-function molitUndervaluePriceValue(mode,row){return mode==='shortval'?row.r3avg:row.r3max;}
-function molitUndervaluePriceStateFor(mode){
-  mode=molitUndervaluePriceMode(mode);
-  let state=molitUndervaluePriceState.get(mode);
-  if(!state){state={source:null,min:0,max:100,lo:0,hi:100,touched:false};molitUndervaluePriceState.set(mode,state);}
-  return state;
+function molitUndervaluePriceValue(mode,row){
+  if(mode==='shortval')return row.r3avg;
+  if(mode==='inversion')return row.underAvgAmt;
+  return row.r3max;
 }
-function resetMolitUndervaluePrice(mode){
-  const state=molitUndervaluePriceStateFor(mode);
-  state.source=null;state.min=0;state.max=100;state.lo=0;state.hi=100;state.touched=false;
+function molitUndervaluePriceStateFor(){return molitUndervaluePriceState;}
+function persistMolitUndervaluePrice(){
+  const {min,max,lo,hi,touched}=molitUndervaluePriceState;
+  try{localStorage.setItem('apc:molitUndervaluePrice',JSON.stringify({min,max,lo,hi,touched}));}catch{}
+}
+function resetMolitUndervaluePriceFilter(){
+  const state=molitUndervaluePriceState;
+  const currentMode=molitUndervaluePriceMode(mode),source=lastData?.mode===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
+  const values=source?(source[key]||[]).map(row=>molitUndervaluePriceValue(currentMode,row)).filter(value=>Number.isFinite(value)&&value>0):[];
+  if(values.length){state.min=Math.floor(Math.min(...values)*2)/2;state.max=Math.max(state.min+0.5,Math.ceil(Math.max(...values)*2)/2);}
+  else{state.min=0;state.max=100;}
+  state.lo=state.min;state.hi=state.max;state.touched=false;
+  persistMolitUndervaluePrice();
   syncMolitUndervaluePriceUI(mode);
+  molitUndervaluePriceApply();
 }
 function syncMolitUndervaluePriceUI(mode){
   mode=molitUndervaluePriceMode(mode);
-  if(mode!=='shortval'&&mode!=='longpeak')return;
+  if(!['shortval','longpeak','inversion'].includes(mode))return;
   const state=molitUndervaluePriceStateFor(mode),min=document.getElementById('muvPriceMin'),max=document.getElementById('muvPriceMax');
   if(!min||!max)return;
   min.min=max.min=state.min;min.max=max.max=state.max;min.value=state.lo;max.value=state.hi;
@@ -7959,31 +7972,34 @@ function syncMolitUndervaluePriceUI(mode){
   document.getElementById('muvPriceTxt').textContent=state.lo<=state.min&&state.hi>=state.max?'전체':`${state.lo.toFixed(1)}~${state.hi.toFixed(1)}억`;
 }
 function molitUndervaluePriceFilter(d){
-  const mode=molitUndervaluePriceMode(d.mode),isFilteredSource=molitUndervalueFilteredSources.has(d),state=molitUndervaluePriceStateFor(mode);
-  if(!isFilteredSource&&state.source!==d){
-    const values=(d.divergence||[]).map(x=>molitUndervaluePriceValue(mode,x)).filter(n=>Number.isFinite(n)&&n>0);
+  const mode=molitUndervaluePriceMode(d.mode),key=mode==='inversion'?'rows':'divergence';
+  const isFilteredSource=molitUndervalueFilteredSources.has(d),state=molitUndervaluePriceStateFor(mode);
+  if(!isFilteredSource&&state.sources.get(mode)!==d){
+    const values=(d[key]||[]).map(x=>molitUndervaluePriceValue(mode,x)).filter(n=>Number.isFinite(n)&&n>0);
     if(values.length){
       const min=Math.floor(Math.min(...values)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...values)*2)/2);
       if(!state.touched){state.min=min;state.max=max;state.lo=min;state.hi=max;}
       else{state.min=Math.min(0,min,state.lo);state.max=Math.max(100,max,state.hi);state.lo=Math.max(state.min,state.lo);state.hi=Math.max(state.lo,Math.min(state.max,state.hi));}
     }
-    state.source=d;
+    state.sources.set(mode,d);
     syncMolitUndervaluePriceUI(mode);
   }
   let data=d;
   if(!isFilteredSource){
-    data={...d,divergence:(d.divergence||[]).filter(x=>{const value=molitUndervaluePriceValue(mode,x);return Number.isFinite(value)&&value>=state.lo&&value<=state.hi;})};
+    const rows=(d[key]||[]).filter(x=>{const value=molitUndervaluePriceValue(mode,x);return Number.isFinite(value)&&((state.lo<=state.min&&state.hi>=state.max)||(value>=state.lo&&value<=state.hi));});
+    data={...d,[key]:rows};
     molitUndervalueFilteredSources.add(data);
   }
   return {data};
 }
 function molitUndervaluePriceSync(input){
-  const currentMode=mode==='longpeak'?'longpeak':mode;
-  if(currentMode!=='shortval'&&currentMode!=='longpeak')return;
+  const currentMode=molitUndervaluePriceMode(mode);
+  if(!['shortval','longpeak','inversion'].includes(currentMode))return;
   const state=molitUndervaluePriceStateFor(currentMode);
   const min=document.getElementById('muvPriceMin'),max=document.getElementById('muvPriceMax');let lo=+min.value,hi=+max.value;
   if(lo>hi){if(input===min)hi=lo;else lo=hi;min.value=lo;max.value=hi;}
   state.lo=lo;state.hi=hi;state.touched=!(lo<=state.min&&hi>=state.max);
+  persistMolitUndervaluePrice();
   syncMolitUndervaluePriceUI(currentMode);
 }
 function molitUndervaluePriceNumberApply(input){
@@ -7997,10 +8013,11 @@ function molitUndervaluePriceNumberApply(input){
   molitUndervaluePriceApply();
 }
 function molitUndervaluePriceApply(){
-  if(mode!=='shortval'&&mode!=='longpeak')return;
-  const state=molitUndervaluePriceStateFor(mode);if(!state.source||lastData!==state.source)return;
-  saveQueriedSliders();
+  if(!['shortval','longpeak','inversion'].includes(mode))return;
+  const selectedMode=molitUndervaluePriceMode(lastData?.mode),state=molitUndervaluePriceStateFor(mode);
+  if(!lastData||selectedMode!==mode||state.sources.get(selectedMode)!==lastData)return;
   if(mode==='shortval')renderShortUndervalue(lastData);
+  else if(mode==='inversion')renderInversion(lastData);
   else renderLongPeak(lastData);
 }
 
@@ -8127,6 +8144,7 @@ function renderJeonseLongTermRise(d){
 }
 
 function renderInversion(d){
+  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
   d=molitPageData(d,"rows",renderInversion);
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
@@ -8866,6 +8884,7 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
 }
 function resetAllSliderFilters(){
   if(document.getElementById('loading').classList.contains('on'))stopSearch();else searchToken++;
+  if(['shortval','longpeak','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
   pyBandMultiSel=[];
