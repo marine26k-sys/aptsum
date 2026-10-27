@@ -1577,7 +1577,7 @@ async function initFromURL(){
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
     if(p.get('pbb')==='past') document.getElementById('priceBandBasis').value = 'past';
     if(p.get('q')) document.getElementById('q').value = p.get('q');
-    if(hasSharedQuery){
+    if(requestedMode==='listingfavorites'||hasSharedQuery){
       if(requestedMode==='complex'){ if(p.get('q')) search(); }
       else search();
     }
@@ -1936,7 +1936,7 @@ function restoreView(vi){
     // 단지 분석과 그 탭이 동시에 선택된 것처럼 보였음(mode 변수도 그 탭 그대로라 검색 버튼·필터 UI가
     // 어긋난 상태로 남음 — 2026.09 운영자 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
     const initialMode=new URLSearchParams(location.search).get('m');
-    if(initialMode)setMode(initialMode,true);else restoreMainMenu();
+    if(initialMode){setMode(initialMode,true);if(initialMode==='listingfavorites')search();}else restoreMainMenu();
     return;
     }
     // 스냅샷이 비어 있으면 URL 복원이 실패한 상태이므로 안전하게 초기 화면으로 돌아간다.
