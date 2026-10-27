@@ -2937,7 +2937,7 @@ function setMode(m, fromRestore){
   document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsHhRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
-  document.getElementById('lsSubwayRow').style.display = m==='listingbudget'&&!isIndividualListing() ? '' : 'none';
+  document.getElementById('lsSubwayRow').style.display = (m==='listingbudget'&&!isIndividualListing())||m==='listingurgent' ? '' : 'none';
   document.getElementById('lsRateRow').style.display = (m==='listingbudget'||m==='listingaskmap') ? '' : 'none';
   document.getElementById('listingTrendDirectionFilters').style.display = (m==='listingtrend'||m==='listingrise') ? '' : 'none';
   document.getElementById('listingTrendDirection').value = m==='listingrise' ? 'up' : 'down';
@@ -8972,7 +8972,7 @@ function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
 function lsRateMatch(x,v){return lsFacetMatch('rate',x,v);}
-function lsSubwayActive(v=lsGet()){return mode==='listingbudget'&&!isIndividualListing()&&Number.isFinite(v.sw)&&v.sw<LS_SUBWAY_ALL;}
+function lsSubwayActive(v=lsGet()){return (mode==='listingbudget'&&!isIndividualListing()||mode==='listingurgent')&&Number.isFinite(v.sw)&&v.sw<LS_SUBWAY_ALL;}
 function lsSubwayMatch(x,v=lsGet()){
   if(!lsSubwayActive(v))return true; // 전체 선택이면 비역세권(공란·-) 단지도 포함
   const raw=x?.subwayMinutes;
@@ -8981,7 +8981,7 @@ function lsSubwayMatch(x,v=lsGet()){
   return Number.isFinite(n)&&n>=0&&n<=v.sw;
 }
 function lsSubwaySync(){const slider=document.getElementById('lsSubwayMax'),index=Math.max(0,Math.min(LS_SUBWAY_STEPS.length-1,Math.round(Number(slider.value)))),value=LS_SUBWAY_STEPS[index];slider.value=index;document.getElementById('lsSubwayTxt').textContent=value===LS_SUBWAY_ALL?'전체':`${value}분 이내`;document.querySelectorAll('#lsSubwaySteps span').forEach((step,i)=>step.classList.toggle('on',i===index));}
-function lsSubwayApply(){lsSubwaySync();}
+function lsSubwayApply(){lsSubwaySync();if(mode==='listingurgent'&&lastData?.mode==='listingurgent')search({silentScroll:true});}
 function lsActive(v){return lsFacetActive('age',v)||lsHhActive(v)||lsPyActive(v);}
 function lsAgeText(v){return v.a0===v.a1?`${v.a0}년차`:!lsFacetActive('age',v)?'전체':`${v.a0}~${v.a1}년차`;}
 function lsHhActive(v){return lsFacetActive('hh',v);}
