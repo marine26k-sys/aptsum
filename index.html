@@ -460,6 +460,8 @@ try {
   .analysis-select-slider{display:flex;align-items:center;gap:10px}
   .analysis-select-slider .ls-numbers{width:100%}
   .analysis-select-slider input[type=range]{display:block;width:100%;margin:6px 0 2px;accent-color:var(--teal)}
+  .analysis-filter-group{margin:8px 0 2px;padding:8px 12px 4px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .analysis-filter-group.unified>.ls-filters{margin:0;padding:6px 0 8px;border:0;border-radius:0;background:transparent;box-shadow:none}
   #listingGapInvestmentFilters .slider-form-control .ls-dual{width:100%}
   #listingGapFilters .ls-row label{display:grid;width:100%;min-width:0;box-sizing:border-box;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:10px}
   #listingGapFilters .analysis-select-slider{width:auto;margin:0;padding:0;border:0;background:transparent;box-shadow:none}
@@ -2590,6 +2592,13 @@ function syncAnalysisSelectSliders(){
     const number=document.getElementById(select.id+'Number');if(number){number.disabled=select.disabled;number.value=select.value;const values=entry.options.filter(o=>o.value!=='').map(o=>+o.value).filter(Number.isFinite);number.min=Math.min(...values);number.max=Math.max(...values);}
   }
   const reset=document.getElementById('sliderFilterResetRow');if(reset)reset.style.display=[...document.querySelectorAll('#searchBox input[type=range]')].some(el=>el.getClientRects().length)?'flex':'none';
+  syncAnalysisFilterGroup();
+}
+function syncAnalysisFilterGroup(){
+  const group=document.getElementById('analysisFilterGroup');if(!group)return;
+  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise';
+  group.classList.toggle('unified',unified);
+  group.style.display=unified?'':'none';
 }
 // Touch scrolling and a light tap must not change an age filter.
 function guardAgeSliderTouch(input,refresh){
@@ -2663,6 +2672,11 @@ function initializeAnalysisSelectSliders(){
   ageSource.after(ageWrap);
   for(const id of ['analysisAgeMin','analysisAgeMax']){const input=document.getElementById(id);guardAgeSliderTouch(input,syncAnalysisAgeSlider);input.addEventListener('input',()=>analysisAgeSync(input));}
   new MutationObserver(syncAnalysisAgeSlider).observe(ageSource,{attributes:true,attributeFilter:['style']});
+  const filterGroup=document.createElement('div');filterGroup.id='analysisFilterGroup';filterGroup.className='analysis-filter-group';
+  document.getElementById('listingGapFilters').after(filterGroup);
+  filterGroup.append(document.getElementById('analysisPyFilters'));
+  for(const entry of analysisSelectSliders)if(['monthsN','risePeriodN'].includes(entry.select.id))filterGroup.append(entry.wrap);
+  filterGroup.append(ageWrap);
   for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
   initializeAnalysisRangeNumbers();
   syncAnalysisSelectSliders();
@@ -2986,6 +3000,7 @@ function setMode(m, fromRestore){
       if(!r.querySelector('input').value.trim()) r.querySelector('select').value = sel.value;
     });
   }
+  syncAnalysisFilterGroup();
   renderRecentComplexes();
   return true;
 }
@@ -7711,6 +7726,7 @@ function setRegionRankView(view){
   if(view!=='complex'&&view!=='pyprice')return;
   regionRankView=view;
   syncRegionRankPicker();
+  syncAnalysisFilterGroup();
   if(lastData?.mode==='region')renderRegion(lastData);
 }
 function syncUndervaluePicker(){
