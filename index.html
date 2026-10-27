@@ -5345,7 +5345,7 @@ async function subwayRowsForRegion(lawd,maxWalk){
 
     // 역세권 거리 필터·표시에는 station_walk_minutes만 사용한다.
     // K-apt subwayWalk는 값이 없거나 달라도 거리 판정에 사용하지 않는다.
-    let rows = collapseSubwayManagementUnits(items);
+    let rows = collapseSubwayManagementUnits(items.filter(item=>!(Number(item.hhcnt)>0&&Number(item.hhcnt)<=50)));
 
     // 단지 분석과 같은 현재월 월평균가 기준 평당가 + 전용면적 구간별 시세 조회
     // 2026.08: 기존 4구간(45~54/55~60/80~85/86~105)은 사이에 빈 구간(61~79, 106+)이 있어서 30평·47평·55평처럼
@@ -5553,6 +5553,43 @@ function dismissSearchKeyboard(){
   const active=document.activeElement;
   if(active?.matches('input.q, #q, .cmp-row input, #listingNameQuery'))active.blur();
 }
+// 국토부 실거래 분석은 단지 단위 표본이 너무 작은 단지를 제외한다.
+// 세대수는 거래 API와 별도이므로 분석 전에 법정동별로 배치 조회한다. 200개 제한에 맞춰 나누고,
+// 세대수 매칭을 확인하지 못한 거래는 임의로 제외하지 않는다.
+async function excludeSmallHouseholdTrades(trades, fallbackLawd){
+  const groups=new Map();
+  for(const trade of trades||[]){
+    const lawd=String(trade.lawd||fallbackLawd||'');
+    const umd=String(trade.umd||'');
+    if(!lawd||!trade.apt)continue;
+    if(!groups.has(lawd))groups.set(lawd,{lawd,names:new Map(),trades:[]});
+    const group=groups.get(lawd),umds=group.names.get(trade.apt)||new Set();umds.add(umd);group.names.set(trade.apt,umds);group.trades.push(trade);
+  }
+  const groupList=[...groups.values()];
+  for(let groupIndex=0;groupIndex<groupList.length;groupIndex+=4)await Promise.all(groupList.slice(groupIndex,groupIndex+4).map(async group=>{
+    const counts=new Map(),unique=[],duplicateByUmd=new Map();
+    for(const [name,umds] of group.names){
+      if(umds.size===1){unique.push([name,[...umds][0]]);continue;}
+      for(const umd of umds){if(!duplicateByUmd.has(umd))duplicateByUmd.set(umd,[]);duplicateByUmd.get(umd).push(name);}
+    }
+    const fetchBatches=async(entries,umd)=>{
+      for(let i=0;i<entries.length;i+=200){
+        const batch=entries.slice(i,i+200),names=batch.map(([name])=>name);
+        const result=await fetchHHCntBatch(group.lawd,names,Object.fromEntries(batch.map(([name,dong])=>[name,umd??dong])));
+        for(const name of names)counts.set(`${umd??batch.find(x=>x[0]===name)?.[1]??''}|${name}`,result[name]||null);
+      }
+    };
+    await Promise.all([
+      fetchBatches(unique),
+      ...[...duplicateByUmd].map(([umd,names])=>fetchBatches(names.map(name=>[name,umd]),umd))
+    ]);
+    for(const trade of group.trades){
+      const hh=counts.get(`${trade.umd||''}|${trade.apt}`)||counts.get(`|${trade.apt}`)||null;
+      trade.hh=hh;
+    }
+  }));
+  return (trades||[]).filter(trade=>!(Number(trade.hh?.hhcnt)>0&&Number(trade.hh.hhcnt)<=50));
+}
 async function search(opts){
   const requestId=search.requestId=(search.requestId||0)+1;
   const result=document.getElementById('result'),previousResult=result.firstChild,requestedMode=mode;
@@ -5734,6 +5771,12 @@ async function runSearch(opts){
           for(const t of rentArr) mergedRent.push({ ...t, gu: guName, lawd: guLawd });
         });
       }
+      const [eligibleSales,eligibleRents]=await Promise.all([
+        excludeSmallHouseholdTrades(merged),
+        excludeSmallHouseholdTrades(mergedRent)
+      ]);
+      merged.length=0;for(const trade of eligibleSales)merged.push(trade);
+      mergedRent.length=0;for(const trade of eligibleRents)mergedRent.push(trade);
       let items = floorF(monthlyHistoryMode?merged:windowF(merged));
       // 헤더 제목: 4곳 이하면 이름을 나열, 5곳 이상이면 시/도 단위로 묶어서 표시 (2026.08 3→4개로 확대,
       // 2026.09 5곳+일 때 "강서구 외 15곳" 대신 "서울시, 경기도, 부산시, 인천시"처럼 규모를 보여주도록 변경)
@@ -5852,8 +5895,9 @@ async function runSearch(opts){
       const byLawd = {};
       uniq.forEach((ld,i)=>{
         const merged = mergeTradeAndPresaleForRanking(fetched[i],fetchedP[i],ld);
-        byLawd[ld]=floorF(merged);
+        byLawd[ld]=merged;
       });
+      await Promise.all(uniq.map(async ld=>{byLawd[ld]=floorF(await excludeSmallHouseholdTrades(byLawd[ld],ld));}));
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       if(myToken!==searchToken)return;
       const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
@@ -5876,6 +5920,10 @@ async function runSearch(opts){
       // 매매·분양권 양쪽에서 독립적으로 이름 매칭을 시도한 뒤 병합한다 (매매 매칭 성공 여부와 무관하게 분양권도 항상 시도).
       let rawMerged = raw;
       rawMerged = mergeTradeAndPresaleForRanking(raw,rawP,lawd);
+      [rawMerged,rawJ]=await Promise.all([
+        excludeSmallHouseholdTrades(rawMerged,lawd),
+        excludeSmallHouseholdTrades(rawJ,lawd)
+      ]);
       let items = monthlyHistoryMode?floorF(rawMerged):windowF(floorF(rawMerged));
       if(mode==='region' || mode==='volume'){
         items = pyBandMultiFilter(items);
