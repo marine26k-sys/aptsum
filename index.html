@@ -8510,7 +8510,7 @@ function analyzeListingUndervalue(all, priceFilter){
       // 한 단지는 비교군에 한 번만 — 엑셀이 단지·전용면적 단위라 같은 단지의 비슷한 평형(예: 전용 58·59)이 따로 잡혀
       // 비교군에 같은 단지가 두 번 들어가고 중앙값도 그 단지로 쏠리던 문제(2026.09 운영자 리포트). 최고가가 가장 가까운 평형만 남긴다.
       .filter((o, i, arr) => arr.findIndex(q => q.nid === o.nid) === i)
-      .slice(0,5);
+      .slice(0,4); // 본인 단지를 포함해 비교 표본 최대 5개
     if(nearest.length < 2) return; // 본인 포함 3개 이상일 때만
     const askMedian = median(nearest.map(o=>o.ask));
     const gapPct = Math.round((r.ask - askMedian)/askMedian*100);
@@ -8587,8 +8587,8 @@ function renderListingUndervalue(d){
     ? `<div class="rng" style="padding:10px 0">조건 충족 단지 없음 (같은 구 · ${LISTING_MIN_HH}세대 이상 · 20~37평 · 비교군 2곳 이상 필요)</div>`
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
-      <div style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</div>
-      <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${x.py}평 (전용 ${x.area})</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)"><span style="min-width:0">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</span><b style="flex:none;white-space:nowrap;color:var(--teal-dark);font-size:11px">${x.py}평 (전용 ${x.area})</b></div>
+      <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x).replace(/^<br>/,' ')}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
         <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
@@ -8609,7 +8609,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 비교군은 호가가 2% 넘게 높은 단지 최대 5곳 · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·같은 평대 (20~29평끼리, 30~37평끼리)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
