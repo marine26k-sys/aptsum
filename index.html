@@ -1482,7 +1482,7 @@ function buildShareURL(inp){
   if(((inp.mode==='listingtrend'||inp.mode==='listingrise')||inp.mode==='listingbudget'||inp.mode==='listingurgent'||inp.mode==='longpeaklisting') && inp.ls && (inp.ls.q0>lsAskLimits().min || inp.ls.q1<lsAskLimits().max)) p.set('lq',`${inp.ls.q0}~${inp.ls.q1}`);
   if(inp.mode!=='listinggap' && inp.ls && lsActive(inp.ls)) p.set('ls', `${inp.ls.a0}-${inp.ls.a1}-${inp.ls.h}-${inp.ls.p0}-${inp.ls.p1}-${inp.ls.h1??5000}`);
   if(inp.mode!=='listinggap' && inp.ls && lsRateActive(inp.ls)) p.set('lr', `${inp.ls.r0}~${inp.ls.r1}`);
-  if(inp.mode==='listingbudget' && new URLSearchParams(location.search).get('individual')!=='1' && Number.isFinite(inp.ls?.sw) && inp.ls.sw!==LS_SUBWAY_ALL) p.set('lsw', String(inp.ls.sw));
+  if(['listingbudget','listingurgent'].includes(inp.mode) && !(inp.mode==='listingbudget'&&new URLSearchParams(location.search).get('individual')==='1') && Number.isFinite(inp.ls?.sw) && inp.ls.sw!==LS_SUBWAY_ALL) p.set('lsw', String(inp.ls.sw));
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
   if(inp.mode==='compare'){
