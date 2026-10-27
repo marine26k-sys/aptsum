@@ -66,7 +66,7 @@ import {REGIONS} from '/shared/regions.mjs';
 import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
 const $=s=>document.querySelector(s), grid=$('#grid'), period=$('#period');
 const state={view:'weekly',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
-const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/main/data/listing-ask-map.json';
+const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-map.json';
 const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
 $('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
 function fmt(n){return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(1)+'%':'자료 없음'}
