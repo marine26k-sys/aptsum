@@ -1198,12 +1198,12 @@ try {
       </div>
     </div>
     <div id="molitUndervalueFilters" class="ls-filters" style="display:none">
-      <div class="slider-form-row">
-        <div class="slider-form-label"><span>최근 금액</span><b id="muvPriceTxt">전체</b></div>
-        <div class="slider-form-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
+      <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
+        <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>매매가</span><b id="muvPriceTxt">전체</b></div>
+        <div class="ls-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
           <input type="range" id="muvPriceMin" min="0" max="100" step="0.5" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
           <input type="range" id="muvPriceMax" min="0" max="100" step="0.5" value="100" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최고 금액(억)">
-        </div></div>
+        </div><div class="ls-numbers"><input type="number" id="muvPriceMinNumber" aria-label="최저 매매가(억) 직접 입력" onchange="molitUndervaluePriceNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="muvPriceMaxNumber" aria-label="최고 매매가(억) 직접 입력" onchange="molitUndervaluePriceNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>억</span></div></div>
       </div>
     </div>
     <div id="listingFloorFilters" class="ls-filters" style="display:none">
@@ -7949,6 +7949,11 @@ function syncMolitUndervaluePriceUI(mode){
   const state=molitUndervaluePriceStateFor(mode),min=document.getElementById('muvPriceMin'),max=document.getElementById('muvPriceMax');
   if(!min||!max)return;
   min.min=max.min=state.min;min.max=max.max=state.max;min.value=state.lo;max.value=state.hi;
+  for(const [sliderId,inputId] of [['muvPriceMin','muvPriceMinNumber'],['muvPriceMax','muvPriceMaxNumber']]){
+    const slider=document.getElementById(sliderId),input=document.getElementById(inputId);
+    input.min=slider.min;input.max=slider.max;input.step=slider.step;
+    if(document.activeElement!==input)input.value=slider.value;
+  }
   const span=state.max-state.min||1,loPct=(state.lo-state.min)/span*100,hiPct=(state.hi-state.min)/span*100;
   const dual=document.getElementById('muvPriceDual');dual.style.setProperty('--lo',loPct+'%');dual.style.setProperty('--hi',hiPct+'%');
   document.getElementById('muvPriceTxt').textContent=state.lo<=state.min&&state.hi>=state.max?'전체':`${state.lo.toFixed(1)}~${state.hi.toFixed(1)}억`;
@@ -7980,6 +7985,16 @@ function molitUndervaluePriceSync(input){
   if(lo>hi){if(input===min)hi=lo;else lo=hi;min.value=lo;max.value=hi;}
   state.lo=lo;state.hi=hi;state.touched=!(lo<=state.min&&hi>=state.max);
   syncMolitUndervaluePriceUI(currentMode);
+}
+function molitUndervaluePriceNumberApply(input){
+  const slider=document.getElementById(input.id==='muvPriceMinNumber'?'muvPriceMin':'muvPriceMax');
+  if(!slider)return;
+  const value=Number(input.value),min=+slider.min,max=+slider.max,step=+slider.step||0.5;
+  if(input.value.trim()===''||!Number.isFinite(value)){input.value=slider.value;return;}
+  slider.value=Math.max(min,Math.min(max,Number((min+Math.round((value-min)/step)*step).toFixed(6))));
+  molitUndervaluePriceSync(slider);
+  input.value=slider.value;
+  molitUndervaluePriceApply();
 }
 function molitUndervaluePriceApply(){
   if(mode!=='shortval'&&mode!=='longpeak')return;
