@@ -2930,7 +2930,7 @@ function setMode(m, fromRestore){
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
-  const isMolitUndervalue=['shortval','longpeak','inversion'].includes(m);
+  const isMolitUndervalue=['shortval','longpeak','longpeakdong','inversion'].includes(m);
   document.getElementById('molitUndervalueFilters').style.display = isMolitUndervalue ? '' : 'none';
   if(isMolitUndervalue)syncMolitUndervaluePriceUI(m);
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
@@ -7964,7 +7964,7 @@ function persistMolitUndervaluePrice(){
 }
 function resetMolitUndervaluePriceFilter(){
   const state=molitUndervaluePriceState;
-  const currentMode=molitUndervaluePriceMode(mode),source=lastData?.mode===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
+  const currentMode=molitUndervaluePriceMode(mode),source=molitUndervaluePriceMode(lastData?.mode)===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
   const values=source?(source[key]||[]).map(row=>molitUndervaluePriceValue(currentMode,row)).filter(value=>Number.isFinite(value)&&value>0):[];
   if(values.length){state.min=Math.floor(Math.min(...values)*2)/2;state.max=Math.max(state.min+0.5,Math.ceil(Math.max(...values)*2)/2);}
   else{state.min=0;state.max=100;}
@@ -8030,11 +8030,12 @@ function molitUndervaluePriceNumberApply(input){
   molitUndervaluePriceApply();
 }
 function molitUndervaluePriceApply(){
-  if(!['shortval','longpeak','inversion'].includes(mode))return;
-  const selectedMode=molitUndervaluePriceMode(lastData?.mode),state=molitUndervaluePriceStateFor(mode);
-  if(!lastData||selectedMode!==mode||state.sources.get(selectedMode)!==lastData)return;
-  if(mode==='shortval')renderShortUndervalue(lastData);
-  else if(mode==='inversion')renderInversion(lastData);
+  const currentMode=molitUndervaluePriceMode(mode);
+  if(!['shortval','longpeak','inversion'].includes(currentMode))return;
+  const selectedMode=molitUndervaluePriceMode(lastData?.mode),state=molitUndervaluePriceStateFor(currentMode);
+  if(!lastData||selectedMode!==currentMode||state.sources.get(selectedMode)!==lastData)return;
+  if(currentMode==='shortval')renderShortUndervalue(lastData);
+  else if(currentMode==='inversion')renderInversion(lastData);
   else renderLongPeak(lastData);
 }
 
@@ -8901,7 +8902,7 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
 }
 function resetAllSliderFilters(){
   if(document.getElementById('loading').classList.contains('on'))stopSearch();else searchToken++;
-  if(['shortval','longpeak','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
+  if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
   pyBandMultiSel=[];
