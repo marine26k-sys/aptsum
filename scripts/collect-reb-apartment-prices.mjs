@@ -1,4 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const apiKey = process.env.REB_RONE_API_KEY;
 if (!apiKey) throw new Error('REB_RONE_API_KEY is required');
@@ -93,6 +94,19 @@ const monthlyRows = [...monthly.values()].filter(row => Number.isFinite(row.aver
 const asOf = monthlyRows.map(row => row.month).sort().at(-1);
 if (!asOf || !Object.keys(regions).length) throw new Error('R-ONE returned no usable apartment price data');
 
+const tileContext = { window: {} };
+vm.runInNewContext(await readFile('shared/metro-tile-map.js', 'utf8'), tileContext);
+const tiles = tileContext.window.APTSUM_METRO_TILE_MAP.flat();
+const normalize = value => String(value).replace(/[\s>\/|·]/g, '').replace(/시(?=.+구$)/, '');
+const districtMonthly = [];
+for (const row of monthlyRows) {
+  const path = normalize(row.region);
+  const matches = tiles.filter(([, province, name]) => path.startsWith(province) && path.endsWith(normalize(name)));
+  if (matches.length !== 1) continue;
+  const [, province, name] = matches[0];
+  districtMonthly.push({ province, name, period: row.month.slice(0,4)+'-'+row.month.slice(4), average: row.average, median: row.median });
+}
+if (!districtMonthly.length) throw new Error('R-ONE returned no usable district price data');
 const output = {
   source: '한국부동산원 R-ONE Open API',
   sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00062.do?isMobileYn=N',
@@ -102,6 +116,7 @@ const output = {
   asOf: asOf.slice(0, 4) + '-' + asOf.slice(4),
   updatedAt: new Date().toISOString(),
   regions,
+  districtMonthly,
 };
 const path = 'data/reb-apartment-prices.json';
 let previous = '';
