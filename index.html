@@ -2538,7 +2538,7 @@ function restoreQueriedSliders(m){
 }
 function getPyBandMultiPref(){
   let raw; try{ raw = localStorage.getItem('apc:pyBand'); }catch(e){ return null; }
-  if(raw==null) return null; // 저장된 적 없음 → 호출부에서 디폴트(32~36평) 적용
+  if(raw==null) return null; // 저장된 적 없음 → 호출부에서 디폴트(전체) 적용
   try{ const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : [String(parsed)]; }
   catch(e){ return raw ? [raw] : []; } // 예전 단일-select 시절 순수 문자열 포맷 호환
 }
@@ -2928,7 +2928,7 @@ function setMode(m, fromRestore){
   document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
-  pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : []);
+  pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? []) : []);
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
