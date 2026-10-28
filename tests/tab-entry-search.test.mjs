@@ -17,10 +17,10 @@ function page(search){
   });
   vm.runInContext(html.slice(html.indexOf('function normalizeListingOccupancy('),html.indexOf('function listingOccupancy(){'))+source,ctx);return {ctx,elements};
 }
-test('all tab entry URLs remain idle even with a remembered region',async()=>{
+test('tab entry URLs stay idle except favorites, which must load its saved list',async()=>{
   const links=[...html.matchAll(/class="tab[^"\n]*"[^\n]*href="([^\"]+\?m=[^\"]+)"/g)].map(x=>x[1]);
   assert.ok(links.length>=20);
-  for(const link of links){const {ctx}=page(new URL(link,'https://aptsum.kr').search);await ctx.initFromURL();assert.equal(ctx.calls,0,link);assert.ok(ctx.mode);}
+  for(const link of links){const {ctx}=page(new URL(link,'https://aptsum.kr').search);await ctx.initFromURL();const mode=new URL(link,'https://aptsum.kr').searchParams.get('m');assert.equal(ctx.calls,mode==='listingfavorites'?1:0,link);assert.ok(ctx.mode);}
 });
 test('shared result URL restores filters and performs exactly one query',async()=>{
   for(const query of ['?m=region&r=11680&by=under10','?m=subway&rs=11680:강남구','?m=listingbudget&r=11680&lbn=1','?m=complex&r=11680&q=래미안']){

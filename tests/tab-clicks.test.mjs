@@ -41,7 +41,10 @@ test('every tab id in index.html is tracked', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/class="tab[^"-][^"]*" id="(tab[A-Za-z0-9]+)"|class="tab" id="(tab[A-Za-z0-9]+)"/g)].map(m => m[1] || m[2]);
   const trackedLinks = [...html.matchAll(/data-track-tab="([A-Za-z0-9]+)"/g)].map(m => m[1]);
-  assert.deepEqual([...new Set([...ids, ...trackedLinks])].sort(), [...TAB_IDS].sort());
+  const standalone = ['move-in.html','reb-apartment-prices.html','reb-weekly-index.html','listing-ask-map.html']
+    .map(file => readFileSync(new URL('../'+file, import.meta.url), 'utf8')).join('\n');
+  const standaloneLinks = [...standalone.matchAll(/data-track-tab="([A-Za-z0-9]+)"/g)].map(m => m[1]);
+  assert.deepEqual([...new Set([...ids, ...trackedLinks, ...standaloneLinks])].sort(), [...TAB_IDS].sort());
 });
 
 

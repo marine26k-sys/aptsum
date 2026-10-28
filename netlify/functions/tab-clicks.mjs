@@ -22,7 +22,7 @@ export const TAB_IDS = [
   "tabR", "tabV", "tabGap",
   "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange", "tabPrivateRegionalChange",
   "tabUV",
-  "tabLPL", "tabLIC", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP",
+  "tabLPL", "tabLIC", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP", "tabLASK",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",
   "tabApply", "tabBusiness", "tabMoveIn", "tabREBPrices", "tabREBWeeklyIndex",
 ];
