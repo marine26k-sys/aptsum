@@ -2279,7 +2279,7 @@ function buildRegionPicker(){
     let ggPickerLastCity = null;
     html += `<div class="rggrid">` + hits.map(([n,c], i)=>{
       let prefix = '';
-      if((multi || cmpPickerRow) && !q && !isMolitUndervalueMode(mode)){
+      if((multi || cmpPickerRow) && !q){
         if(g==='경기'){
           // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 47개 시군구 일괄 추가 버튼을 노출한다.
           if(i===0 && ggAllAllowed()){
@@ -2897,7 +2897,7 @@ function setMode(m, fromRestore){
   // 서울(25)조차 다 못 담아서 실효성 없다고 보고 한때 제외했었는데(눌러도 addRegion()이 5개까지만 채우고
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
-  const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='peak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
+  const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
   [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
   if(!supportsAllScopeOption && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
