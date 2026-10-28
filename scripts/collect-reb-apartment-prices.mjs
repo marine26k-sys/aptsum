@@ -24,8 +24,8 @@ async function getRows(tableId) {
       STATBL_ID: tableId,
       DTACYCLE_CD: 'MM',
       ITM_ID: '100001',
-      START_WRTTIME: '2012',
-      END_WRTTIME: String(new Date().getFullYear()),
+      START_WRTTIME: '201201',
+      END_WRTTIME: String(new Date().getFullYear()) + '12',
       pIndex: String(page),
       pSize: String(PAGE_SIZE),
     })) url.searchParams.set(key, value);
@@ -118,6 +118,24 @@ const output = {
   regions,
   districtMonthly,
 };
+// Never replace a newer uploaded release or publish a different price unit.
+const latestResponse = await fetch('https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/reb-weekly-data/data/reb-apartment-prices.json?v=' + Date.now(), { cache: 'no-store' });
+if (!latestResponse.ok) throw new Error('Cannot verify published price release; keeping existing data');
+const published = await latestResponse.json();
+const baseline = JSON.parse(await readFile('data/reb-apartment-prices.json', 'utf8'));
+for (const existing of [published, baseline]) {
+  if (existing.asOf > output.asOf) throw new Error(`Refusing older price release ${output.asOf}; existing release is ${existing.asOf}`);
+  for (const province of REGIONS) {
+    const last = existing.regions[province]?.at(-1);
+    const next = output.regions[province]?.find(row => row.year === last?.year);
+    if (!next || next.months < last.months) throw new Error(`Incomplete price series for ${province}`);
+  }
+}
+for (const province of REGIONS) for (const row of output.regions[province] || []) {
+  if (!(row.average > 0 && row.median > 0) || row.average / row.median < .5 || row.average / row.median > 3) {
+    throw new Error(`Price unit mismatch for ${province} ${row.year}; keeping existing data`);
+  }
+}
 const path = 'data/reb-apartment-prices.json';
 let previous = '';
 try { previous = await readFile(path, 'utf8'); } catch {}
