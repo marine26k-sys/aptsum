@@ -2122,7 +2122,7 @@ const REGION_MAX_UNDERVALUE = 5; // 국토부 저평가 비교 표본·조회량
 function ggAllAllowed(){return true;}
 function regionSelMax(){
   if(isMolitUndervalueMode(mode)) return REGION_MAX_UNDERVALUE;
-  // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
+  // 저평가 모드는 최대 5개, 그 외 분석은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
 // 현재 선택 지역은 탭 사이에 영구 저장하지 않는다. 뒤로가기/공유 복원은 viewStack·URL이 담당하고,
@@ -5653,7 +5653,7 @@ async function runSearch(opts){
   let multiTargets = !(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   if(multiTargets.length > regionSelMax()){
-    showError(`국토부 실거래 분석은 최대 ${REGION_MAX_RANK}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
+    showError(`국토부 실거래 분석은 최대 ${regionSelMax()}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
     return;
   }
   let complexLookup=null;
