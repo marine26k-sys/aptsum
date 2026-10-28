@@ -8805,7 +8805,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·전용면적(48/59/72/84㎡ ±5㎡)에서 3년 최고가 ±2%인 단지와 비교합니다. 본인 포함 최대 5곳이며, 비교군 호가가 기준 단지 3년 최고가보다 20% 이상 높으면 제외합니다. ${LISTING_MIN_HH}세대 이상·${listingOccupancyLabel()}·중층 이상 매물만 집계하고, 중앙값보다 25% 넘게 낮은 특이 호가는 제외합니다. 최저 호가순 · ‘급매’ 표시는 매물 문구 기준 · 출처: 네이버 부동산·국토교통부</div>`;
+  <div class="src-note">같은 구·전용면적(48/59/72/84㎡ ±5㎡)에서 3년 최고가 ±2%인 단지와 비교합니다. 기준 단지를 포함해 최대 5곳이며, 비교군 호가가 기준 단지 3년 최고가보다 20% 이상 높으면 제외합니다. ${LISTING_MIN_HH}세대 이상·${listingOccupancyLabel()}·중층 이상 매물만 집계하고, 중앙값보다 25% 넘게 낮은 특이 호가는 제외합니다. 최저 호가순 · ‘급매’ 표시는 매물 문구 기준 · 출처: 네이버 부동산·국토교통부</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
