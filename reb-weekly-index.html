@@ -19,15 +19,15 @@ import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
  let data,kind='monthly',selectedPeriod='';const grid=$('grid'),period=$('period');
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function listPeriods(){return [...new Set(data.regions.flatMap(region=>(region[kind]||[]).map(row=>row.period)))].sort((a,b)=>b.localeCompare(a));}
- function formatPeriod(key,row){return row?.date||(kind==='monthly'?`${key.slice(0,4)}년 ${Number(key.slice(4))}월`:`${key.slice(0,4)}년 ${key.slice(4)}주`);}
+ function formatPeriod(key,row){if(row?.date)return row.date;if(!key)return '이전 자료 없음';return kind==='monthly'?`${key.slice(0,4)}년 ${Number(key.slice(4))}월`:`${key.slice(0,4)}년 ${key.slice(4)}주`;}
  function fillPeriod(){const periods=listPeriods();if(!periods.includes(selectedPeriod))selectedPeriod=periods[0]||'';period.replaceChildren(...periods.map(key=>{const option=document.createElement('option');option.value=key;option.textContent=formatPeriod(key);option.selected=key===selectedPeriod;return option;}));}
  function compare(region){const rows=region[kind]||[];const i=rows.findIndex(row=>row.period===selectedPeriod);if(i<0)return null;const current=rows[i],previous=rows.slice(0,i).at(-1);return {current,previous,rate:previous&&previous.index!==0?(current.index/previous.index-1)*100:null};}
  function color(rate){if(rate==null)return '#f1f5f9';if(Math.abs(rate)<.005)return '#fff';const alpha=Math.min(.68,.09+Math.abs(rate)/12);return rate>0?`rgba(239,68,68,${alpha})`:`rgba(59,130,246,${alpha})`;}
  function render(){
   const periods=listPeriods();if(!periods.length){grid.innerHTML='<div class="empty-message">선택한 주기의 자료가 없습니다.</div>';return;}if(!periods.includes(selectedPeriod))selectedPeriod=periods[0];fillPeriod();
-  const first=data.regions.find(r=>(r[kind]||[]).some(x=>x.period===selectedPeriod));const selected=first?.[kind].find(x=>x.period===selectedPeriod);
+  const first=data.regions.find(r=>(r[kind]||[]).some(x=>x.period===selectedPeriod));const firstSeries=first?.[kind]||[];const selectedIndex=firstSeries.findIndex(x=>x.period===selectedPeriod);const selected=firstSeries[selectedIndex];const previous=firstSeries.slice(0,selectedIndex).at(-1);
   $('title').textContent=formatPeriod(selectedPeriod,selected);$('basis').textContent=`자료 기준일 ${data.meta[kind].asOf} · 지수 기준시점 ${kind==='monthly'?'2026년 6월':'2026년 7월 6일'} = 100`;
-  $('vs').innerHTML=`<span>${kind==='monthly'?'전월 평균':'전주'}</span><span class="vs">vs</span><span>${formatPeriod(selectedPeriod,selected)}</span>`;grid.replaceChildren();
+  $('vs').innerHTML=`<span>${formatPeriod(previous?.period,previous)}</span><span class="vs">vs</span><span>${formatPeriod(selectedPeriod,selected)}</span>`;grid.replaceChildren();
   for(const province of PROVINCES){const label=document.createElement('div');label.className='group';label.textContent=province;grid.append(label);
    for(const row of REGIONAL_LAYOUT[province]){const rowGrid=document.createElement('div');rowGrid.className='province-grid';grid.append(rowGrid);
     for(const district of row){if(!district){const blank=document.createElement('div');blank.className='empty';blank.setAttribute('aria-hidden','true');rowGrid.append(blank);continue;}
