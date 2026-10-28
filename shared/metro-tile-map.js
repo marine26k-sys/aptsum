@@ -22,11 +22,11 @@ window.APTSUM_METRO_TILE_NAME = name => String(name)
   .replace(/(시|군|구)$/,'')
   .slice(0,3);
 
-window.APTSUM_METRO_TILE_OUTLINE = (rowIndex,column,province) => {
+window.APTSUM_METRO_TILE_OUTLINE = (rowIndex,column,province,hasOverride) => {
   const colors={서울:'#008b91',인천:'#3977d5',부산:'#d97706'};
   const color=colors[province];
   if(!color)return '';
-  const has=(r,c)=>window.APTSUM_METRO_TILE_MAP[r]?.some(([x,p])=>x===c&&p===province);
+  const has=hasOverride||((r,c)=>window.APTSUM_METRO_TILE_MAP[r]?.some(([x,p])=>x===c&&p===province));
   return [[!has(rowIndex-1,column),'inset 0 3px 0'],[!has(rowIndex+1,column),'inset 0 -3px 0'],[!has(rowIndex,column-1),'inset 3px 0 0'],[!has(rowIndex,column+1),'inset -3px 0 0']]
     .filter(([edge])=>edge).map(([,shadow])=>`${shadow} ${color}`).join(',');
 };
