@@ -530,7 +530,7 @@ try {
   .rgitem.sel .tick{display:inline}
   .rgitem.rgcityall{border-style:dashed;border-color:var(--teal);background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800}
   .rgitem.rgcityall:active{background:var(--teal-light)}
-  .rgitem.rgstandalonecity{border-color:var(--teal)}
+  .rgitem.rgstandalonecity{border-color:var(--line)}
   .rgft{flex:0 0 auto;display:flex;gap:7px;padding:8px 12px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:9px;padding:9px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -2121,6 +2121,7 @@ const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평�
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){return true;}
 function regionSelMax(){
+  if(isMolitUndervalueMode(mode)) return REGION_MAX_UNDERVALUE;
   // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
