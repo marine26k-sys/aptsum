@@ -22,13 +22,11 @@ jobs:
           python-version: '3.12'
       - name: 서울·경기·인천·부산 청약홈 공고 수집
         run: python scripts/collect-cheongyak.py
-      - name: 공식 전망 이후 청약공고 기반 입주자료 누적
-        run: python scripts/build-move-in-announced.py
       - name: 데이터 저장
         run: |
           git config user.name 'aptsum-bot'
           git config user.email 'aptsum-bot@users.noreply.github.com'
-          git add data/cheongyak.json data/move-in-announced.json
+          git add data/cheongyak.json
           if ! git diff --cached --quiet; then
             git commit -m 'data: 청약 공고 자동 갱신 [skip netlify]'
             git pull --rebase origin main
