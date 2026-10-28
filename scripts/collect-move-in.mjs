@@ -57,7 +57,7 @@ const items = records.map(row => {
     name: row[col('아파트명')]?.trim() || '',
     households,
   };
-}).filter(item => INCLUDED_REGIONS.has(item.region) && item.name && Number.isFinite(item.households) && item.households >= 30)
+}).filter(item => item.month && INCLUDED_REGIONS.has(item.region) && item.name && Number.isFinite(item.households) && item.households >= 30)
   .sort((a, b) => (a.month || '9999-99').localeCompare(b.month || '9999-99') || a.region.localeCompare(b.region, 'ko') || a.name.localeCompare(b.name, 'ko'));
 
 if (!items.length) throw new Error('서울·경기·인천·부산 자료가 비어 있어 기존 파일을 유지합니다.');

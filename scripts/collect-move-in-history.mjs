@@ -47,7 +47,9 @@ for (let chunkStart = start; chunkStart <= latest; chunkStart += 60) {
     throw new Error(data.msg || '국토교통부 준공 실적 데이터를 읽지 못했습니다.');
   }
   for (const row of data.data) {
-    const month = row['0']?.replace('-', '');
+    // 국토교통부는 확정 전 실적에 `p)`를 붙입니다(예: `2026-08 p)`).
+    // 잠정치도 공식 준공 실적이므로 월 정보를 정규화해 포함합니다.
+    const month = row['0']?.match(/^(\d{4})-(\d{2})(?:\s*p\))?$/)?.slice(1, 3).join('');
     const region = row['1'];
     if (!/^\d{6}$/.test(month || '') || !REGIONS.has(region) || row['2'] !== '아파트') continue;
     const rawUnits = String(row['5'] ?? '').replaceAll(',', '').trim();
