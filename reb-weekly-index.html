@@ -33,7 +33,7 @@ import {REGIONAL_LAYOUT} from '/shared/regional-layout.mjs';
     for(const district of row){if(!district){const blank=document.createElement('div');blank.className='empty';blank.setAttribute('aria-hidden','true');rowGrid.append(blank);continue;}
      const region=data.regions.find(r=>r.province===province&&r.name===district),metric=region&&compare(region),cell=document.createElement('div');cell.className='cell'+(metric?.rate==null?' insufficient':'');cell.style.background=color(metric?.rate??null);
      const name=document.createElement('b');name.textContent=district;const value=document.createElement('strong');value.textContent=metric?.rate==null?'자료 없음':`${metric.rate>0?'+':''}${metric.rate.toFixed(1)}%`;
-     const note=document.createElement('small');note.textContent=metric?.rate==null?'':`${metric.previous.index.toFixed(1)} → ${metric.current.index.toFixed(1)}`;cell.append(name,value,note);cell.setAttribute('aria-label',`${province} ${district} ${value.textContent}`);rowGrid.append(cell);
+     cell.append(name,value);cell.setAttribute('aria-label',`${province} ${district} ${value.textContent}`);rowGrid.append(cell);
     }
    }
   }
