@@ -12,7 +12,7 @@ const PAGES = [
   { page: "tier", label: "급지 분석" },
   { page: "subway", label: "교통 호재" },
 ];
-const TREND_DAYS = 14;
+const TREND_DAYS = 30;
 
 function json(data, { status = 200 } = {}) {
   return new Response(JSON.stringify(data), {
