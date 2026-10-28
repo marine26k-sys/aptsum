@@ -10,6 +10,9 @@ test('지하철·학교 비교 열 너비는 시세 비교 표와 같은 열 계
 });
 function setup(){
  const c=vm.createContext({matchComplex:all=>({hits:all}),naverNameOf:()=>null,markOutliers:a=>a,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:()=>34,avgA:a=>a.reduce((s,t)=>s+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s.slice(2,4)+'.'+s.slice(4),yearsLabel:()=>'',esc:s=>String(s??'').replace(/[<>&"]/g,x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x])),complexBuildLabel:y=>y+'년',formatWalkDisplay:x=>x,CMP_COLORS:['teal','red'],cmpPyMap:{0:84,1:84}});
+ // compareSummaryHTML calls the same display-name helper as the live page.
+ // Keep its production fallback behavior in this isolated VM context.
+ c.complexDisplayName=(lawd,apt,umd)=>c.naverNameOf(lawd,apt,umd)||apt||'';
  vm.runInContext(html.slice(html.indexOf('function complexTradeBuild('),html.indexOf('function calendarMonths('))+html.slice(html.indexOf('function complexCompletionYear('),html.indexOf('let complexCompletionFallbackPromise')),c);
  vm.runInContext(html.slice(html.indexOf('function calendarMonths('),html.indexOf('function analyzeComplex(')),c);
  vm.runInContext(html.slice(html.indexOf('function analyzeCompare('),html.indexOf('function esc(')),c);
