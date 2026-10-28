@@ -26,7 +26,7 @@
 .chart-panel .list-head>#yearBack{position:absolute;right:0;top:50%;transform:translateY(-50%)}
 </style>
 <link rel="stylesheet" href="/assets/apartment-stats-nav.css">
-</head>
+<link rel="stylesheet" href="/assets/stats-chart-header.css"></head>
 <body><main class="wrap">
 <header>
  <a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기" title="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
@@ -37,7 +37,7 @@
 <section id="loading" class="panel status">입주물량 자료를 불러오는 중입니다.</section>
 <div id="content" hidden>
 <section class="panel region-panel"><h2 class="panel-title">지역 선택 <small id="regionHint">서울</small></h2><div id="regionChips" class="chips" role="group" aria-label="지역"></div></section>
-<section class="panel chart-panel"><div class="chart-brand"><svg class="chart-brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="15" width="5" height="10" rx="1"/><rect x="11" y="9" width="5" height="16" rx="1" opacity=".8"/><rect x="19" y="3" width="5" height="22" rx="1" opacity=".65"/></svg><span>아파트썸</span></div><div class="list-head"><h2 id="chartTitle" class="panel-title">연도별 입주물량 합계</h2><button type="button" id="yearBack" class="chip" hidden>연도별 비교</button></div><div id="chart" class="annual-chart" role="list"></div><p id="chartHint" class="note">연도 막대를 누르면 해당 연도의 월별 물량을 볼 수 있습니다.</p><p id="periodLine" class="note"></p></section>
+<section class="panel chart-panel"><div class="stats-chart-head"><div class="stats-chart-top"><div class="chart-brand"><svg class="chart-brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="15" width="5" height="10" rx="1"/><rect x="11" y="9" width="5" height="16" rx="1" opacity=".8"/><rect x="19" y="3" width="5" height="22" rx="1" opacity=".65"/></svg><span>아파트썸</span></div><span class="stats-chart-badge">입주물량</span></div><div class="list-head"><h2 id="chartTitle" class="panel-title">연도별 입주물량 합계</h2><button type="button" id="yearBack" class="chip" hidden>연도별 비교</button></div><div class="stats-chart-subtitle">연도 막대를 누르면 월별로 이동</div></div><div id="chart" class="annual-chart" role="list"></div><p id="chartHint" class="note">연도 막대를 누르면 해당 연도의 월별 물량을 볼 수 있습니다.</p><p id="periodLine" class="note"></p></section>
 <section id="monthDetail" class="panel" hidden><div class="list-head"><h2 id="detailTitle" class="panel-title"></h2><button type="button" id="clearMonth" class="chip">닫기</button></div><div id="detailContent"></div></section>
 <p id="sourceNote" class="source"></p></div>
 </main>
