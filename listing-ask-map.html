@@ -84,7 +84,7 @@ async function fetchJson(url,options={}){const r=await fetch(url,{credentials:'s
 async function loadAskMap(){try{return await fetchJson(liveAskMapUrl,{cache:'no-cache'})}catch{return fetchJson('/data/listing-ask-map.json')}}
 function render(){
  const title=$('#title');title.textContent=state.asOf?(weekInfo(state.asOf)?.label||'호가 주간 평균'):'호가 주간 평균';
- $('#comparisonPeriod').textContent='중층 이상 최저매물 호가 비교';
+ $('#comparisonPeriod').textContent='네이버 부동산 / 중층 이상 / 최저 매물 비교';
  const beforeWeek=weekInfo(state.previousAsOf),afterWeek=weekInfo(state.asOf);
  const shortWeek=w=>w?w.label.replace(/^\d+년 /,''):'자료 확인 중';
  const comparison=$('#monthlyVs');comparison.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:start';comparison.replaceChildren();
