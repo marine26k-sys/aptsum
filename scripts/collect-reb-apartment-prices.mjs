@@ -5,8 +5,8 @@ if (!apiKey) throw new Error('REB_RONE_API_KEY is required');
 
 const API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do';
 const TABLES = {
-  average: 'A_2024_00188',
-  median: 'A_2024_00189',
+  average: 'A_2024_00061',
+  median: 'A_2024_00062',
 };
 const REGIONS = ['서울', '경기', '인천', '부산'];
 const PAGE_SIZE = 1000;
@@ -23,7 +23,7 @@ async function getRows(tableId) {
       STATBL_ID: tableId,
       DTACYCLE_CD: 'MM',
       ITM_ID: '100001',
-      START_WRTTIME: '2006',
+      START_WRTTIME: '2012',
       END_WRTTIME: String(new Date().getFullYear()),
       pIndex: String(page),
       pSize: String(PAGE_SIZE),
@@ -58,7 +58,7 @@ function collect(rows, metric) {
     const key = `${region}|${month}`;
     const record = monthly.get(key) || { region, month };
     record[metric] = value;
-    record.unit = row.UI_NM || '만원/㎡';
+    record.unit = row.UI_NM || '천원';
     monthly.set(key, record);
   }
 }
@@ -82,8 +82,8 @@ for (const item of annual.values()) {
   if (!REGIONS.includes(item.region)) continue;
   (regions[item.region] ||= []).push({
     year: item.year,
-    average: Number((item.averageTotal / item.months).toFixed(2)),
-    median: Number((item.medianTotal / item.months).toFixed(2)),
+    average: Number((item.averageTotal / item.months).toFixed(3)),
+    median: Number((item.medianTotal / item.months).toFixed(3)),
     months: item.months,
   });
 }
@@ -95,10 +95,10 @@ if (!asOf || !Object.keys(regions).length) throw new Error('R-ONE returned no us
 
 const output = {
   source: '한국부동산원 R-ONE Open API',
-  sourceUrl: 'https://www.reb.or.kr/r-one/portal/openapi/openApiListPage.do',
+  sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00062.do?isMobileYn=N',
   tables: TABLES,
-  unit: '만원/㎡',
-  aggregation: '월별 평균·중위가격의 연도별 산술평균',
+  unit: '천원',
+  aggregation: '월별 아파트 매매가격의 연도별 산술평균 (단위: 천원)',
   asOf: asOf.slice(0, 4) + '-' + asOf.slice(4),
   updatedAt: new Date().toISOString(),
   regions,
