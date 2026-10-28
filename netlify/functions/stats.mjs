@@ -56,34 +56,43 @@ export default async (request) => {
     return ymd(d);
   });
 
-  const [totalRaw, todayRaw, trendRaw, pageRaws] = await Promise.all([
-    store.get("total", { consistency: "strong" }),
-    store.get(`day-${today}`, { consistency: "strong" }),
-    Promise.all(trendDates.map((d) => store.get(`day-${d}`, { consistency: "strong" }))),
-    Promise.all(
-      PAGES.map((p) =>
-        Promise.all([
-          store.get(`page:${p.page}:total`, { consistency: "strong" }),
-          store.get(`page:${p.page}:day:${today}`, { consistency: "strong" }),
-        ])
-      )
-    ),
-  ]);
-
-  const total = ledger ? (ledger.total || 0) : (parseInt(totalRaw, 10) || 0);
-  const todayCount = ledger ? ((ledger.days?.[today]?.total) || 0) : (parseInt(todayRaw, 10) || 0);
-
-  const trend = trendDates.map((date, i) => ({
-    date,
-    count: ledger ? ((ledger.days?.[date]?.total) || 0) : (parseInt(trendRaw[i], 10) || 0),
-  }));
-
-  const pages = PAGES.map((p, i) => ({
-    page: p.page,
-    label: p.label,
-    total: ledger ? ((ledger.pageTotals?.[p.page]) || 0) : (parseInt(pageRaws[i][0], 10) || 0),
-    today: ledger ? ((ledger.days?.[today]?.pages?.[p.page]) || 0) : (parseInt(pageRaws[i][1], 10) || 0),
-  }));
+  let total, todayCount, trend, pages;
+  if (ledger) {
+    // 원장에 필요한 합계와 30일 이력이 모두 있으므로 예전 visits 저장소를 다시 조회하지 않는다.
+    total = ledger.total || 0;
+    todayCount = ledger.days?.[today]?.total || 0;
+    trend = trendDates.map((date) => ({ date, count: ledger.days?.[date]?.total || 0 }));
+    pages = PAGES.map((p) => ({
+      page: p.page,
+      label: p.label,
+      total: ledger.pageTotals?.[p.page] || 0,
+      today: ledger.days?.[today]?.pages?.[p.page] || 0,
+    }));
+  } else {
+    // 원장이 만들어지기 전의 기존 저장 방식과 초기 누적 자료를 계속 지원한다.
+    const [totalRaw, todayRaw, trendRaw, pageRaws] = await Promise.all([
+      store.get("total", { consistency: "strong" }),
+      store.get(`day-${today}`, { consistency: "strong" }),
+      Promise.all(trendDates.map((d) => store.get(`day-${d}`, { consistency: "strong" }))),
+      Promise.all(
+        PAGES.map((p) =>
+          Promise.all([
+            store.get(`page:${p.page}:total`, { consistency: "strong" }),
+            store.get(`page:${p.page}:day:${today}`, { consistency: "strong" }),
+          ])
+        )
+      ),
+    ]);
+    total = parseInt(totalRaw, 10) || 0;
+    todayCount = parseInt(todayRaw, 10) || 0;
+    trend = trendDates.map((date, i) => ({ date, count: parseInt(trendRaw[i], 10) || 0 }));
+    pages = PAGES.map((p, i) => ({
+      page: p.page,
+      label: p.label,
+      total: parseInt(pageRaws[i][0], 10) || 0,
+      today: parseInt(pageRaws[i][1], 10) || 0,
+    }));
+  }
 
   return json({ total, today: todayCount, trend, pages });
 };
