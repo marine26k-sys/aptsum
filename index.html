@@ -207,13 +207,12 @@ try {
   .listing-ask-map{padding:10px 14px 12px;background:#f7fbfc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .listing-ask-map-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;color:var(--teal-dark);font-size:11.5px;font-weight:800}
   .listing-ask-map-title small{color:var(--sub);font-size:9.5px;font-weight:500;white-space:nowrap}
-  .listing-ask-map-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;background:#dce9ed;border:1px solid #dce9ed;border-radius:8px;overflow:hidden}
-  .listing-ask-map-group{grid-column:1/-1;padding:3px 7px;background:var(--navy);color:#fff;font-size:9px;font-weight:800;letter-spacing:.2px}
+  .listing-ask-map-grid{display:block;background:#fff;border:1px solid #dce9ed;border-radius:8px;overflow:hidden;padding:4px}.listing-ask-map-row{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:0}.listing-ask-map-row .listing-ask-map-cell{aspect-ratio:1;min-height:0}
   .listing-ask-map-cell{min-width:0;min-height:46px;padding:4px 2px;border:0;background:#fff;color:var(--navy);text-align:center;line-height:1.15}
-  .listing-ask-map-cell b{display:block;font-size:8px;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:keep-all}
-  .listing-ask-map-cell strong{display:block;margin-top:3px;font-size:10px;font-weight:900;white-space:nowrap}
-  .listing-ask-map-cell small{display:block;margin-top:2px;color:rgba(15,43,61,.68);font-size:7.5px;white-space:nowrap}
-  .listing-ask-map-cell.empty{background:#edf3f6;color:transparent}
+  .listing-ask-map-cell b{display:block;font-size:clamp(6px,2vw,9px);font-weight:700;white-space:nowrap;overflow:hidden;overflow-wrap:normal;word-break:keep-all;letter-spacing:-.4px}
+  .listing-ask-map-cell strong{display:block;margin-top:1px;font-size:clamp(6px,2.3vw,10px);font-weight:900;white-space:nowrap}
+  .listing-ask-map-cell small{display:block;margin-top:1px;color:rgba(15,43,61,.68);font-size:clamp(5px,1.7vw,7.5px);white-space:nowrap}
+  .listing-ask-map-legend{padding:2px 0 6px;text-align:center;color:var(--sub);font-size:9px}.listing-ask-map-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;overflow:hidden}
   @media(max-width:500px){.listing-ask-map{padding:9px 10px 10px}.listing-ask-map-cell{min-height:43px;padding:3px 1px}.listing-ask-map-cell b{font-size:7px}.listing-ask-map-cell strong{font-size:9px}.listing-ask-map-cell small{font-size:7px}}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
 
@@ -564,6 +563,7 @@ try {
 <script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 <script src="/assets/subscriber-session.js?v=1"></script>
 <script src="/shared/complex-identity.js?v=1"></script>
+<script src="/shared/metro-tile-map.js"></script>
 <link rel="stylesheet" href="/assets/page-header.css">
 </head>
 <body>
@@ -9322,14 +9322,8 @@ function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=fa
   if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>`;
   return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}`;
 }
-// 실매물 결과를 지역 변동률 화면과 같은 7열 지리 배치로 요약한다.
+// 실매물 결과를 실거래·가격지수와 공통 11열 타일 배치로 요약한다.
 // 매물 행은 평형별 최저 호가이므로, 지역별로 그 값의 평균과 포함 매물 수를 표시한다.
-const LISTING_ASK_MAP_LAYOUT={
-  '서울':[[null,null,null,null,'도봉구','노원구',null],[null,'은평구',null,'강북구','성북구','중랑구',null],['강서구','마포구','서대문구','종로구','중구','동대문구',null],['양천구','영등포구',null,'용산구','성동구','광진구','강동구'],['구로구','금천구','관악구','동작구','서초구','강남구','송파구']],
-  '경기':[[null,null,null,'연천군',null,null,null],[null,null,null,'동두천시','포천시',null,null],[null,'파주시',null,'양주시','의정부시',null,'가평군'],['김포시','고양 일산서구','고양 일산동구','고양 덕양구',null,'남양주시',null],['부천 오정구',null,null,null,'구리시','하남시','양평군'],['부천 원미구','부천 소사구','광명시','과천시','성남 수정구','성남 중원구',null],['시흥시','안양 만안구','안양 동안구','의왕시','성남 분당구','광주시',null],['안산 단원구','안산 상록구','군포시','수원 장안구','용인 수지구','용인 기흥구','여주시'],[null,'화성 효행구','수원 권선구','수원 팔달구','수원 영통구','용인 처인구','이천시'],[null,'화성 만세구',null,'화성 병점구','화성 동탄구',null,null],[null,null,null,'오산시',null,null,null],[null,null,'평택시',null,'안성시',null,null]],
-  '인천':[['강화군','영종구','제물포구','서해구','검단구','부평구','계양구'],[null,null,'연수구','미추홀구','남동구',null,null]],
-  '부산':[['강서구','북구','사상구','부산진구','금정구','동래구','기장군'],['사하구','서구','중구','동구','연제구','수영구','해운대구'],[null,null,null,'영도구','남구',null,null]]
-};
 function listingAskMapColor(value,min,max){
   const t=max>min?Math.max(0,Math.min(1,(value-min)/(max-min))):.5;
   const a=[231,247,248],b=[0,126,134];
@@ -9359,20 +9353,20 @@ function listingAskMapHTML(d){
   }
   if(!groups.size)return '';
   const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length}));
-  const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[x.name,x]));
-  const groupsHTML=[];
-  for(const province of ['서울','경기','인천','부산']){
-    const cells=LISTING_ASK_MAP_LAYOUT[province].flatMap(row=>row.map(name=>{
-      if(!name)return '<div class="listing-ask-map-cell empty" aria-hidden="true"></div>';
-      const stat=byName.get(name);
-      if(!stat)return '<div class="listing-ask-map-cell empty" aria-hidden="true"></div>';
+  const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[`${x.province}:${x.name}`,x]));
+  const rowsHTML=[];
+  window.APTSUM_METRO_TILE_MAP.forEach((placements,rowIndex)=>{
+    const cells=placements.map(([column,province,name])=>{
+      const stat=byName.get(`${province}:${name}`);
+      if(!stat)return '';
       const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · ${stat.values.length}개 매물`;
       const value=rateMode?`${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}%`:`${stat.avg.toFixed(1)}억`;
-      return `<div class="listing-ask-map-cell" style="background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)}" aria-label="${esc(label)}"><b>${esc(name)}</b><strong>${value}</strong><small>${stat.values.length}개 매물</small></div>`;
-    })).join('');
-    if(stats.some(x=>x.province===province))groupsHTML.push(`<div class="listing-ask-map-group">${province}</div>${cells}`);
-  }
-  return `<div class="listing-ask-map" aria-label="지역별 호가 통계 지도"><div class="listing-ask-map-title"><span>${rateMode?'호가 주간 평균 변동률':'호가 통계 지도'}</span><small>${rateMode?'중층 이상 최저매물 호가 · 최근 주간 평균과 직전 주간 평균 비교':'지역별 최저 호가 평균'} · ${stats.reduce((sum,x)=>sum+x.values.length,0)}개 매물</small></div><div class="listing-ask-map-grid">${groupsHTML.join('')}</div></div>`;
+      const outline=window.APTSUM_METRO_TILE_OUTLINE(rowIndex,column,province);
+      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small></div>`;
+    }).filter(Boolean).join('');
+    if(cells)rowsHTML.push(`<div class="listing-ask-map-row">${cells}</div>`);
+  });
+  return `<div class="listing-ask-map" aria-label="지역별 호가 통계 지도"><div class="listing-ask-map-title"><span>${rateMode?'호가 주간 평균 변동률':'호가 통계 지도'}</span><small>${rateMode?'중층 이상 최저매물 호가 · 최근 주간 평균과 직전 주간 평균 비교':'지역별 최저 호가 평균'} · ${stats.reduce((sum,x)=>sum+x.values.length,0)}개 매물</small></div><div class="listing-ask-map-legend">${rateMode?'<span style="color:#2563eb">■ 하락</span> · □ 보합 · <span style="color:#ef4444">■ 상승</span>':'낮은 호가 평균 · 높은 호가 평균'}</div><div class="listing-ask-map-grid">${rowsHTML.join('')}</div></div>`;
 }
 function listingAskMapTargets(lawd){
   const selected=regionSel.length?regionSel.slice():(isAllScope(lawd)?lawdsOfScope(lawd):[{lawd,name:regionNameByLawd(lawd)}]);
