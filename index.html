@@ -6004,14 +6004,15 @@ function complexBuildLabel(build){
   return age<1 ? `${year}년 준공 예정` : `${year}년 (${age}년차)`;
 }
 function complexCompletionYear(d){
+  const build=parseInt(d.build,10);
+  if(build>=1800 && build<=2200)return build;
   const date=String(d.hh?.useDate||'').replace(/[-.]/g,'');
   if(/^\d{8}$/.test(date)){
     const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
     const check=new Date(Date.UTC(year,month-1,day));
     if(year>=1800&&year<=2200&&check.getUTCFullYear()===year&&check.getUTCMonth()===month-1&&check.getUTCDate()===day)return year;
   }
-  const build=parseInt(d.build,10);
-  return build>=1800 && build<=2200?build:null;
+  return null;
 }
 let complexCompletionFallbackPromise=null;
 async function loadCompletionFallback(d,lawd){
