@@ -31,7 +31,7 @@ async function getDistricts(table) {
     headers: { 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' },
     body: new URLSearchParams({ statblId: table.id, itmTag: 'C', itmNmsearchVal: '', optDivVal: '21', langGb: '' }),
   });
-  const leaves = (response.data || []).filter(node => node.leaf === 'T' && PROVINCES.some(p => node.viewItmFullnm.startsWith(`${p}>`)));
+  const leaves = (response.data || []).filter(node => PROVINCES.includes(node.viewItmFullnm) || (node.leaf === 'T' && PROVINCES.some(p => node.viewItmFullnm.startsWith(`${p}>`))));
   if (!leaves.length) throw new Error(`No district nodes for ${table.id}`);
   return leaves.map(node => {
     const parts = node.viewItmFullnm.split('>');

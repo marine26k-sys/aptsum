@@ -50,10 +50,10 @@ test('subscriber price-band tab has all requested periods and defaults to curren
   assert.match(html, /const focusLabel = isCurrentBasis \? `현재 \$\{d\.priceBandLabel\}` : `\$\{d\.periodM\}개월 전 \$\{d\.priceBandLabel\}`/);
   assert.match(html, /\$\{d\.periodM\}개월 전 평균<\/b><small>\$\{esc\(d\.pastPeriod\)\}/);
   assert.match(html, /최근 3개월 평균<\/b><small>\$\{esc\(d\.recentPeriod\)\}/);
-  // 경기 전체 버튼은 유지하되, 국토부 분석의 선택 상한은 25개다.
-  assert.match(html, /function ggAllAllowed\(\)\{[\s\S]*?mode==='pricebandrise'[\s\S]*?\n\}/);
+  // 금액대별 변동률은 경기 전체를 제공하고 저평가 모드만 제외한다.
+  assert.match(html, /function ggAllAllowed\(\)\{return true;\}/);
   assert.match(html, /return isListingMode\(mode\) \? REGION_MAX : REGION_MAX_RANK/);
-  assert.match(html, /if\(i===0 && ggAllAllowed\(\)\)\{[\s\S]*?\+ 경기 전체/);
+  assert.match(html, /if\(i===0 && ggAllAllowed\(\) && !isMolitUndervalueMode\(mode\)\)\{[\s\S]*?\+ 경기 전체/);
   assert.match(html, /const rows = matchedRows\.slice\(0,100\);/);
   assert.match(html, /matchedCount:matchedRows\.length, isLimited:matchedRows\.length>rows\.length/);
   assert.match(html, /개 중 상위 \$\{d\.rows\.length\}개/);

@@ -407,7 +407,7 @@ try {
   .mpop-hd h3{font-size:13px;font-weight:900;color:var(--navy)}
   .mpop-hd button{border:none;background:var(--slate-bg);border-radius:8px;width:28px;height:28px;font-size:15px;color:var(--sub);cursor:pointer}
   .mpop-note{font-size:10px;color:var(--sub);margin-top:6px;text-align:right}
-  .src-note{font-size:10px;color:var(--sub);text-align:center;padding:4px 0 20px;line-height:1.6}
+  .src-note{margin:10px 0 22px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;background:#fff;color:var(--ink);font-size:12px;font-weight:500;text-align:left;line-height:1.55;overflow-wrap:anywhere}
   /* 쿠팡 파트너스 배너(2026.09, 운영자 요청) — 검색 결과 카드 안, 맨 아래(.src-note 바로 위)에 삽입.
      공정거래위원회 추천·보증 심사지침상 경제적 이해관계 고지 문구(coupangDisclosure)를 배너와 항상 함께 붙인다 —
      배너만 따로 떼어내 쓰면 안 됨(couponBannerHTML() 하나로만 만들어서 실수로 누락되는 걸 방지). */
@@ -530,7 +530,7 @@ try {
   .rgitem.sel .tick{display:inline}
   .rgitem.rgcityall{border-style:dashed;border-color:var(--teal);background:var(--teal-light-soft);color:var(--teal-dark);font-weight:800}
   .rgitem.rgcityall:active{background:var(--teal-light)}
-  .rgitem.rgstandalonecity{border-color:var(--teal)}
+  .rgitem.rgstandalonecity{border-color:var(--line)}
   .rgft{flex:0 0 auto;display:flex;gap:7px;padding:8px 12px;border-top:1px solid var(--line);background:#fff}
   .rgft button{flex:1;border:0;border-radius:9px;padding:9px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
   .rgft .ok{background:var(--teal);color:#fff}
@@ -2067,6 +2067,7 @@ const ALL_PREFIX = 'ALL:';
 // "일괄 스코프"로 취급되도록 isAllScope에 같이 매칭시켜, 기존 ALL: 전용 로직(addRegion·데이터셋 hidden 처리 등)을
 // 그대로 재사용한다.
 function isAllScope(v){ return String(v||'').startsWith(ALL_PREFIX) || String(v||'').startsWith(CITYALL_PREFIX); }
+function isMolitUndervalueMode(value){ return value==='shortval'||value==='longpeak'||value==='inversion'; }
 function lawdsOfScope(v){
   v = String(v);
   if(v.startsWith(CITYALL_PREFIX)){
@@ -2115,12 +2116,13 @@ const RECENT_REGION_CACHE_KEY = 'apc:recentRegions';
 const RECENT_REGION_CACHE_MAX = 7;
 const REGION_MAX = REGIONS.find(([province])=>province==='경기')[1].length; // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
-const REGION_MAX_UNDERVALUE = 5; // (2026.09부터 단기/반기/연간 저평가에는 더 이상 쓰이지 않음 — 아래 regionSelMax() 참고. 혹시 모를 다른 용도 대비 상수만 유지)
+const REGION_MAX_UNDERVALUE = 5; // 국토부 저평가 비교 표본·조회량 제한
 // "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){return true;}
 function regionSelMax(){
-  // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
+  if(isMolitUndervalueMode(mode)) return REGION_MAX_UNDERVALUE;
+  // 저평가 모드는 최대 5개, 그 외 분석은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
 // 현재 선택 지역은 탭 사이에 영구 저장하지 않는다. 뒤로가기/공유 복원은 viewStack·URL이 담당하고,
@@ -2280,7 +2282,7 @@ function buildRegionPicker(){
       if((multi || cmpPickerRow) && !q){
         if(g==='경기'){
           // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 47개 시군구 일괄 추가 버튼을 노출한다.
-          if(i===0 && ggAllAllowed()){
+          if(i===0 && ggAllAllowed() && !isMolitUndervalueMode(mode)){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
           }
           const sp = n.indexOf(' ');
@@ -2289,7 +2291,7 @@ function buildRegionPicker(){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
           }
           ggPickerLastCity = city;
-        } else if(i===0){
+        } else if(i===0 && !isMolitUndervalueMode(mode)){
           prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(PROVINCE_DISPLAY[g]||g)} 전체</button>`;
         }
       }
@@ -2536,7 +2538,7 @@ function restoreQueriedSliders(m){
 }
 function getPyBandMultiPref(){
   let raw; try{ raw = localStorage.getItem('apc:pyBand'); }catch(e){ return null; }
-  if(raw==null) return null; // 저장된 적 없음 → 호출부에서 디폴트(32~36평) 적용
+  if(raw==null) return null; // 저장된 적 없음 → 호출부에서 디폴트(전체) 적용
   try{ const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : [String(parsed)]; }
   catch(e){ return raw ? [raw] : []; } // 예전 단일-select 시절 순수 문자열 포맷 호환
 }
@@ -2896,8 +2898,8 @@ function setMode(m, fromRestore){
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
   const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
-  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
-  if(!supportsAllScopeOption && isAllScope(sel.value)){
+  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (isMolitUndervalueMode(m) && o.value.startsWith(ALL_PREFIX)) || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
+  if((!supportsAllScopeOption || (isMolitUndervalueMode(m) && sel.value.startsWith(ALL_PREFIX))) && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
@@ -2926,7 +2928,7 @@ function setMode(m, fromRestore){
   document.getElementById('analysisPyFilters').style.display = ['region','volume','gap','newhigh','newlow','longtermrise','jeonselongtermrise','pricebandrise'].includes(m) ? '' : 'none';
   document.getElementById('pyBandMultiPanel').style.display = 'none';
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
-  pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? ['32-36']) : []);
+  pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? []) : []);
   renderPyBandMultiBtn();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
@@ -5651,7 +5653,7 @@ async function runSearch(opts){
   let multiTargets = !(mode==='complex'||mode==='volume'||mode==='gap'||mode==='subway'||mode==='region'||mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? []
     : (regionSel.length ? regionSel.slice() : (isAllScope(sel.value) ? lawdsOfScope(sel.value) : []));
   if(multiTargets.length > regionSelMax()){
-    showError(`국토부 실거래 분석은 최대 ${REGION_MAX_RANK}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
+    showError(`국토부 실거래 분석은 최대 ${regionSelMax()}개 지역까지 조회할 수 있습니다. 지역을 다시 선택해 주세요.`);
     return;
   }
   let complexLookup=null;
@@ -8243,7 +8245,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전 3개월 평균가 vs 최근 3개월 평균가 비교 (각 2건 이상 표본 필요) · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 1~4층·직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전·최근 3개월 평균가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 1~4층·직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8293,7 +8295,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">이전 6개월 최고가 vs 최근 6개월 최고가 비교 (각 2건 이상 표본 필요) · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">이전·최근 6개월 최고가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8700,6 +8702,7 @@ function analyzeListingUndervalue(all, priceFilter){
     const nearest = rows
       .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && listingAreaGroup(o.ex)===listingAreaGroup(r.ex) // 같은 구·같은 전용면적 기준 그룹 안에서 비교
         && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 3년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 3년치 중 최고가(2026.09 운영자가 엑셀 추출 기간을 5년→3년으로 변경)
+        && o.ask < o.peak * 1.2                       // 비교 단지의 최저 호가가 해당 단지 3년 최고가보다 20% 이상 높으면 비교군에서 제외
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
       // 한 단지는 비교군에 한 번만 — 엑셀이 단지·전용면적 단위라 같은 단지의 비슷한 평형(예: 전용 58·59)이 따로 잡혀
@@ -8804,7 +8807,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·같은 전용면적 그룹 (전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡)에서 최근 3년 최고가 ±2% 이내 단지와 비교 · 본인 포함 비교 표본 최대 5개 (비교군 최대 4곳, 호가가 2% 넘게 높은 단지) · ${LISTING_MIN_HH}세대 이상 · ${listingOccupancyLabel()} 매물만 · 중층·고층 매물만 (저층·1층 제외) · 중앙값보다 25% 넘게 낮은 호가 (-26% 이하)는 특수 매물·입력 오류 가능성으로 제외 · 정렬: 최저 호가 낮은 순 · 급매 배지: 네이버 부동산 매물의 '급매' 문구 기준 · 출처: 네이버 부동산 매물, 국토교통부 실거래가</div>`;
+  <div class="src-note">같은 구·전용면적(48/59/72/84㎡ ±5㎡)에서 3년 최고가 ±2%인 단지와 비교합니다. 기준 단지를 포함해 최대 5곳이며, 비교군 호가가 기준 단지 3년 최고가보다 20% 이상 높으면 제외합니다. ${LISTING_MIN_HH}세대 이상·${listingOccupancyLabel()}·중층 이상 매물만 집계하고, 중앙값보다 25% 넘게 낮은 특이 호가는 제외합니다. 최저 호가순 · ‘급매’ 표시는 매물 문구 기준 · 출처: 네이버 부동산·국토교통부</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -9355,6 +9358,7 @@ function listingAskMapHTML(d){
   if(!groups.size)return '';
   const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length}));
   const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[`${x.province}:${x.name}`,x]));
+  for(const province of ['서울','경기','인천','부산']){const values=stats.filter(x=>x.province===province).flatMap(x=>x.values);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length});}
   const rowsHTML=[];
   window.APTSUM_METRO_TILE_MAP.forEach((placements,rowIndex)=>{
     const cells=placements.map(([column,province,name])=>{
@@ -9560,7 +9564,7 @@ function renderListingGap(d){
     ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 전용 59·84·109·134㎡에 가까운 매물 우선 · 호가 차이 적은 순`)}
     ${listingLinkLegend()}
     <div class="rng" style="margin:6px 0;color:#036B31">평형·가격 옆 ↗를 누르면 해당 네이버 매물로 이동합니다.</div>
-    ${body}</div></div><div class="src-note">20·30·40·50평대는 각각 전용 59·84·109·134㎡에 가장 가까운 매물을 우선 비교하며, 면적 차이가 같으면 호가가 낮은 매물을 선택합니다. 해당 기준 면적이 없는 10평대·60평 이상은 호가가 낮은 매물을 선택합니다. 큰 평형의 호가가 더 낮으면 음수로 표시합니다. 실제 거래금액·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산 매물</div>`;
+    ${body}</div></div><div class="src-note">평형대별 대표 전용면적(59/84/109/134㎡)에 가까운 매물을 비교하며, 차이가 같으면 낮은 호가를 선택합니다. 큰 평형 호가가 낮으면 음수로 표시합니다. 실거래가·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 function renderListingTrend(d){
@@ -9586,7 +9590,7 @@ function renderListingTrend(d){
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
-    <div class="src-note">각 시점의 최저가 매물은 서로 다를 수 있습니다. 가격 변화는 같은 단지·전용면적의 최저 호가끼리 비교하며, 매물 하나의 가격 ${rising?'인상':'인하'}를 뜻하지 않습니다. 같은 기준일은 마지막 업로드를 사용합니다. 최근 2주에서 현재 가격 구간 이전의 최저 호가와 최신 호가를 비교합니다. 비교 시작 금액 대비 변동률이 25% 이상인 항목은 상승·하락 모두 제외합니다. 항상 최신 업로드를 기준으로 조회하며, 기본 화면에는 최근 자료 2개를 표시하며, 펼치면 최근 2주(오늘 포함 14일)의 가격 이력을 표시합니다.</div>`;
+    <div class="src-note">같은 단지·전용면적의 최저 호가를 과거 자료와 비교합니다. 매물 자체의 가격 변경을 뜻하지 않으며, 25% 이상 변동은 제외합니다. 같은 기준일은 마지막 업로드를 사용합니다. 기본은 최근 자료 2건, 펼치면 최근 14일 이력을 표시합니다. 출처: 업로드된 네이버 부동산 매물</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
   requestAnimationFrame(fitListingTrendPrices);
