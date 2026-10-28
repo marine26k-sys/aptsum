@@ -9358,6 +9358,7 @@ function listingAskMapHTML(d){
   if(!groups.size)return '';
   const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length}));
   const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[`${x.province}:${x.name}`,x]));
+  for(const province of ['서울','경기','인천','부산']){const values=stats.filter(x=>x.province===province).flatMap(x=>x.values);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length});}
   const rowsHTML=[];
   window.APTSUM_METRO_TILE_MAP.forEach((placements,rowIndex)=>{
     const cells=placements.map(([column,province,name])=>{

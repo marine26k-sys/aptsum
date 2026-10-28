@@ -1,7 +1,7 @@
 // Shared 11-column tile coordinates for the metro-area statistics maps.
 // Coordinates are schematic, not a geographic projection.
 window.APTSUM_METRO_TILE_MAP = [
-  [[6,'경기','연천군'],[7,'경기','포천시'],[8,'경기','의정부시'],[9,'경기','양주시'],[10,'경기','동두천시']],
+  [[0,'서울','서울'],[1,'경기','경기'],[2,'인천','인천'],[3,'부산','부산'],[6,'경기','연천군'],[7,'경기','포천시'],[8,'경기','의정부시'],[9,'경기','양주시'],[10,'경기','동두천시']],
   [[5,'서울','은평구'],[6,'서울','성북구'],[7,'서울','강북구'],[8,'서울','도봉구'],[9,'서울','노원구'],[10,'경기','가평군']],
   [[0,'인천','강화군'],[2,'경기','김포시'],[3,'경기','파주시'],[5,'서울','서대문구'],[6,'서울','중구'],[7,'서울','종로구'],[8,'서울','동대문구'],[9,'서울','중랑구'],[10,'경기','남양주시']],
   [[0,'인천','영종구'],[2,'경기','고양 일산서구'],[3,'경기','고양 일산동구'],[4,'경기','고양 덕양구'],[6,'서울','마포구'],[7,'서울','용산구'],[8,'서울','성동구'],[9,'서울','광진구'],[10,'경기','구리시']],
@@ -23,10 +23,18 @@ window.APTSUM_METRO_TILE_NAME = name => String(name)
   .slice(0,3);
 
 window.APTSUM_METRO_TILE_OUTLINE = (rowIndex,column,province,hasOverride) => {
+  if(window.APTSUM_METRO_TILE_MAP[rowIndex]?.some(([x,p,n])=>x===column&&p===province&&n===province))return '';
   const colors={서울:'#008b91',인천:'#3977d5',부산:'#d97706'};
   const color=colors[province];
   if(!color)return '';
   const has=hasOverride||((r,c)=>window.APTSUM_METRO_TILE_MAP[r]?.some(([x,p])=>x===c&&p===province));
   return [[!has(rowIndex-1,column),'inset 0 3px 0'],[!has(rowIndex+1,column),'inset 0 -3px 0'],[!has(rowIndex,column-1),'inset 3px 0 0'],[!has(rowIndex,column+1),'inset -3px 0 0']]
     .filter(([edge])=>edge).map(([,shadow])=>`${shadow} ${color}`).join(',');
+};
+
+// Aggregate rates with the same sample weights used by each statistics tab.
+window.APTSUM_METRO_WEIGHTED_RATE = (rows, weightKey) => {
+  const valid=rows.filter(row=>Number.isFinite(row?.rate)&&Number(row[weightKey])>0);
+  const count=valid.reduce((sum,row)=>sum+Number(row[weightKey]),0);
+  return {rate:count?valid.reduce((sum,row)=>sum+row.rate*Number(row[weightKey]),0)/count:null,count};
 };
