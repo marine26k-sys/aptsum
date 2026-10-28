@@ -8,6 +8,7 @@ const TABLES = {
   average: 'A_2024_00188',
   median: 'A_2024_00189',
 };
+const REGIONS = ['서울', '경기', '인천', '부산'];
 const PAGE_SIZE = 1000;
 
 async function getRows(tableId) {
@@ -78,6 +79,7 @@ for (const row of monthly.values()) {
 
 const regions = {};
 for (const item of annual.values()) {
+  if (!REGIONS.includes(item.region)) continue;
   (regions[item.region] ||= []).push({
     year: item.year,
     average: Number((item.averageTotal / item.months).toFixed(2)),
