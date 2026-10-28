@@ -33,14 +33,14 @@
   .card-badge{display:inline-block;max-width:100%;box-sizing:border-box;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
   #subCard .card-badge{display:block;width:fit-content;margin:6px 0 0!important}
 
-  .chart{display:flex;align-items:flex-end;gap:4px;height:126px;margin-bottom:6px}
-  .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
-  .chart-val{font-size:8.5px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap}
-  .chart-val.today{color:var(--navy)}
-  .chart-bar{width:100%;max-width:20px;background:var(--teal);border-radius:4px 4px 2px 2px;transition:height .4s ease}
+  .chart{display:flex;flex-direction:column;gap:5px;margin:4px 0}
+  .chart-row{display:grid;grid-template-columns:42px minmax(0,1fr) 38px;align-items:center;gap:7px;min-height:16px}
+  .chart-date{font-size:9px;color:var(--sub);white-space:nowrap}
+  .chart-track{height:11px;background:var(--slate-bg);border-radius:999px;overflow:hidden}
+  .chart-bar{height:100%;min-width:2px;background:var(--teal);border-radius:999px;transition:width .4s ease}
   .chart-bar.today{background:var(--navy)}
-  .chart-labels{display:flex;gap:4px}
-  .chart-lbl{flex:1;text-align:center;font-size:8.5px;color:var(--sub);min-width:0;overflow:hidden;white-space:nowrap}
+  .chart-val{font-size:9px;font-weight:800;color:var(--ink);text-align:right;white-space:nowrap}
+  .chart-val.today{color:var(--navy)}
 
   .page-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-bg)}
   .page-row:last-child{border-bottom:none}
@@ -175,16 +175,14 @@ function render(d){
 
     <div class="card">
       <div class="card-title">최근 30일 추이</div>
-      <div class="chart">
+      <div class="chart" role="img" aria-label="최근 30일 방문자 수 가로 막대 그래프">
         ${d.trend.map(t => `
-          <div class="chart-col">
+          <div class="chart-row" title="${t.date} · ${t.count.toLocaleString()}회">
+            <div class="chart-date">${esc(t.date.slice(5).replace("-", "/"))}</div>
+            <div class="chart-track"><div class="chart-bar ${t.date===todayStr?"today":""}" style="width:${t.count ? Math.max(t.count/maxTrend*100, 1) : 0}%"></div></div>
             <div class="chart-val ${t.date===todayStr?"today":""}">${t.count.toLocaleString()}</div>
-            <div class="chart-bar ${t.date===todayStr?"today":""}" style="height:${Math.max((t.count/maxTrend*82), t.count>0?4:2)}%" title="${t.date} · ${t.count}회"></div>
           </div>
         `).join("")}
-      </div>
-      <div class="chart-labels">
-        ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%4===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>`).join("")}
       </div>
     </div>
 
