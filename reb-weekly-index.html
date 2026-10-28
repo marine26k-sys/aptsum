@@ -32,7 +32,7 @@
  function render(){
   const periods=listPeriods();if(!periods.length){grid.innerHTML='<div class="empty-message">선택한 주기의 자료가 없습니다.</div>';return;}if(!periods.includes(selectedPeriod))selectedPeriod=periods[0];fillPeriod();
   const rangeMode=view==='period';const endKey=rangeMode?endPeriod:selectedPeriod;const first=data.regions.find(r=>(r[kind]||[]).some(x=>x.period===endKey));const firstSeries=first?.[kind]||[];const selectedIndex=firstSeries.findIndex(x=>x.period===endKey);const selected=firstSeries[selectedIndex];const previous=rangeMode?firstSeries.find(x=>x.period===startPeriod):firstSeries.slice(0,selectedIndex).at(-1);
-  $('title').textContent=rangeMode?`${formatPeriod(startPeriod)} ~ ${formatPeriod(endPeriod)}`:formatPeriod(selectedPeriod,selected);$('basis').textContent=`자료 기준일 ${data.meta[kind].asOf} · 지수 기준시점 ${kind==='monthly'?'2026년 6월':'2026년 7월 6일'} = 100`;
+  $('title').textContent=rangeMode?`${formatPeriod(startPeriod)} ~ ${formatPeriod(endPeriod)}`:formatPeriod(selectedPeriod,selected);$('basis').textContent=`자료 기준일 ${data.meta[kind].asOf}`;
   $('vs').innerHTML=`<span>${formatPeriod(previous?.period,previous)}</span><span class="vs">vs</span><span>${formatPeriod(endKey,selected)}</span>`;grid.replaceChildren();
   COMBINED_MAP.forEach((row,rowIndex)=>{
    const hasAvailableTile=(r,c,p)=>{const placement=COMBINED_MAP[r]?.find(([x,area])=>x===c&&area===p);if(!placement)return false;const neighbor=data.regions.find(item=>item.province===p&&item.name===placement[2]);return Number.isFinite(neighbor&&compare(neighbor)?.rate)};
@@ -50,7 +50,7 @@
  function setView(next){view=next;kind=next==='weekly'?'weekly':'monthly';selectedPeriod=listPeriods()[0]||'';const range=next==='period';$('monthlyMode').setAttribute('aria-pressed',String(next==='monthly'));$('weeklyMode').setAttribute('aria-pressed',String(next==='weekly'));$('periodMode').setAttribute('aria-pressed',String(range));$('singlePeriodControls').hidden=range;$('rangePeriodControls').hidden=!range;fillPeriod();render();}
  async function init(){try{
   try{const saved=JSON.parse(sessionStorage.getItem(KEY)||'null');if(saved?.kind==='weekly'&&saved?.selectedPeriod)selectedPeriod=saved.selectedPeriod;}catch{}
-  const response=await fetch('https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/reb-weekly-data/data/reb-weekly-index.json',{cache:'no-cache'});if(!response.ok)throw new Error('data fetch');data=await response.json();
+  const response=await fetch('https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/reb-weekly-data/data/reb-weekly-index.json?v='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('data fetch');data=await response.json();
   $('loading').hidden=true;$('content').hidden=false;$('monthlyMode').onclick=()=>setView('monthly');$('weeklyMode').onclick=()=>setView('weekly');$('periodMode').onclick=()=>setView('period');period.onchange=()=>{selectedPeriod=period.value;render();};startPeriodSelect.onchange=()=>{startPeriod=startPeriodSelect.value;fillPeriod();render();};endPeriodSelect.onchange=()=>{endPeriod=endPeriodSelect.value;fillPeriod();render();};
   $('updated').textContent=`월간 최신 자료 ${data.meta.monthly.asOf} · 주간 최신 자료 ${data.meta.weekly.asOf} · 갱신 ${new Date(data.updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} (한국시간)`;
   $('source').innerHTML=`출처: <a href="${esc(data.sourceUrl)}" target="_blank" rel="noopener">한국부동산원 R-ONE Open API</a> · 월간 기준시점 2026.06=100 · 주간 기준시점 2026.07.06=100 · 지수 수준보다 전월/전주 변동률을 비교합니다.`;

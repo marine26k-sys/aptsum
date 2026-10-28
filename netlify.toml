@@ -1,4 +1,5 @@
 [build]
+  ignore = "node scripts/skip-stats-data-build.mjs"
   publish = "."
   command = "node scripts/prepare-share-meta.mjs"
 
