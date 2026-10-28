@@ -13,11 +13,22 @@
 .annual-chart .compare-bar.median{background:linear-gradient(90deg,#26a4aa,var(--teal))}
 .annual-chart .compare-value.median{color:var(--dark)}
 </style>
+
+<style>
+.region-panel{text-align:center}
+.region-panel>.panel-title{text-align:center}
+.region-panel .chips{justify-content:center}
+.chart-panel{position:relative}
+.chart-brand{display:flex;align-items:center;gap:6px;margin:0 0 7px;color:var(--sub);font-size:12px;font-weight:900}
+.chart-brand-mark{width:19px;height:19px;flex:none;fill:var(--teal)}
+.chart-panel>#chartTitle{text-align:center}
+.chart-panel>#metricToggle{display:flex;width:max-content;margin:0 auto 10px}
+</style>
 </head>
 <body><main class="wrap">
 <header><a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6M9 12h11"/></svg></a><div class="logo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg><div class="brand-copy"><span class="brand-name">아파트썸</span><span class="brand-description">아파트 매매가격 통계</span></div></div><button class="header-share" id="sharePage" title="공유" aria-label="현재 통계 공유"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button></header>
 <section id="locked" class="panel status" hidden>비공개 탭입니다. <a href="./index.html">메인 화면</a>에서 운영자 인증 후 이용해 주세요.</section><section id="loading" class="panel status">한국부동산원 통계를 불러오는 중입니다.</section>
-<div id="content" hidden><section class="panel"><h2 class="panel-title">지역 선택 <small id="regionHint">서울</small></h2><div id="regionChips" class="chips" role="group" aria-label="지역"></div></section><section class="panel"><h2 id="chartTitle" class="panel-title">연도별 아파트 매매 중위가격</h2><div id="metricToggle" class="metric-toggle" role="group" aria-label="가격 기준"><button type="button" data-metric="average" aria-pressed="false">평균가격</button><button type="button" data-metric="median" aria-pressed="true" class="on">중위가격</button></div><div id="chart" class="annual-chart" role="list" aria-label="연도별 아파트 매매가격 그래프"></div><p id="period" class="note"></p></section><p id="source" class="source"></p></div>
+<div id="content" hidden><section class="panel region-panel"><h2 class="panel-title">지역 선택 <small id="regionHint">서울</small></h2><div id="regionChips" class="chips" role="group" aria-label="지역"></div></section><section class="panel chart-panel"><div class="chart-brand"><svg class="chart-brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="15" width="5" height="10" rx="1"/><rect x="11" y="9" width="5" height="16" rx="1" opacity=".8"/><rect x="19" y="3" width="5" height="22" rx="1" opacity=".65"/></svg><span>아파트썸</span></div><h2 id="chartTitle" class="panel-title">연도별 아파트 매매 중위가격</h2><div id="metricToggle" class="metric-toggle" role="group" aria-label="가격 기준"><button type="button" data-metric="average" aria-pressed="false">평균가격</button><button type="button" data-metric="median" aria-pressed="true" class="on">중위가격</button></div><div id="chart" class="annual-chart" role="list" aria-label="연도별 아파트 매매가격 그래프"></div><p id="period" class="note"></p></section><p id="source" class="source"></p></div>
 </main>
 <script>
 (()=>{const $=id=>document.getElementById(id),eok=n=>(Number(n)*84/10000).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),stateKey='aptsum-reb-apartment-prices-state';let data=null,region='서울',metric='median',regions=[];

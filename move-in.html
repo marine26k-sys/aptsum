@@ -8,7 +8,24 @@
 [hidden]{display:none!important}@media(max-width:480px){.wrap{padding:8px 12px 35px}.panel{padding:14px}.region-totals{gap:5px}.region-total{padding:9px 2px}.region-total strong{font-size:13px}.stat-value{font-size:22px}.list-head{align-items:flex-start;flex-direction:column}.search{width:100%}.history-table th,.history-table td{padding:8px 4px;font-size:12px}}
 .annual-chart{display:grid;gap:0}.compare-row{display:grid;width:100%;grid-template-columns:54px minmax(0,1fr) 88px;align-items:center;gap:9px;padding:2px 0;border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}.compare-row:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}.compare-label{font-weight:800;font-size:12px;white-space:nowrap}.compare-track{height:16px;overflow:hidden;border-radius:999px;background:#edf2f6}.compare-bar{display:block;height:100%;min-width:0;border-radius:999px;background:linear-gradient(90deg,#26a4aa,var(--teal));transition:width .2s}.compare-value{width:88px;min-width:88px;text-align:right;color:var(--dark);font-size:12px;font-weight:900;white-space:nowrap}.compare-row.month-row .compare-label{font-weight:600;color:var(--sub)}.compare-row.month-row .compare-track{height:13px}.compare-row.month-row .compare-bar{background:#e0b84d}.compare-row.month-row.selected .compare-bar{background:var(--navy)}.graph-empty{padding:18px 4px;text-align:center;color:var(--sub);font-size:13px}.source{margin-top:12px}@media(max-width:480px){.compare-row{grid-template-columns:48px minmax(0,1fr) 88px;gap:6px;padding:1px 0}.compare-label,.compare-value{font-size:11px}.compare-value{width:88px;min-width:88px}.compare-track{height:17px}}
 [hidden]{display:none!important}.compare-track{position:relative}.mean-line{position:absolute;z-index:3;top:-3px;bottom:-3px;border-left:3px dotted #e11d48;filter:drop-shadow(0 0 1px #fff);pointer-events:none}.average-caption{display:inline-flex;align-items:center;gap:4px;margin-left:7px;color:var(--dark);font-weight:800;white-space:nowrap}.average-caption i{display:inline-block;width:16px;border-top:3px dotted #e11d48}
-[hidden]{display:none!important}</style></head>
+[hidden]{display:none!important}</style>
+<style>
+.region-panel{text-align:center}
+.region-panel>.panel-title{text-align:center}
+.region-panel .chips{justify-content:center}
+.chart-panel{position:relative}
+.chart-brand{display:flex;align-items:center;gap:6px;margin:0 0 7px;color:var(--sub);font-size:12px;font-weight:900}
+.chart-brand-mark{width:19px;height:19px;flex:none;fill:var(--teal)}
+.chart-panel>#chartTitle{text-align:center}
+.chart-panel>#metricToggle{display:flex;width:max-content;margin:0 auto 10px}
+</style>
+<style>
+.chart-panel .list-head{position:relative;justify-content:center}
+@media(max-width:480px){.chart-panel .list-head{align-items:center;flex-direction:row}}
+.chart-panel .list-head>.panel-title{text-align:center}
+.chart-panel .list-head>#yearBack{position:absolute;right:0;top:50%;transform:translateY(-50%)}
+</style>
+</head>
 <body><main class="wrap">
 <header>
  <a class="analysis-back" href="./index.html" aria-label="메인으로 돌아가기" title="메인으로 돌아가기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
@@ -17,8 +34,8 @@
 </header>
 <section id="locked" class="lock" hidden>비공개 탭입니다. <a href="./index.html">메인 화면</a>에서 운영자 인증 후 이용해 주세요.</section><section id="loading" class="panel status">입주물량 자료를 불러오는 중입니다.</section>
 <div id="content" hidden>
-<section class="panel"><h2 class="panel-title">지역 선택 <small id="regionHint">서울</small></h2><div id="regionChips" class="chips" role="group" aria-label="지역"></div></section>
-<section class="panel"><div class="list-head"><h2 id="chartTitle" class="panel-title">연도별 입주물량 합계</h2><button type="button" id="yearBack" class="chip" hidden>연도별 비교</button></div><div id="chart" class="annual-chart" role="list"></div><p id="chartHint" class="note">연도 막대를 누르면 해당 연도의 월별 물량을 볼 수 있습니다.</p><p id="periodLine" class="note"></p></section>
+<section class="panel region-panel"><h2 class="panel-title">지역 선택 <small id="regionHint">서울</small></h2><div id="regionChips" class="chips" role="group" aria-label="지역"></div></section>
+<section class="panel chart-panel"><div class="chart-brand"><svg class="chart-brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="15" width="5" height="10" rx="1"/><rect x="11" y="9" width="5" height="16" rx="1" opacity=".8"/><rect x="19" y="3" width="5" height="22" rx="1" opacity=".65"/></svg><span>아파트썸</span></div><div class="list-head"><h2 id="chartTitle" class="panel-title">연도별 입주물량 합계</h2><button type="button" id="yearBack" class="chip" hidden>연도별 비교</button></div><div id="chart" class="annual-chart" role="list"></div><p id="chartHint" class="note">연도 막대를 누르면 해당 연도의 월별 물량을 볼 수 있습니다.</p><p id="periodLine" class="note"></p></section>
 <section id="monthDetail" class="panel" hidden><div class="list-head"><h2 id="detailTitle" class="panel-title"></h2><button type="button" id="clearMonth" class="chip">닫기</button></div><div id="detailContent"></div></section>
 <p id="sourceNote" class="source"></p></div>
 </main>
