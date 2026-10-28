@@ -1,11 +1,7 @@
 name: Inspect R-ONE housing statistics catalog
 
 on:
-  push:
-    branches: [feat/undervalue-listing-layout]
-    paths:
-      - .github/workflows/inspect-rone-catalog.yml
-      - scripts/inspect-rone-catalog.mjs
+  workflow_dispatch:
 
 permissions:
   contents: read
