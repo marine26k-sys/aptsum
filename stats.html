@@ -92,6 +92,11 @@ function showConfigError(){
   $("#app").innerHTML = `<div class="err">통계 관리자 인증이 아직 설정되지 않았습니다.<br>Netlify 환경 변수에 <b>STATS_ACCESS_CODE</b>를 추가한 뒤 다시 배포하세요.</div>`;
 }
 
+function showStatsLoadError(detail = ""){
+  $("#app").innerHTML = `<div class="err">통계 자료를 불러오지 못했습니다.${detail ? `<br><small>${esc(detail)}</small>` : ""}<br><button id="retryStats" type="button" style="margin-top:12px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);font:inherit;font-weight:700;cursor:pointer">다시 불러오기</button></div>`;
+  $("#retryStats").addEventListener("click", load);
+}
+
 async function submitStatsCode(event){
   event.preventDefault();
   const code = $("#statsCode").value;
@@ -148,18 +153,24 @@ async function load(){
     }
 
     if(res.status === 503){
-      showConfigError();
+      const data = await res.json().catch(() => ({}));
+      if(data.error === "stats_auth_not_configured") showConfigError();
+      else showStatsLoadError(data.error || "HTTP 503");
       return;
     }
 
-    if(!res.ok) throw new Error("failed");
-    render(await res.json());
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if(!data || !Array.isArray(data.trend) || !Number.isFinite(Number(data.total)) || !Number.isFinite(Number(data.today))) {
+      throw new Error("통계 응답 형식 오류");
+    }
+    render(data);
     initTabClicks();
     loadListingMeta();
     initSubscribers();
     initApplications();
   }catch(e){
-    $("#app").innerHTML = `<div class="err">통계를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+    showStatsLoadError(e.message || "연결 오류");
   }
 }
 
