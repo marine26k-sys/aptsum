@@ -1,0 +1,35 @@
+name: Update apartment move-in supply
+
+on:
+  schedule:
+    - cron: "0 0 5 * *" # Monthly, after the previous month's completion figures are published.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download the latest Korea Real Estate Board dataset
+        run: node scripts/collect-move-in.mjs
+      - name: Download monthly apartment completion history
+        run: node scripts/collect-move-in-history.mjs
+      - name: Commit changed move-in data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/move-in.json
+          if git diff --cached --quiet; then
+            echo "No move-in data changes."
+          else
+            git commit -m "Refresh apartment move-in supply data"
+            git push
+          fi

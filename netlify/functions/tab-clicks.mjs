@@ -20,11 +20,11 @@ export const config = { path: "/api/tab-clicks" };
 export const TAB_IDS = [
   "tabC", "tabCmp", "tabCY", "tabTM", "tabSL", "tabSub",
   "tabR", "tabV", "tabGap",
-  "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange",
+  "tabNH", "tabLTR", "tabJLTR", "tabRegionalChange", "tabPrivateRegionalChange",
   "tabUV",
   "tabLPL", "tabLIC", "tabLBG", "tabLFAV", "tabLUR", "tabLTRD", "tabLGAP", "tabLASK",
   "tabNL", "tabLPD", "tabNH7", "tabPBR",
-  "tabApply", "tabBusiness",
+  "tabApply", "tabBusiness", "tabMoveIn", "tabREBPrices", "tabREBWeeklyIndex",
 ];
 const TAB_SET = new Set(TAB_IDS);
 const MAX_RETRIES = 8;

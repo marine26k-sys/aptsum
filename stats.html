@@ -33,14 +33,14 @@
   .card-badge{display:inline-block;max-width:100%;box-sizing:border-box;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
   #subCard .card-badge{display:block;width:fit-content;margin:6px 0 0!important}
 
-  .chart{display:flex;align-items:flex-end;gap:4px;height:126px;margin-bottom:6px}
-  .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
-  .chart-val{font-size:8.5px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap}
-  .chart-val.today{color:var(--navy)}
-  .chart-bar{width:100%;max-width:20px;background:var(--teal);border-radius:4px 4px 2px 2px;transition:height .4s ease}
+  .chart{display:flex;flex-direction:column;gap:5px;margin:4px 0}
+  .chart-row{display:grid;grid-template-columns:42px minmax(0,1fr) 38px;align-items:center;gap:7px;min-height:16px}
+  .chart-date{font-size:9px;color:var(--sub);white-space:nowrap}
+  .chart-track{height:11px;background:var(--slate-bg);border-radius:999px;overflow:hidden}
+  .chart-bar{height:100%;min-width:2px;background:var(--teal);border-radius:999px;transition:width .4s ease}
   .chart-bar.today{background:var(--navy)}
-  .chart-labels{display:flex;gap:4px}
-  .chart-lbl{flex:1;text-align:center;font-size:8.5px;color:var(--sub);min-width:0;overflow:hidden;white-space:nowrap}
+  .chart-val{font-size:9px;font-weight:800;color:var(--ink);text-align:right;white-space:nowrap}
+  .chart-val.today{color:var(--navy)}
 
   .page-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-bg)}
   .page-row:last-child{border-bottom:none}
@@ -174,17 +174,15 @@ function render(d){
     </div>
 
     <div class="card">
-      <div class="card-title">최근 14일 추이</div>
-      <div class="chart">
+      <div class="card-title">최근 30일 추이</div>
+      <div class="chart" role="img" aria-label="최근 30일 방문자 수 가로 막대 그래프">
         ${d.trend.map(t => `
-          <div class="chart-col">
+          <div class="chart-row" title="${t.date} · ${t.count.toLocaleString()}회">
+            <div class="chart-date">${esc(t.date.slice(5).replace("-", "/"))}</div>
+            <div class="chart-track"><div class="chart-bar ${t.date===todayStr?"today":""}" style="width:${t.count ? Math.max(t.count/maxTrend*100, 1) : 0}%"></div></div>
             <div class="chart-val ${t.date===todayStr?"today":""}">${t.count.toLocaleString()}</div>
-            <div class="chart-bar ${t.date===todayStr?"today":""}" style="height:${Math.max((t.count/maxTrend*82), t.count>0?4:2)}%" title="${t.date} · ${t.count}회"></div>
           </div>
         `).join("")}
-      </div>
-      <div class="chart-labels">
-        ${d.trend.map((t,i) => `<div class="chart-lbl">${(i%2===0||i===d.trend.length-1)?esc(t.date.slice(5).replace("-", "/")):""}</div>`).join("")}
       </div>
     </div>
 
@@ -234,17 +232,11 @@ function render(d){
 
 // ═══ 카드 접기(2026.09 운영자 요청) ═══
 // 카드가 늘어나 스크롤이 길어져서, 맨 위 전체/오늘 방문 숫자만 늘 보이고 나머지 카드는 제목만 보이게 접어 둔다.
-// 제목을 누르면 펼쳐지고, 펼친 카드는 이 브라우저에 기억해 다음에 열 때도 펼쳐 둔다.
-// (카드 안 내용은 그대로 불러와 두므로 펼치면 바로 보인다. 접힌 동안에도 제목 옆 배지로 처리할 건수를 알린다.)
-const OPEN_KEY = "aptsum_stats_open";
-function loadOpenCards(){ try{ return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]")); }catch(e){ return new Set(); } }
-function saveOpenCards(set){ try{ localStorage.setItem(OPEN_KEY, JSON.stringify([...set])); }catch(e){} }
+// 통계 화면은 매번 모든 카드를 접은 상태로 시작한다. 현재 페이지 안에서는 사용자가 자유롭게 펼칠 수 있다.
 function setupCollapsible(){
-  const open = loadOpenCards();
-  $("#app").querySelectorAll(".card").forEach((card, i) => {
+  $("#app").querySelectorAll(".card").forEach(card => {
     const title = card.querySelector(".card-title");
     if(!title) return;
-    const key = card.id || `card${i}`;
     const body = document.createElement("div");
     while(title.nextSibling) body.appendChild(title.nextSibling);
     card.appendChild(body);
@@ -268,8 +260,6 @@ function setupCollapsible(){
     title.addEventListener("click", () => {
       const now = body.hidden;
       set(now);
-      now ? open.add(key) : open.delete(key);
-      saveOpenCards(open);
     });
   });
 }
@@ -544,13 +534,13 @@ function initApplications(){
 // 같은 사람이 같은 탭을 하루에 여러 번 눌러도 1회 — 그래서 방문자 수로 나누면 "눌러 본 사람 비율"이 된다.
 const TAB_LABELS = [
   ["국토부 · 실거래", [["tabC","단지 분석"],["tabCmp","단지 비교"],["tabR","단지 랭킹"]]],
-  ["국토부 · 입지", [["tabTM","급지 분석"],["tabSL","교통 호재"],["tabSub","역세권"]]],
-  ["국토부 · 분석", [["tabUV","저평가"],["tabLTR","단지 변동률"],["tabRegionalChange","실거래 통계"]]],
-  ["네이버 · 실매물", [["tabLIC","단지 분석"],["tabLBG","금액대별"],["tabLUR","급매물"]]],
-  ["네이버 · 분석", [["tabLTRD","호가 변동"],["tabLPL","저평가"],["tabLGAP","평형 갭"],["tabLASK","호가 통계"]]],
+  ["국토부 · 분석", [["tabRegionalChange","아파트 통계"],["tabREBWeeklyIndex","가격지수"],["tabLASK","호가지수"],["tabREBPrices","매매가격"],["tabMoveIn","입주물량"],["tabUV","저평가"],["tabLTR","기간 변동률"]]],
+  ["국토부 · 입지", [["tabTM","급지 분석"],["tabSL","교통 호재"]]],
+  ["네이버 · 실매물", [["tabLBG","금액대별"],["tabLUR","급매물"],["tabLIC","단지 호가"]]],
+  ["네이버 · 분석", [["tabLTRD","호가 변동"],["tabLPL","저평가"],["tabLGAP","평형 갭"]]],
   ["네이버 · 발급", [["tabApply","전 지역 이용 신청 + 개인 맞춤 단지 선별"]]],
   ["청약홈 · 분양", [["tabCY","청약 공고"]]],
-  ["비공개 탭", [["tabV","거래량 랭킹"],["tabGap","전세가율"],["tabJLTR","전세 변동률"],["tabNH","신고가"],["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"],["tabLFAV","관심 단지"]]],
+  ["비공개 탭", [["tabPrivateRegionalChange","실거래 통계"],["tabSub","역세권"],["tabV","거래량 랭킹"],["tabGap","전세가율"],["tabJLTR","전세 변동률"],["tabNH","신고가"],["tabNL","하락 거래"],["tabLPD","연간 저평가 (동일 권역)"],["tabNH7","신고가 속보 (7일)"],["tabPBR","금액대별 변동률"],["tabLFAV","관심 단지"]]],
   ["비즈니스", [["tabBusiness","비즈니스 문의"]]],
 ];
 let tabData = null, tabPeriod = "d1";

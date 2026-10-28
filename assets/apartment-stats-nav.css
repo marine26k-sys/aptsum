@@ -1,0 +1,4 @@
+.apartment-stats-nav{display:flex;gap:7px;overflow-x:auto;margin:0 0 12px;padding:2px 0 5px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.apartment-stats-nav::-webkit-scrollbar{display:none}
+.apartment-stats-nav a{flex:0 0 auto;padding:7px 12px;border:1px solid #dfe6ef;border-radius:999px;background:#fff;color:#687c95;font-size:12px;font-weight:800;line-height:1.4;text-decoration:none;white-space:nowrap}
+.apartment-stats-nav a[aria-current=page]{border-color:#008b91;background:#e0f3f4;color:#00565c}
