@@ -46,15 +46,16 @@
   const first=data.regions.find(r=>(r[kind]||[]).some(x=>x.period===selectedPeriod));const firstSeries=first?.[kind]||[];const selectedIndex=firstSeries.findIndex(x=>x.period===selectedPeriod);const selected=firstSeries[selectedIndex];const previous=firstSeries.slice(0,selectedIndex).at(-1);
   $('title').textContent=formatPeriod(selectedPeriod,selected);$('basis').textContent=`자료 기준일 ${data.meta[kind].asOf} · 지수 기준시점 ${kind==='monthly'?'2026년 6월':'2026년 7월 6일'} = 100`;
   $('vs').innerHTML=`<span>${formatPeriod(previous?.period,previous)}</span><span class="vs">vs</span><span>${formatPeriod(selectedPeriod,selected)}</span>`;grid.replaceChildren();
-  for(const row of COMBINED_MAP){
+  COMBINED_MAP.forEach((row,rowIndex)=>{
    const rowGrid=document.createElement('div');rowGrid.className='map-row';grid.append(rowGrid);let visible=0;
    for(const [column,province,district] of row){const region=data.regions.find(r=>r.province===province&&r.name===district),metric=region&&compare(region);if(!Number.isFinite(metric?.rate))continue;visible++;
     const cell=document.createElement('div');cell.className='cell';cell.style.background=color(metric.rate);cell.style.gridColumn=String(column+1);
+    if(['서울','인천','부산'].includes(province)){const neighbor=(r,c)=>COMBINED_MAP[r]?.some(([x,p])=>x===c&&p===province);cell.style.borderTopWidth=neighbor(rowIndex-1,column)?'1px':'3px';cell.style.borderBottomWidth=neighbor(rowIndex+1,column)?'1px':'3px';cell.style.borderLeftWidth=neighbor(rowIndex,column-1)?'1px':'3px';cell.style.borderRightWidth=neighbor(rowIndex,column+1)?'1px':'3px';}
     const name=document.createElement('b');name.textContent=shortName(district);const value=document.createElement('strong');value.textContent=metric.rate.toFixed(2);
     cell.append(name,value);cell.setAttribute('aria-label',`${province} ${district} ${value.textContent}`);rowGrid.append(cell);
    }
    if(!visible&&row.length)rowGrid.remove();
-  }
+  });
   $('cycleLabel').textContent=kind==='monthly'?'월간':'주간';try{sessionStorage.setItem(KEY,JSON.stringify({kind,selectedPeriod}));}catch{}
  }
  function setKind(next){kind=next;selectedPeriod=listPeriods()[0]||'';$('monthlyMode').setAttribute('aria-pressed',String(kind==='monthly'));$('weeklyMode').setAttribute('aria-pressed',String(kind==='weekly'));render();}
