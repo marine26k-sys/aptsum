@@ -1,0 +1,48 @@
+name: Publish uploaded apartment statistics without deployment
+on:
+  push:
+    branches: [main, fix/listing-peer-ask-cap]
+    paths:
+      - data/reb-weekly-index.json
+      - data/reb-apartment-prices.json
+      - data/move-in.json
+  workflow_dispatch:
+    inputs:
+      file:
+        description: Data file to publish
+        required: true
+        type: choice
+        options:
+          - data/reb-weekly-index.json
+          - data/reb-apartment-prices.json
+          - data/move-in.json
+permissions:
+  contents: write
+concurrency:
+  group: apartment-statistics-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Publish only updated files
+        env:
+          SELECTED_FILE: ${{ inputs.file }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$SELECTED_FILE" ]; then
+            node scripts/publish-apartment-stats.mjs "$SELECTED_FILE"
+          else
+            git fetch --depth=1 origin "$BEFORE"
+            for file in data/reb-weekly-index.json data/reb-apartment-prices.json data/move-in.json; do
+              if ! git diff --quiet "$BEFORE" HEAD -- "$file"; then
+                node scripts/publish-apartment-stats.mjs "$file"
+              fi
+            done
+          fi

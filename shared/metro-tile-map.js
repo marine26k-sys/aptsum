@@ -1,7 +1,7 @@
 // Shared 11-column tile coordinates for the metro-area statistics maps.
 // Coordinates are schematic, not a geographic projection.
 window.APTSUM_METRO_TILE_MAP = [
-  [[6,'경기','연천군'],[7,'경기','포천시'],[8,'경기','의정부시'],[9,'경기','양주시'],[10,'경기','동두천시']],
+  [[0,'서울','서울'],[1,'경기','경기'],[2,'인천','인천'],[3,'부산','부산'],[6,'경기','연천군'],[7,'경기','포천시'],[8,'경기','의정부시'],[9,'경기','양주시'],[10,'경기','동두천시']],
   [[5,'서울','은평구'],[6,'서울','성북구'],[7,'서울','강북구'],[8,'서울','도봉구'],[9,'서울','노원구'],[10,'경기','가평군']],
   [[0,'인천','강화군'],[2,'경기','김포시'],[3,'경기','파주시'],[5,'서울','서대문구'],[6,'서울','중구'],[7,'서울','종로구'],[8,'서울','동대문구'],[9,'서울','중랑구'],[10,'경기','남양주시']],
   [[0,'인천','영종구'],[2,'경기','고양 일산서구'],[3,'경기','고양 일산동구'],[4,'경기','고양 덕양구'],[6,'서울','마포구'],[7,'서울','용산구'],[8,'서울','성동구'],[9,'서울','광진구'],[10,'경기','구리시']],
@@ -9,7 +9,7 @@ window.APTSUM_METRO_TILE_MAP = [
   [[0,'인천','서해구'],[1,'인천','부평구'],[2,'경기','부천 원미구'],[3,'서울','구로구'],[4,'서울','금천구'],[5,'서울','관악구'],[7,'경기','과천시'],[8,'경기','성남 수정구'],[9,'경기','성남 분당구'],[10,'경기','하남시']],
   [[0,'인천','제물포구'],[1,'인천','남동구'],[2,'경기','부천 소사구'],[3,'경기','광명시'],[4,'경기','안양 만안구'],[5,'경기','안양 동안구'],[7,'경기','성남 중원구'],[8,'경기','광주시'],[9,'경기','여주시'],[10,'경기','양평군']],
   [[0,'인천','미추홀구'],[1,'인천','연수구'],[2,'경기','시흥시'],[3,'경기','군포시'],[4,'경기','의왕시'],[5,'경기','수원 장안구'],[7,'경기','용인 수지구'],[8,'경기','용인 기흥구'],[9,'경기','이천시']],
-  [[1,'경기','안산 단원구'],[2,'경기','안산 상록구'],[3,'경기','수원 권선구'],[4,'경기','수원 팔달구'],[5,'경기','수원 영통구'],[6,'경기','용인 처인구']],
+  [[1,'경기','안산 단원구'],[2,'경기','안산 상록구'],[3,'경기','수원 권선구'],[4,'경기','수원 팔달구'],[5,'경기','수원 영통구'],[8,'경기','용인 처인구']],
   [[2,'경기','평택시'],[3,'경기','오산시'],[4,'경기','화성 효행구'],[5,'경기','화성 만세구'],[6,'경기','화성 병점구'],[7,'경기','화성 동탄구'],[8,'경기','안성시']],
   [[7,'부산','금정구'],[8,'부산','동래구'],[9,'부산','연제구'],[10,'부산','기장군']],
   [[7,'부산','북구'],[8,'부산','부산진구'],[9,'부산','수영구'],[10,'부산','해운대구']],
@@ -23,10 +23,18 @@ window.APTSUM_METRO_TILE_NAME = name => String(name)
   .slice(0,3);
 
 window.APTSUM_METRO_TILE_OUTLINE = (rowIndex,column,province,hasOverride) => {
+  if(window.APTSUM_METRO_TILE_MAP[rowIndex]?.some(([x,p,n])=>x===column&&p===province&&n===province))return '';
   const colors={서울:'#008b91',인천:'#3977d5',부산:'#d97706'};
   const color=colors[province];
   if(!color)return '';
   const has=hasOverride||((r,c)=>window.APTSUM_METRO_TILE_MAP[r]?.some(([x,p])=>x===c&&p===province));
   return [[!has(rowIndex-1,column),'inset 0 3px 0'],[!has(rowIndex+1,column),'inset 0 -3px 0'],[!has(rowIndex,column-1),'inset 3px 0 0'],[!has(rowIndex,column+1),'inset -3px 0 0']]
     .filter(([edge])=>edge).map(([,shadow])=>`${shadow} ${color}`).join(',');
+};
+
+// Aggregate rates with the same sample weights used by each statistics tab.
+window.APTSUM_METRO_WEIGHTED_RATE = (rows, weightKey) => {
+  const valid=rows.filter(row=>Number.isFinite(row?.rate)&&Number(row[weightKey])>0);
+  const count=valid.reduce((sum,row)=>sum+Number(row[weightKey]),0);
+  return {rate:count?valid.reduce((sum,row)=>sum+row.rate*Number(row[weightKey]),0)/count:null,count};
 };

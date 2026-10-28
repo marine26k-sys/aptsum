@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: apartment-statistics-publish
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -27,25 +31,5 @@ jobs:
         env:
           REB_RONE_API_KEY: ${{ secrets.REB_RONE_API_KEY }}
         run: node scripts/collect-reb-weekly-index.mjs
-      - name: Preserve collected data outside deploy branches
-        run: cp data/reb-weekly-index.json "$RUNNER_TEMP/reb-weekly-index.json"
-      - name: Publish JSON to the data-only branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin reb-weekly-data >/dev/null 2>&1; then
-            git fetch origin reb-weekly-data
-            git checkout -B reb-weekly-data origin/reb-weekly-data
-          else
-            git checkout --orphan reb-weekly-data
-            git rm -rf . >/dev/null 2>&1 || true
-          fi
-          mkdir -p data
-          cp "$RUNNER_TEMP/reb-weekly-index.json" data/reb-weekly-index.json
-          git add data/reb-weekly-index.json
-          if git diff --cached --quiet; then
-            echo "No R-ONE index changes."
-          else
-            git commit -m "Refresh R-ONE apartment price index data"
-            git push --set-upstream origin reb-weekly-data
-          fi
+      - name: Publish without site deployment
+        run: node scripts/publish-apartment-stats.mjs data/reb-weekly-index.json
