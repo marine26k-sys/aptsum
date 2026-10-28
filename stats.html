@@ -232,17 +232,11 @@ function render(d){
 
 // ═══ 카드 접기(2026.09 운영자 요청) ═══
 // 카드가 늘어나 스크롤이 길어져서, 맨 위 전체/오늘 방문 숫자만 늘 보이고 나머지 카드는 제목만 보이게 접어 둔다.
-// 제목을 누르면 펼쳐지고, 펼친 카드는 이 브라우저에 기억해 다음에 열 때도 펼쳐 둔다.
-// (카드 안 내용은 그대로 불러와 두므로 펼치면 바로 보인다. 접힌 동안에도 제목 옆 배지로 처리할 건수를 알린다.)
-const OPEN_KEY = "aptsum_stats_open";
-function loadOpenCards(){ try{ return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]")); }catch(e){ return new Set(); } }
-function saveOpenCards(set){ try{ localStorage.setItem(OPEN_KEY, JSON.stringify([...set])); }catch(e){} }
+// 통계 화면은 매번 모든 카드를 접은 상태로 시작한다. 현재 페이지 안에서는 사용자가 자유롭게 펼칠 수 있다.
 function setupCollapsible(){
-  const open = loadOpenCards();
-  $("#app").querySelectorAll(".card").forEach((card, i) => {
+  $("#app").querySelectorAll(".card").forEach(card => {
     const title = card.querySelector(".card-title");
     if(!title) return;
-    const key = card.id || `card${i}`;
     const body = document.createElement("div");
     while(title.nextSibling) body.appendChild(title.nextSibling);
     card.appendChild(body);
@@ -266,8 +260,6 @@ function setupCollapsible(){
     title.addEventListener("click", () => {
       const now = body.hidden;
       set(now);
-      now ? open.add(key) : open.delete(key);
-      saveOpenCards(open);
     });
   });
 }
