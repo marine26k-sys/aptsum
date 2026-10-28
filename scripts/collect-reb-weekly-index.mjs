@@ -29,7 +29,16 @@ async function getRows(region) {
       pIndex: String(page),
       pSize: String(PAGE_SIZE),
     })) url.searchParams.set(key, value);
-    const response = await fetch(url);
+    let response;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (response.ok || response.status < 500) break;
+      } catch (error) {
+        if (attempt === 4) throw error;
+      }
+      if (attempt < 4) await new Promise(resolve => setTimeout(resolve, attempt * 1200));
+    }
     if (!response.ok) throw new Error(`R-ONE request failed: HTTP ${response.status}`);
     const payload = await response.json();
     const block = payload.SttsApiTblData;
