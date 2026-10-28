@@ -267,7 +267,7 @@ function setupCollapsible(){
       title.style.marginBottom = isOpen ? "" : "0";
       arrow.style.transform = isOpen ? "" : "rotate(-90deg)";
     };
-    set(open.has(key));
+    set(false);
     title.addEventListener("click", () => {
       const now = body.hidden;
       set(now);
