@@ -2116,11 +2116,12 @@ const RECENT_REGION_CACHE_KEY = 'apc:recentRegions';
 const RECENT_REGION_CACHE_MAX = 7;
 const REGION_MAX = REGIONS.find(([province])=>province==='경기')[1].length; // 서울25·경기47·인천10 — 시·도 하나를 통째로 담을 수 있는 여유치(localStorage 복원 시 상한 캡용, 실제 선택 상한은 아래 regionSelMax() 참고)
 const REGION_MAX_RANK = REGION_MAX; // 지역 랭킹·신고가·신저가 공통 상한(2026.08) — '○○ 전체'로 서울(25개 구)은 한 번에 담기지만 경기(39)·인천(10) 전체는 25개에서 끊김
+const REGION_MAX_UNDERVALUE = 5; // 국토부 저평가 비교 표본·조회량 제한
 // "경기 전체"(47개 시군구 일괄 추가)를 허용하는 탭 — 신고가 속보(7일)·금액대별 변동률, 그리고 실매물 엑셀
 // 요약만 읽는 비공개 탭 3종(저평가 실매물·예산별 실매물·네이버 급매, 2026.09 운영자 요청).
 function ggAllAllowed(){return true;}
 function regionSelMax(){
-  if(isMolitUndervalueMode(mode)) return REGION_MAX;
+  if(isMolitUndervalueMode(mode)) return REGION_MAX_UNDERVALUE;
   // 국토부 실거래 분석은 최대 25개, 네이버 실매물은 경기 전체 47개까지 선택 가능.
   return isListingMode(mode) ? REGION_MAX : REGION_MAX_RANK;
 }
@@ -2281,7 +2282,7 @@ function buildRegionPicker(){
       if((multi || cmpPickerRow) && !q){
         if(g==='경기'){
           // 경기 전체를 허용한 탭에서는 경기 그룹 맨 앞에 47개 시군구 일괄 추가 버튼을 노출한다.
-          if(i===0 && ggAllAllowed()){
+          if(i===0 && ggAllAllowed() && !isMolitUndervalueMode(mode)){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}경기')">+ 경기 전체</button>`;
           }
           const sp = n.indexOf(' ');
@@ -2290,7 +2291,7 @@ function buildRegionPicker(){
             prefix += `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${CITYALL_PREFIX}${esc(city)}')">+ ${esc(city)}시 전체</button>`;
           }
           ggPickerLastCity = city;
-        } else if(i===0){
+        } else if(i===0 && !isMolitUndervalueMode(mode)){
           prefix = `<button type="button" class="rgitem rgcityall" onclick="pickRegion('${ALL_PREFIX}${esc(g)}')">+ ${esc(PROVINCE_DISPLAY[g]||g)} 전체</button>`;
         }
       }
@@ -2897,8 +2898,8 @@ function setMode(m, fromRestore){
   // 초과 안내하는 방식이라 그것대로 유용하다는 피드백으로 2026.09 초 재추가), 곧바로 이 세 탭 상한 자체를
   // 25개로 올려서(아래 regionSelMax() 참고) 이제 다른 탭과 동일하게 '전체'가 온전히 다 담김.
   const supportsAllScopeOption = (m==='complex'||m==='compare'||m==='volume'||m==='gap'||m==='subway'||m==='region'||m==='shortval'||m==='peak'||m==='longpeak'||m==='longpeakdong'||m==='longpeaklisting'||m==='listingurgent'||(m==='listingtrend'||m==='listingrise')||m==='listinggap'||m==='listingbudget'||m==='listingaskmap'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='inversion'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise');
-  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
-  if(!supportsAllScopeOption && isAllScope(sel.value)){
+  [...sel.options].forEach(o=>{ if(o.dataset && o.dataset.scope==='all') o.hidden = !supportsAllScopeOption || (isMolitUndervalueMode(m) && o.value.startsWith(ALL_PREFIX)) || (o.value===ALL_PREFIX+'경기' && !ggAllAllowed()); });
+  if((!supportsAllScopeOption || (isMolitUndervalueMode(m) && sel.value.startsWith(ALL_PREFIX))) && isAllScope(sel.value)){
     const first = lawdsOfScope(sel.value)[0];
     if(first) sel.value = first.lawd;
   }
