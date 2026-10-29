@@ -62,7 +62,7 @@
   const rows=(region.monthly||[]).slice().sort((a,b)=>a.period.localeCompare(b.period)),years=[...new Set(rows.map(row=>row.period.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
   if(!years.length){grid.innerHTML='<div class="empty-message">월간 자료가 없습니다.</div>';return;}
   const monthLabel=key=>`${key.slice(0,4)}년 ${Number(key.slice(4))}월`;
-  $('title').textContent=`${province} 전체 매매 변동률`;$('basis').textContent=`월별 최신 자료 ${data.meta.monthly.asOf}`;$('vs').hidden=false;$('vs').innerHTML='<span class="cumulative-note">누적 기준: 전년도 12월 대비</span>';$('legend').hidden=true;grid.className='monthly-table-wrap';grid.replaceChildren();
+  $('title').textContent=`${province} 전체 월간 매매 변동률`;$('basis').textContent=`월별 최신 자료 ${data.meta.monthly.asOf}`;$('vs').hidden=false;$('vs').innerHTML='<span class="cumulative-note">누적 기준: 전년도 12월 대비</span>';$('legend').hidden=true;grid.className='monthly-table-wrap';grid.replaceChildren();
   const table=document.createElement('table');table.className='monthly-table annual-region-table';const thead=document.createElement('thead'),head=document.createElement('tr'),yearHead=document.createElement('th');yearHead.scope='col';yearHead.textContent='년도';head.append(yearHead);
   const ytdHead=document.createElement('th');ytdHead.scope='col';ytdHead.className='ytd-head';ytdHead.textContent='누적';ytdHead.title='전년도 12월 대비 누적 변동률';for(let month=1;month<=12;month++){const th=document.createElement('th');th.scope='col';th.textContent=`${month}월`;head.append(th);}head.append(ytdHead);thead.append(head);table.append(thead);
   const tbody=document.createElement('tbody'),byMonth=new Map(rows.map((row,index)=>[row.period,{row,previous:rows[index-1]}]));
