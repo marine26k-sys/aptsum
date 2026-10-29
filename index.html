@@ -192,7 +192,7 @@ try {
   .price-band-vs b{display:block;color:#7FD4D9;font-size:11.5px;font-weight:700}
   .price-band-vs small{display:block;margin-top:1px;color:rgba(255,255,255,.58);font-size:9.5px;font-weight:500;white-space:nowrap}
   .price-band-vs svg{width:11px;height:11px;stroke:#7FD4D9}
-  .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:5px 10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
+  .hd-vs{background:rgba(127,212,217,.12);border-radius:8px;padding:7px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-content:stretch;gap:10px;margin-top:8px;text-align:center}
   /* 탭마다 있던 "※..." 안내문 재설계(2026.09, 운영자 요청) — 예전엔 5~7개 절을 가운뎃점(·)으로 이어붙인
      한 줄짜리 회색 텍스트라 핵심(사용자가 결과를 해석할 때 꼭 알아야 할 한 가지)과 부가 조건(집계 기준)이
      시각적으로 구분이 안 됐음. 핵심 문장만 굵게 강조하고 나머지는 더 작고 흐리게 눌러서, 한눈에 핵심부터
@@ -200,8 +200,7 @@ try {
   .hint{background:var(--teal-light-soft);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;padding:7px 10px;margin-bottom:8px;font-size:11.5px;line-height:1.5;color:var(--navy)}
   .hint b{color:var(--teal-dark)}
   .hint-sub{display:block;margin-top:2px;color:var(--sub);font-size:10.5px}
-  .hd-vs svg{width:11px;height:11px}
-  .hd-vs span{font-size:11.5px;font-weight:500;color:#7FD4D9}
+  .hd-vs-period{font-size:11.5px;font-weight:500;color:#7FD4D9;white-space:nowrap}.hd-vs-arrow{font-size:18px;font-weight:900;line-height:1;color:#7FD4D9}
   .sec{padding:14px 18px}
   .sec+.sec{border-top:1px solid var(--line)}
   .listing-ask-map{padding:10px 14px 12px;background:#f7fbfc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -4811,7 +4810,7 @@ function uvSep(i){ return i ? uvBrandSep() : ''; }
 // 최근 vs 이전(또는 올해 vs 작년) 비교 문구 전용 강조 박스 — 예전엔 헤더 meta 줄에 다른 정보들과 같은 흐린
 // 회색으로 섞여 있어 정작 결과 해석에 제일 중요한 "무엇과 무엇을 비교했는지"가 잘 안 보였음. 별도 박스로 분리.
 function hdVs(prevLabel, recentLabel){
-  return `<div class="hd-vs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7FD4D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11M18 7l-3-3M18 7l-3 3"/><path d="M17 17H6M6 17l3-3M6 17l3 3"/></svg><span>${esc(prevLabel)} <span style="opacity:.6">vs</span> ${esc(recentLabel)}</span></div>`;
+  return `<div class="hd-vs"><span class="hd-vs-period">${esc(prevLabel)}</span><span class="hd-vs-arrow" aria-label="비교">↔</span><span class="hd-vs-period">${esc(recentLabel)}</span></div>`;
 }
 // 탭 하단 방법론 안내문 — 결과 해석에 꼭 필요한 핵심 한 문장만 굵게, 나머지 집계 조건은 짧게 눌러서 붙임.
 function hint(core, sub){
@@ -7462,12 +7461,15 @@ function multiChartNearestIdx(e){
 }
 function multiTipFor(idx){
   const ym = curMultiChart.allYm[idx];
+  const monthPrices=curMultiChart.series.map(s=>s.byYm.get(ym)?.avg);
+  const priceGap=monthPrices.length===2&&monthPrices.every(Number.isFinite)?Math.abs(monthPrices[0]-monthPrices[1]):null;
   const rows = curMultiChart.series
     .map(s=>({ s, m: s.byYm.get(ym) }))
     .sort((a,b)=> (b.m?b.m.avg:-Infinity) - (a.m?a.m.avg:-Infinity)) // 비싼 단지가 위로
     .map(({s,m})=> `<span style="color:${s.color}">●</span> ${esc(s.label)}: ${m? `<b>${m.avg.toFixed(1)}억</b>${m.carriedFrom?` <span style="opacity:.7">(${esc(m.carriedFrom)} 평균 유지)</span>`:''}` : '<span style="opacity:.6">거래 없음</span>'}`)
     .join('<br>');
-  return `<b>20${ym}</b><br>${rows}`;
+  const heading=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px"><b>20${ym}</b>${priceGap===null?'':`<strong style="color:#7FD4D9;white-space:nowrap">가격 차이 ${priceGap.toFixed(1)}억</strong>`}</div>`;
+  return `${heading}${rows}`;
 }
 function multiChartHoverAt(e){
   if(!curMultiChart.allYm.length) return;
