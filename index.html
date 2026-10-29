@@ -7461,12 +7461,15 @@ function multiChartNearestIdx(e){
 }
 function multiTipFor(idx){
   const ym = curMultiChart.allYm[idx];
+  const monthPrices=curMultiChart.series.map(s=>s.byYm.get(ym)?.avg);
+  const priceGap=monthPrices.length===2&&monthPrices.every(Number.isFinite)?Math.abs(monthPrices[0]-monthPrices[1]):null;
   const rows = curMultiChart.series
     .map(s=>({ s, m: s.byYm.get(ym) }))
     .sort((a,b)=> (b.m?b.m.avg:-Infinity) - (a.m?a.m.avg:-Infinity)) // 비싼 단지가 위로
     .map(({s,m})=> `<span style="color:${s.color}">●</span> ${esc(s.label)}: ${m? `<b>${m.avg.toFixed(1)}억</b>${m.carriedFrom?` <span style="opacity:.7">(${esc(m.carriedFrom)} 평균 유지)</span>`:''}` : '<span style="opacity:.6">거래 없음</span>'}`)
     .join('<br>');
-  return `<b>20${ym}</b><br>${rows}`;
+  const heading=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px"><b>20${ym}</b>${priceGap===null?'':`<strong style="color:#7FD4D9;white-space:nowrap">가격 차이 ${priceGap.toFixed(1)}억</strong>`}</div>`;
+  return `${heading}${rows}`;
 }
 function multiChartHoverAt(e){
   if(!curMultiChart.allYm.length) return;
