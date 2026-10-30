@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,
 let items=[],limit=20,today=kstToday(),favorites=[],loading=false,lastLoaded=0,lastPayload='',hasData=false;
 try{const data=JSON.parse(localStorage.getItem('apc:cheongyak:favs:v1')||'[]');if(Array.isArray(data))favorites=data.filter(x=>typeof x==='string');}catch{}
 const params=new URLSearchParams(location.search);
-let selectedStatus=params.get('s')==='upcoming'?'upcoming':'open';
+let selectedStatus=params.get('s')==='open'?'open':'upcoming';
 for(const [id,key] of [['category','c'],['region','r']])if([...$(id).options].some(o=>o.value===params.get(key)))$(id).value=params.get(key);
 $('query').value=params.get('q')||'';
 function syncFilterPills(){for(const button of document.querySelectorAll('.filter-pill')){const active=$(button.dataset.filterId).value===button.dataset.value;button.classList.toggle('on',active);button.setAttribute('aria-pressed',String(active));}}
@@ -38,7 +38,7 @@ function render(){
 for(const id of ['category','region','favoritesOnly'])$(id).addEventListener('change',()=>{syncFilterPills();limit=20;render();});
 $('query').addEventListener('input',()=>{limit=20;render();});
 document.querySelectorAll('.count').forEach(b=>b.addEventListener('click',()=>{selectedStatus=b.dataset.status;limit=20;render();}));
- $('reset').addEventListener('click',()=>{selectedStatus='open';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;syncFilterPills();limit=20;render();});
+ $('reset').addEventListener('click',()=>{selectedStatus='upcoming';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;syncFilterPills();limit=20;render();});
 $('more').addEventListener('click',()=>{limit+=20;render();});
 $('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;favorites=favorites.includes(key)?favorites.filter(x=>x!==key):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
 async function load(){
