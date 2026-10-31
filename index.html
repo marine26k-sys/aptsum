@@ -6080,7 +6080,7 @@ function subwayMetaHTML(stationWalkMinutes,stationWalkLoaded=false){
   // "지하철 도보" 앞말은 한때 중복이라는 지적으로 뺐었는데(2026.09),
   // 바로 앞에 용적률(예: "307%")이 붙게 되면서 분 값만 남으면 무엇까지의 거리인지 다시
   // 모호해져 도로 붙임(2026.09).
-  return ` · 지하철 도보 ${esc(walkDisplay)}`;
+  return '';
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
