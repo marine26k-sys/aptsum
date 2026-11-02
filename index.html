@@ -1459,6 +1459,7 @@ function captureViewInputs(){
     pbp: document.getElementById('priceBandPeriodN').value,
     pb: document.getElementById('priceBandN').value,
     pbb: document.getElementById('priceBandBasis').value,
+    newHighPrice: mode==='newhigh' ? newHighPriceRange() : null,
     nh7: newHighWeekOnly, // "신고가 속보 (7일)" 탭 여부(2026.09 신설, 구독 전용) — newhigh와 같은 mode를 공유하므로 뒤로가기 복원 시 따로 저장해야 함
     cmp: [...document.querySelectorAll('.cmp-row')].map(r=>({lawd:r.querySelector('select').value, name:r.querySelector('input').value})),
     cmpAreas:mode==='compare'&&typeof lastData!=='undefined'?captureCompareAreas(lastData):{},
@@ -1468,6 +1469,7 @@ function captureViewInputs(){
 function pushView(){
   regionPickerPushed = false;
   const inputs = captureViewInputs();
+  if(lastData?.mode==='newhigh'&&Array.isArray(lastData.newHighPrice))inputs.newHighPrice=lastData.newHighPrice.slice();
   viewStack.push({data:lastData, inputs});
   try{ history.pushState({vi: viewStack.length-1}, '', buildShareURL(inputs)); }catch(e){} // 샌드박스 미리보기(about:blank 등) 등 History API를 못 쓰는 환경에서도 앱 동작에 지장 없게
 }
@@ -1488,6 +1490,7 @@ function buildShareURL(inp){
   if(['listingbudget','listingurgent'].includes(inp.mode) && !(inp.mode==='listingbudget'&&new URLSearchParams(location.search).get('individual')==='1') && Number.isFinite(inp.ls?.sw) && inp.ls.sw!==LS_SUBWAY_ALL) p.set('lsw', String(inp.ls.sw));
   if(inp.mode==='listinggap' && inp.lg) p.set('lg', `${inp.lg.smallBand}-${inp.lg.largeBand}`);
   if(inp.mode==='newhigh' && inp.nh7) p.set('nh7', '1');
+  if(inp.mode==='newhigh'&&Array.isArray(inp.newHighPrice)&&(inp.newHighPrice[0]!==0||inp.newHighPrice[1]!==100))p.set('nhp',inp.newHighPrice.join('~'));
   if(inp.mode==='compare'){
     p.set('c', inp.cmp.filter(x=>x.name.trim()).map(x=>x.lawd+':'+x.name.trim()).join('|'));
     if(inp.cmpAreas&&Object.keys(inp.cmpAreas).length)p.set('ca',JSON.stringify(inp.cmpAreas));
@@ -1542,6 +1545,7 @@ async function initFromURL(){
   listingNameSelected=null;listingNameRestoreKey=p.get('lnk')||'';
   listingFloorScope=p.get('lf')==='all'?'all':'mid';syncListingFloor();
   if(hasSharedQuery)resetQueriedSliderDefaults(requestedMode);
+  if(requestedMode==='newhigh'&&(hasSharedQuery||p.has('nhp')))setNewHighPriceRange(p.has('nhp')?p.get('nhp').split('~').map(Number):[0,100]);
   if(p.get('p')) document.getElementById('monthsN').value = analysisMonthsForMode(requestedMode, p.get('p'));
   if(p.get('f')!==null) document.getElementById('floorMin').value = p.get('f');
   if(p.get('by')!==null) setBuildYearValue(p.get('by'));
@@ -1972,6 +1976,7 @@ function restoreView(vi){
   saveRegionSel(); renderRegionChips();
   // 평형 다중 선택 상태 복원(setMode()가 새 탭 진입 시 초기화하므로 그 다음에) — 2026.08부터 평형 선택
   // 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
+  if(inp.mode==='newhigh')setNewHighPriceRange(inp.newHighPrice||[0,100]);
   pyBandMultiSel = (inp.pym || []).slice();
   renderPyBandMultiBtn();
   if(inp.rp) document.getElementById('risePeriodN').value = inp.rp; // 기간별 변동률의 비교 시점(뒤로가기 복원)
@@ -2373,6 +2378,7 @@ function applyNativeRegionInputs(inp){
   document.getElementById('listingOccupancy').value=normalizeListingOccupancy(inp.occupancy,inp.mode);
   restoreListingSelectionInputs(inp);
   regionSel=(inp.regionSel||[]).slice(0, regionSelMax());saveRegionSel();renderRegionChips();
+  if(inp.mode==='newhigh')setNewHighPriceRange(inp.newHighPrice||[0,100]);
   pyBandMultiSel=(inp.pym||[]).slice();renderPyBandMultiBtn();
   if(inp.mode==='compare'){
     document.getElementById('cmpRows').innerHTML='';
@@ -2498,11 +2504,11 @@ function getQueriedSliderPref(m){
   }catch{return null;}
 }
 function analysisMonthsForMode(m, selected){ return m==='region' && !['12','24','36','48','60'].includes(String(selected)) ? '36' : selected; }
-function saveQueriedSliders(){
+function saveQueriedSliders(priceRange){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
-  if(mode==='newhigh')v.newHighPrice=newHighPriceRange();
+  if(mode==='newhigh')v.newHighPrice=priceRange||newHighPriceRange();
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
@@ -4123,6 +4129,10 @@ function analyzeRegion(all, months){
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
 function newHighPriceRange(){return ['newHighPriceMin','newHighPriceMax'].map(id=>+document.getElementById(id).value);}
+function setNewHighPriceRange(range){
+  const valid=Array.isArray(range)&&range.length===2&&range.every(n=>Number.isFinite(n)&&n>=0&&n<=100&&n*2===Math.round(n*2))&&range[0]<=range[1];
+  const [lo,hi]=valid?range:[0,100];document.getElementById('newHighPriceMin').value=lo;document.getElementById('newHighPriceMax').value=hi;newHighPriceSync();
+}
 function newHighPriceSync(changed){
   const lo=document.getElementById('newHighPriceMin'),hi=document.getElementById('newHighPriceMax');
   if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
@@ -5711,7 +5721,7 @@ async function runSearch(opts){
     ? ((mode==='shortval'||mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='inversion'||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='pricebandrise') ? neededMN : mN) // 이 탭들은 고정 분석 창(neededMN)이 있어 '○○ 전체'에서도 그만큼만 조회 — mN(숨겨진/공유 셀렉트 잔여값)을 쓰면 필요한 개월수와 안 맞을 수 있음
     : (mode==='peak'||mode==='longpeak'||mode==='longpeakdong'||mode==='shortval'||mode==='gap'||mode==='newlow'||mode==='inversion') ? 24 : ((mode==='newhigh'||mode==='pyprice') ? 36 : (mode==='pricebandrise' ? priceBandPeriodM+2 : ((mode==='longtermrise'||mode==='jeonselongtermrise') ? risePeriodM+2 : Math.max(mN, 24))));
   const effMN=monthlyHistoryMode?Math.max(baseFetchMN,neededMN+12,73):baseFetchMN;
-  saveQueriedSliders();
+  saveQueriedSliders(requestedNewHighPrice);
   document.getElementById('tradeLoadNote').hidden = false;
   showLookupProgress(0,1);
   document.getElementById('loading').classList.add('on');
@@ -6072,6 +6082,7 @@ async function runSearch(opts){
       await loadCompletionFallback(d,d.lawd);
       if(myToken!==searchToken) return;
     }
+    if(d.mode==='newhigh')d.newHighPrice=requestedNewHighPrice.slice();
     lastData = d;
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
