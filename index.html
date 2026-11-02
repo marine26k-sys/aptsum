@@ -2504,7 +2504,7 @@ function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
-  if(mode==='newhigh'&&newHighWeekOnly)v.newHighPrice=newHighPriceRange();
+  if(mode==='newhigh')v.newHighPrice=newHighPriceRange();
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
@@ -2604,7 +2604,7 @@ function syncAnalysisSelectSliders(){
 }
 function syncAnalysisFilterGroup(){
   const group=document.getElementById('analysisFilterGroup');if(!group)return;
-  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise'||(mode==='newhigh'&&newHighWeekOnly);
+  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='newhigh';
   group.classList.toggle('unified',unified);
   group.style.display=unified?'':'none';
 }
@@ -2937,7 +2937,7 @@ function setMode(m, fromRestore){
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
   pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? []) : []);
   renderPyBandMultiBtn();
-  document.getElementById('newHighPriceFilters').style.display=m==='newhigh'&&newHighWeekOnly?'':'none';
+  document.getElementById('newHighPriceFilters').style.display=m==='newhigh'?'':'none';
   const pricePref=getQueriedSliderPref(m)?.newHighPrice;
   document.getElementById('newHighPriceMin').value=pricePref?.[0]??0;
   document.getElementById('newHighPriceMax').value=pricePref?.[1]??100;
@@ -4186,7 +4186,7 @@ function analyzeNewHigh(all, months, weekOnly){
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: weekOnly ? filtered.filter(row=>{const [lo,hi]=newHighPriceRange();return row.amt>=lo&&(hi===100||row.amt<=hi);}) : filtered };
+    newHigh: filtered.filter(row=>{const [lo,hi]=newHighPriceRange();return row.amt>=lo&&(hi===100||row.amt<=hi);}) };
 }
 
 // ═══ 신저가 탭 ═══
@@ -7900,7 +7900,7 @@ function renderNewHigh(d){
       ${hdTop(weekOnly?'신고가 속보 (7일)':'신고가', weekOnly)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 ${weekOnly?'일주일':'한 달'} 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${weekOnly ? `<div class="hd-vs"><span class="hd-vs-period">이전 최고가</span><span class="hd-vs-arrow" aria-label="비교">↔</span><span class="hd-vs-period">이번 신고가<br><small style="display:block;font-size:11px;white-space:nowrap">(${recentWindow})</small></span></div>` : hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
+      ${`<div class="hd-vs"><span class="hd-vs-period">이전 최고가</span><span class="hd-vs-arrow" aria-label="비교">↔</span><span class="hd-vs-period">이번 신고가<br><small style="display:block;font-size:11px;white-space:nowrap">(${recentWindow})</small></span></div>`}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
