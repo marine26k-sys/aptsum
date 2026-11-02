@@ -93,11 +93,14 @@
   const rangeMode=view==='monthly'||view==='weekly';const endKey=rangeMode?endPeriod:selectedPeriod;const first=data.regions.find(r=>(r[kind]||[]).some(x=>x.period===endKey));const firstSeries=first?.[kind]||[];const selectedIndex=firstSeries.findIndex(x=>x.period===endKey);const selected=firstSeries[selectedIndex];const previous=rangeMode?firstSeries.find(x=>x.period===startPeriod):firstSeries.slice(0,selectedIndex).at(-1);
   const shortPeriod=key=>formatPeriod(key).replace(/^\d{4}년\s*/, '').replace(/\s*\(\d+주차\)/, '');$('title').textContent=`${shortPeriod(endKey)} 매매 변동률`;$('basis').textContent=`자료 기준일 ${data.meta[kind].asOf}`;
   $('vs').innerHTML=`<span>${formatPeriod(previous?.period,previous)}</span><span class="vs" aria-label="비교">↔</span><span>${formatPeriod(endKey,selected)}</span>`;grid.replaceChildren();requestAnimationFrame(()=>{if(renderId!==mapRenderId)return;
+  const mapRates=COMBINED_MAP.flatMap(row=>row.map(([,province,district])=>{const region=regionByName.get(`${province}|${district}`);return region&&compare(region)?.rate;})).filter(Number.isFinite);
+  const mapMax=Math.max(0.1,...mapRates.map(rate=>Math.abs(Number(displayRate(rate)))));
+  function mapColor(rate){const rounded=Number(displayRate(rate));if(rounded===0)return '#fff';const alpha=0.12+0.40*Math.min(1,Math.abs(rounded)/mapMax);return rounded>0?`rgba(239,68,68,${alpha})`:`rgba(59,130,246,${alpha})`;}
   COMBINED_MAP.forEach((row,rowIndex)=>{
    const hasAvailableTile=(r,c,p)=>{const placement=COMBINED_MAP[r]?.find(([x,area])=>x===c&&area===p);if(!placement)return false;const neighbor=regionByName.get(`${p}|${placement[2]}`);return Number.isFinite(neighbor&&compare(neighbor)?.rate)};
    const rowGrid=document.createElement('div');rowGrid.className='map-row';grid.append(rowGrid);let visible=0;
    for(const [column,province,district] of row){const region=regionByName.get(`${province}|${district}`),metric=region&&compare(region);if(!Number.isFinite(metric?.rate))continue;visible++;
-    const cell=document.createElement('div');cell.className='cell';cell.style.background=color(metric.rate);cell.style.gridColumn=String(column+1);
+    const cell=document.createElement('div');cell.className='cell';cell.style.background=mapColor(metric.rate);cell.style.gridColumn=String(column+1);
     cell.style.boxShadow=window.APTSUM_METRO_TILE_OUTLINE(rowIndex,column,province,(r,c)=>hasAvailableTile(r,c,province));
     const name=document.createElement('b');name.textContent=shortName(district);const value=document.createElement('strong');value.textContent=displayRate(metric.rate);
     cell.append(name,value);cell.setAttribute('aria-label',`${province} ${district} ${value.textContent}`);rowGrid.append(cell);
