@@ -4136,7 +4136,7 @@ function newHighPriceNumberSync(input){
   newHighPriceSync(slider);
 }
 
-function analyzeNewHigh(all, months, weekOnly){
+function analyzeNewHigh(all, months, weekOnly, priceRange){
   // 직거래(중개 없이 당사자끼리 신고, 특수관계 거래 가능성 있음)는 신고가 판정에서 아예 제외 —
   // 등락 랭킹·저평가 탭의 markOutliers()가 같은 이유로 직거래를 걸러내는 것과 동일한 원칙.
   // 신고가는 60,000명 팔로워에게 그대로 노출되는 공개 지표라, 특수관계자 간 1건의 시세 왜곡 거래만으로
@@ -4183,7 +4183,7 @@ function analyzeNewHigh(all, months, weekOnly){
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: filtered.filter(row=>{const [lo,hi]=newHighPriceRange();return row.amt>=lo&&(hi===100||row.amt<=hi);}) };
+    newHigh: filtered.filter(row=>{const [lo,hi]=priceRange;return row.amt>=lo&&(hi===100||row.amt<=hi);}) };
 }
 
 // ═══ 신저가 탭 ═══
@@ -5592,6 +5592,7 @@ async function search(opts){
   }
 }
 async function runSearch(opts){
+  const requestedNewHighPrice=mode==='newhigh'?newHighPriceRange():null;
   dismissSearchKeyboard();
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
@@ -5790,7 +5791,7 @@ async function runSearch(opts){
         if(!items.length){
           d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
         } else {
-          d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
+          d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly, requestedNewHighPrice)
             : mode==='newlow' ? analyzeNewLow(items, months)
             : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
             : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
@@ -5914,7 +5915,7 @@ async function runSearch(opts){
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longtermrise'||mode==='pricebandrise'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
-        d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
+        d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly, requestedNewHighPrice)
           : mode==='newlow' ? analyzeNewLow(items, months)
           : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
           : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
