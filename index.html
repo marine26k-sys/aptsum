@@ -706,7 +706,7 @@ try {
       document.addEventListener('DOMContentLoaded', function(){
       // 네이버 실매물 기준 탭(tabLPL·tabLBG·tabLUR)은 2026.09부터 누구나 강남구만 무료 체험으로 조회할 수 있어 항상 노출 —
       // 여기(인증 시에만 노출·해지 시 숨김) 목록에서 뺐다. 지역 제한은 listingTrialBlocked()와 서버(/api/listings)가 건다.
-      const subTabs = ['tabPrivateRegionalChange', 'tabSub', 'tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabLPD', 'tabNH', 'tabNH7', 'tabPBR', 'tabLFAV'].map(id => document.getElementById(id)).filter(Boolean);
+      const subTabs = ['tabSub', 'tabV', 'tabGap', 'tabJLTR', 'tabP', 'tabNL', 'tabNH', 'tabNH7', 'tabPBR', 'tabLFAV'].map(id => document.getElementById(id)).filter(Boolean);
       const subDividers = ['tabSubDivider'].map(id => document.getElementById(id)).filter(Boolean);
       if (!subTabs.length) { resolveReady(false); return; }
 
@@ -954,14 +954,12 @@ try {
          2026.09 — 화면 표기를 "구독 전용"→"비공개 탭"으로 변경(구독비 없음, 운영자 요청). 코드·쿠키·API의
          subscriber 명칭은 그대로 둠(표기만 변경).-->
     <div class="tab-divider" id="tabSubDivider" style="display:none">비공개 탭</div>
-    <a class="tab subscriber" id="tabPrivateRegionalChange" style="display:none" href="./regional-change.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>실거래 통계</a>
     <a class="tab subscriber" id="tabSub" style="display:none" href="./index.html?m=subway"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="17" r="2.2"/><rect x="4" y="4" width="16" height="12" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/></svg>역세권</a>
     <a class="tab subscriber" id="tabV" style="display:none" href="./index.html?m=volume"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="20" y1="20" x2="20" y2="15"/></svg>거래량 랭킹</a>
     <a class="tab subscriber" id="tabGap" style="display:none" href="./index.html?m=gap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>전세가율</a>
     <a class="tab subscriber" id="tabJLTR" style="display:none" href="./index.html?m=jeonselongtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>전세 변동률</a>
     <a class="tab subscriber" id="tabNH" style="display:none" href="./index.html?m=newhigh"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가</a>
     <a class="tab subscriber" id="tabNL" style="display:none" href="./index.html?m=newlow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 9.5A2.5 2.5 0 0 1 11 12c0 1.38-.5 2-1 3-1.072 2.143-.224 4.054 2 6 .5-2.5 2-4.9 4-6.5 2-1.6 3-3.5 3-5.5a7 7 0 1 0-14 0c0 1.153.433 2.294 1 3a2.5 2.5 0 0 1 2.5-2.5z"/></svg>하락 거래</a>
-    <a class="tab subscriber" id="tabLPD" style="display:none" href="./index.html?m=longpeakdong"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><circle cx="12" cy="15" r="2"/></svg>연간 저평가 (동일 권역)</a>
     <a class="tab subscriber" id="tabNH7" style="display:none" href="./index.html?m=newhigh&amp;nh7=1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>신고가 속보 (7일)</a>
     <a class="tab subscriber" id="tabPBR" style="display:none" href="./index.html?m=pricebandrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/><circle cx="6" cy="6" r="3"/></svg>금액대별 변동률</a>
     <a class="tab subscriber" id="tabLFAV" style="display:none" href="./index.html?m=listingfavorites">관심 단지</a>
@@ -1148,6 +1146,13 @@ try {
         <input type="range" id="analysisPyMin" min="10" max="60" step="1" value="10" oninput="analysisPySync(this)" aria-label="최소 평형">
         <input type="range" id="analysisPyMax" min="10" max="60" step="1" value="60" oninput="analysisPySync(this)" aria-label="최대 평형">
       </div></div></div>
+    </div>
+    <div id="newHighPriceFilters" class="ls-filters analysis-select-slider" style="display:none">
+      <div class="ls-hd"><span>금액대</span><b id="newHighPriceTxt">전체</b></div>
+      <div class="ls-control"><div class="ls-dual" id="newHighPriceDual">
+        <input type="range" id="newHighPriceMin" min="0" max="100" step="0.5" value="0" oninput="newHighPriceSync(this)" aria-label="최소 신고가(억)">
+        <input type="range" id="newHighPriceMax" min="0" max="100" step="0.5" value="100" oninput="newHighPriceSync(this)" aria-label="최대 신고가(억)">
+      </div><div class="ls-numbers"><input type="number" id="newHighPriceMinNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최소 신고가(억) 직접 입력"><span>~</span><input type="number" id="newHighPriceMaxNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최대 신고가(억) 직접 입력"><span>억</span></div></div>
     </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
 
@@ -2497,6 +2502,7 @@ function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
+  if(mode==='newhigh')v.newHighPrice=newHighPriceRange();
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
@@ -2596,7 +2602,7 @@ function syncAnalysisSelectSliders(){
 }
 function syncAnalysisFilterGroup(){
   const group=document.getElementById('analysisFilterGroup');if(!group)return;
-  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise';
+  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise'||mode==='newhigh';
   group.classList.toggle('unified',unified);
   group.style.display=unified?'':'none';
 }
@@ -2675,6 +2681,7 @@ function initializeAnalysisSelectSliders(){
   const filterGroup=document.createElement('div');filterGroup.id='analysisFilterGroup';filterGroup.className='analysis-filter-group';
   document.getElementById('listingGapFilters').after(filterGroup);
   filterGroup.append(document.getElementById('analysisPyFilters'));
+  filterGroup.append(document.getElementById('newHighPriceFilters'));
   for(const entry of analysisSelectSliders)if(['monthsN','risePeriodN'].includes(entry.select.id))filterGroup.append(entry.wrap);
   filterGroup.append(ageWrap);
   for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
@@ -2870,7 +2877,6 @@ function setMode(m, fromRestore){
   document.getElementById('tabPBR').classList.toggle('on', m==='pricebandrise');
   document.getElementById('tabV').classList.toggle('on', m==='volume');
   document.getElementById('tabUV').classList.toggle('on', m==='shortval'||m==='longpeak'||m==='inversion');
-  document.getElementById('tabLPD').classList.toggle('on', m==='longpeakdong');
   document.getElementById('tabLPL').classList.toggle('on', m==='longpeaklisting');
   document.getElementById('tabLFAV').classList.toggle('on', m==='listingfavorites');
   document.getElementById('tabLBG').classList.toggle('on', m==='listingbudget'&&!isIndividualListing());
@@ -2928,6 +2934,11 @@ function setMode(m, fromRestore){
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
   pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? []) : []);
   renderPyBandMultiBtn();
+  document.getElementById('newHighPriceFilters').style.display=m==='newhigh'?'':'none';
+  const pricePref=getQueriedSliderPref(m)?.newHighPrice;
+  document.getElementById('newHighPriceMin').value=pricePref?.[0]??0;
+  document.getElementById('newHighPriceMax').value=pricePref?.[1]??100;
+  newHighPriceSync();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
   const isMolitUndervalue=['shortval','longpeak','longpeakdong','inversion'].includes(m);
@@ -4111,7 +4122,21 @@ function analyzeRegion(all, months){
 // "선택 조회기간(고정 3년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
-function analyzeNewHigh(all, months, weekOnly){
+function newHighPriceRange(){return ['newHighPriceMin','newHighPriceMax'].map(id=>+document.getElementById(id).value);}
+function newHighPriceSync(changed){
+  const lo=document.getElementById('newHighPriceMin'),hi=document.getElementById('newHighPriceMax');
+  if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
+  const dual=document.getElementById('newHighPriceDual');dual.style.setProperty('--lo',lo.value+'%');dual.style.setProperty('--hi',hi.value+'%');
+  document.getElementById('newHighPriceTxt').textContent=+lo.value===0&&+hi.value===100?'전체':+hi.value===100?`${lo.value}억 이상`:`${lo.value}~${hi.value}억`;
+  for(const end of ['Min','Max'])document.getElementById('newHighPrice'+end+'Number').value=document.getElementById('newHighPrice'+end).value;
+}
+function newHighPriceNumberSync(input){
+  const slider=document.getElementById(input.id.replace('Number',''));
+  if(input.value.trim()!==''&&Number.isFinite(+input.value))slider.value=Math.max(0,Math.min(100,Math.round(+input.value*2)/2));
+  newHighPriceSync(slider);
+}
+
+function analyzeNewHigh(all, months, weekOnly, priceRange){
   // 직거래(중개 없이 당사자끼리 신고, 특수관계 거래 가능성 있음)는 신고가 판정에서 아예 제외 —
   // 등락 랭킹·저평가 탭의 markOutliers()가 같은 이유로 직거래를 걸러내는 것과 동일한 원칙.
   // 신고가는 60,000명 팔로워에게 그대로 노출되는 공개 지표라, 특수관계자 간 1건의 시세 왜곡 거래만으로
@@ -4158,7 +4183,7 @@ function analyzeNewHigh(all, months, weekOnly){
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: filtered };
+    newHigh: filtered.filter(row=>{const [lo,hi]=priceRange;return row.amt>=lo&&(hi===100||row.amt<=hi);}) };
 }
 
 // ═══ 신저가 탭 ═══
@@ -5567,6 +5592,7 @@ async function search(opts){
   }
 }
 async function runSearch(opts){
+  const requestedNewHighPrice=mode==='newhigh'?newHighPriceRange():null;
   dismissSearchKeyboard();
   document.getElementById('tradeLoadNote').hidden = true;
   const silentScroll = !!(opts && opts.silentScroll); // true면 화면 맨 위로 스크롤하지 않음 — 실매물 탭 슬라이더를 조작할 때마다 자동 재조회되는데(lsApply), 매번 최상단으로 튀면 슬라이더를 계속 만지기 불편함(2026.09 운영자 리포트)
@@ -5765,7 +5791,7 @@ async function runSearch(opts){
         if(!items.length){
           d = {found:false, note:'선택한 평형·연식 조건에 맞는 거래가 없습니다. 필터를 조정해 보세요.'};
         } else {
-          d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
+          d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly, requestedNewHighPrice)
             : mode==='newlow' ? analyzeNewLow(items, months)
             : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
             : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
@@ -5889,7 +5915,7 @@ async function runSearch(opts){
       } else if(mode==='newhigh'||mode==='newlow'||mode==='pyprice'||mode==='longtermrise'||mode==='pricebandrise'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
-        d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly)
+        d = mode==='newhigh' ? analyzeNewHigh(items, months, newHighWeekOnly, requestedNewHighPrice)
           : mode==='newlow' ? analyzeNewLow(items, months)
           : mode==='longtermrise' ? analyzeLongTermRise(items, months, +document.getElementById('risePeriodN').value)
           : mode==='pricebandrise' ? analyzePriceBandRise(items, months, priceBandPeriodM, +document.getElementById('priceBandN').value, priceBandBasis)
@@ -6080,7 +6106,7 @@ function subwayMetaHTML(stationWalkMinutes,stationWalkLoaded=false){
   // "지하철 도보" 앞말은 한때 중복이라는 지적으로 뺐었는데(2026.09),
   // 바로 앞에 용적률(예: "307%")이 붙게 되면서 분 값만 남으면 무엇까지의 거리인지 다시
   // 모호해져 도로 붙임(2026.09).
-  return ` · 지하철 도보 ${esc(walkDisplay)}`;
+  return '';
 }
 // 단지 상세 카드 헤더(#complexMeta) 전체 텍스트를 만드는 공용 함수 — renderComplex 최초 렌더와
 // attachHHCountsAsync의 비동기 갱신이 서로 다른 문자열을 만들어 어긋나는 일이 없도록 하나로 합침.
@@ -7872,7 +7898,7 @@ function renderNewHigh(d){
       ${hdTop(weekOnly?'신고가 속보 (7일)':'신고가', weekOnly)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 ${weekOnly?'일주일':'한 달'} 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
+      ${`<div class="hd-vs"><span class="hd-vs-period">이전 최고가</span><span class="hd-vs-arrow" aria-label="비교">↔</span><span class="hd-vs-period">이번 신고가<br><small style="display:block;font-size:11px;white-space:nowrap">(${recentWindow})</small></span></div>`}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -8910,6 +8936,7 @@ function resetAllSliderFilters(){
   if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
+  if(mode==='newhigh'){document.getElementById('newHighPriceMin').value=0;document.getElementById('newHighPriceMax').value=100;newHighPriceSync();}
   pyBandMultiSel=[];
   if(mode==='region')savePyBandMultiPref([]);
   document.getElementById('priceBandBasis').value='current';
