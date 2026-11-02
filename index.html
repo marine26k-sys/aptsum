@@ -4130,7 +4130,7 @@ function newHighPriceSync(changed){
   const lo=document.getElementById('newHighPriceMin'),hi=document.getElementById('newHighPriceMax');
   if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
   const dual=document.getElementById('newHighPriceDual');dual.style.setProperty('--lo',lo.value+'%');dual.style.setProperty('--hi',hi.value+'%');
-  document.getElementById('newHighPriceTxt').textContent=+lo.value===0&&+hi.value===100?'전체':`${lo.value}~${hi.value}${+hi.value===100?'억 이상':'억'}`;
+  document.getElementById('newHighPriceTxt').textContent=+lo.value===0&&+hi.value===100?'전체':+hi.value===100?`${lo.value}억 이상`:`${lo.value}~${hi.value}억`;
   for(const end of ['Min','Max'])document.getElementById('newHighPrice'+end+'Number').value=document.getElementById('newHighPrice'+end).value;
 }
 function newHighPriceNumberSync(input){
