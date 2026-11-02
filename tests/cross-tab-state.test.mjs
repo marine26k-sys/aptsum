@@ -11,12 +11,13 @@ test('share URL preserves build-year and weekly-new-high state', () => {
   const ctx = vm.createContext({ URLSearchParams, location:{ pathname:'/index.html' } });
   vm.runInContext(html.slice(start, end), ctx);
   const url = ctx.buildShareURL({
-    mode:'newhigh', mN:'36', fM:'0', by:'under10', nh7:true,
+    mode:'newhigh', mN:'36', fM:'0', by:'under10', nh7:true, newHighPrice:[12.5,25],
     cmp:[], lawd:'41135', q:'', regionSel:[], pym:[], rp:'', pbp:'', pb:''
   });
   const params = new URL('https://example.test'+url).searchParams;
   assert.equal(params.get('by'), 'under10');
   assert.equal(params.get('nh7'), '1');
+  assert.equal(params.get('nhp'), '12.5~25');
 });
 
 test('region share URL keeps a selected five-year period and replaces a legacy three-month period', () => {
