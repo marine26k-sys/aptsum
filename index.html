@@ -1149,6 +1149,13 @@ try {
         <input type="range" id="analysisPyMax" min="10" max="60" step="1" value="60" oninput="analysisPySync(this)" aria-label="최대 평형">
       </div></div></div>
     </div>
+    <div id="newHighPriceFilters" class="ls-filters analysis-select-slider" style="display:none">
+      <div class="ls-hd"><span>금액대</span><b id="newHighPriceTxt">전체</b></div>
+      <div class="ls-control"><div class="ls-dual" id="newHighPriceDual">
+        <input type="range" id="newHighPriceMin" min="0" max="100" step="0.5" value="0" oninput="newHighPriceSync(this)" aria-label="최소 신고가(억)">
+        <input type="range" id="newHighPriceMax" min="0" max="100" step="0.5" value="100" oninput="newHighPriceSync(this)" aria-label="최대 신고가(억)">
+      </div><div class="ls-numbers"><input type="number" id="newHighPriceMinNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최소 신고가(억) 직접 입력"><span>~</span><input type="number" id="newHighPriceMaxNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최대 신고가(억) 직접 입력"><span>억</span></div></div>
+    </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
 
       <!-- 평형 슬라이더 — 실매물 탭 공통(2026.09, 운영자 요청: 체크박스 다중선택 대신 연식·세대수와
@@ -2497,6 +2504,7 @@ function saveQueriedSliders(){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
+  if(mode==='newhigh'&&newHighWeekOnly)v.newHighPrice=newHighPriceRange();
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
 }
@@ -2596,7 +2604,7 @@ function syncAnalysisSelectSliders(){
 }
 function syncAnalysisFilterGroup(){
   const group=document.getElementById('analysisFilterGroup');if(!group)return;
-  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise';
+  const unified=(mode==='region'&&regionRankView==='complex')||mode==='longtermrise'||mode==='jeonselongtermrise'||(mode==='newhigh'&&newHighWeekOnly);
   group.classList.toggle('unified',unified);
   group.style.display=unified?'':'none';
 }
@@ -2675,6 +2683,7 @@ function initializeAnalysisSelectSliders(){
   const filterGroup=document.createElement('div');filterGroup.id='analysisFilterGroup';filterGroup.className='analysis-filter-group';
   document.getElementById('listingGapFilters').after(filterGroup);
   filterGroup.append(document.getElementById('analysisPyFilters'));
+  filterGroup.append(document.getElementById('newHighPriceFilters'));
   for(const entry of analysisSelectSliders)if(['monthsN','risePeriodN'].includes(entry.select.id))filterGroup.append(entry.wrap);
   filterGroup.append(ageWrap);
   for(const id of ['lsAgeMin','lsAgeMax'])guardAgeSliderTouch(document.getElementById(id),()=>lsSync());
@@ -2928,6 +2937,11 @@ function setMode(m, fromRestore){
   // 각 탭의 마지막 조회 평형을 복원한다. 지역 탭은 기존 저장값도 호환한다.
   pyBandMultiSel = getQueriedSliderPref(m)?.bands ?? (m==='region' ? (getPyBandMultiPref() ?? []) : []);
   renderPyBandMultiBtn();
+  document.getElementById('newHighPriceFilters').style.display=m==='newhigh'&&newHighWeekOnly?'':'none';
+  const pricePref=getQueriedSliderPref(m)?.newHighPrice;
+  document.getElementById('newHighPriceMin').value=pricePref?.[0]??0;
+  document.getElementById('newHighPriceMax').value=pricePref?.[1]??100;
+  newHighPriceSync();
   document.getElementById('buildYear').style.display = (m==='region'||m==='volume'||m==='newhigh'||m==='newlow'||m==='pyprice'||m==='longtermrise'||m==='jeonselongtermrise'||m==='pricebandrise') ? '' : 'none';
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
   const isMolitUndervalue=['shortval','longpeak','longpeakdong','inversion'].includes(m);
@@ -4111,6 +4125,20 @@ function analyzeRegion(all, months){
 // "선택 조회기간(고정 3년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
+function newHighPriceRange(){return ['newHighPriceMin','newHighPriceMax'].map(id=>+document.getElementById(id).value);}
+function newHighPriceSync(changed){
+  const lo=document.getElementById('newHighPriceMin'),hi=document.getElementById('newHighPriceMax');
+  if(+lo.value>+hi.value){if(changed===lo)hi.value=lo.value;else lo.value=hi.value;}
+  const dual=document.getElementById('newHighPriceDual');dual.style.setProperty('--lo',lo.value+'%');dual.style.setProperty('--hi',hi.value+'%');
+  document.getElementById('newHighPriceTxt').textContent=+lo.value===0&&+hi.value===100?'전체':`${lo.value}~${hi.value}${+hi.value===100?'억 이상':'억'}`;
+  for(const end of ['Min','Max'])document.getElementById('newHighPrice'+end+'Number').value=document.getElementById('newHighPrice'+end).value;
+}
+function newHighPriceNumberSync(input){
+  const slider=document.getElementById(input.id.replace('Number',''));
+  if(input.value.trim()!==''&&Number.isFinite(+input.value))slider.value=Math.max(0,Math.min(100,Math.round(+input.value*2)/2));
+  newHighPriceSync(slider);
+}
+
 function analyzeNewHigh(all, months, weekOnly){
   // 직거래(중개 없이 당사자끼리 신고, 특수관계 거래 가능성 있음)는 신고가 판정에서 아예 제외 —
   // 등락 랭킹·저평가 탭의 markOutliers()가 같은 이유로 직거래를 걸러내는 것과 동일한 원칙.
@@ -4158,7 +4186,7 @@ function analyzeNewHigh(all, months, weekOnly){
   return { found:true, mode:'newhigh', total:all.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
     years:yearsLabel(months),
-    newHigh: filtered };
+    newHigh: weekOnly ? filtered.filter(row=>{const [lo,hi]=newHighPriceRange();return row.amt>=lo&&(hi===100||row.amt<=hi);}) : filtered };
 }
 
 // ═══ 신저가 탭 ═══
@@ -7872,7 +7900,7 @@ function renderNewHigh(d){
       ${hdTop(weekOnly?'신고가 속보 (7일)':'신고가', weekOnly)}
       <h2>${esc(shortRegionLabel(regionName))}</h2>
       <div class="meta">${esc(d.period)} (${d.years}) 최고가 · 최근 ${weekOnly?'일주일':'한 달'} 이내 갱신${d.pyBand? ` · <b style="color:#7FD4D9">${esc(d.pyBand)}</b>`:''}${d.buildYear? ` · <b style="color:#7FD4D9">${esc(d.buildYear)}</b>`:''}</div>
-      ${hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
+      ${weekOnly ? `<div class="hd-vs"><span class="hd-vs-period">이전 최고가</span><span class="hd-vs-arrow" aria-label="비교">↔</span><span class="hd-vs-period">이번 신고가<br><small style="display:block;font-size:11px;white-space:nowrap">(${recentWindow})</small></span></div>` : hdVs('이전 최고가', `이번 신고가 (${recentWindow})`)}
       ${d.failedRegions && d.failedRegions.length? `<div class="meta" style="color:#FCA5A5">조회 실패: ${d.failedRegions.map(esc).join(', ')}</div>`:''}
     </div>
 
@@ -8910,6 +8938,7 @@ function resetAllSliderFilters(){
   if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
+  if(mode==='newhigh'){document.getElementById('newHighPriceMin').value=0;document.getElementById('newHighPriceMax').value=100;newHighPriceSync();}
   pyBandMultiSel=[];
   if(mode==='region')savePyBandMultiPref([]);
   document.getElementById('priceBandBasis').value='current';
