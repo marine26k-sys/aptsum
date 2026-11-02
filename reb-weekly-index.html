@@ -121,7 +121,15 @@
   const dataBase='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/reb-weekly-data/data/reb-weekly-index.json';
   try{
    if(typeof DecompressionStream!=='function')throw Error('gzip unavailable');
-   const compressed=await fetch(dataBase+'.gz?v='+Date.now(),{cache:'no-store'});if(!compressed.ok||!compressed.body)throw Error('compressed data unavailable');
+   const stamp=Date.now();
+   const [sourceResponse,metaResponse,compressed]=await Promise.all([
+    fetch('https://api.github.com/repos/marine26k-sys/aptsum/contents/data/reb-weekly-index.json?ref=reb-weekly-data',{cache:'no-store'}),
+    fetch(dataBase+'.gz.meta.json?v='+stamp,{cache:'no-store'}),
+    fetch(dataBase+'.gz?v='+stamp,{cache:'no-store'})
+   ]);
+   if(!sourceResponse.ok||!metaResponse.ok||!compressed.ok||!compressed.body)throw Error('compressed data unavailable');
+   const [source,meta]=await Promise.all([sourceResponse.json(),metaResponse.json()]);
+   if(!source.sha||source.sha!==meta.sourceSha)throw Error('compressed data is stale');
    data=await new Response(compressed.body.pipeThrough(new DecompressionStream('gzip'))).json();
   }catch{
    const response=await fetch(dataBase+'?v='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('data fetch');data=await response.json();

@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import {readFileSync,copyFileSync,mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {gzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 const allowed=new Set(['data/reb-weekly-index.json','data/reb-apartment-prices.json','data/move-in.json']);
@@ -17,7 +18,7 @@ try{
  git(['config','user.name','github-actions[bot]']);git(['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
  for(const file of files){mkdirSync(dirname(join(folder,file)),{recursive:true});copyFileSync(resolve(file),join(folder,file));}
  const published=[...files];
- if(files.includes('data/reb-weekly-index.json')){const gz='data/reb-weekly-index.json.gz';writeFileSync(join(folder,gz),gzipSync(readFileSync(resolve('data/reb-weekly-index.json')),{level:9}));published.push(gz);}
+ if(files.includes('data/reb-weekly-index.json')){const bytes=readFileSync(resolve('data/reb-weekly-index.json')),gz='data/reb-weekly-index.json.gz',meta=gz+'.meta.json';const sha=createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');writeFileSync(join(folder,gz),gzipSync(bytes,{level:9}));writeFileSync(join(folder,meta),JSON.stringify({sourceSha:sha})+'\n');published.push(gz,meta);}
  git(['add','--',...published]);
  if(!git(['diff','--cached','--name-only']).trim()){console.log('Statistics data unchanged');}
  else{git(['commit','-m','Refresh apartment statistics [skip netlify]']);for(let attempt=0;;attempt++){try{git(['push','origin','HEAD:reb-weekly-data']);break;}catch(error){if(attempt>=2)throw error;git(['pull','--rebase','origin','reb-weekly-data']);}}console.log(`Published ${files.join(', ')} without site deployment`);}

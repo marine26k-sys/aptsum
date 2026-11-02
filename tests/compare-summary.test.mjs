@@ -22,7 +22,7 @@ function setup(){
 test('comparison statistics use the selected exclusive area and actual contract chronology',()=>{
  const c=setup(),base={apt:'가상단지',umd:'가상동',area:84.99,py:34,build:'2020',floor:12};
  const data=[{...base,ym:'202610',d:1,amt:19},{...base,ym:'202610',d:15,amt:20},{...base,ym:'202609',d:2,amt:18},{...base,ym:'202606',d:3,amt:16},{...base,area:59.9,ym:'202610',d:16,amt:9}];
- const result=c.analyzeCompare({'11111':data},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605']);
+ const result=c.analyzeCompare({'11111':data},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605'],Date.parse('2026-10-20T00:00:00Z'));
  const p=result.complexes[0].pys.find(p=>p.area===84);
  assert.equal(p.latest.price,20);assert.equal(p.latest.day,15);assert.equal(p.high.price,20);assert.equal(p.low.price,16);assert.equal(p.avg3.v,17.8);assert.equal(p.avg3.n,3);assert.equal(p.prev3,null);assert.equal(p.n,4);assert.equal(p.median,18.5);
 });
@@ -45,7 +45,7 @@ test('all comparison averages and monthly graph points use the existing outlier 
  const c=setup();c.median=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
  vm.runInContext(html.slice(html.indexOf('function markOutliers('),html.indexOf('// ── 층별 가격 프리미엄',html.indexOf('function markOutliers('))),c);
  const base={apt:'가상단지',umd:'가상동',area:84,py:34,ym:'202610',floor:12,direct:0};
- const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511']).complexes[0].pys[0];
+ const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  const p=analyze([12,13,14,5].map((amt,i)=>({...base,amt,d:i+1})).concat({...base,amt:50,d:5,direct:1}));
  assert.equal(p.avg1.v,13);assert.equal(p.avg1.n,3);for(const key of ['avg3','avg6','avg12','avg24'])assert.equal(p[key],null);
  assert.equal(p.monthly[0].avg,13);assert.equal(p.monthly[0].n,3);assert.equal(p.avgAll,null);
