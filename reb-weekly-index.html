@@ -148,4 +148,5 @@
  }catch{$('loading').textContent='매매지수 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';}}
  init();
 })();
+window.addEventListener('pageshow',event=>{if(event.persisted)document.querySelector('#mapRegionControls [data-region=all]')?.click();});
 </script><script src="/assets/tab-click-tracking.js"></script></body></html>
