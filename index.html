@@ -7028,7 +7028,7 @@ function openRichgoComplexInfo(d,lawd){
 }
 let complexCoordinatePromise=null;
 async function loadNaverComplexCoordinates(){
-  if(!complexCoordinatePromise)complexCoordinatePromise=fetch('/data/complex-coordinates.json',{cache:'force-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  if(!complexCoordinatePromise)complexCoordinatePromise=fetch('/data/complex-coordinates.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
   return complexCoordinatePromise;
 }
 async function findNaverComplexCoordinate(d,lawd,alias){
