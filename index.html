@@ -6101,6 +6101,7 @@ async function runSearch(opts){
       if(myToken!==searchToken) return;
     }
     if(d.mode==='newhigh')d.newHighPrice=requestedNewHighPrice.slice();
+    if(d.mode==='complex'&&complexLookup?.hits?.[0])d.complexIndexEntry=complexLookup.hits[0];
     lastData = d;
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
@@ -6843,10 +6844,10 @@ async function tapComplexLiveRefresh(){
   const months=lastMonthsYm(original.monthsN||36);
   const read=cache=>complexRefreshCacheItems(cache,lawd,original.monthsN);
   const floor=t=>!original.floorMin||parseInt(t.floor,10)>=original.floorMin;
-  const merged=mergeTradeAndPresaleForRanking(read(monthCache),read(monthCacheP),lawd);
+  const merged=filterComplexRecords(mergeTradeAndPresaleForRanking(read(monthCache),read(monthCacheP),lawd),original.complexIndexEntry);
   const query=original.name+(original.umd?' ['+original.umd+']':'');
   let updated=analyzeComplex(merged.filter(floor),query,months,merged,lawd);
-  const rent=analyzeComplex(read(monthCacheJ).filter(floor),query,months,undefined,lawd);
+  const rent=analyzeComplex(filterComplexRecords(read(monthCacheJ).filter(floor),original.complexIndexEntry),query,months,undefined,lawd);
   updated=includeJeonseOnlySaleAreas(updated,rent);
   if(!updated.found)throw Error('갱신된 자료에서 단지를 찾지 못했습니다. 다시 조회해 주세요.');
   const view=complexView;
