@@ -5,7 +5,7 @@ const entries=[];
 for(const [,regions] of REGIONS)for(const [region,lawd] of regions){
  let names={};try{names=JSON.parse(await readFile(`data/naver-names/${lawd}.json`,'utf8'));}catch{}
  const items=[];
- for(const kind of ['analyze','presale']){
+ for(const kind of ['analyze','presale','rent']){
   let files=[];try{files=await readdir(`data/${kind}/${lawd}`);}catch{}
   for(const file of files.filter(f=>/^\d{6}\.json$/.test(f))){const data=JSON.parse(await readFile(`data/${kind}/${lawd}/${file}`,'utf8'));items.push(...(data.items||[]));}
  }

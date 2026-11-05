@@ -155,3 +155,16 @@ test('comparison includes sizes without query-window trades using historical mon
  assert.equal(p.monthly.length,3);assert.ok(p.monthly.every(x=>x.n===0&&x.avg===8));
  assert.doesNotMatch(c.compareSummaryHTML(r),/NaN|Infinity|undefined/);
 });
+
+test('전세만 있는 단지는 비교에 포함하고 전세 보증금을 매매 가격으로 사용하지 않는다',()=>{
+ const c=setup();
+ vm.runInContext(html.slice(html.indexOf('function filterComplexRecords('),html.indexOf('function complexCandidateIdentityKey(',html.indexOf('function filterComplexRecords('))),c);
+ c.matchComplex=(records,name)=>({hits:records.filter(row=>row.apt===name.replace(/ \[[^\]]+\]$/, ''))});
+ c.analyzeComplex=(rows,name,months,raw,lawd)=>rows.length?{found:true,name:'지축역북한산비바힐스',umd:'지축동',build:'2024',byPy:[{sizeKey:59,py:'25평'}]}:{found:false};
+ const target={lawd:'41281',name:'지축역북한산비바힐스 [지축동]',indexEntry:{name:'지축역북한산비바힐스',umd:'지축동',names:['지축역북한산비바힐스']}};
+ const rents={'41281':[{apt:'지축역북한산비바힐스',umd:'지축동',area:59,amt:4,ym:'202609',d:19}]};
+ const result=c.analyzeCompare({},[target],['202610','202609'],Date.parse('2026-10-20T00:00:00Z'),rents);
+ assert.equal(result.found,true);assert.equal(result.complexes[0].pys[0].area,59);
+ assert.equal(result.complexes[0].pys[0].max,null);assert.equal(result.complexes[0].pys[0].currentPrice,undefined);
+ assert.equal(result.complexes[0].pys[0].monthly.length,0);
+});

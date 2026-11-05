@@ -5,7 +5,7 @@ test('지역명+단지명 검색은 단지 공식명이 짧아도 해당 지역 
  const c=vm.createContext({complexSearchIndex:entries,regionNameByLawd:code=>code==='11620'?'관악구':'성북구'});
  vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
  const result=await c.complexSearchTargets('봉천 두산',[],true);
- assert.deepEqual(Array.from(result.hits,x=>`${x.lawd}|${x.umd}|${x.name}`),['11620|봉천동|두산']);
+ assert.deepEqual(Array.from(result.hits,x=>`${x.lawd}|${x.umd}|${x.name}`).sort(),['11620|봉천동|두산','11620|봉천동|두산(임대)']);
  const seongsu=await c.complexSearchTargets('성수동 동아',[],true);
  assert.deepEqual(Array.from(seongsu.hits,x=>x.name).sort(),['동아','성수동아그린']);
 });
@@ -39,4 +39,21 @@ test('아르테 부분 검색의 모든 후보를 유지하고 동을 선택하�
  const sample=[{lawd:'11680',name:'가상단지',umd:'동1',names:['가상단지']},{lawd:'11680',name:'가상단지',umd:'동2',names:['가상단지']}];
  c.complexSearchIndex=sample;const selected=await c.complexSearchTargets('가상단지 [동2]',[{lawd:'11680'}]);assert.equal(selected.hits.length,1);assert.equal(selected.hits[0].umd,'동2');
  assert.ok(html.indexOf('if(complexLookup.hits.length>1)')<html.indexOf('const allScope = multiTargets.length > 0',html.indexOf('let complexLookup=null')));
+});
+
+test('전세만 있는 지축역북한산비바힐스도 검색하고 단지 식별은 정확한 이름과 동을 지킨다',async()=>{
+ const c=vm.createContext({complexSearchIndex:entries,regionNameByLawd:()=> '고양 덕양구'});
+ vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
+ const r=await c.complexSearchTargets('지축역북한산비바힐스',[],true);const target=r.hits.find(x=>x.lawd==='41281'&&x.umd==='지축동');assert.ok(target);
+ const records=[{apt:'지축역북한산비바힐스',umd:'지축동',amt:4},{apt:'지축역북한산',umd:'지축동',amt:8},{apt:'지축역북한산비바힐스',umd:'다른동',amt:9}];
+ assert.deepEqual(Array.from(c.filterComplexRecords(records,target),x=>x.amt),[4]);
+});
+
+test('매핑표의 기존 공식 단지명과 실거래 별칭을 함께 검색한다',async()=>{
+ const c=vm.createContext({complexSearchIndex:entries});
+ vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
+ for(const [lawd,name,alias,umd] of [['11740','천호태영','천호태영아파트','천호동'],['41410','군포대야미서해그랑블','서해그랑블','대야미동'],['11350','현대(929)','현대','월계동']]){
+  const r=await c.complexSearchTargets(name,[{lawd}],true);
+  assert.ok(r.hits.some(x=>x.name===name&&x.umd===umd&&x.names.includes(alias)),name);
+ }
 });
