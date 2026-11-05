@@ -48,3 +48,12 @@ test('전세만 있는 지축역북한산비바힐스도 검색하고 단지 식
  const records=[{apt:'지축역북한산비바힐스',umd:'지축동',amt:4},{apt:'지축역북한산',umd:'지축동',amt:8},{apt:'지축역북한산비바힐스',umd:'다른동',amt:9}];
  assert.deepEqual(Array.from(c.filterComplexRecords(records,target),x=>x.amt),[4]);
 });
+
+test('매핑표의 기존 공식 단지명과 실거래 별칭을 함께 검색한다',async()=>{
+ const c=vm.createContext({complexSearchIndex:entries});
+ vm.runInContext(html.slice(html.indexOf('async function complexSearchTargets('),html.indexOf('async function search(',html.indexOf('async function complexSearchTargets('))),c);
+ for(const [lawd,name,alias,umd] of [['11740','천호태영','천호태영아파트','천호동'],['41410','군포대야미서해그랑블','서해그랑블','대야미동'],['11350','현대(929)','현대','월계동']]){
+  const r=await c.complexSearchTargets(name,[{lawd}],true);
+  assert.ok(r.hits.some(x=>x.name===name&&x.umd===umd&&x.names.includes(alias)),name);
+ }
+});
