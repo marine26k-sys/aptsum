@@ -4733,7 +4733,7 @@ function analyzeLongPeakUndervalue(all, months, allUnfiltered, sameDongOnly){
     divergence: divergence.slice(0,300) };
 }
 
-function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
+function analyzeCompare(itemsByLawd, targets, months, now=Date.now(), rentItemsByLawd={}){
   const kstToday=new Date(now+9*3600000).toISOString().slice(0,10);
   const today=Date.parse(kstToday+'T00:00:00Z'),dayMs=86400000;
   const tradeDay=t=>{
@@ -4746,12 +4746,19 @@ function analyzeCompare(itemsByLawd, targets, months, now=Date.now()){
   const monthsAsc = months.slice().reverse();
   const complexes=[], missing=[];
   for(const tg of targets){
-    const all = itemsByLawd[tg.lawd] || [];
+    const all = tg.indexEntry?filterComplexRecords(itemsByLawd[tg.lawd] || [],tg.indexEntry):(itemsByLawd[tg.lawd] || []);
     const m = matchComplex(all, tg.name, tg.lawd);
     if(m.multi){ missing.push(`${tg.name} (여러 단지 일치 — 정확한 단지명 입력)`); continue; }
     const historyHits=(m.hits||[]).filter(t=>t.ym<=months[0]);
     const hits = historyHits.filter(t=>months.includes(t.ym));
-    if(!historyHits.length){ missing.push(tg.name); continue; }
+    if(!historyHits.length){
+      const rentItems=tg.indexEntry?filterComplexRecords(rentItemsByLawd[tg.lawd]||[],tg.indexEntry):(rentItemsByLawd[tg.lawd]||[]);
+      const rent=rentItems.length?analyzeComplex(rentItems,tg.name,months,undefined,tg.lawd):null;
+      if(!rent?.found){missing.push(tg.name);continue;}
+      complexes.push({name:rent.name,umd:rent.umd,count:0,build:rent.build,lawd:tg.lawd,
+        pys:rent.byPy.map(p=>({area:p.sizeKey,py:p.py,n:0,max:null,monthly:[]}))});
+      continue;
+    }
     const metaHits=hits.length?hits:historyHits;
     const nameCnt={}; metaHits.forEach(t=>nameCnt[t.apt]=(nameCnt[t.apt]||0)+1);
     const officialName = Object.entries(nameCnt).sort((a,b)=>b[1]-a[1])[0][0];
@@ -5570,6 +5577,12 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  });
  return {targets:searchTargets.filter(t=>hits.some(x=>x.lawd===t.lawd)),hits};
 }
+function filterComplexRecords(records,selected){
+ if(!selected)return records;
+ const key=value=>String(value||'').replace(/\s/g,'').toLowerCase();
+ const names=new Set([selected.name,selected.apt,...(selected.names||[])].filter(Boolean).map(key));
+ return records.filter(t=>t.umd===selected.umd&&(names.has(key(t.apt))||names.has(key(t.sourceApt))));
+}
 function complexCandidateIdentityKey(hit){return `${hit.lawd}|${hit.umd||''}|${hit.name||hit.apt||''}`;}
 function matchPickedComplexCandidate(candidates,query,input){
  const norm=value=>String(value||'').normalize('NFKC').replace(/\s/g,'').toLowerCase();
@@ -5706,6 +5719,7 @@ async function runSearch(opts){
         showError(candidates.length?'검색 목록에서 지역과 동을 확인해 단지를 선택한 뒤 분석을 눌러 주세요.':'단지 호가 검색에서 일치하는 단지를 찾지 못했습니다. 단지명이나 동 이름을 확인해 주세요.');
         return;
       }
+      complexLookup={hits:[selected]};
       name=`${selected.name} [${selected.umd}]`;
       qInput.value=name;qInput.dataset.pickedLawd=selected.lawd;qInput.dataset.pickedName=name;qInput.dataset.pickedKey=complexCandidateIdentityKey(selected);qInput.dataset.pickedApt=selected.name;
       lawd=selected.lawd;
@@ -5868,7 +5882,7 @@ async function runSearch(opts){
         setCmpRowLawd(x.input.closest('.cmp-row'),selected.lawd);
         x.input.value=`${selected.apt} [${selected.umd}]`;
         x.input.dataset.pickedLawd=selected.lawd;x.input.dataset.pickedName=x.input.value;x.input.dataset.pickedKey=selected.key;x.input.dataset.pickedApt=selected.apt;
-        return [{...x,name:x.input.value,lawd:selected.lawd}];
+        return [{...x,name:x.input.value,lawd:selected.lawd,indexEntry:selected}];
       }));
       if(myToken!==searchToken)return;
       if(needsCompareSelection){
@@ -5885,17 +5899,20 @@ async function runSearch(opts){
       ]);
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       if(myToken!==searchToken)return;
-      const byLawd = {};
+      const byLawd = {}, rentByLawd = {};
       uniq.forEach((ld,i)=>{
         const merged = mergeTradeAndPresaleForRanking(fetched[i],fetchedP[i],ld);
         byLawd[ld]=floorF(merged);
       });
       await Promise.all(uniq.map(ld=>ensureNaverNames(ld)));
       if(myToken!==searchToken)return;
-      const matchedCmp=expandedCmp.filter(x=>matchComplex(byLawd[x.lawd]||[],x.name,x.lawd).hits?.length);
+      const rentLawds=[...new Set(expandedCmp.filter(x=>!matchComplex(filterComplexRecords(byLawd[x.lawd]||[],x.indexEntry),x.name,x.lawd).hits?.length).map(x=>x.lawd))];
+      await Promise.all(rentLawds.map(async ld=>{rentByLawd[ld]=floorF(await ensureMonthsJ(ld,Math.max(effMN,73)).catch(()=>[]));}));
+      if(myToken!==searchToken)return;
+      const matchedCmp=expandedCmp.filter(x=>matchComplex(filterComplexRecords(byLawd[x.lawd]||[],x.indexEntry),x.name,x.lawd).hits?.length||matchComplex(filterComplexRecords(rentByLawd[x.lawd]||[],x.indexEntry),x.name,x.lawd).hits?.length);
       const missingTrade=missingCompareInputs(cmpItems,narrowedCmp,matchedCmp);
       if(missingTrade.length){showError('조회 조건에 맞는 거래가 없는 단지: '+missingTrade.map(x=>esc(x.name)).join(', '));return;}
-      d = analyzeCompare(byLawd, matchedCmp, months);
+      d = analyzeCompare(byLawd, matchedCmp, months, Date.now(), rentByLawd);
     } else {
       // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
       // 전세는 단지 분석 탭에서만 쓰므로, 다른 탭(지역/거래량/등락 랭킹 등)에서는 호출 자체를 하지 않는다.
@@ -5967,12 +5984,13 @@ async function runSearch(opts){
         if(!d.rows.length){ d = {found:false, note:'선택한 평형 조건에 맞게 매매·전세가 모두 있는 단지가 없습니다. 지역이나 평형을 조정해 보세요.'}; }
       } else {
         await ensureNaverNames(lawd);
-        d = analyzeComplex(items, name, months, rawMerged, lawd);
+        const selected=complexLookup?.hits?.[0];
+        d = analyzeComplex(filterComplexRecords(items,selected), name, months, filterComplexRecords(rawMerged,selected), lawd);
         if(d.found && d.splitBase){ const kn = await kaptNameForSplit(d.splitLawd || lawd, d.splitBase); if(kn) d.name = kn; }
         // 전세는 매매·분양권과 합산하지 않고 독립적으로 분석(별도 서브탭). 이름 매칭도 전세 데이터 안에서
         // 자체적으로 시도하므로, 매매 매칭이 실패해도(예: 표기 차이) 전세는 따로 찾힐 수 있다.
         try{
-          const itemsJ = floorF(rawJ);
+          const itemsJ = filterComplexRecords(floorF(rawJ),selected);
           const dJ = analyzeComplex(itemsJ, name, months, undefined, lawd);
           d = includeJeonseOnlySaleAreas(d, dJ);
           d.jeonse = dJ.found ? dJ : null;
