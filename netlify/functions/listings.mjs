@@ -62,23 +62,31 @@ export async function buildAskMap(store, lawd) {
   }
   const groups = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const weekly = groups.map(([weekStart, week], i) => {
-    const previous = groups[i - 1]?.[1], byComplex = new Map();
+    const previous = groups[i - 1]?.[1], byComplex = new Map(), byBand = new Map();
     if (previous) for (const [itemKey, values] of week.items) {
       const old = previous.items.get(itemKey);
       if (!old?.length) continue;
       const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
       const before = mean(old);
       if (!(before > 0)) continue;
-      const nid = itemKey.split('|')[0];
+      const nid = itemKey.split('|')[0], currentMean = mean(values), rate = (currentMean / before - 1) * 100;
       const rates = byComplex.get(nid) || [];
-      rates.push((mean(values) / before - 1) * 100);
+      rates.push(rate);
       byComplex.set(nid, rates);
+      const band = currentMean < 4 ? 'under4' : String(Math.floor(currentMean));
+      if (!byBand.has(band)) byBand.set(band, new Map());
+      const complexes = byBand.get(band), bandRates = complexes.get(nid) || [];
+      bandRates.push(rate); complexes.set(nid, bandRates);
     }
     const values = [...byComplex.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
-    return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null };
+    const priceBands = Object.fromEntries([...byBand].map(([band, complexes]) => {
+      const means = [...complexes.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
+      return [band, { count: means.length, rate: means.length ? means.reduce((sum, value) => sum + value, 0) / means.length : null }];
+    }));
+    return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, priceBands };
   });
   const current = weekly.at(-1), previous = weekly.at(-2);
-  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly };
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 1 };
 }
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
@@ -195,7 +203,7 @@ export default async (request) => {
     if (q.get("askMap") === "1" && q.get("all") === "1") {
       const regions = await Promise.all([...LAWDS].map(async code => {
         const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
-        if (cached) return cached;
+        if (cached?.priceBandVersion === 1) return cached;
         try {
           const aggregate = await buildAskMap(store, code);
           await store.setJSON(askMapKey(code), aggregate);
@@ -206,7 +214,10 @@ export default async (request) => {
     }
     if(q.get("askMap")==="1"){
       const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
-      return json(cached || await buildAskMap(store, lawd));
+      if (cached?.priceBandVersion === 1) return json(cached);
+      const aggregate = await buildAskMap(store, lawd);
+      await store.setJSON(askMapKey(lawd), aggregate);
+      return json(aggregate);
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
