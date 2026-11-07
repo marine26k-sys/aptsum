@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { createHash } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
@@ -39,10 +40,10 @@ const historyIndexKey = (lawd) => `history-index:${lawd}`;
 const askMapKey = (lawd) => `ask-map:${lawd}`;
 
 // 업로드 완료 시 한 번만 계산해 저장하는 공개 지도용 집계입니다.
-export async function buildAskMap(store, lawd) {
-  const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
+export async function buildAskMap(store, lawd, suppliedIndex) {
+  const index = suppliedIndex ?? (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) ?? [];
   const weeks = new Map();
-  const snapshots = await Promise.all(index.map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
+  const snapshots = await Promise.all(dailyHistoryIndex(index).map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
   for (const data of snapshots) {
     if (!data) continue;
     const date = new Date(String(data.asOf).replaceAll('.', '-') + 'T00:00:00Z');
@@ -62,23 +63,53 @@ export async function buildAskMap(store, lawd) {
   }
   const groups = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const weekly = groups.map(([weekStart, week], i) => {
-    const previous = groups[i - 1]?.[1], byComplex = new Map();
+    const previous = groups[i - 1]?.[1], previousWeekStart = groups[i - 1]?.[0], byComplex = new Map(), byBand = new Map();
+    const consecutiveWeek = previousWeekStart && Date.parse(weekStart) - Date.parse(previousWeekStart) === 7 * 86400000;
     if (previous) for (const [itemKey, values] of week.items) {
       const old = previous.items.get(itemKey);
       if (!old?.length) continue;
       const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
       const before = mean(old);
       if (!(before > 0)) continue;
-      const nid = itemKey.split('|')[0];
+      const nid = itemKey.split('|')[0], currentMean = mean(values), rate = (currentMean / before - 1) * 100;
       const rates = byComplex.get(nid) || [];
-      rates.push((mean(values) / before - 1) * 100);
+      rates.push(rate);
       byComplex.set(nid, rates);
+      if (consecutiveWeek) {
+        const boundarySafeMean = currentMean + 4 * Number.EPSILON * Math.max(1, Math.abs(currentMean));
+        const band = boundarySafeMean < 4 ? 'under4' : String(Math.floor(boundarySafeMean));
+        if (!byBand.has(band)) byBand.set(band, new Map());
+        const complexes = byBand.get(band), bandRates = complexes.get(nid) || [];
+        bandRates.push(rate); complexes.set(nid, bandRates);
+      }
     }
     const values = [...byComplex.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
-    return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null };
+    const priceBands = Object.fromEntries([...byBand].map(([band, complexes]) => {
+      const means = [...complexes.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
+      return [band, { count: means.length, rate: means.length ? means.reduce((sum, value) => sum + value, 0) / means.length : null }];
+    }));
+    return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, priceBands };
   });
   const current = weekly.at(-1), previous = weekly.at(-2);
-  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly };
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, sourceUploadId: index.at(-1)?.uploadId || null, priceBandVersion: 5 };
+}
+
+// 각 캐시가 실제로 사용한 이력 색인을 기록해, 오래 걸린 이전 계산이 최신 집계를 덮어써도 재사용하지 않는다.
+function askMapHistoryVersion(index) {
+  return createHash('sha256').update(JSON.stringify(index)).digest('hex');
+}
+export async function loadCurrentAskMap(store, lawd) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const index = (await store.get(historyIndexKey(lawd), {type:'json', consistency:'strong'})) || [];
+    const historyVersion = askMapHistoryVersion(index);
+    const cached = await store.get(askMapKey(lawd), {type:'json', consistency:'strong'});
+    if (cached?.priceBandVersion === 5 && cached.historyVersion === historyVersion) return cached;
+    const aggregate = {...await buildAskMap(store, lawd, index), historyVersion};
+    await store.setJSON(askMapKey(lawd), aggregate);
+    const current = (await store.get(historyIndexKey(lawd), {type:'json', consistency:'strong'})) || [];
+    if (askMapHistoryVersion(current) === historyVersion) return aggregate;
+  }
+  throw new Error('호가 이력이 계속 변경되어 집계를 다시 시도해야 합니다.');
 }
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
@@ -165,6 +196,11 @@ export default async (request) => {
 
   if (request.method === "GET") {
     const q = new URL(request.url).searchParams;
+    if (q.get("askMapVersion") === "1") {
+      const meta = await store.get("meta", { type: "json", consistency: "strong" });
+      const active = Array.isArray(meta?.lawds) ? meta.lawds : (await store.list({prefix:"lawd:"})).blobs.map(blob=>blob.key.slice(5));
+      return json({ uploadId: meta?.uploadId || null, lawds: [...new Set(active.map(String))].sort() });
+    }
     if (q.get("meta")) {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
@@ -194,19 +230,14 @@ export default async (request) => {
     // 공개 지도는 원본 매물 대신 단지별 동일 비중의 집계만 제공한다.
     if (q.get("askMap") === "1" && q.get("all") === "1") {
       const regions = await Promise.all([...LAWDS].map(async code => {
-        const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
-        if (cached) return cached;
         try {
-          const aggregate = await buildAskMap(store, code);
-          await store.setJSON(askMapKey(code), aggregate);
-          return aggregate;
+          return await loadCurrentAskMap(store, code);
         } catch { return { lawd: code, rate: null, count: 0, asOf: null, previousAsOf: null, weekly: [], error: true }; }
       }));
       return json({ regions });
     }
     if(q.get("askMap")==="1"){
-      const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
-      return json(cached || await buildAskMap(store, lawd));
+      return json(await loadCurrentAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
@@ -252,9 +283,9 @@ export default async (request) => {
       await store.setJSON(latestKey, next);
       // 화면을 열 때 과거 이력을 계산하지 않도록 업로드 직후 공개용 집계를 미리 갱신한다.
       try {
-        await store.setJSON(askMapKey(lawd), await buildAskMap(store, lawd));
+        await loadCurrentAskMap(store, lawd);
       } catch {
-        await store.delete(askMapKey(lawd));
+        // 다음 조회에서 이력 버전을 확인하고 다시 계산한다.
       }
       saved.push(lawd);
     }
@@ -281,7 +312,7 @@ export default async (request) => {
     // 지도 집계는 조회 시 필요한 지역만 계산한다. 전체 지역 이력을 여기서 다시 읽으면
     // 업로드 마무리가 시간 제한을 넘길 수 있다. put 단계에서 기존 캐시는 이미 지웠다.
     const meta = {
-      uploadId, asOf, uploadedAt: new Date().toISOString(), regions: keep.size,
+      uploadId, asOf, uploadedAt: new Date().toISOString(), regions: keep.size, lawds: [...keep].sort(),
       rows: num(body.rows), types: num(body.types), fileName: str(body.fileName, 120),
     };
     await store.setJSON("meta", meta);
