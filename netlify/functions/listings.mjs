@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { createHash } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
@@ -39,8 +40,8 @@ const historyIndexKey = (lawd) => `history-index:${lawd}`;
 const askMapKey = (lawd) => `ask-map:${lawd}`;
 
 // 업로드 완료 시 한 번만 계산해 저장하는 공개 지도용 집계입니다.
-export async function buildAskMap(store, lawd) {
-  const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
+export async function buildAskMap(store, lawd, suppliedIndex) {
+  const index = suppliedIndex ?? (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) ?? [];
   const weeks = new Map();
   const snapshots = await Promise.all(dailyHistoryIndex(index).map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
   for (const data of snapshots) {
@@ -75,7 +76,8 @@ export async function buildAskMap(store, lawd) {
       rates.push(rate);
       byComplex.set(nid, rates);
       if (consecutiveWeek) {
-        const band = currentMean < 4 ? 'under4' : String(Math.floor(currentMean));
+        const boundarySafeMean = currentMean + 4 * Number.EPSILON * Math.max(1, Math.abs(currentMean));
+        const band = boundarySafeMean < 4 ? 'under4' : String(Math.floor(boundarySafeMean));
         if (!byBand.has(band)) byBand.set(band, new Map());
         const complexes = byBand.get(band), bandRates = complexes.get(nid) || [];
         bandRates.push(rate); complexes.set(nid, bandRates);
@@ -89,7 +91,25 @@ export async function buildAskMap(store, lawd) {
     return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, priceBands };
   });
   const current = weekly.at(-1), previous = weekly.at(-2);
-  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 3 };
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 4 };
+}
+
+// 각 캐시가 실제로 사용한 이력 색인을 기록해, 오래 걸린 이전 계산이 최신 집계를 덮어써도 재사용하지 않는다.
+function askMapHistoryVersion(index) {
+  return createHash('sha256').update(JSON.stringify(index)).digest('hex');
+}
+export async function loadCurrentAskMap(store, lawd) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const index = (await store.get(historyIndexKey(lawd), {type:'json', consistency:'strong'})) || [];
+    const historyVersion = askMapHistoryVersion(index);
+    const cached = await store.get(askMapKey(lawd), {type:'json', consistency:'strong'});
+    if (cached?.priceBandVersion === 4 && cached.historyVersion === historyVersion) return cached;
+    const aggregate = {...await buildAskMap(store, lawd, index), historyVersion};
+    await store.setJSON(askMapKey(lawd), aggregate);
+    const current = (await store.get(historyIndexKey(lawd), {type:'json', consistency:'strong'})) || [];
+    if (askMapHistoryVersion(current) === historyVersion) return aggregate;
+  }
+  throw new Error('호가 이력이 계속 변경되어 집계를 다시 시도해야 합니다.');
 }
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
@@ -209,22 +229,14 @@ export default async (request) => {
     // 공개 지도는 원본 매물 대신 단지별 동일 비중의 집계만 제공한다.
     if (q.get("askMap") === "1" && q.get("all") === "1") {
       const regions = await Promise.all([...LAWDS].map(async code => {
-        const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
-        if (cached?.priceBandVersion === 3) return cached;
         try {
-          const aggregate = await buildAskMap(store, code);
-          await store.setJSON(askMapKey(code), aggregate);
-          return aggregate;
+          return await loadCurrentAskMap(store, code);
         } catch { return { lawd: code, rate: null, count: 0, asOf: null, previousAsOf: null, weekly: [], error: true }; }
       }));
       return json({ regions });
     }
     if(q.get("askMap")==="1"){
-      const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
-      if (cached?.priceBandVersion === 3) return json(cached);
-      const aggregate = await buildAskMap(store, lawd);
-      await store.setJSON(askMapKey(lawd), aggregate);
-      return json(aggregate);
+      return json(await loadCurrentAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
@@ -270,9 +282,9 @@ export default async (request) => {
       await store.setJSON(latestKey, next);
       // 화면을 열 때 과거 이력을 계산하지 않도록 업로드 직후 공개용 집계를 미리 갱신한다.
       try {
-        await store.setJSON(askMapKey(lawd), await buildAskMap(store, lawd));
+        await loadCurrentAskMap(store, lawd);
       } catch {
-        await store.delete(askMapKey(lawd));
+        // 다음 조회에서 이력 버전을 확인하고 다시 계산한다.
       }
       saved.push(lawd);
     }
