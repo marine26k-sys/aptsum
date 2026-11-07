@@ -62,7 +62,8 @@ export async function buildAskMap(store, lawd) {
   }
   const groups = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const weekly = groups.map(([weekStart, week], i) => {
-    const previous = groups[i - 1]?.[1], byComplex = new Map(), byBand = new Map();
+    const previous = groups[i - 1]?.[1], previousWeekStart = groups[i - 1]?.[0], byComplex = new Map(), byBand = new Map();
+    const consecutiveWeek = previousWeekStart && Date.parse(weekStart) - Date.parse(previousWeekStart) === 7 * 86400000;
     if (previous) for (const [itemKey, values] of week.items) {
       const old = previous.items.get(itemKey);
       if (!old?.length) continue;
@@ -73,10 +74,12 @@ export async function buildAskMap(store, lawd) {
       const rates = byComplex.get(nid) || [];
       rates.push(rate);
       byComplex.set(nid, rates);
-      const band = currentMean < 4 ? 'under4' : String(Math.floor(currentMean));
-      if (!byBand.has(band)) byBand.set(band, new Map());
-      const complexes = byBand.get(band), bandRates = complexes.get(nid) || [];
-      bandRates.push(rate); complexes.set(nid, bandRates);
+      if (consecutiveWeek) {
+        const band = currentMean < 4 ? 'under4' : String(Math.floor(currentMean));
+        if (!byBand.has(band)) byBand.set(band, new Map());
+        const complexes = byBand.get(band), bandRates = complexes.get(nid) || [];
+        bandRates.push(rate); complexes.set(nid, bandRates);
+      }
     }
     const values = [...byComplex.values()].map(rates => rates.reduce((sum, value) => sum + value, 0) / rates.length);
     const priceBands = Object.fromEntries([...byBand].map(([band, complexes]) => {
@@ -86,7 +89,7 @@ export async function buildAskMap(store, lawd) {
     return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, priceBands };
   });
   const current = weekly.at(-1), previous = weekly.at(-2);
-  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 1 };
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 2 };
 }
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
@@ -203,7 +206,7 @@ export default async (request) => {
     if (q.get("askMap") === "1" && q.get("all") === "1") {
       const regions = await Promise.all([...LAWDS].map(async code => {
         const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
-        if (cached?.priceBandVersion === 1) return cached;
+        if (cached?.priceBandVersion === 2) return cached;
         try {
           const aggregate = await buildAskMap(store, code);
           await store.setJSON(askMapKey(code), aggregate);
@@ -214,7 +217,7 @@ export default async (request) => {
     }
     if(q.get("askMap")==="1"){
       const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
-      if (cached?.priceBandVersion === 1) return json(cached);
+      if (cached?.priceBandVersion === 2) return json(cached);
       const aggregate = await buildAskMap(store, lawd);
       await store.setJSON(askMapKey(lawd), aggregate);
       return json(aggregate);
