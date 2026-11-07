@@ -162,7 +162,7 @@ function loadPriceBandData(){
   for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions)&&(data.sourceVersion||null)===version&&data.regions.every(x=>x.priceBandVersion===3)){const regions=new Map(data.regions.map(x=>[String(x.lawd),x]));priceBandCache={version,regions};return regions}}catch{}
   // 미리 만든 자료가 오래된 경우 최신 공개 집계를 한 번에 읽는다.
   try{const live=await fetchJson('/api/listings?askMap=1&all=1',{cache:'no-store'});const after=(await fetchJson('/api/listings?askMapVersion=1',{cache:'no-store'})).uploadId||null;
-   if(after===version&&Array.isArray(live.regions)&&live.regions.length&&live.regions.every(x=>!x.error&&x.priceBandVersion===3)){const regions=new Map(live.regions.map(x=>[String(x.lawd),x]));priceBandCache={version,regions};return regions}
+   if(after===version&&Array.isArray(live.regions)&&live.regions.length===regionLookup.size&&new Set(live.regions.map(x=>String(x.lawd))).size===regionLookup.size&&live.regions.every(x=>!x.error&&x.priceBandVersion===3&&regionLookup.has(String(x.lawd)))){const regions=new Map(live.regions.map(x=>[String(x.lawd),x]));priceBandCache={version,regions};return regions}
   }catch{}
   return new Map();
  })().finally(()=>{priceBandDataPromise=null});}
