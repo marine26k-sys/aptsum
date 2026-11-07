@@ -42,7 +42,7 @@ const askMapKey = (lawd) => `ask-map:${lawd}`;
 export async function buildAskMap(store, lawd) {
   const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
   const weeks = new Map();
-  const snapshots = await Promise.all(index.map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
+  const snapshots = await Promise.all(dailyHistoryIndex(index).map(entry => store.get(historyKey(lawd, entry.uploadId), { type: "json", consistency: "strong" })));
   for (const data of snapshots) {
     if (!data) continue;
     const date = new Date(String(data.asOf).replaceAll('.', '-') + 'T00:00:00Z');
@@ -89,7 +89,7 @@ export async function buildAskMap(store, lawd) {
     return { weekStart, asOf: week.last, previousAsOf: previous?.last || null, count: values.length, rate: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, priceBands };
   });
   const current = weekly.at(-1), previous = weekly.at(-2);
-  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 2 };
+  return { lawd, rate: current?.rate ?? null, count: current?.count || 0, asOf: current?.asOf || null, previousAsOf: previous?.asOf || null, weekly, priceBandVersion: 3 };
 }
 
 // 같은 기준일을 다시 올려도 직전 날짜와 비교할 수 있게 날짜별 마지막 업로드만 조회한다.
@@ -176,6 +176,10 @@ export default async (request) => {
 
   if (request.method === "GET") {
     const q = new URL(request.url).searchParams;
+    if (q.get("askMapVersion") === "1") {
+      const meta = await store.get("meta", { type: "json", consistency: "strong" });
+      return json({ uploadId: meta?.uploadId || null });
+    }
     if (q.get("meta")) {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
@@ -206,7 +210,7 @@ export default async (request) => {
     if (q.get("askMap") === "1" && q.get("all") === "1") {
       const regions = await Promise.all([...LAWDS].map(async code => {
         const cached = await store.get(askMapKey(code), { type: "json", consistency: "strong" });
-        if (cached?.priceBandVersion === 2) return cached;
+        if (cached?.priceBandVersion === 3) return cached;
         try {
           const aggregate = await buildAskMap(store, code);
           await store.setJSON(askMapKey(code), aggregate);
@@ -217,7 +221,7 @@ export default async (request) => {
     }
     if(q.get("askMap")==="1"){
       const cached = await store.get(askMapKey(lawd), { type: "json", consistency: "strong" });
-      if (cached?.priceBandVersion === 2) return json(cached);
+      if (cached?.priceBandVersion === 3) return json(cached);
       const aggregate = await buildAskMap(store, lawd);
       await store.setJSON(askMapKey(lawd), aggregate);
       return json(aggregate);

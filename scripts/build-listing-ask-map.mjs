@@ -2,6 +2,13 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { REGIONS } from '../shared/regions.mjs';
 
 const baseUrl = (process.env.APTSUM_BASE_URL || 'https://aptsum.kr').replace(/\/$/, '');
+async function readUploadVersion() {
+  const response = await fetch(`${baseUrl}/api/listings?askMapVersion=1`, { signal: AbortSignal.timeout(30_000), cache: 'no-store' });
+  if (!response.ok) throw new Error(`업로드 상태 조회 실패: HTTP ${response.status}`);
+  const data = await response.json();
+  return data.uploadId || null;
+}
+const sourceVersion = await readUploadVersion();
 const entries = REGIONS.flatMap(([province, regions]) => regions.map(([name, lawd]) => ({ province, name, lawd })));
 const results = new Array(entries.length);
 let cursor = 0;
@@ -34,6 +41,7 @@ async function worker() {
 }
 
 await Promise.all(Array.from({ length: 6 }, worker));
+if (await readUploadVersion() !== sourceVersion) throw new Error('집계 중 업로드가 완료되어 다시 실행해야 합니다.');
 const asOf = results.reduce((latest, row) => row.asOf && row.asOf > latest ? row.asOf : latest, '');
 const outputUrl = new URL('../data/listing-ask-map.json', import.meta.url);
 let previous = null;
@@ -52,7 +60,7 @@ const bandUrl = new URL('../data/listing-ask-price-bands.json', import.meta.url)
 const bandRegions = results.map(({lawd, asOf, weekly, priceBandVersion}) => ({lawd, asOf, priceBandVersion, weekly:(weekly||[]).map(({weekStart, asOf, previousAsOf, priceBands}) => ({weekStart, asOf, previousAsOf, priceBands:priceBands||{}}))}));
 let oldBands = null;
 try { oldBands = JSON.parse(await readFile(bandUrl, 'utf8')); } catch {}
-if (!oldBands || JSON.stringify(oldBands.regions) !== JSON.stringify(bandRegions)) {
-  await writeFile(bandUrl, `${JSON.stringify({generatedAt:new Date().toISOString(), regions:bandRegions})}\n`);
+if (!oldBands || (oldBands.sourceVersion || null) !== sourceVersion || JSON.stringify(oldBands.regions) !== JSON.stringify(bandRegions)) {
+  await writeFile(bandUrl, `${JSON.stringify({generatedAt:new Date().toISOString(), sourceVersion, regions:bandRegions})}\n`);
   console.log(`금액대별 집계 갱신 완료: ${bandRegions.length}개 지역`);
 } else console.log('금액대별 집계 변경 없음');

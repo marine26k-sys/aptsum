@@ -152,12 +152,20 @@ function renderWeeklyRanking(){
  endSelect.onchange=syncWeek;startSelect.onchange=syncWeek;constrainStart();syncWeek();
 }
 
-let priceBandDataPromise=null;
+let priceBandDataPromise=null,priceBandCache=null;
 function loadPriceBandData(){
- if(!priceBandDataPromise){const local='/data/listing-ask-price-bands.json',remote='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-price-bands.json';
+ if(!priceBandDataPromise){priceBandDataPromise=(async()=>{
+  let version;try{version=(await fetchJson('/api/listings?askMapVersion=1',{cache:'no-store'})).uploadId||null}catch{return new Map()}
+  if(priceBandCache&&priceBandCache.version===version)return priceBandCache.regions;
+  const local='/data/listing-ask-price-bands.json',remote='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-price-bands.json';
   const urls=location.hostname.includes('deploy-preview-')?[local,remote]:[remote,local];
-  priceBandDataPromise=(async()=>{for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions))return new Map(data.regions.filter(x=>x.priceBandVersion===2).map(x=>[String(x.lawd),x]));}catch{}return new Map()})();
- }
+  for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions)&&(data.sourceVersion||null)===version&&data.regions.every(x=>x.priceBandVersion===3)){const regions=new Map(data.regions.map(x=>[String(x.lawd),x]));priceBandCache={version,regions};return regions}}catch{}
+  // 미리 만든 자료가 오래된 경우 최신 공개 집계를 한 번에 읽는다.
+  try{const live=await fetchJson('/api/listings?askMap=1&all=1',{cache:'no-store'});const after=(await fetchJson('/api/listings?askMapVersion=1',{cache:'no-store'})).uploadId||null;
+   if(after===version&&Array.isArray(live.regions)&&live.regions.length&&live.regions.every(x=>!x.error&&x.priceBandVersion===3)){const regions=new Map(live.regions.map(x=>[String(x.lawd),x]));priceBandCache={version,regions};return regions}
+  }catch{}
+  return new Map();
+ })().finally(()=>{priceBandDataPromise=null});}
  return priceBandDataPromise;
 }
 loadPriceBandData();
@@ -187,7 +195,7 @@ async function renderPriceBandTable(){
  const request=++priceBandRequest,lawd=priceBandRegion.value,region=lawd.startsWith('province:')?{province:lawd.slice(9),name:'전체'}:regionLookup.get(lawd);priceBandPanel.innerHTML='<div class="price-band-note">금액대별 자료를 불러오는 중입니다.</div>';
  try{
   const precomputed=await loadPriceBandData();
-  const loadRegion=async code=>{let item=precomputed.get(code)||state.data.get(code);if(item?.priceBandVersion!==2){item=await fetchJson(`/api/listings?lawd=${encodeURIComponent(code)}&askMap=1`,{cache:'no-store'});if(String(item.lawd)!==code||item.priceBandVersion!==2)throw Error('자료 없음');state.data.set(code,{...regionLookup.get(code),...item})}return item};
+  const loadRegion=async code=>{let item=precomputed.get(code);if(item?.priceBandVersion!==3){item=await fetchJson(`/api/listings?lawd=${encodeURIComponent(code)}&askMap=1`,{cache:'no-store'});if(String(item.lawd)!==code||item.priceBandVersion!==3)throw Error('자료 없음');state.data.set(code,{...regionLookup.get(code),...item})}return item};
   let metric;
   if(lawd.startsWith('province:')){const province=lawd.slice(9),codes=(REGIONS.find(([name])=>name===province)?.[1]||[]).map(([,code])=>String(code));if(!codes.length)throw Error('지역 없음');const results=new Array(codes.length);let cursor=0;await Promise.all(Array.from({length:Math.min(4,codes.length)},async()=>{while(cursor<codes.length){const i=cursor++;results[i]=await loadRegion(codes[i])}}));const byWeek=new Map();for(const item of results)for(const week of item.weekly||[]){if(!week.previousAsOf)continue;let combined=byWeek.get(week.weekStart);if(!combined){combined={weekStart:week.weekStart,asOf:week.asOf,previousAsOf:week.previousAsOf,priceBands:{}};byWeek.set(week.weekStart,combined)}if(week.asOf>combined.asOf)combined.asOf=week.asOf;for(const [band,v] of Object.entries(week.priceBands||{})){if(!Number.isFinite(v.rate)||!(v.count>0))continue;const total=combined.priceBands[band]||{count:0,total:0};total.count+=v.count;total.total+=v.rate*v.count;combined.priceBands[band]=total}}for(const week of byWeek.values())for(const band of Object.values(week.priceBands))band.rate=band.total/band.count;metric={asOf:results.reduce((latest,item)=>item.asOf>latest?item.asOf:latest,''),weekly:[...byWeek.values()].sort((a,b)=>a.weekStart.localeCompare(b.weekStart))};
   }else metric=await loadRegion(lawd);
