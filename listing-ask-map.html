@@ -155,7 +155,7 @@ function renderWeeklyRanking(){
 let askView='map',priceBandRequest=0;
 const priceBandRegion=$('#priceBandRegion'),priceBandPanel=$('#priceBandPanel');
 for(const [province,regions] of REGIONS){const group=document.createElement('optgroup');group.label=province;const whole=document.createElement('option');whole.value=`province:${province}`;whole.textContent=`${province} 전체`;group.append(whole);for(const [name,lawd] of regions){const option=document.createElement('option');option.value=String(lawd);option.textContent=`${province} ${name}`;group.append(option)}priceBandRegion.append(group)}
-priceBandRegion.value='11680';
+priceBandRegion.value='province:서울';
 function setAskView(next){
  askView=next;$('#askMapView').setAttribute('aria-pressed',String(next==='map'));$('#askPriceBandView').setAttribute('aria-pressed',String(next==='bands'));
  $('#mapRegionControls').hidden=next!=='map';$('#priceBandControls').hidden=next!=='bands';$('#ytdRankingPanel').hidden=next!=='map';priceBandPanel.hidden=next!=='bands';
