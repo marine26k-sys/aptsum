@@ -9635,7 +9635,7 @@ function listingTrendDayTimestamp(value){
 }
 function listingTrendRowInDays(row,asOf,days,direction){
   const end=listingTrendDayTimestamp(asOf);if(end===null)return null;
-  const points=(row.points||[]).filter(p=>{const day=listingTrendDayTimestamp(p.date);return day!==null&&day<=end&&day>=end-(days-1)*86400000;});
+  const points=(row.points||[]).filter(p=>{const day=listingTrendDayTimestamp(p.date);return day!==null&&day<=end&&day>=end-days*86400000;});
   if(points.length<2||points.at(-1).ask!==row.ask)return null;
   const baseline=listingPreviousPricePoint(points,row.ask);if(!baseline||!(baseline.ask>0))return null;
   const delta=row.ask-baseline.ask,change=Math.abs(delta);
@@ -9669,7 +9669,7 @@ function renderListingTrend(source){
     <div class="sec">
       <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">${state.days===15?'최근 2주':`최근 ${state.days}일`} 이전 가격 구간의 최저 호가 대비 최신 호가가 ${all?'변화를 비교하는':rising?'올라간':'내려간'} 단지·평형</div>
       ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.belowPeak?'전고점 이하만 · ':''}${d.trendContinuous ? `연속 ${word}만 · ` : ''}${all?'변동':word} 금액 큰 순${d.nameQuery?' · 단지명: '+esc(d.nameQuery):''}`)}
-      <div class="ls-filters" style="margin:10px 0;padding:9px 12px"><div class="ls-hd"><span>호가 변동 확인일</span><b id="listingTrendDaysLabel">${state.days===15?'전체':`최근 ${state.days}일 이내`}</b></div><div class="ls-control"><input type="range" min="1" max="15" step="1" value="${state.days}" aria-label="호가 변동 확인 기간" aria-valuetext="${state.days===15?'전체':`최근 ${state.days}일 이내`}" oninput="document.getElementById('listingTrendDaysLabel').textContent=this.value==='15'?'전체':'최근 '+this.value+'일 이내';this.setAttribute('aria-valuetext',document.getElementById('listingTrendDaysLabel').textContent)" onchange="listingTrendDaysApply(this.value)"></div><div class="ls-hd"><span>1일</span><span>전체</span></div><div class="rng" style="margin-top:4px">선택한 기간 안의 가격 기록끼리 비교 · 14일 이력 내</div></div>
+      <div class="ls-filters" style="margin:10px 0;padding:9px 12px"><div class="ls-hd"><span>호가 변동 확인일</span><b id="listingTrendDaysLabel">${state.days===15?'전체':`최근 ${state.days}일 이내`}</b></div><div class="ls-control"><input type="range" min="1" max="15" step="1" value="${state.days}" aria-label="호가 변동 확인 기간" aria-valuetext="${state.days===15?'전체':`최근 ${state.days}일 이내`}" oninput="document.getElementById('listingTrendDaysLabel').textContent=this.value==='15'?'전체':'최근 '+this.value+'일 이내';this.setAttribute('aria-valuetext',document.getElementById('listingTrendDaysLabel').textContent)" onchange="listingTrendDaysApply(this.value)"></div><div class="ls-hd"><span>1일</span><span>전체</span></div><div class="rng" style="margin-top:4px">기준일부터 선택한 일수 전까지 비교 · 14일 이력 내</div></div>
       ${listingLinkLegend()}
       ${listingTrendGraphLegend(state.days===15)}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
