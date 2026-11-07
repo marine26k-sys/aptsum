@@ -46,3 +46,13 @@ if (previous && signature(previous) === signature({ asOf, regions: results })) {
   await writeFile(outputUrl, `${JSON.stringify(output)}\n`);
   console.log(`지도 데이터 갱신 완료: ${asOf || '기준일 없음'}, ${results.length}개 지역`);
 }
+
+// 별도 경량 파일로 전체 지역의 금액대별 집계를 미리 제공한다.
+const bandUrl = new URL('../data/listing-ask-price-bands.json', import.meta.url);
+const bandRegions = results.map(({lawd, asOf, weekly, priceBandVersion}) => ({lawd, asOf, priceBandVersion, weekly:(weekly||[]).map(({weekStart, asOf, previousAsOf, priceBands}) => ({weekStart, asOf, previousAsOf, priceBands:priceBands||{}}))}));
+let oldBands = null;
+try { oldBands = JSON.parse(await readFile(bandUrl, 'utf8')); } catch {}
+if (!oldBands || JSON.stringify(oldBands.regions) !== JSON.stringify(bandRegions)) {
+  await writeFile(bandUrl, `${JSON.stringify({generatedAt:new Date().toISOString(), regions:bandRegions})}\n`);
+  console.log(`금액대별 집계 갱신 완료: ${bandRegions.length}개 지역`);
+} else console.log('금액대별 집계 변경 없음');

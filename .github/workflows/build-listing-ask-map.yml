@@ -35,7 +35,7 @@ jobs:
 
       - name: 지도 JSON 커밋 및 푸시
         run: |
-          git add data/listing-ask-map.json
+          git add data/listing-ask-map.json data/listing-ask-price-bands.json
           if git diff --cached --quiet; then
             echo "지도 데이터 변경 없음"
           else
