@@ -9,7 +9,7 @@ test('금액대는 이번 주 평균 호가로 정하고 단지별 동일 비중
   'history:11680:b':{asOf:'2026.11.02',items:[item('1',84,4.4),item('1',59,4.95),item('2',84,4.4),item('3',84,5.5)]}
  };
  const result=await buildAskMap({get:async key=>data[key]},'11680');
- assert.equal(result.priceBandVersion,4);const bands=result.weekly.at(-1).priceBands;
+ assert.equal(result.priceBandVersion,5);const bands=result.weekly.at(-1).priceBands;
  assert.equal(bands['4'].count,2);assert.ok(Math.abs(bands['4'].rate-10)<1e-8);
  assert.equal(bands['5'].count,1);assert.ok(Math.abs(bands['5'].rate-10)<1e-8);
 });

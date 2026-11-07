@@ -1,14 +1,16 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { REGIONS } from '../shared/regions.mjs';
+import { uploadState, sameUploadState, verifiedRegionMetric } from './listing-ask-snapshot-integrity.mjs';
 
 const baseUrl = (process.env.APTSUM_BASE_URL || 'https://aptsum.kr').replace(/\/$/, '');
-async function readUploadVersion() {
+async function readUploadState() {
   const response = await fetch(`${baseUrl}/api/listings?askMapVersion=1`, { signal: AbortSignal.timeout(30_000), cache: 'no-store' });
   if (!response.ok) throw new Error(`업로드 상태 조회 실패: HTTP ${response.status}`);
   const data = await response.json();
-  return data.uploadId || null;
+  return uploadState(data);
 }
-const sourceVersion = await readUploadVersion();
+const sourceState = await readUploadState();
+const sourceVersion = sourceState.uploadId;
 const entries = REGIONS.flatMap(([province, regions]) => regions.map(([name, lawd]) => ({ province, name, lawd })));
 const results = new Array(entries.length);
 let cursor = 0;
@@ -17,13 +19,14 @@ async function load(entry) {
   let error;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      if (!sourceState.lawds.includes(String(entry.lawd))) return verifiedRegionMetric(entry, null, sourceState);
       const response = await fetch(`${baseUrl}/api/listings?lawd=${encodeURIComponent(entry.lawd)}&askMap=1`, {
         signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status} (${entry.lawd})`);
       const metric = await response.json();
       if (String(metric.lawd) !== String(entry.lawd)) throw new Error(`지역 코드 불일치 (${entry.lawd})`);
-      return { ...entry, ...metric };
+      return verifiedRegionMetric(entry, metric, sourceState);
     } catch (cause) {
       error = cause;
       if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
@@ -41,7 +44,7 @@ async function worker() {
 }
 
 await Promise.all(Array.from({ length: 6 }, worker));
-if (await readUploadVersion() !== sourceVersion) throw new Error('집계 중 업로드가 완료되어 다시 실행해야 합니다.');
+if (!sameUploadState(await readUploadState(), sourceState)) throw new Error('집계 중 업로드가 변경되어 다시 실행해야 합니다.');
 const asOf = results.reduce((latest, row) => row.asOf && row.asOf > latest ? row.asOf : latest, '');
 const outputUrl = new URL('../data/listing-ask-map.json', import.meta.url);
 let previous = null;

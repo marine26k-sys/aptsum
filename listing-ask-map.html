@@ -91,7 +91,7 @@ function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url,options={}){const r=await fetch(url,{credentials:'same-origin',cache:'default',...options});if(!r.ok)throw Error(String(r.status));return r.json()}
-async function loadAskMap(){try{return await fetchJson(liveAskMapUrl,{cache:'no-cache'})}catch{return fetchJson('/data/listing-ask-map.json')}}
+async function loadAskMap(){if(location.hostname.includes('deploy-preview-'))try{return await fetchJson('/data/listing-ask-map.json')}catch{}try{return await fetchJson(liveAskMapUrl,{cache:'no-cache'})}catch{return fetchJson('/data/listing-ask-map.json')}}
 function render(){
  const title=$('#title'),currentWeek=weekInfo(state.asOf);title.textContent=currentWeek?`${currentWeek.label.replace(/^\d+년 /,'')} 호가 변동률`:'호가 주간 평균';
  $('#comparisonPeriod').textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';
@@ -156,7 +156,7 @@ let priceBandDataPromise=null;
 function loadPriceBandData(){
  if(!priceBandDataPromise){const local='/data/listing-ask-price-bands.json',remote='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-price-bands.json';
   const urls=location.hostname.includes('deploy-preview-')?[local,remote]:[remote,local];
-  priceBandDataPromise=(async()=>{for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===4))return new Map(data.regions.map(x=>[String(x.lawd),x]))}catch{}throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
+  priceBandDataPromise=(async()=>{for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===5))return new Map(data.regions.map(x=>[String(x.lawd),x]))}catch{}throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
  }
  return priceBandDataPromise;
 }
@@ -187,7 +187,7 @@ async function renderPriceBandTable(){
  const request=++priceBandRequest,lawd=priceBandRegion.value,region=lawd.startsWith('province:')?{province:lawd.slice(9),name:'전체'}:regionLookup.get(lawd);priceBandPanel.innerHTML='<div class="price-band-note">금액대별 자료를 불러오는 중입니다.</div>';
  try{
   const precomputed=await loadPriceBandData();
-  const loadRegion=async code=>{const item=precomputed.get(code);if(!item||item.priceBandVersion!==4)throw Error('지역 집계 자료 없음');return item};
+  const loadRegion=async code=>{const item=precomputed.get(code);if(!item||item.priceBandVersion!==5)throw Error('지역 집계 자료 없음');return item};
   let metric;
   if(lawd.startsWith('province:')){const province=lawd.slice(9),codes=(REGIONS.find(([name])=>name===province)?.[1]||[]).map(([,code])=>String(code));if(!codes.length)throw Error('지역 없음');const results=new Array(codes.length);let cursor=0;await Promise.all(Array.from({length:Math.min(4,codes.length)},async()=>{while(cursor<codes.length){const i=cursor++;results[i]=await loadRegion(codes[i])}}));const byWeek=new Map();for(const item of results)for(const week of item.weekly||[]){if(!week.previousAsOf)continue;let combined=byWeek.get(week.weekStart);if(!combined){combined={weekStart:week.weekStart,asOf:week.asOf,previousAsOf:week.previousAsOf,priceBands:{}};byWeek.set(week.weekStart,combined)}if(week.asOf>combined.asOf)combined.asOf=week.asOf;for(const [band,v] of Object.entries(week.priceBands||{})){if(!Number.isFinite(v.rate)||!(v.count>0))continue;const total=combined.priceBands[band]||{count:0,total:0};total.count+=v.count;total.total+=v.rate*v.count;combined.priceBands[band]=total}}for(const week of byWeek.values())for(const band of Object.values(week.priceBands))band.rate=band.total/band.count;metric={asOf:results.reduce((latest,item)=>item.asOf>latest?item.asOf:latest,''),weekly:[...byWeek.values()].sort((a,b)=>a.weekStart.localeCompare(b.weekStart))};
   }else metric=await loadRegion(lawd);
