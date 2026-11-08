@@ -22,10 +22,11 @@ for (const complex of snapshot.complexes) {
     name: complex.name,
     dong: complex.dong,
     url: complex.url,
-    areas: complex.areas.filter(area => Number(area.saleGeneralManwon) > 0).map(area => ({
+    areas: complex.areas.map(area => ({
       type: area.type,
       exclusiveM2: area.exclusiveM2,
       supplyM2: area.supplyM2,
+      households: area.households,
       saleGeneralManwon: area.saleGeneralManwon,
     })),
   });
