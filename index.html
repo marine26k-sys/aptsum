@@ -6640,7 +6640,13 @@ function recentAverageCell(a){
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
 function complexPyLabel(p){return p.py;}
-let complexTypeHouseholdData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
+let complexTypeHouseholdData=null,complexTradeTypeData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
+function exactExclusiveKey(value){
+  const text=String(value??'').trim();
+  if(!/^\d+(?:\.\d+)?$/.test(text))return '';
+  const [whole,fraction='']=text.split('.'),normalizedFraction=fraction.replace(/0+$/,'');
+  return normalizedFraction?`${whole}.${normalizedFraction}`:whole;
+}
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
@@ -6677,7 +6683,9 @@ function tradesHTML(d, footNote){
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
-      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      const exactTypes=t.area?complexTradeTypeData?.[exactExclusiveKey(t.area)]:null;
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?`<div class="rng" style="font-size:9px">타입 ${exactTypes.map(esc).join(' · ')}</div>`:'';
+      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${typeLabel}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
@@ -7446,24 +7454,26 @@ async function loadComplexTypeHouseholds(d){
   const dong=entry.umd||d?.umd||'';
   const names=[entry.name,d?.name?.replace(/\s*\[[^\]]+\]\s*$/,''),...(entry.names||[])].filter((name,i,list)=>name&&list.indexOf(name)===i);
   const key=`${lawd}|${dong}|${names[0]||''}`;
-  if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
+  if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTradeTypeData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
   if(complexTypeHouseholdLoaded)return;
   if(complexTypeHouseholdPromise)return complexTypeHouseholdPromise;
   complexTypeHouseholdPromise=(async()=>{
-    let areas=null;
+    let areas=null,exactTypes=null;
     for(const name of names){
       try{
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
         if(!response.ok)continue;
         const result=await response.json();
-        if(result.areas){areas=result.areas;break;}
+        if(result.areas||result.exactExclusiveTypes){areas=result.areas;exactTypes=result.exactExclusiveTypes||null;break;}
       }catch{}
     }
     if(complexTypeHouseholdKey!==key)return;
-    complexTypeHouseholdData=areas;complexTypeHouseholdLoaded=true;
+    complexTypeHouseholdData=areas;complexTradeTypeData=exactTypes;complexTypeHouseholdLoaded=true;
     const table=document.getElementById('pyTable');
     if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    const trades=document.getElementById('tradesBox');
+    if(trades?.isConnected)trades.innerHTML=tradesHTML(curComplexData(),complexView==='sale'?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT);
   })().finally(()=>{if(complexTypeHouseholdKey===key)complexTypeHouseholdPromise=null;});
   return complexTypeHouseholdPromise;
 }

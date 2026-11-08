@@ -34,7 +34,7 @@ export default async request=>{
   if(kind==='complex-type-households'){
    const normalize=value=>String(value||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR');
    const key=`${normalize(q.get('name'))}|${normalize(q.get('dong'))}`;
-   return Response.json({areas:data.items?.[key]||null,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=300','Netlify-CDN-Cache-Control':'public, max-age=3600'}});
+   return Response.json({areas:data.items?.[key]||null,exactExclusiveTypes:data.exactExclusiveTypes?.[key]||null,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=300','Netlify-CDN-Cache-Control':'public, max-age=3600'}});
   }
   return Response.json({...data,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':requested?'public, max-age=86400':'public, max-age=60'}});
  }catch{return Response.json({error:'dashboard_data_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
