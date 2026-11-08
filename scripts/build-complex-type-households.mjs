@@ -7,6 +7,15 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
   return i < 0 ? [arg.replace(/^--/, ''), true] : [arg.slice(2, i), arg.slice(i + 1)];
 }));
 if (!args.master) throw new Error('--master=<전체 단지 매핑표 JSON 경로> is required');
+const freshKbTypes = args['kb-types'] ? JSON.parse(await readFile(args['kb-types'], 'utf8')) : null;
+const freshTypesByNaverId = new Map();
+for (const complex of freshKbTypes?.complexes || []) {
+  const ids = complex.targetNaverIds || (complex.matchedTarget?.naverId ? [complex.matchedTarget.naverId] : []);
+  for (const naverId of ids) {
+    if (!freshTypesByNaverId.has(Number(naverId))) freshTypesByNaverId.set(Number(naverId), []);
+    freshTypesByNaverId.get(Number(naverId)).push(...(complex.areas || []));
+  }
+}
 
 const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g, '').toLocaleLowerCase('ko-KR');
 const exactAreaKey = (value) => {
@@ -60,6 +69,26 @@ for (const complex of index) {
     const types = byArea.get(areaKey);
     // 같은 타입이 소수점 면적 차이로 중복 기재된 경우 한 번만 집계한다.
     types.set(type, Math.max(types.get(type) || 0, households));
+  }
+  // After the one-time live KB collection finishes, supplement/replace gaps in the older mapping
+  // with the freshly collected type inventory, including types that have no KB price.
+  for (const area of freshTypesByNaverId.get(Number([...candidates.keys()][0])) || []) {
+    const exclusive = Number(area.exclusiveM2);
+    if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
+    const type = String(area.websiteTypeName || area.kbTypeName || '').trim();
+    if (!type) continue;
+    const exactKey = exactAreaKey(area.exclusiveM2);
+    if (exactKey) {
+      if (!exactExclusiveTypes.has(exactKey)) exactExclusiveTypes.set(exactKey, new Set());
+      exactExclusiveTypes.get(exactKey).add(type);
+    }
+    const households = Number(area.households);
+    if (Number.isInteger(households) && households > 0) {
+      const areaKey = String(Math.floor(exclusive));
+      if (!byArea.has(areaKey)) byArea.set(areaKey, new Map());
+      const types = byArea.get(areaKey);
+      types.set(type, Math.max(types.get(type) || 0, households));
+    }
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
   const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
