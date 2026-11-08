@@ -225,6 +225,8 @@ try {
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
+  .py-summary-table .td-type{font-size:8.5px;line-height:1.35;white-space:nowrap;color:var(--sub)}
+  .py-summary-table .td-type b{font-size:8.5px;color:var(--navy)}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -6638,15 +6640,21 @@ function recentAverageCell(a){
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
 function complexPyLabel(p){return p.py;}
+let complexTypeHouseholdData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
+function typeHouseholdCell(p){
+  const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
+  if(!rows.length)return '<span class="rng">-</span>';
+  return rows.map(row=>`<div>${esc(row.type)} · <b>${Number(row.households).toLocaleString('ko-KR')}세대</b></div>`).join('');
+}
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
-  const isSale=complexView==='sale';
-  const columnWidths=['24%','25%','25%','26%'];
+  const columnWidths=['20%','24%','19%','19%','18%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>평형</th><th>타입별<br>세대수</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td class="td-type">${typeHouseholdCell(p)}</td>
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
@@ -7432,6 +7440,34 @@ async function loadComplexSchools(panel,d,lawd){
   }catch(e){if(panel.isConnected)body.textContent='학교 정보를 불러오지 못했습니다. 접었다가 다시 펼쳐 주세요.';}
   finally{delete panel.dataset.loading;}
 }
+async function loadComplexTypeHouseholds(d){
+  const entry=d?.complexIndexEntry||{};
+  const lawd=entry.lawd||d?.lawd||d?.splitLawd||sel.value;
+  const dong=entry.umd||d?.umd||'';
+  const names=[entry.name,d?.name?.replace(/\s*\[[^\]]+\]\s*$/,''),...(entry.names||[])].filter((name,i,list)=>name&&list.indexOf(name)===i);
+  const key=`${lawd}|${dong}|${names[0]||''}`;
+  if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
+  if(complexTypeHouseholdLoaded)return;
+  if(complexTypeHouseholdPromise)return complexTypeHouseholdPromise;
+  complexTypeHouseholdPromise=(async()=>{
+    let areas=null;
+    for(const name of names){
+      try{
+        const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
+        const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
+        if(!response.ok)continue;
+        const result=await response.json();
+        if(result.areas){areas=result.areas;break;}
+      }catch{}
+    }
+    if(complexTypeHouseholdKey!==key)return;
+    complexTypeHouseholdData=areas;complexTypeHouseholdLoaded=true;
+    const table=document.getElementById('pyTable');
+    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+  })().finally(()=>{if(complexTypeHouseholdKey===key)complexTypeHouseholdPromise=null;});
+  return complexTypeHouseholdPromise;
+}
+
 function renderComplex(d){
   closeExpandedComplexMap();rememberRecentComplex(sel.value,d);
   const complexName=complexDisplayName(d.lawd||d.splitLawd||sel.value,d.name,d.umd);
@@ -7468,6 +7504,7 @@ function renderComplex(d){
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적을 기준으로 표시</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  loadComplexTypeHouseholds(d);
   const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
   infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
   checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
