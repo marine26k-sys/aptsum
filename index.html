@@ -8638,7 +8638,7 @@ function syncListingTrendUpload(choices){
   el.value=listingTrendUploadId;
 
 }
-function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down',minHouseholds=LISTING_MIN_HH){
+function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down',minHouseholds=LISTING_MIN_HH,includeAll=false){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
   if(idx<1)return [];
   const previousUploadId=snapshots[idx-1].uploadId,byType=new Map();
@@ -8657,7 +8657,7 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
     const baseline=listingPreviousPricePoint(points,now.ask);
     if(!baseline)continue;
     const change=direction==='all'?Math.abs(now.ask-baseline.ask):direction==='up'?now.ask-baseline.ask:baseline.ask-now.ask;
-    if((direction!=='all'&&!(change>0))||!(baseline.ask>0)||change/baseline.ask>=0.25-1e-9)continue;
+    if(!includeAll&&((direction!=='all'&&!(change>0))||!(baseline.ask>0)||change/baseline.ask>=0.25-1e-9))continue;
     if(continuous && (!older || older.uploadId!==snapshots[idx-2]?.uploadId || !(direction==='up' ? older.ask<prev.ask && prev.ask<now.ask : older.ask>prev.ask && prev.ask>now.ask)))continue;
     rows.push({...item,lawd,gu,previousPricePoint:baseline,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100,points});
   }
@@ -8706,7 +8706,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   try{
     let selectedComplex=null;
     if(listingNameActive()){selectedComplex=await resolveListingName(myToken);if(!selectedComplex){openListingNameSearch(false);return;}targets=[selectedComplex];}
-    const failed=[],rows=[],currentItems=[],packs=[];const ls=lsGet();
+    const failed=[],rows=[],dayCandidates=[],currentItems=[],packs=[];const ls=lsGet();
     await Promise.all(lookupProgressMap(targets,async t=>{try{
       const [current,history]=await Promise.all([fetchListings(t.lawd),fetchListingHistory(t.lawd)]);
       packs.push({t,current,history});
@@ -8727,12 +8727,13 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       const idx=snapshots.findIndex(s=>s.uploadId===selectedId);
       historyCount=Math.max(historyCount,idx+1);
       rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous,direction));
+      dayCandidates.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,false,'all',LISTING_MIN_HH,true));
     }
     // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
     lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
-    for(let i=rows.length-1;i>=0;i--)if((selectedComplex&&(rows[i].nid!==selectedComplex.items[0]?.nid||rows[i].lawd!==selectedComplex.lawd))||!listingTrendNameMatch(rows[i],nameQuery)||!lsAskMatch(rows[i],ls)||!lsPyMatch(rows[i],ls)||(belowPeak&&!listingTrendPeakMatch(rows[i])))rows.splice(i,1);
+    for(const list of [rows,dayCandidates])for(let i=list.length-1;i>=0;i--)if((selectedComplex&&(list[i].nid!==selectedComplex.items[0]?.nid||list[i].lawd!==selectedComplex.lawd))||!listingTrendNameMatch(list[i],nameQuery)||!lsAskMatch(list[i],ls)||!lsPyMatch(list[i],ls)||(belowPeak&&!listingTrendPeakMatch(list[i])))list.splice(i,1);
     rows.sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct);
-    const d={found:true,mode,asOf,rows,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,belowPeak,direction,nameQuery,
+    const d={found:true,mode,asOf,rows,dayCandidates,historyCount,failedRegions:failed,missingRegions:missing,trendChoices:choices,trendUpload:requestedUpload,trendContinuous:continuous,belowPeak,direction,nameQuery,
       askLabel:lsAskText(ls),pyBand:lsPyActive(ls)?lsPyText(ls):null,scopeLabel:regionSel.length?regionScopeLabel(targets):sel.options[sel.selectedIndex].textContent};
     lastData=d;renderListingTrend(d);
     if(!silentScroll)window.scrollTo(0,0);pushView();saveLastRegionPref(lawd);
@@ -9626,8 +9627,32 @@ function renderListingGap(d){
     ${body}</div></div><div class="src-note">평형대별 대표 전용면적(59/84/109/134㎡)에 가까운 매물을 비교하며, 차이가 같으면 낮은 호가를 선택합니다. 큰 평형 호가가 낮으면 음수로 표시합니다. 실거래가·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
-function renderListingTrend(d){
-  d=molitPageData(d,"rows",renderListingTrend);
+// 최근 가격 구간의 첫 확인일: 같은 가격이 여러 번 수집돼도 최신 업로드일로 오인하지 않는다.
+function listingTrendDayTimestamp(value){
+  const digits=String(value||'').replace(/[^0-9]/g,'');if(!/^\d{8}$/.test(digits))return null;
+  const y=Number(digits.slice(0,4)),m=Number(digits.slice(4,6)),day=Number(digits.slice(6,8)),date=new Date(Date.UTC(y,m-1,day));
+  return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===day?date.getTime():null;
+}
+function listingTrendRowInDays(row,asOf,days,direction){
+  const end=listingTrendDayTimestamp(asOf);if(end===null)return null;
+  const points=(row.points||[]).filter(p=>{const day=listingTrendDayTimestamp(p.date);return day!==null&&day<=end&&day>=end-days*86400000;});
+  if(points.length<2||points.at(-1).ask!==row.ask)return null;
+  const baseline=listingPreviousPricePoint(points,row.ask);if(!baseline||!(baseline.ask>0))return null;
+  const delta=row.ask-baseline.ask,change=Math.abs(delta);
+  if((direction==='up'&&delta<=0)||(direction==='down'&&delta>=0)||change/baseline.ask>=0.25-1e-9)return null;
+  return {...row,points,previousPricePoint:baseline,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100};
+}
+const listingTrendDayViews=new WeakMap();
+function listingTrendDaysApply(value){
+  if(!lastData||!['listingtrend','listingrise'].includes(lastData.mode))return;
+  const days=Math.max(1,Math.min(15,Number(value)||15));
+  listingTrendDayViews.set(lastData,{days});renderListingTrend(lastData);
+}
+function renderListingTrend(source){
+  let state=listingTrendDayViews.get(source);
+  if(!state){state={days:15};listingTrendDayViews.set(source,state);}
+  if(!state.filtered)state.filtered={...source,rows:state.days===15?source.rows:(source.dayCandidates||source.rows).map(row=>listingTrendRowInDays(row,source.asOf,state.days,source.direction||(source.mode==='listingrise'?'up':'down'))).filter(Boolean).sort((a,b)=>b.drop-a.drop||b.dropPct-a.dropPct)};
+  let d=molitPageData(state.filtered,"rows",()=>renderListingTrend(source));
   syncListingTrendBelowPeak(!!d.belowPeak);
   const rising=d.mode==='listingrise',all=d.direction==='all',word=all?'전체':rising?'상승':'하락';
   document.getElementById('listingTrendDirection').value=d.direction||(rising?'up':'down');
@@ -9637,15 +9662,16 @@ function renderListingTrend(d){
   const body = d.historyCount < 2
     ? `<div class="rng" style="padding:10px 0">비교할 최저 호가 이력이 아직 없습니다.</div>`
     : !d.rows.length
-      ? `<div class="rng" style="padding:10px 0">${d.trendContinuous ? `최근 3개 기록에서 두 번 연속 ${word}한 단지·평형이 없습니다.` : `${all?'조건에 맞는 단지·평형이 없습니다.':`최근 2주 이전 가격 구간의 최저 호가 대비 최신 호가가 ${rising?'오른':'내린'} 단지·평형이 없습니다.`}`}</div>`
+      ? `<div class="rng" style="padding:10px 0">${state.days!==15?'선택한 기간에 호가 변동이 확인된 단지가 없습니다.':d.trendContinuous ? `최근 3개 기록에서 두 번 연속 ${word}한 단지·평형이 없습니다.` : `${all?'조건에 맞는 단지·평형이 없습니다.':`최근 2주 이전 가격 구간의 최저 호가 대비 최신 호가가 ${rising?'오른':'내린'} 단지·평형이 없습니다.`}`}</div>`
       : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion,all?'all':rising?'up':'down',true)).join('');
   const html = `<div class="card">
     ${listingHeaderHTML(d, `최저 호가 변동 · ${word}`, null, null)}
     <div class="sec">
-      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">최근 2주 이전 가격 구간의 최저 호가 대비 최신 호가가 ${all?'변화를 비교하는':rising?'올라간':'내려간'} 단지·평형</div>
+      <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">${state.days===15?'최근 2주':`최근 ${state.days}일`} 이전 가격 구간의 최저 호가 대비 최신 호가가 ${all?'변화를 비교하는':rising?'올라간':'내려간'} 단지·평형</div>
       ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · ${esc(d.askLabel||'전체')} · ${d.belowPeak?'전고점 이하만 · ':''}${d.trendContinuous ? `연속 ${word}만 · ` : ''}${all?'변동':word} 금액 큰 순${d.nameQuery?' · 단지명: '+esc(d.nameQuery):''}`)}
+      <div class="ls-filters" style="margin:10px 0;padding:9px 12px"><div class="ls-hd"><span>호가 변동 확인일</span><b id="listingTrendDaysLabel">${state.days===15?'전체':`최근 ${state.days}일 이내`}</b></div><div class="ls-control"><input type="range" min="1" max="15" step="1" value="${state.days}" aria-label="호가 변동 확인 기간" aria-valuetext="${state.days===15?'전체':`최근 ${state.days}일 이내`}" oninput="document.getElementById('listingTrendDaysLabel').textContent=this.value==='15'?'전체':'최근 '+this.value+'일 이내';this.setAttribute('aria-valuetext',document.getElementById('listingTrendDaysLabel').textContent)" onchange="listingTrendDaysApply(this.value)"></div><div class="ls-hd"><span>1일</span><span>전체</span></div><div class="rng" style="margin-top:4px">기준일부터 선택한 일수 전까지 비교 · 14일 이력 내</div></div>
       ${listingLinkLegend()}
-      ${listingTrendGraphLegend(true)}
+      ${listingTrendGraphLegend(state.days===15)}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
