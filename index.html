@@ -217,6 +217,10 @@ try {
   table{width:100%;border-collapse:collapse;font-size:11.5px}
   th{color:var(--sub);font-weight:500;font-size:10.5px;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);white-space:pre-line}
   td{padding:6px 4px;border-bottom:1px dashed var(--line)}
+  .py-summary-table{table-layout:fixed;font-size:10.5px}
+  .py-summary-table th,.py-summary-table td{padding:5px 2px;white-space:nowrap}
+  .py-summary-table th:first-child,.py-summary-table td:first-child{width:20%;white-space:normal}
+  .py-summary-table td b{font-size:11.5px}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -260,6 +264,9 @@ try {
   .th-max{color:#fff;background:var(--red);border-radius:6px 6px 0 0;border-bottom:2px solid var(--red)}
   .td-max{background:#FEF2F2}
   .td-max b{color:var(--red);font-size:13px}
+  .th-kb{color:var(--teal-dark);background:#DDF2F2;border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
+  .td-kb{background:#F0FAFA}
+  .td-kb b{color:var(--teal-dark);font-size:12.5px}
   .th-teal{color:#fff;background:var(--teal);border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
   .td-teal{background:var(--teal-soft)}
   .td-teal b{color:var(--teal-dark);font-size:13px}
@@ -4037,6 +4044,17 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
     const maxDate = maxTrade?`${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`:null;
     const recent = arr[0];
+    const recentMonthStart = new Date();
+    recentMonthStart.setHours(0,0,0,0);
+    recentMonthStart.setDate(recentMonthStart.getDate()-30);
+    const recentMonthTrades = arr.filter(t=>{
+      const year=+String(t.ym).slice(0,4),month=+String(t.ym).slice(4,6),day=+t.d;
+      const date=new Date(year,month-1,day);
+      return Number.isFinite(date.getTime())&&date>=recentMonthStart;
+    });
+    const recentMonthAvg = recentMonthTrades.length
+      ? {v:R1(recentMonthTrades.reduce((sum,t)=>sum+t.amt,0)/recentMonthTrades.length),n:recentMonthTrades.length}
+      : null;
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
     // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
@@ -4059,8 +4077,8 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     }
     return { py:`${representativePy(labelTrades)}평`, sizeKey:+sizeKey, area:`(전용 ${sizeKey})`, n:arr.length,
       excluded: arrRaw.length-arr.length, // arr = clean이 비면 arrRaw로 폴백되므로, 실제 표시 데이터 기준으로 계산해야 폴백 시 0건으로 정확히 나옴
-      recent:recent?{amt:recent.amt, ym:ymLabel(recent.ym), floor:recent.floor}:null,
-      max, maxDate, quarters, trend,
+      recent:recent?{amt:recent.amt, ym:ymLabel(recent.ym), day:recent.d, floor:recent.floor}:null,
+      recentMonthAvg, max, maxDate, quarters, trend,
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: !!recent && recent.amt>=max && arr.length>=3, monthly, floorBand };
   }).sort((a,b)=>a.sizeKey-b.sizeKey);
@@ -6553,21 +6571,59 @@ const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래�
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
 }
+let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
+function kbSaleKey(d){return `${d?.lawd||d?.splitLawd||sel.value}|${d?.umd||''}|${d?.name||''}`;}
+function kbAreaPriceCell(p){
+  const areas=kbSalePriceData?.areas||[];
+  const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
+  if(!prices.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
+  const label=prices.length===1?`${prices[0].toFixed(1)}`:`${prices[0].toFixed(1)}~${prices.at(-1).toFixed(1)}`;
+  const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>a.type).filter(Boolean))];
+  return `<td class="tr-r td-kb"><b>${label}</b><div class="rng">${prices.length===1?(types.length>1?`${types.length}개 타입`:(types[0]||'KB 일반가')):'타입별'}</div></td>`;
+}
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
-  const qLabels = list[0].quarters.map(q=>q.label); // 4개 분기 라벨은 모든 평형이 동일
-  return `<table>
-    <tr><th>평형</th><th class="tr-r">${esc(qLabels[0])}</th><th class="tr-r">${esc(qLabels[1])}</th><th class="tr-r th-teal2">${esc(qLabels[2])}</th><th class="tr-r th-teal">${esc(qLabels[3])}</th><th class="tr-r th-max">최고가</th></tr>
+  const isSale=complexView==='sale';
+  const key=kbSaleKey(lastData);
+  const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
+  return `<table class="py-summary-table">
+    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">최근 1개월<br>평균</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
-      <td class="tr-r">${avgCell(p.quarters[0].avg)}</td>
-      <td class="tr-r">${avgCell(p.quarters[1].avg)}</td>
-      <td class="tr-r td-teal2">${avgCell(p.quarters[2].avg)}</td>
-      <td class="tr-r td-teal">${avgCell(p.quarters[3].avg)}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
+      ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
+      <td class="tr-r td-teal">${avgCell(p.recentMonthAvg)}</td>
+      <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
     </tr>`).join('')}
   </table>`;
+}
+async function loadComplexKbSalePrice(d){
+  if(!d||complexView!=='sale')return;
+  const key=kbSaleKey(d);
+  if(kbSalePriceKey===key&&kbSalePriceLoaded)return;
+  if(kbSalePricePromise?.key===key)return kbSalePricePromise.promise;
+  kbSalePriceError=false;
+  const [lawd,dong,name]=key.split('|');
+  const promise=(async()=>{
+    const query=new URLSearchParams({kind:'kb-sale-general',lawd,name,dong});
+    const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
+    if(!response.ok)throw Error('KB시세를 불러오지 못했습니다.');
+    const result=await response.json();
+    if(lastData!==d||complexView!=='sale')return;
+    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
+    const table=document.getElementById('pyTable');
+    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    const note=document.getElementById('kbSalePriceNote');
+    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 · 수집 ${result.collectedAt.slice(2,10).replaceAll('-','.')}`:'KB부동산 매매 일반가';
+  })().catch(error=>{
+    if(lastData!==d||complexView!=='sale')return;
+    kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
+    const table=document.getElementById('pyTable');
+    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+  }).finally(()=>{if(kbSalePricePromise?.key===key)kbSalePricePromise=null;});
+  kbSalePricePromise={key,promise};
+  return promise;
 }
 
 function tradesHTML(d, footNote){
@@ -6785,8 +6841,10 @@ function complexDynamicHTML(){
         <span class="chip on" onclick="selectPy(-1)">전체</span>
         ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
-      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — 최근 분기 ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
+      <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
+      ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:-3px 0 6px">KB부동산 매매 일반가</div>':''}
       <div id="pyTable">${pyTableHTML(d)}</div>
+      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 최근 1개월 평균은 최근 30일 내 직거래·이상 저가 제외 실거래 기준</div>
     </div>
 
     <div class="sec">
@@ -6873,6 +6931,7 @@ function setComplexView(v){
   const box = document.getElementById('complexDynamic');
   const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
+  if(v==='sale')loadComplexKbSalePrice(lastData);
   const infoButton=document.getElementById('complexInfoButton');
   if(infoButton&&lastData){
     const infoLawd=lastData.lawd||lastData.splitLawd||sel.value;
@@ -7380,6 +7439,8 @@ function renderComplex(d){
   <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적 기준 환산 추정치로, 실제 분양 평형과 약간 다를 수 있습니다</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
+  if(kbSalePriceKey!==kbSaleKey(d)){kbSalePriceData=null;kbSalePriceError=false;kbSalePriceLoaded=false;}
+  loadComplexKbSalePrice(d);
   const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
   infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
   checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
