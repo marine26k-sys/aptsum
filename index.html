@@ -7462,7 +7462,10 @@ async function loadComplexTypeHouseholds(d){
     for(const name of names){
       try{
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
-        const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
+        // Bump the lookup URL when adding response fields so an older CDN/browser response
+        // (which only had floored-area household data) cannot suppress exact-area type labels.
+        query.set('typeSchema','exact-v2');
+        const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
         if(result.areas||result.exactExclusiveTypes){areas=result.areas;exactTypes=result.exactExclusiveTypes||null;break;}
