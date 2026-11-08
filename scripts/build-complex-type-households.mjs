@@ -36,7 +36,10 @@ for (const complex of index) {
   for (const area of row['면적별'] || []) {
     const exclusive = Number(area['전용면적']);
     const households = Number(area['KB세대수']);
-    const type = String(area['타입명'] || '').trim();
+    const sourceType = String(area['타입명'] || '').trim();
+    // 매핑표의 타입명 숫자는 공급면적 기준(예: 85B)이다. 화면은 전용면적
+    // 행(예: 전용 59)에 맞춰 표시하되, A/B/C 같은 타입 구분은 보존한다.
+    const type = sourceType.replace(/^\d+/, String(Math.floor(exclusive)));
     if (area['상태'] !== 'confirmed' || area['KB세대수상태'] !== '확인됨' || !Number.isFinite(exclusive) || exclusive <= 0 || !Number.isInteger(households) || households <= 0 || !type) continue;
     const areaKey = String(Math.floor(exclusive));
     if (!byArea.has(areaKey)) byArea.set(areaKey, new Map());
