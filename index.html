@@ -6613,7 +6613,7 @@ async function loadComplexKbSalePrice(d){
     const table=document.getElementById('pyTable');
     if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
     const note=document.getElementById('kbSalePriceNote');
-    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 · 수집 ${result.collectedAt.slice(2,10).replaceAll('-','.')}`:'KB부동산 매매 일반가';
+    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가';
   })().catch(error=>{
     if(lastData!==d||complexView!=='sale')return;
     kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
