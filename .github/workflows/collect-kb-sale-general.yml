@@ -1,9 +1,6 @@
 name: Collect KB apartment and reconstruction sale general prices
 
 on:
-  schedule:
-    # KB prices update weekly; collect Saturday 02:00 KST, after Friday's update window.
-    - cron: "0 17 * * 5"
   workflow_dispatch:
 
 permissions:
