@@ -192,6 +192,7 @@ def main():
             "naverId": naver_id,
             "kbComplexId": cid,
             "name": target["name"],
+            "category": target["category"],
             "city": target["city"],
             "district": target["district"],
             "dong": target["dong"],
@@ -229,7 +230,7 @@ def main():
     snapshot = {
         "schemaVersion": 1,
         "source": "KB부동산 매매 일반가",
-        "scope": "전체_단지_매핑표 아파트 / 서울·경기·인천·부산",
+        "scope": "전체_단지_매핑표 아파트·재건축 / 서울·경기·인천·부산",
         "collectedAt": now(),
         "kbReferenceDate": None,
         "targetComplexCount": len(targets),

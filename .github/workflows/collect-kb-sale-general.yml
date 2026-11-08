@@ -1,4 +1,4 @@
-name: Collect KB apartment sale general prices
+name: Collect KB apartment and reconstruction sale general prices
 
 on:
   schedule:
