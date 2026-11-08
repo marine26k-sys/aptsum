@@ -221,6 +221,7 @@ try {
   .py-summary-table th,.py-summary-table td{padding:5px 2px;white-space:nowrap}
   .py-summary-table th:first-child,.py-summary-table td:first-child{width:20%;white-space:normal}
   .py-summary-table td b{font-size:11.5px}
+  .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -6564,8 +6565,8 @@ function avgCell(a){
 }
 function recentAverageCell(a){
   if(!a)return '<span class="rng">-</span>';
-  const sub=a.carriedFrom?`${esc(a.carriedFrom)} 시세 유지`:`${a.n}건`;
-  return `<b>${a.v.toFixed(1)}</b><div class="rng">${sub}</div>`;
+  const sub=a.carriedFrom?esc(a.carriedFrom):`${a.n}건`;
+  return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
 let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
 function kbSaleKey(d){return `${d?.lawd||d?.splitLawd||sel.value}|${d?.umd||''}|${d?.name||''}`;}
@@ -6586,7 +6587,7 @@ function pyTableHTML(d){
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
   return `<table class="py-summary-table">
-    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">최근 평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
+    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(최근 1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
