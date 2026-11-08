@@ -6606,6 +6606,20 @@ function kbSupplyPy(p){
 function complexPyLabel(p){
   return kbSalePriceLoaded&&kbSalePriceKey===kbSaleKey(lastData)?kbSupplyPy(p)||p.py:p.py;
 }
+function removeKbHistoricalAliasSizes(d){
+  if(!d?.byPy?.length)return false;
+  const areas=kbSalePriceData?.areas||[];
+  const kbKeys=new Set(areas.filter(a=>Number(a.supplyM2)>0).map(a=>Math.floor(Number(a.exclusiveM2))));
+  const aliasKeys=new Set(areas.filter(a=>Number(a.supplyM2)>0&&Number.isFinite(Number(a.exclusiveM2))&&Math.abs(Number(a.exclusiveM2)-Math.round(Number(a.exclusiveM2)))<=0.05)
+    .map(a=>({reported:Math.round(Number(a.exclusiveM2)),canonical:Math.floor(Number(a.exclusiveM2))}))
+    .filter(a=>a.reported!==a.canonical&&kbKeys.has(a.canonical)).map(a=>a.reported));
+  const selectedSize=selPy>=0?d.byPy[selPy]?.sizeKey:null;
+  const rows=d.byPy.filter(p=>!(aliasKeys.has(p.sizeKey)&&kbKeys.has(p.sizeKey-1)&&p.n===0&&p.max==null&&!p.recent));
+  if(rows.length===d.byPy.length)return false;
+  d.byPy=rows;
+  if(selectedSize!=null){const next=rows.findIndex(p=>p.sizeKey===selectedSize);selPy=next>=0?next:-1;}
+  return true;
+}
 function kbAreaPriceCell(p){
   const areas=kbSalePriceData?.areas||[];
   const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
@@ -6648,6 +6662,7 @@ async function loadComplexKbSalePrice(d){
     const result=await response.json();
     if(lastData!==d||complexView!=='sale')return;
     kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
+    removeKbHistoricalAliasSizes(d);
     const table=document.getElementById('pyTable');
     if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
     if(document.getElementById('complexDynamic'))selectPy(selPy);
