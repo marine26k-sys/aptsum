@@ -8922,7 +8922,7 @@ function renderListingUndervalue(d){
     : list.map((x,i)=>`${uvSep(i)}
     <div style="padding:6px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)"><span style="min-width:0">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}${x.urgent?'<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:6px">급매</span>':''}</span><b style="flex:none;white-space:nowrap;color:var(--teal-dark);font-size:11px">${x.py}평 (전용 ${x.area})</b></div>
-      <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x).replace(/^<br>/,' ')}</div>
+      <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
         <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
@@ -9441,12 +9441,12 @@ function listingNameHTML(x, noUrgentBadge){
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
   return `<span class="nm-title"><span>${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span>${urgent}${link}</span>`;
 }
-function listingSubwayHTML(x,color='var(--teal-dark)'){
+function listingSubwayHTML(x,color='var(--teal-dark)',separator=' · '){
   const raw=x?.subwayMinutes;
   if(raw===null||raw===undefined||String(raw).trim()==='')return '';
   const minutes=Number(raw);
   if(!Number.isFinite(minutes)||minutes<0)return '';
-  return `<br><span style="color:${color};font-weight:800">· 지하철 ${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분</span>`;
+  return `<span style="color:${color}">${separator}지하철 ${Number.isInteger(minutes)?minutes:minutes.toFixed(1)}분</span>`;
 }
 // 여러 구가 섞인 결과에서 단지 옆에 구 이름을 붙일지 — 구가 1곳뿐이면 false.
 // 안양처럼 구 이름이 "안양 동안구"·"안양 만안구"로 같은 시로 시작하면 시 이름은 빼고 "동안구"만 보여준다
@@ -9544,7 +9544,7 @@ function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
       <h2${d.individual?' class="listing-complex-title"':''}>${esc(d.individual?d.complexName:(title || shortRegionLabel(d.scopeLabel||'')))}</h2>
-      ${d.individual?`<div style="text-align:center;font-size:12px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${[esc(d.complexRegion||''),built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:'',subwayRow?listingSubwayHTML(subwayRow,'#fff').trim().replace(/^· /,''):null].filter(Boolean).join(' · ')}</div>`:''}
+      ${d.individual?`<div style="text-align:center;font-size:12px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${[esc(d.complexRegion||''),built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:'',subwayRow?listingSubwayHTML(subwayRow,'#fff',''):null].filter(Boolean).join(' · ')}</div>`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
         ${separator}
