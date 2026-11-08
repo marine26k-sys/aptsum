@@ -226,10 +226,11 @@ try {
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
-  .py-summary-table .td-kb .kb-price-columns{display:flex;justify-content:flex-end;gap:5px;max-width:100%;white-space:nowrap}
-  .py-summary-table .td-kb .kb-price-item{display:flex;align-items:center;gap:2px;min-width:0;line-height:1.15}
+  .py-summary-table .td-kb .kb-price-columns{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 5px;max-width:100%;white-space:nowrap}
+  .py-summary-table .td-kb .kb-price-item{display:flex;flex:0 0 auto;align-items:center;gap:2px;line-height:1.15}
   .py-summary-table .td-kb .kb-price-item b{font-size:clamp(9px,2.9vw,12px);letter-spacing:-.25px}
   .py-summary-table .td-kb .kb-price-item span{color:#71839a;font-size:clamp(8px,2.25vw,9px);font-weight:500}
+  .py-summary-table .td-kb .rng{white-space:normal;overflow:visible;text-overflow:clip}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -1426,15 +1427,23 @@ function openNewHigh7(){
 let searchToken = 0;
 let searchAbortController=null;
 let lookupProgressToken=-1,lookupProgressValue=0;
+let lookupProgressTasks=new Map(),lookupProgressTaskToken=-1,lookupProgressTaskId=0;
 function lookupPercent(done,total){return Math.min(95,Math.floor(95*done/Math.max(1,total)));}
 function showLookupProgress(done,total){
-  if(lookupProgressToken!==searchToken){lookupProgressToken=searchToken;lookupProgressValue=0;}
+  if(lookupProgressToken!==searchToken){lookupProgressToken=searchToken;lookupProgressValue=0;lookupProgressTasks=new Map();lookupProgressTaskToken=searchToken;}
   lookupProgressValue=Math.max(lookupProgressValue,lookupPercent(done,total));
   const label='조회 중… '+lookupProgressValue+'%';
   const loadMessage=document.getElementById('loadMsg');if(loadMessage)loadMessage.textContent=label;
   // 진행률을 로딩 영역까지 스크롤하지 않아도 확인할 수 있도록 조회 버튼에도 표시한다.
   const buttons=[document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])];
   buttons.filter(button=>button?.dataset).forEach(button=>{button.dataset.idleLabel||=button.textContent.trim()||'조회';button.textContent=label;});
+}
+function updateFetchProgressTask(token,id,done,total){
+  if(token!==searchToken)return;
+  if(lookupProgressTaskToken!==token){lookupProgressTasks=new Map();lookupProgressTaskToken=token;}
+  lookupProgressTasks.set(id,{done,total});
+  const work=[...lookupProgressTasks.values()];
+  showLookupProgress(work.reduce((sum,task)=>sum+task.done,0),work.reduce((sum,task)=>sum+task.total,0));
 }
 function lookupProgressMap(items,mapper){
   const token=searchToken;let completed=0;showLookupProgress(0,items.length);
@@ -3149,13 +3158,15 @@ async function searchListingComplexNames(query,myToken,{occupancy='available',fl
 // (2026.10 20→21: 네이버 전용·공급면적 매칭표의 확정 타입을 우선 적용하고 전용 소수값을 구분)
 // Split district live and historical transactions now share the selected district calibration.
 const CACHE_VER = 27;
+// 분양권 면적 보정값은 별도 버전으로 관리해 매매·전세 전체 캐시를 비우지 않고 기존 분양권 캐시만 갱신한다.
+const CACHE_VER_P = 28;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
 (function cleanupOldCache(){
   try{
     const versionedRe = /^apc[PJ]?:\d+:/;
-    const keep = 'apc:'+CACHE_VER+':', keepP = 'apcP:'+CACHE_VER+':', keepJ = 'apcJ:'+CACHE_VER+':';
+    const keep = 'apc:'+CACHE_VER+':', keepP = 'apcP:'+CACHE_VER_P+':', keepJ = 'apcJ:'+CACHE_VER+':';
     const toRemove = [];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
@@ -3261,11 +3272,16 @@ function applyMonthResults(cache, chunk, result, now) {
 }
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];const token=searchToken;
+  const track=token===searchToken&&document.getElementById('loading')?.classList.contains('on')&&mode!=='compare'&&regionSel.length<=1&&!isAllScope(sel.value);
+  const totalWork=chunks.reduce((sum,chunk)=>sum+chunk.length,0),taskId=track?++lookupProgressTaskId:null;
+  let completedWork=0;
+  if(track)updateFetchProgressTask(token,taskId,0,totalWork);
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     if(token!==searchToken)break;
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
-    if(token===searchToken && document.getElementById('loading')?.classList.contains('on') && mode!=='compare' && regionSel.length<=1 && !isAllScope(sel.value))showLookupProgress(Math.min(i+batch.length,chunks.length),chunks.length);
+    completedWork+=batch.reduce((sum,chunk)=>sum+chunk.length,0);
+    if(track)updateFetchProgressTask(token,taskId,completedWork,totalWork);
   }
   return results;
 }
@@ -3312,7 +3328,7 @@ function lsLoadP(lawd){
   if(lsLoadedP[lawd]) return;
   lsLoadedP[lawd] = true;
   try{
-    const raw = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':'+lawd) || 'null');
+    const raw = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':'+lawd) || 'null');
     if(!raw) return;
     const cache = monthCacheP[lawd] = monthCacheP[lawd] || {};
     for(const [ym, e] of Object.entries(raw)){
@@ -3326,19 +3342,19 @@ function lsSaveP(lawd){
     const cache = monthCacheP[lawd]; if(!cache) return;
     const out = {};
     for(const [ym, e] of Object.entries(cache)) out[ym] = { t: e.t, i: e.items.map(t => LS_FIELDS_P.map(k => t[k])) };
-    localStorage.setItem('apcP:'+CACHE_VER+':'+lawd, JSON.stringify(out));
-    const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+    localStorage.setItem('apcP:'+CACHE_VER_P+':'+lawd, JSON.stringify(out));
+    const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':meta') || '{}');
     meta[lawd] = Date.now();
-    localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+    localStorage.setItem('apcP:'+CACHE_VER_P+':meta', JSON.stringify(meta));
   }catch(e){
     // 용량 초과 → 가장 오래 안 쓴 지역부터 삭제 후 1회 재시도 (매매 캐시 lsSave와 동일한 정책)
     try{
-      const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+      const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':meta') || '{}');
       const victims = Object.entries(meta).filter(([k])=>k!==lawd).sort((a,b)=>a[1]-b[1]);
       if(victims.length){
-        localStorage.removeItem('apcP:'+CACHE_VER+':'+victims[0][0]);
+        localStorage.removeItem('apcP:'+CACHE_VER_P+':'+victims[0][0]);
         delete meta[victims[0][0]];
-        localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+        localStorage.setItem('apcP:'+CACHE_VER_P+':meta', JSON.stringify(meta));
         lsSaveP(lawd);
       }
     }catch(e2){}
@@ -3346,7 +3362,7 @@ function lsSaveP(lawd){
 }
 async function postFetchP(lawd, yms){
   const q = yms.slice().sort().join(',');
-  const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
+  const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER_P}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
   const d = await res.json().catch(()=>({}));
   if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
   if (!Array.isArray(d.items) || !Array.isArray(d.failedMonths)) throw new Error('월별 응답 형식 오류');
@@ -6693,7 +6709,7 @@ function pyTableHTML(d){
 async function loadComplexKbSalePrice(d){
   if(!d||complexView!=='sale')return;
   const key=kbSaleKey(d);
-  if(kbSalePriceKey===key&&kbSalePriceLoaded)return;
+  if(kbSalePriceKey===key&&kbSalePriceLoaded&&!kbSalePriceError)return;
   if(kbSalePricePromise?.key===key)return kbSalePricePromise.promise;
   kbSalePriceError=false;
   const [lawd,dong]=key.split('|');
@@ -6707,18 +6723,22 @@ async function loadComplexKbSalePrice(d){
       result=await response.json();
       if(result.complex?.areas?.some(area=>Number(area.saleGeneralManwon)>0))break;
     }
-    if(lastData!==d||complexView!=='sale')return;
-    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
-    const table=document.getElementById('pyTable');
-    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
-    if(document.getElementById('complexDynamic'))selectPy(selPy);
-    const note=document.getElementById('kbSalePriceNote');
-    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
+    if(lastData!==d)return;
+    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=!result.complex;kbSalePriceLoaded=true;
+    if(complexView==='sale'){
+      const table=document.getElementById('pyTable');
+      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+      if(document.getElementById('complexDynamic'))selectPy(selPy);
+      const note=document.getElementById('kbSalePriceNote');
+      if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
+    }
   })().catch(error=>{
-    if(lastData!==d||complexView!=='sale')return;
+    if(lastData!==d)return;
     kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
-    const table=document.getElementById('pyTable');
-    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    if(complexView==='sale'){
+      const table=document.getElementById('pyTable');
+      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    }
   }).finally(()=>{if(kbSalePricePromise?.key===key)kbSalePricePromise=null;});
   kbSalePricePromise={key,promise};
   return promise;
