@@ -211,7 +211,6 @@ try {
   .listing-ask-map-cell b{display:block;font-size:8px;font-size:clamp(6px,2cqw,8px);font-weight:700;white-space:nowrap;overflow:hidden;overflow-wrap:normal;word-break:keep-all;letter-spacing:-.4px}
   .listing-ask-map-cell strong{display:block;margin-top:1px;font-size:9px;font-size:clamp(6px,2.3cqw,9px);font-weight:900;white-space:nowrap}
   .listing-ask-map-cell small{display:block;margin-top:1px;color:rgba(15,43,61,.68);font-size:7px;font-size:clamp(5px,1.7cqw,7px);white-space:nowrap}
-  .listing-kb-chip{display:inline;color:var(--teal-dark);font-weight:700;white-space:nowrap}
   .listing-ask-map-legend{padding:2px 0 6px;text-align:center;color:var(--sub);font-size:9px}.listing-ask-map-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;overflow:hidden}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
 
@@ -226,11 +225,6 @@ try {
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
-  .py-summary-table .td-kb .kb-price-columns{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 5px;max-width:100%;white-space:nowrap}
-  .py-summary-table .td-kb .kb-price-item{display:flex;flex:0 0 auto;align-items:center;gap:2px;line-height:1.15}
-  .py-summary-table .td-kb .kb-price-item b{font-size:clamp(9px,2.9vw,12px);letter-spacing:-.25px}
-  .py-summary-table .td-kb .kb-price-item span{color:#71839a;font-size:clamp(8px,2.25vw,9px);font-weight:500}
-  .py-summary-table .td-kb .rng{white-space:normal;overflow:visible;text-overflow:clip}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -274,9 +268,6 @@ try {
   .th-max{color:#fff;background:var(--red);border-radius:6px 6px 0 0;border-bottom:2px solid var(--red)}
   .td-max{background:#FEF2F2}
   .td-max b{color:var(--red);font-size:13px}
-  .th-kb{color:var(--teal-dark);background:#DDF2F2;border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
-  .td-kb{background:#F0FAFA}
-  .td-kb b{color:var(--teal-dark);font-size:12.5px}
   .th-recent{color:var(--navy);background:#E8EEF4;border-radius:6px 6px 0 0;border-bottom:2px solid #A9B8C8}
   .td-recent{background:#F4F7FA}
   .td-recent b{color:var(--navy)}
@@ -357,12 +348,6 @@ try {
   .cmp-summary-table .cmp-size-row th,.cmp-summary-table .cmp-size-row td{background:var(--teal-light-soft);color:var(--navy)}
   .cmp-summary-table .cmp-current-row th{background:var(--teal-light-soft)}
   .cmp-summary-table .cmp-current-row td{background:var(--teal-light-soft)}
-  .cmp-summary-table .cmp-kb-row th{background:#EAF6F6}
-  .cmp-summary-table .cmp-kb-row td{background:#F0FAFA;color:var(--teal-dark)}
-  .cmp-kb-price-list{display:flex;flex-wrap:wrap;gap:2px 7px;justify-content:flex-start}
-  .cmp-kb-price-item{display:inline-flex;align-items:baseline;gap:2px;white-space:nowrap}
-  .cmp-kb-price-item b{color:var(--teal-dark);font-size:12px}
-  .cmp-kb-price-item small,.cmp-kb-types{color:var(--sub);font-size:9px;font-weight:500}
   .cmp-summary-heading{display:flex;align-items:flex-start;gap:4px}
   .cmp-summary-dot{flex:0 0 7px;width:7px;height:7px;margin-top:5px;border-radius:50%}
   .cmp-summary-name{flex:1;min-width:0;text-wrap:balance;word-break:break-all}
@@ -6652,102 +6637,21 @@ function recentAverageCell(a){
   const sub=a.carriedFrom?esc(a.carriedFrom):`${a.n}건`;
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
-let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
-function kbSaleKey(d){
-  const complex=d?.complexIndexEntry;
-  return `${complex?.lawd||d?.lawd||d?.splitLawd||sel.value}|${complex?.umd||d?.umd||''}|${complex?.name||d?.name||''}`;
-}
-function kbSupplyPy(p){
-  const areas=kbSalePriceData?.areas||[];
-  const candidates=areas.filter(a=>Math.floor(Number(a.exclusiveM2))===p.sizeKey&&Number(a.supplyM2)>0);
-  if(!candidates.length)return null;
-  const counts=new Map();
-  candidates.forEach(a=>{
-    // KB 타입 앞 숫자는 해당 타입의 공급평형 표기이므로 보간값 대신 우선 사용한다.
-    const typePy=String(a.type||'').trim().match(/^(\d+)/)?.[1];
-    const py=typePy?Number(typePy):Math.floor(Number(a.supplyM2)/3.3);
-    const households=Number(a.households);
-    const weight=Number.isFinite(households)&&households>0?households:1;
-    if(Number.isFinite(py)&&py>0)counts.set(py,(counts.get(py)||0)+weight);
-  });
-  if(!counts.size)return null;
-  return `${[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0]}평`;
-}
-function complexPyLabel(p){
-  return kbSalePriceLoaded&&kbSalePriceKey===kbSaleKey(lastData)?kbSupplyPy(p)||p.py:p.py;
-}
-function kbAreaPriceCell(p){
-  const areas=kbSalePriceData?.areas||[];
-  const matching=areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey);
-  const entries=[...new Map(matching.map(a=>{
-    const price=Math.round(Number(a.saleGeneralManwon)/1000)/10;
-    const type=String(a.type||'').trim().match(/([A-Za-z]\d*)$/)?.[1]?.toUpperCase()||'';
-    return [`${price}|${type}`,{price,type}];
-  })).values()].sort((a,b)=>a.type&&b.type?a.type.localeCompare(b.type,'ko',{numeric:true}):a.price-b.price);
-  const prices=[...new Set(entries.map(a=>a.price))].sort((a,b)=>a-b);
-  if(!entries.length)return '<td class="tr-r td-kb"><span class="rng">-</span></td>';
-  const label=prices.length>1
-    ? `<div class="kb-price-columns">${entries.map(a=>`<span class="kb-price-item"><b>${a.price.toFixed(1)}</b>${a.type?`<span>${esc(a.type)}</span>`:''}</span>`).join('')}</div>`
-    : `<b>${prices[0].toFixed(1)}</b>`;
-  const types=[...new Set(matching.map(a=>String(a.type||'').trim()).filter(Boolean))];
-  const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||null).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
-  const typeNote=prices.length===1&&typeLabels.length?`<div class="rng">${typeLabels.map(esc).join(' · ')}</div>`:'';
-  return `<td class="tr-r td-kb">${label}${typeNote}</td>`;
-}
+function complexPyLabel(p){return p.py;}
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
   const isSale=complexView==='sale';
-  const key=kbSaleKey(lastData);
-  const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
-  const columnWidths=isSale?['22%','20%','20%','19%','19%']:['24%','29%','29%','18%'];
+  const columnWidths=['24%','25%','25%','26%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th>${isSale?'<th class="tr-r th-kb">KB시세<br>일반가</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>평형</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(complexPyLabel(p))}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
-      ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
+      <td>${esc(p.py)}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
   </table>`;
-}
-async function loadComplexKbSalePrice(d){
-  if(!d||complexView!=='sale')return;
-  const key=kbSaleKey(d);
-  if(kbSalePriceKey===key&&kbSalePriceLoaded&&!kbSalePriceError)return;
-  if(kbSalePricePromise?.key===key)return kbSalePricePromise.promise;
-  kbSalePriceError=false;
-  const [lawd,dong]=key.split('|');
-  const names=[d.complexIndexEntry?.name,d.name,...(d.complexIndexEntry?.names||[])].filter((value,index,list)=>value&&list.indexOf(value)===index);
-  const promise=(async()=>{
-    let result=null;
-    for(const name of names){
-      const query=new URLSearchParams({kind:'kb-sale-general',lawd,name,dong,matchVersion:'2'});
-      const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
-      if(!response.ok)throw Error('KB시세를 불러오지 못했습니다.');
-      result=await response.json();
-      if(result.complex?.areas?.some(area=>Number(area.saleGeneralManwon)>0))break;
-    }
-    if(lastData!==d)return;
-    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
-    if(complexView==='sale'){
-      const table=document.getElementById('pyTable');
-      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
-      if(document.getElementById('complexDynamic'))selectPy(selPy);
-      const note=document.getElementById('kbSalePriceNote');
-      if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
-    }
-  })().catch(error=>{
-    if(lastData!==d)return;
-    kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
-    if(complexView==='sale'){
-      const table=document.getElementById('pyTable');
-      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
-    }
-  }).finally(()=>{if(kbSalePricePromise?.key===key)kbSalePricePromise=null;});
-  kbSalePricePromise={key,promise};
-  return promise;
 }
 
 function tradesHTML(d, footNote){
@@ -6969,8 +6873,7 @@ function complexDynamicHTML(){
       </div>
       <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
-      ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:6px 0 0">KB부동산 매매 일반가 (대출 기준가)</div>':''}
-      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 평균 시세는 최근 1개월 거래 기준</div>
+      <div class="rng" style="margin-top:5px">평균 시세는 최근 1개월 거래 기준</div>
     </div>
 
     <div class="sec">
@@ -7562,11 +7465,9 @@ function renderComplex(d){
     </div>
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
-  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 KB 공급평형 우선 표시, KB 자료가 없으면 전용면적 환산 추정치 표시</div>`;
+  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 평형은 전용면적을 기준으로 표시</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
-  if(kbSalePriceKey!==kbSaleKey(d)){kbSalePriceData=null;kbSalePriceError=false;kbSalePriceLoaded=false;}
-  loadComplexKbSalePrice(d);
   const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
   infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
   checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
@@ -7831,51 +7732,6 @@ function syncCompareSummarySticky(){
   floating.style.top=top+'px';floating.style.left=rect.left+'px';floating.style.width=wrapper.clientWidth+'px';floating.style.height=headRect.height+'px';floating.hidden=false;floating.scrollLeft=wrapper.scrollLeft;
 }
 
-function compareKbCell(c,p){
-  if(!p)return '—';
-  if(!c.kbSaleState||c.kbSaleState==='loading')return '<span class="cmp-price-date">조회 중…</span>';
-  if(c.kbSaleState==='error'||c.kbSaleState==='missing'||!c.kbSaleData)return '—';
-  const matching=(c.kbSaleData.areas||[]).filter(a=>Number(a.saleGeneralManwon)>0&&Math.floor(Number(a.exclusiveM2))===Number(p.area));
-  const entries=[...new Map(matching.map(a=>{
-    const price=Math.round(Number(a.saleGeneralManwon)/1000)/10;
-    const type=String(a.type||'').trim().match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||'';
-    return [`${price}|${type}`,{price,type}];
-  })).values()].sort((a,b)=>a.type&&b.type?a.type.localeCompare(b.type,'ko',{numeric:true}):a.price-b.price);
-  if(!entries.length)return '—';
-  return `<span class="cmp-kb-price-list">${entries.map(entry=>`<span class="cmp-kb-price-item"><b>${entry.price.toFixed(1)}</b>${entry.type?`<small>${esc(entry.type)}</small>`:''}</span>`).join('')}</span>`;
-}
-
-async function loadCompareKbPrices(d){
-  const token=searchToken;
-  const pending=d.complexes.filter(c=>!c.kbSaleState||c.kbSaleState==='error');
-  if(!pending.length)return;
-  const tasks=pending.map(c=>{
-    c.kbSaleState='loading';
-    return (async()=>{
-      const index=c.complexIndexEntry;
-      const lawd=index?.lawd||c.lawd,dong=index?.umd||c.umd;
-      const names=[index?.name,c.name,...(index?.names||[])].filter((name,i,list)=>name&&list.indexOf(name)===i);
-      let matched=null,succeeded=false;
-      for(const name of names){
-        try{
-          const query=new URLSearchParams({kind:'kb-sale-general',lawd,name,dong,matchVersion:'2'});
-          const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
-          if(!response.ok)continue;
-          succeeded=true;
-          const result=await response.json();
-          if(result.complex){matched=result.complex;if(matched.areas?.some(area=>Number(area.saleGeneralManwon)>0))break;}
-        }catch{}
-      }
-      c.kbSaleData=matched;
-      c.kbSaleState=matched?'ready':succeeded?'missing':'error';
-    })();
-  });
-  await Promise.all(tasks);
-  if(token!==searchToken||lastData!==d||mode!=='compare')return;
-  const table=document.getElementById('cmpTable');
-  if(table){table.innerHTML=compareSummaryHTML(d);fitCompareSummaryTables();syncCompareSummarySticky();}
-}
-
 function compareSummaryHTML(d){
   const chosen=d.complexes.map((c,i)=>({c,p:c.pys.find(p=>p.area===cmpPyMap[i])}));
   const region=c=>{
@@ -7906,7 +7762,6 @@ function compareSummaryHTML(d){
     ${row('용적률',c=>c.hh?.far!=null?`${value(c.hh.far)}%`:'—')}
     ${row('건폐율',c=>c.hh?.bcr!=null?`${value(c.hh.bcr)}%`:'—')}
     ${row('최근 3년 최고가',(_c,p)=>deal(p?.high3))}
-    ${row('KB시세 일반가',compareKbCell,null,'cmp-kb-row')}
     ${row('최근 시세',(_c,p)=>money(p?.currentPrice?.v),monthAt(0),'cmp-current-row')}
     ${row('1개월 전',(_c,p)=>change(p?.changes?.m1),monthAt(1))}
     ${row('3개월 전',(_c,p)=>change(p?.changes?.m3),monthAt(3))}
@@ -7934,7 +7789,6 @@ function drawCompare(d){
     </span>`;
   }).join('');
   document.getElementById('cmpTable').innerHTML = compareSummaryHTML(d);
-  loadCompareKbPrices(d);
   requestAnimationFrame(fitListingHeadingNames);
   if(document.fonts)document.fonts.ready.then(fitListingHeadingNames);
 }
@@ -7971,7 +7825,7 @@ function renderCompare(d,areas){
     <div class="sec">
       <h3>요약 (단지별 선택 평형 기준)</h3>
       <div id="cmpTable" class="cmp-summary-scroll" tabindex="0" role="region" aria-label="단지 비교 요약 표, 좌우로 스크롤"></div>
-      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. KB시세는 같은 전용면적의 매매 일반가를 타입별로 표시하며, 자료가 없으면 — · 최근 시세는 현재월 월평균가 · 무거래월은 직전 평균가 유지.</div>
+      <div class="chart-note">좌우로 밀어 모든 단지를 비교하세요. 최근 시세는 현재월 월평균가이며, 거래가 없는 달은 직전 평균가를 이어서 표시합니다.</div>
     </div>
     <div class="sec">
       <h3>지하철·학교 비교</h3>
@@ -8343,7 +8197,7 @@ ${uvSep(i)}
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</div>
-          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${listingKbPriceHTML(x)}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
@@ -9008,7 +8862,7 @@ function analyzeListingUndervalue(all, priceFilter){
     // 5% 이상 낮으면 채택. 25% 넘게(-26% 이하) 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
     // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25% 넘게 — -25%까지는 표시.
     if(gapPct <= -5 && gapPct >= -25){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, kbPrice:o.kbPrice, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
@@ -9082,8 +8936,8 @@ function renderListingUndervalue(d){
       <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}${x.kbPrice>0?`<div class="sub">${listingKbPriceHTML(x,'')}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}${p.kbPrice>0?`<div class="sub">${listingKbPriceHTML(p,'')}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -9598,10 +9452,6 @@ function listingNameHTML(x, noUrgentBadge){
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
   return `<span class="nm-title"><span>${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span>${urgent}${link}</span>`;
 }
-function listingKbPriceHTML(x,separator=' · '){
-  const price=Number(x?.kbPrice);
-  return Number.isFinite(price)&&price>0?`${separator}<span class="listing-kb-chip">KB시세 ${price.toFixed(1)}억</span>`:'';
-}
 function listingSubwayHTML(x,color='var(--teal-dark)',separator=' · '){
   const raw=x?.subwayMinutes;
   if(raw===null||raw===undefined||String(raw).trim()==='')return '';
@@ -9621,8 +9471,8 @@ function regionMulti(list){
 }
 function guShort(gu, m){ return (m && m.pre && gu.startsWith(m.pre)) ? gu.slice(m.pre.length) : gu; }
 function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=false){
-  if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>${listingKbPriceHTML(x)}`;
-  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}${listingKbPriceHTML(x)}`;
+  if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>`;
+  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}`;
 }
 // 실매물 결과를 실거래·가격지수와 공통 11열 타일 배치로 요약한다.
 // 매물 행은 평형별 최저 호가이므로, 지역별로 그 값의 평균과 포함 매물 수를 표시한다.
@@ -9650,24 +9500,23 @@ function listingAskMapHTML(d){
     const name=info?.name||String(row.gu||'');
     if(!name)continue;
     const key=lawd||name;
-    const entry=groups.get(key)||{lawd,name,province:info?.province||LAWD_TO_PROVINCE[lawd]||'',values:[],kbValues:[]};
+    const entry=groups.get(key)||{lawd,name,province:info?.province||LAWD_TO_PROVINCE[lawd]||'',values:[]};
     entry.values.push(metric);
-    const kb=Number(row.kbPrice);if(Number.isFinite(kb)&&kb>0)entry.kbValues.push(kb);
     groups.set(key,entry);
   }
   if(!groups.size)return '';
-  const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length,kbAvg:x.kbValues.length?x.kbValues.reduce((a,b)=>a+b,0)/x.kbValues.length:null}));
+  const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length}));
   const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[`${x.province}:${x.name}`,x]));
-  for(const province of ['서울','경기','인천','부산']){const items=stats.filter(x=>x.province===province),values=items.flatMap(x=>x.values),kbValues=items.flatMap(x=>x.kbValues);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length,kbValues,kbAvg:kbValues.length?kbValues.reduce((a,b)=>a+b,0)/kbValues.length:null});}
+  for(const province of ['서울','경기','인천','부산']){const items=stats.filter(x=>x.province===province),values=items.flatMap(x=>x.values);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length});}
   const rowsHTML=[];
   window.APTSUM_METRO_TILE_MAP.forEach((placements,rowIndex)=>{
     const cells=placements.map(([column,province,name])=>{
       const stat=byName.get(`${province}:${name}`);
       if(!stat)return '';
-      const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`;
+      const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · ${stat.values.length}개 매물`;
       const value=rateMode?`${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}%`:`${stat.avg.toFixed(1)}억`;
       const outline=window.APTSUM_METRO_TILE_OUTLINE(rowIndex,column,province);
-      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small>${stat.kbAvg!==null?`<small><span class="listing-kb-chip">KB ${stat.kbAvg.toFixed(1)}억</span></small>`:''}</div>`;
+      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small></div>`;
     }).filter(Boolean).join('');
     if(cells)rowsHTML.push(`<div class="listing-ask-map-row">${cells}</div>`);
   });
@@ -9843,7 +9692,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
 }
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
-  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡${listingKbPriceHTML(x)}</small>`;
+  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
   return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 네이버 매물 보기">${content}</a>`
     : `<span class="price ${large?'large':''}">${content}</span>`;
 }
