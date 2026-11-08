@@ -8186,7 +8186,7 @@ ${uvSep(i)}
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div class="clickable" style="font-weight:700;font-size:13px;line-height:1.35;color:var(--navy)" onclick="quick('${esc(x.apt)}'${x.gu?`,'${esc(x.gu)}'`:''})">${esc(aptLabel(x))}</div>
-          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}</div>
+          <div class="rng" style="margin-top:2px"><b style="color:var(--teal-dark)">${esc(x.mainPy)}</b>${(multiRegion&&x.gu)?` · ${esc(guShort(x.gu, multiRegion))} `:' · '}${esc(x.umd)}${x.build?` · ${buildAgeLabel(x.build)}`:''}${x.hh? ` · ${x.hh.hhcnt.toLocaleString()}세대`:''}${listingKbPriceHTML(x)}</div>
         </div>
       </div>
       <div class="tbl-scroll"><table class="peer-table" style="margin-top:10px">
@@ -8851,7 +8851,7 @@ function analyzeListingUndervalue(all, priceFilter){
     // 5% 이상 낮으면 채택. 25% 넘게(-26% 이하) 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
     // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25% 넘게 — -25%까지는 표시.
     if(gapPct <= -5 && gapPct >= -25){
-      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
+      const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, kbPrice:o.kbPrice, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
@@ -8925,8 +8925,8 @@ function renderListingUndervalue(d){
       <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}${x.kbPrice>0?`<div class="sub" style="color:var(--teal-dark)">KB시세 ${x.kbPrice.toFixed(1)}억</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}${p.kbPrice>0?`<div class="sub" style="color:var(--teal-dark)">KB시세 ${p.kbPrice.toFixed(1)}억</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -9441,6 +9441,10 @@ function listingNameHTML(x, noUrgentBadge){
   const urgent = (x.urgent && !noUrgentBadge) ? '<span class="extag" style="color:#B91C1C;background:#FEE2E2;border-color:#FCA5A5;margin-left:4px">급매</span>' : '';
   return `<span class="nm-title"><span>${esc(complexDisplayName(x.lawd||x.code||'',x.apt,x.umd,x.gu))}</span>${urgent}${link}</span>`;
 }
+function listingKbPriceHTML(x,separator=' · '){
+  const price=Number(x?.kbPrice);
+  return Number.isFinite(price)&&price>0?`<span style="color:var(--teal-dark);font-weight:700">${separator}KB시세 ${price.toFixed(1)}억</span>`:'';
+}
 function listingSubwayHTML(x,color='var(--teal-dark)',separator=' · '){
   const raw=x?.subwayMinutes;
   if(raw===null||raw===undefined||String(raw).trim()==='')return '';
@@ -9460,8 +9464,8 @@ function regionMulti(list){
 }
 function guShort(gu, m){ return (m && m.pre && gu.startsWith(m.pre)) ? gu.slice(m.pre.length) : gu; }
 function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=false){
-  if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>`;
-  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}`;
+  if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>${listingKbPriceHTML(x)}`;
+  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}${listingKbPriceHTML(x)}`;
 }
 // 실매물 결과를 실거래·가격지수와 공통 11열 타일 배치로 요약한다.
 // 매물 행은 평형별 최저 호가이므로, 지역별로 그 값의 평균과 포함 매물 수를 표시한다.
@@ -9489,22 +9493,24 @@ function listingAskMapHTML(d){
     const name=info?.name||String(row.gu||'');
     if(!name)continue;
     const key=lawd||name;
-    const entry=groups.get(key)||{lawd,name,province:info?.province||LAWD_TO_PROVINCE[lawd]||'',values:[]};
-    entry.values.push(metric);groups.set(key,entry);
+    const entry=groups.get(key)||{lawd,name,province:info?.province||LAWD_TO_PROVINCE[lawd]||'',values:[],kbValues:[]};
+    entry.values.push(metric);
+    const kb=Number(row.kbPrice);if(Number.isFinite(kb)&&kb>0)entry.kbValues.push(kb);
+    groups.set(key,entry);
   }
   if(!groups.size)return '';
-  const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length}));
+  const stats=[...groups.values()].map(x=>({...x,avg:x.values.reduce((a,b)=>a+b,0)/x.values.length,kbAvg:x.kbValues.length?x.kbValues.reduce((a,b)=>a+b,0)/x.kbValues.length:null}));
   const min=Math.min(...stats.map(x=>x.avg)),max=Math.max(...stats.map(x=>x.avg)),byName=new Map(stats.map(x=>[`${x.province}:${x.name}`,x]));
-  for(const province of ['서울','경기','인천','부산']){const values=stats.filter(x=>x.province===province).flatMap(x=>x.values);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length});}
+  for(const province of ['서울','경기','인천','부산']){const items=stats.filter(x=>x.province===province),values=items.flatMap(x=>x.values),kbValues=items.flatMap(x=>x.kbValues);if(values.length)byName.set(`${province}:${province}`,{values,avg:values.reduce((a,b)=>a+b,0)/values.length,kbValues,kbAvg:kbValues.length?kbValues.reduce((a,b)=>a+b,0)/kbValues.length:null});}
   const rowsHTML=[];
   window.APTSUM_METRO_TILE_MAP.forEach((placements,rowIndex)=>{
     const cells=placements.map(([column,province,name])=>{
       const stat=byName.get(`${province}:${name}`);
       if(!stat)return '';
-      const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · ${stat.values.length}개 매물`;
+      const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`;
       const value=rateMode?`${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}%`:`${stat.avg.toFixed(1)}억`;
       const outline=window.APTSUM_METRO_TILE_OUTLINE(rowIndex,column,province);
-      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small></div>`;
+      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small>${stat.kbAvg!==null?`<small>KB ${stat.kbAvg.toFixed(1)}억</small>`:''}</div>`;
     }).filter(Boolean).join('');
     if(cells)rowsHTML.push(`<div class="listing-ask-map-row">${cells}</div>`);
   });
@@ -9680,7 +9686,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
 }
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
-  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
+  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡${listingKbPriceHTML(x)}</small>`;
   return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 네이버 매물 보기">${content}</a>`
     : `<span class="price ${large?'large':''}">${content}</span>`;
 }
