@@ -6626,12 +6626,12 @@ function pyTableHTML(d){
   const isSale=complexView==='sale';
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
-  const columnWidths=isSale?['12%','14%','17%','18%','20%','19%']:['14%','15%','23%','24%','24%'];
+  const columnWidths=isSale?['14%','12%','17%','18%','20%','19%']:['15%','14%','23%','24%','24%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>전용면적</th><th>평형·타입</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
+    <tr><th>평형·타입</th><th>전용면적</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
-      <td>${p.sizeKey}㎡</td>
       <td>${esc(complexPyLabel(p))}${isSale&&hasKb&&kbTypesForSize(p).length?`<div class="rng">${kbTypesForSize(p).map(esc).join(' · ')}</div>`:''}</td>
+      <td>${p.sizeKey}㎡</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
       ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
