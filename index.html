@@ -6574,8 +6574,10 @@ function kbAreaPriceCell(p){
   const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
   if(!prices.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
   const label=prices.length===1?`${prices[0].toFixed(1)}`:`${prices[0].toFixed(1)}~${prices.at(-1).toFixed(1)}`;
-  const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>a.type).filter(Boolean))];
-  return `<td class="tr-r td-kb"><b>${label}</b><div class="rng">${prices.length===1?(types.length>1?`${types.length}개 타입`:(types[0]||'KB 일반가')):'타입별'}</div></td>`;
+  const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>String(a.type||'').trim()).filter(Boolean))];
+  const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||type).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
+  const typeNote=typeLabels.length?typeLabels.map(esc).join(' · '):'KB 일반가';
+  return `<td class="tr-r td-kb"><b>${label}</b><div class="rng">${typeNote}</div></td>`;
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
