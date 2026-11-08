@@ -6677,15 +6677,15 @@ function tradesHTML(d, footNote){
   const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
   const remain = full.length - list.length;
   return `<table>
-    <tr><th>일자</th><th>평형</th><th>층</th><th class="tr-r">금액</th></tr>
+    <tr><th>일자</th><th>평형</th><th>타입</th><th>층</th><th class="tr-r">금액</th></tr>
     ${list.map(t=>{
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?complexTradeTypeData?.[exactExclusiveKey(t.area)]:null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?`<div class="rng" style="font-size:9px">타입 ${exactTypes.map(esc).join(' · ')}</div>`:'';
-      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${typeLabel}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(esc).join(' · '):'-';
+      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
