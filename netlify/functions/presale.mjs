@@ -1,6 +1,6 @@
 import {fetchAllRtmsPages} from '../../shared/rtms-pages.mjs';
 import {latestTradeMonth} from '../../shared/latest-trade-data.mjs';
-import { applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
+import { applyPresaleSupplyAreaOverrides, applySupplyAreaOverrides } from "../../shared/supply-area-loader.mjs";
 import { currentAndPrevYm, collectMonths } from "../../shared/month-fetch.mjs";
 // Netlify Function — 국토부 아파트 분양권전매 실거래 월 데이터 샤드 조회 (분석은 클라이언트에서)
 // 환경변수: DATA_GO_KR_KEY(필수, analyze.mjs와 공용)
@@ -91,7 +91,9 @@ function areaToPy(area) {
 // 공용 행을 다 못 잡은 것"(수집 실패)이다 — 전체 13,680개 타입 중 23.4%가 여기 해당했고, 그중 13.7%는
 // 공용이 아예 0이었다. 아래 ±3평 가드로는 이게 안 걸러진다(예: 전용 59㎡가 22평으로 나와도 보간값
 // 25평과 3평 차이라 그대로 통과) → 잘못된 평형이 화면에 그대로 나갔음.
-const hubPyOverride = applySupplyAreaOverrides;
+const hubPyOverride = async (items, lawd, origin) => applySupplyAreaOverrides(
+  await applyPresaleSupplyAreaOverrides(items, lawd, origin), lawd, origin,
+);
 
 function xtag(b, name) {
   const m = b.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}\\s*>`));

@@ -222,8 +222,8 @@ try {
   .py-summary-table th,.py-summary-table td{padding:5px 2px;overflow:hidden}
   .py-summary-table td{vertical-align:top}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
-  .py-summary-table td:first-child{white-space:nowrap}
-  .py-summary-table td:first-child .rng{white-space:normal}
+  .py-summary-table td:nth-child(1),.py-summary-table td:nth-child(2){white-space:nowrap}
+  .py-summary-table td:nth-child(1) .rng,.py-summary-table td:nth-child(2) .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
   .peer-table{table-layout:fixed}
@@ -6606,29 +6606,19 @@ function kbSupplyPy(p){
 function complexPyLabel(p){
   return kbSalePriceLoaded&&kbSalePriceKey===kbSaleKey(lastData)?kbSupplyPy(p)||p.py:p.py;
 }
-function removeKbHistoricalAliasSizes(d){
-  if(!d?.byPy?.length)return false;
-  const areas=kbSalePriceData?.areas||[];
-  const kbKeys=new Set(areas.filter(a=>Number(a.supplyM2)>0).map(a=>Math.floor(Number(a.exclusiveM2))));
-  const aliasKeys=new Set(areas.filter(a=>Number(a.supplyM2)>0&&Number.isFinite(Number(a.exclusiveM2))&&Math.abs(Number(a.exclusiveM2)-Math.round(Number(a.exclusiveM2)))<=0.05)
-    .map(a=>({reported:Math.round(Number(a.exclusiveM2)),canonical:Math.floor(Number(a.exclusiveM2))}))
-    .filter(a=>a.reported!==a.canonical&&kbKeys.has(a.canonical)).map(a=>a.reported));
-  const selectedSize=selPy>=0?d.byPy[selPy]?.sizeKey:null;
-  const rows=d.byPy.filter(p=>!(aliasKeys.has(p.sizeKey)&&kbKeys.has(p.sizeKey-1)&&p.n===0&&p.max==null&&!p.recent));
-  if(rows.length===d.byPy.length)return false;
-  d.byPy=rows;
-  if(selectedSize!=null){const next=rows.findIndex(p=>p.sizeKey===selectedSize);selPy=next>=0?next:-1;}
-  return true;
+function kbTypesForSize(p){
+  const types=[...new Set((kbSalePriceData?.areas||[])
+    .filter(a=>Math.floor(Number(a.exclusiveM2))===p.sizeKey)
+    .map(a=>String(a.type||'').trim().match(/^\d+([A-Za-z]\d*)$/)?.[1]?.toUpperCase())
+    .filter(Boolean))];
+  return types.sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
 }
 function kbAreaPriceCell(p){
   const areas=kbSalePriceData?.areas||[];
   const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
   if(!prices.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
   const label=prices.length===1?`${prices[0].toFixed(1)}`:`${prices[0].toFixed(1)}~${prices.at(-1).toFixed(1)}`;
-  const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>String(a.type||'').trim()).filter(Boolean))];
-  const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||null).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
-  const typeNote=typeLabels.length?`<div class="rng">${typeLabels.map(esc).join(' · ')}</div>`:'';
-  return `<td class="tr-r td-kb"><b>${label}</b>${typeNote}</td>`;
+  return `<td class="tr-r td-kb"><b>${label}</b></td>`;
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
@@ -6636,11 +6626,12 @@ function pyTableHTML(d){
   const isSale=complexView==='sale';
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
-  const columnWidths=isSale?['24%','17%','19%','20%','20%']:['24%','18%','29%','29%'];
+  const columnWidths=isSale?['12%','14%','17%','18%','20%','19%']:['14%','15%','23%','24%','24%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
+    <tr><th>전용면적</th><th>평형·타입</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(complexPyLabel(p))}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td>${p.sizeKey}㎡</td>
+      <td>${esc(complexPyLabel(p))}${isSale&&hasKb&&kbTypesForSize(p).length?`<div class="rng">${kbTypesForSize(p).map(esc).join(' · ')}</div>`:''}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
       ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
@@ -6662,7 +6653,6 @@ async function loadComplexKbSalePrice(d){
     const result=await response.json();
     if(lastData!==d||complexView!=='sale')return;
     kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
-    removeKbHistoricalAliasSizes(d);
     const table=document.getElementById('pyTable');
     if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
     if(document.getElementById('complexDynamic'))selectPy(selPy);

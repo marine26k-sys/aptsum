@@ -21,6 +21,7 @@ import { recentTradeMonths, coversFullTradeBatch, TRADE_HISTORY_MONTHS } from ".
 import { ALL_LAWDS, SPLIT_REGIONS } from "../shared/regions.mjs";
 import { fetchText, parseTrade, parsePresale, parseRent } from "../shared/rtms-parse.mjs";
 import { preserveTradeFirstSeen } from "../shared/trade-first-seen.mjs";
+import { correctPresaleSupplyAreas } from "../shared/supply-area-loader.mjs";
 
 // GitHub Actions가 300분 타임아웃으로 죽거나 스크립트가 도중에 죽어도(API 장애 등) 그때까지
 // 받아온 데이터는 살아남도록, kind 하나가 끝날 때마다(또는 catch 시) 바로 커밋·푸시해버린다.
@@ -87,6 +88,16 @@ function parseArgs() {
 }
 
 const recentYms = recentTradeMonths;
+const presaleAreaMaps = new Map();
+async function correctPresaleAreasForLawd(items, lawd) {
+  if (!presaleAreaMaps.has(lawd)) {
+    const promise = readFile(`data/supply-area-naver/${lawd}.json`, "utf8")
+      .then(raw => JSON.parse(raw))
+      .catch(() => []);
+    presaleAreaMaps.set(lawd, promise);
+  }
+  return correctPresaleSupplyAreas(items, await presaleAreaMaps.get(lawd));
+}
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -215,6 +226,7 @@ async function main() {
         try{items=await fetchMergedMonth(cfg,key,lawd,ym);break;}
         catch(error){if(attempt===1){failedMonths.push({kind,lawd,ym});throw error;}console.warn(`${kind} ${lawd} ${ym}: 30초 후 재시도`);await new Promise(resolve=>setTimeout(resolve,30000));}
       }
+      if (kind === "presale") items = await correctPresaleAreasForLawd(items, lawd);
 
       await mkdir(dir, { recursive: true });
       let previousItems=[];
