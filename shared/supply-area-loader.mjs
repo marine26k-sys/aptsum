@@ -7,6 +7,26 @@ const caches = new Map();
 export function supplyAreaToPy(supplyArea) {
   return Math.floor(supplyArea * 0.3025);
 }
+// 일부 분양권 거래 원본은 excluUseAr에 전용면적 대신 공급면적을 기록한다.
+// 단지명과 공급면적이 네이버 단지 매핑표의 한 전용면적으로만 유일하게 대응할 때만 교정한다.
+export function correctPresaleSupplyAreas(items, records) {
+  const byName = new Map();
+  for (const row of Array.isArray(records) ? records : []) {
+    if (!row?.apt || !Number.isFinite(row.exclusiveArea) || !Number.isFinite(row.supplyArea)) continue;
+    const key = norm(row.apt);
+    if (!byName.has(key)) byName.set(key, []);
+    byName.get(key).push(row);
+  }
+  return items.map(item => {
+    const rows = byName.get(norm(item.apt)) || [];
+    const supplyHits = rows.filter(row => Math.abs(row.supplyArea - Number(item.area)) <= 0.05);
+    if (!supplyHits.length || rows.some(row => Math.abs(row.exclusiveArea - Number(item.area)) <= 0.05)) return item;
+    const exclusiveAreas = [...new Set(supplyHits.map(row => row.exclusiveArea))];
+    const householdCounts = [...new Set(supplyHits.map(row => row.hh).filter(Number.isInteger))];
+    if (exclusiveAreas.length !== 1 || householdCounts.length > 1) return item;
+    return { ...item, area: exclusiveAreas[0], py: supplyAreaToPy(supplyHits[0].supplyArea) };
+  });
+}
 export function applyNaverSupplyAreas(items, records, lawd) {
   const exactTypes = new Map();
   const roundedTypes = new Map();
@@ -59,4 +79,9 @@ export async function applySupplyAreaOverrides(items,lawd,origin) {
     return Math.abs(py-t.py)>3?t:{...t,py};
   });
   return applyNaverSupplyAreas(hubItems,naver,lawd);
+}
+export async function applyPresaleSupplyAreaOverrides(items, lawd, origin) {
+  if (!origin || !lawd) return items;
+  const { naver } = await load(origin, lawd);
+  return correctPresaleSupplyAreas(items, naver, lawd);
 }

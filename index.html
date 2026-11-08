@@ -226,6 +226,11 @@ try {
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
+  .py-summary-table .td-kb .kb-price-columns{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 5px;max-width:100%;white-space:nowrap}
+  .py-summary-table .td-kb .kb-price-item{display:flex;flex:0 0 auto;align-items:center;gap:2px;line-height:1.15}
+  .py-summary-table .td-kb .kb-price-item b{font-size:clamp(9px,2.9vw,12px);letter-spacing:-.25px}
+  .py-summary-table .td-kb .kb-price-item span{color:#71839a;font-size:clamp(8px,2.25vw,9px);font-weight:500}
+  .py-summary-table .td-kb .rng{white-space:normal;overflow:visible;text-overflow:clip}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -1421,13 +1426,24 @@ function openNewHigh7(){
 // (한 화면에 렌더링은 항상 한 번만 일어나야 하므로, 렌더 직전 자신이 여전히 최신 요청인지 확인 후 아니면 조용히 폐기)
 let searchToken = 0;
 let searchAbortController=null;
+let lookupProgressToken=-1,lookupProgressValue=0;
+let lookupProgressTasks=new Map(),lookupProgressTaskToken=-1,lookupProgressTaskId=0;
 function lookupPercent(done,total){return Math.min(95,Math.floor(95*done/Math.max(1,total)));}
 function showLookupProgress(done,total){
-  const label='조회 중… '+lookupPercent(done,total)+'%';
+  if(lookupProgressToken!==searchToken){lookupProgressToken=searchToken;lookupProgressValue=0;lookupProgressTasks=new Map();lookupProgressTaskToken=searchToken;}
+  lookupProgressValue=Math.max(lookupProgressValue,lookupPercent(done,total));
+  const label='조회 중… '+lookupProgressValue+'%';
   const loadMessage=document.getElementById('loadMsg');if(loadMessage)loadMessage.textContent=label;
   // 진행률을 로딩 영역까지 스크롤하지 않아도 확인할 수 있도록 조회 버튼에도 표시한다.
   const buttons=[document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])];
   buttons.filter(button=>button?.dataset).forEach(button=>{button.dataset.idleLabel||=button.textContent.trim()||'조회';button.textContent=label;});
+}
+function updateFetchProgressTask(token,id,done,total){
+  if(token!==searchToken)return;
+  if(lookupProgressTaskToken!==token){lookupProgressTasks=new Map();lookupProgressTaskToken=token;}
+  lookupProgressTasks.set(id,{done,total});
+  const work=[...lookupProgressTasks.values()];
+  showLookupProgress(work.reduce((sum,task)=>sum+task.done,0),work.reduce((sum,task)=>sum+task.total,0));
 }
 function lookupProgressMap(items,mapper){
   const token=searchToken;let completed=0;showLookupProgress(0,items.length);
@@ -3142,13 +3158,15 @@ async function searchListingComplexNames(query,myToken,{occupancy='available',fl
 // (2026.10 20→21: 네이버 전용·공급면적 매칭표의 확정 타입을 우선 적용하고 전용 소수값을 구분)
 // Split district live and historical transactions now share the selected district calibration.
 const CACHE_VER = 27;
+// 분양권 면적 보정값은 별도 버전으로 관리해 매매·전세 전체 캐시를 비우지 않고 기존 분양권 캐시만 갱신한다.
+const CACHE_VER_P = 28;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
 (function cleanupOldCache(){
   try{
     const versionedRe = /^apc[PJ]?:\d+:/;
-    const keep = 'apc:'+CACHE_VER+':', keepP = 'apcP:'+CACHE_VER+':', keepJ = 'apcJ:'+CACHE_VER+':';
+    const keep = 'apc:'+CACHE_VER+':', keepP = 'apcP:'+CACHE_VER_P+':', keepJ = 'apcJ:'+CACHE_VER+':';
     const toRemove = [];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
@@ -3254,11 +3272,16 @@ function applyMonthResults(cache, chunk, result, now) {
 }
 async function fetchChunksLimited(chunks, fetchFn, lawd){
   const results = [];const token=searchToken;
+  const track=token===searchToken&&document.getElementById('loading')?.classList.contains('on')&&mode!=='compare'&&regionSel.length<=1&&!isAllScope(sel.value);
+  const totalWork=chunks.reduce((sum,chunk)=>sum+chunk.length,0),taskId=track?++lookupProgressTaskId:null;
+  let completedWork=0;
+  if(track)updateFetchProgressTask(token,taskId,0,totalWork);
   for(let i=0; i<chunks.length; i+=CHUNK_CONCURRENCY){
     if(token!==searchToken)break;
     const batch = chunks.slice(i, i+CHUNK_CONCURRENCY);
     results.push(...await Promise.all(batch.map(c=>fetchFn(lawd, c).then(items=>({chunk:c, items})).catch(()=>({chunk:c, items:null})))));
-    if(token===searchToken && mode!=='compare' && regionSel.length<=1 && !isAllScope(sel.value))showLookupProgress(Math.min(i+batch.length,chunks.length),chunks.length);
+    completedWork+=batch.reduce((sum,chunk)=>sum+chunk.length,0);
+    if(track)updateFetchProgressTask(token,taskId,completedWork,totalWork);
   }
   return results;
 }
@@ -3305,7 +3328,7 @@ function lsLoadP(lawd){
   if(lsLoadedP[lawd]) return;
   lsLoadedP[lawd] = true;
   try{
-    const raw = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':'+lawd) || 'null');
+    const raw = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':'+lawd) || 'null');
     if(!raw) return;
     const cache = monthCacheP[lawd] = monthCacheP[lawd] || {};
     for(const [ym, e] of Object.entries(raw)){
@@ -3319,19 +3342,19 @@ function lsSaveP(lawd){
     const cache = monthCacheP[lawd]; if(!cache) return;
     const out = {};
     for(const [ym, e] of Object.entries(cache)) out[ym] = { t: e.t, i: e.items.map(t => LS_FIELDS_P.map(k => t[k])) };
-    localStorage.setItem('apcP:'+CACHE_VER+':'+lawd, JSON.stringify(out));
-    const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+    localStorage.setItem('apcP:'+CACHE_VER_P+':'+lawd, JSON.stringify(out));
+    const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':meta') || '{}');
     meta[lawd] = Date.now();
-    localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+    localStorage.setItem('apcP:'+CACHE_VER_P+':meta', JSON.stringify(meta));
   }catch(e){
     // 용량 초과 → 가장 오래 안 쓴 지역부터 삭제 후 1회 재시도 (매매 캐시 lsSave와 동일한 정책)
     try{
-      const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER+':meta') || '{}');
+      const meta = JSON.parse(localStorage.getItem('apcP:'+CACHE_VER_P+':meta') || '{}');
       const victims = Object.entries(meta).filter(([k])=>k!==lawd).sort((a,b)=>a[1]-b[1]);
       if(victims.length){
-        localStorage.removeItem('apcP:'+CACHE_VER+':'+victims[0][0]);
+        localStorage.removeItem('apcP:'+CACHE_VER_P+':'+victims[0][0]);
         delete meta[victims[0][0]];
-        localStorage.setItem('apcP:'+CACHE_VER+':meta', JSON.stringify(meta));
+        localStorage.setItem('apcP:'+CACHE_VER_P+':meta', JSON.stringify(meta));
         lsSaveP(lawd);
       }
     }catch(e2){}
@@ -3339,7 +3362,7 @@ function lsSaveP(lawd){
 }
 async function postFetchP(lawd, yms){
   const q = yms.slice().sort().join(',');
-  const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
+  const res = await fetch(`/api/presale?lawd=${encodeURIComponent(lawd)}&yms=${q}&v=${CACHE_VER_P}`, {signal:typeof searchAbortController==='undefined'?undefined:searchAbortController?.signal});
   const d = await res.json().catch(()=>({}));
   if(!res.ok || d.error) throw new Error(d.error || '오류 ('+res.status+')');
   if (!Array.isArray(d.items) || !Array.isArray(d.failedMonths)) throw new Error('월별 응답 형식 오류');
@@ -5942,12 +5965,12 @@ async function runSearch(opts){
       if(missingTrade.length){showError('조회 조건에 맞는 거래가 없는 단지: '+missingTrade.map(x=>esc(x.name)).join(', '));return;}
       d = analyzeCompare(byLawd, matchedCmp, months, Date.now(), rentByLawd);
     } else {
-      // 매매·분양권·전세를 병렬로 동시에 조회 (기존에는 매매 끝난 뒤 분양권을 순차로 기다려서 응답 시간이 그대로 합산됐음)
-      // 전세는 단지 분석 탭에서만 쓰므로, 다른 탭(지역/거래량/등락 랭킹 등)에서는 호출 자체를 하지 않는다.
+      // 단지 분석은 먼저 매매·분양권으로 화면을 구성하고, 전세는 결과 표시 뒤 백그라운드에서 채운다.
+      // 매매 자료가 없는 전세 전용 단지만 예외로 전세 조회까지 기다려 검색 가능 여부를 판단한다.
       let [raw, rawPFetched, rawJFetched] = await Promise.all([
         ensureMonths(lawd, effMN),
         ensureMonthsP(lawd, effMN).catch(()=>[]),
-        (mode==='complex'||mode==='gap'||mode==='jeonselongtermrise') ? ensureMonthsJ(lawd, effMN).catch(()=>[]) : Promise.resolve([]),
+        (mode==='gap'||mode==='jeonselongtermrise') ? ensureMonthsJ(lawd, effMN).catch(()=>[]) : Promise.resolve([]),
       ]);
       rawP = rawPFetched;
       rawJ = rawJFetched;
@@ -6112,6 +6135,14 @@ async function runSearch(opts){
     // 지금 결과는 낡은 것이므로 화면에 반영하지 않고 조용히 버린다.
     if(myToken !== searchToken) return;
 
+    if(!d.found&&!d.multi&&mode==='complex'){
+      const rentRows=await ensureMonthsJ(lawd,effMN).catch(()=>[]);
+      if(myToken!==searchToken)return;
+      const rentData=analyzeComplex(floorF(rentRows),name,months,undefined,lawd);
+      d=includeJeonseOnlySaleAreas(d,rentData);
+      d.jeonse=rentData.found?rentData:null;
+      d.jeonseLoading=false;
+    }
     if(!d.found){
       if(d.multi){
         showError('여러 단지가 일치합니다. 단지를 선택해 주세요:<br>' +
@@ -6124,12 +6155,11 @@ async function runSearch(opts){
     }
     if(d.mode==='complex'){
       d.lawd=d.splitLawd||lawd;
-      d.hh = await fetchHHCnt(d.lawd, d.name, d.umd);
-      await loadCompletionFallback(d,d.lawd);
-      if(myToken!==searchToken) return;
+      // 세대수·준공연도는 헤더 부가 정보라 결과를 먼저 보여주고 attachHHCountsAsync에서 보충한다.
     }
     if(d.mode==='newhigh')d.newHighPrice=requestedNewHighPrice.slice();
     if(d.mode==='complex'&&complexLookup?.hits?.[0])d.complexIndexEntry=complexLookup.hits[0];
+    if(d.mode==='complex'&&!d.jeonse)d.jeonseLoading=true;
     lastData = d;
     if(d.mode==='complex') renderComplex(d); else if(d.mode==='compare') renderCompare(d); else if(d.mode==='shortval') renderShortUndervalue(d); else if(d.mode==='peak') renderPeak(d); else if(d.mode==='longpeak') renderLongPeak(d); else if(d.mode==='longpeakdong') renderLongPeak(d); else if(d.mode==='volume') renderVolume(d); else if(d.mode==='newhigh') renderNewHigh(d); else if(d.mode==='newlow') renderNewLow(d); else if(d.mode==='inversion') renderInversion(d); else if(d.mode==='pyprice') renderPricePerPyeong(d); else if(d.mode==='longtermrise') renderLongTermRise(d); else if(d.mode==='jeonselongtermrise') renderJeonseLongTermRise(d); else if(d.mode==='pricebandrise') renderPriceBandRise(d); else if(d.mode==='gap') renderGap(d); else renderRegion(d);
     // 지역랭킹처럼 긴 목록을 한참 스크롤한 상태에서 단지명을 클릭하면(quick()), 스크롤 위치가 그대로 유지된 채
@@ -6144,6 +6174,34 @@ async function runSearch(opts){
     }
     // 세대수는 표시용 부가 정보라 화면을 막지 않고 렌더링 이후 비동기로 채워 넣는다 (2026.07)
     attachHHCountsAsync(d, myToken, lawd);
+    if(d.mode==='complex'&&!d.jeonse){
+      const initial=d, rentLawd=d.lawd||lawd, rentName=name, rentMonths=months.slice(), rentToken=myToken;
+      ensureMonthsJ(rentLawd,effMN).then(rentRows=>{
+        if(rentToken!==searchToken||lastData!==initial||mode!=='complex')return;
+        const rentData=analyzeComplex(floorF(rentRows),rentName,rentMonths,undefined,rentLawd);
+        const updated=includeJeonseOnlySaleAreas(initial,rentData);
+        updated.jeonse=rentData.found?rentData:null;
+        updated.jeonseLoading=false;
+        lastData=updated;
+        const box=document.getElementById('complexDynamic');
+        if(!box)return;
+        const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
+        schoolWrap?.remove();
+        box.innerHTML=complexDynamicHTML();
+        if(selPy>=-1&&selPy<curComplexData().byPy.length)selectPy(selPy);
+        placeComplexSchools(schoolWrap);
+      }).catch(()=>{
+        if(rentToken!==searchToken||lastData!==initial||mode!=='complex')return;
+        initial.jeonseLoading=false;
+        const box=document.getElementById('complexDynamic');
+        if(box){
+          const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
+          schoolWrap?.remove();
+          box.innerHTML=complexDynamicHTML();
+          placeComplexSchools(schoolWrap);
+        }
+      });
+    }
   }catch(err){ if(myToken===searchToken) showError('오류: ' + esc(err.message)); }
   finally{
     if(myToken===searchToken){
@@ -6573,7 +6631,10 @@ function completeJeonseSizeRows(sale){
   rows.sort((a,b)=>a.sizeKey-b.sizeKey);
   return {...sale,...(rent||{}),byPy:rows,trades:rent?.trades||[],count:rent?.count||0};
 }
-function curComplexData(){ return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData; }
+function curComplexData(){
+  if(complexView==='jeonse'&&lastData?.jeonseLoading)return null;
+  return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData;
+}
 const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
 const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
@@ -6586,7 +6647,10 @@ function recentAverageCell(a){
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
 let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
-function kbSaleKey(d){return `${d?.lawd||d?.splitLawd||sel.value}|${d?.umd||''}|${d?.name||''}`;}
+function kbSaleKey(d){
+  const complex=d?.complexIndexEntry;
+  return `${complex?.lawd||d?.lawd||d?.splitLawd||sel.value}|${complex?.umd||d?.umd||''}|${complex?.name||d?.name||''}`;
+}
 function kbSupplyPy(p){
   const areas=kbSalePriceData?.areas||[];
   const candidates=areas.filter(a=>Math.floor(Number(a.exclusiveM2))===p.sizeKey&&Number(a.supplyM2)>0);
@@ -6608,13 +6672,21 @@ function complexPyLabel(p){
 }
 function kbAreaPriceCell(p){
   const areas=kbSalePriceData?.areas||[];
-  const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
-  if(!prices.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
-  const label=prices.length===1?`${prices[0].toFixed(1)}`:`${prices[0].toFixed(1)}~${prices.at(-1).toFixed(1)}`;
-  const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>String(a.type||'').trim()).filter(Boolean))];
+  const matching=areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey);
+  const entries=[...new Map(matching.map(a=>{
+    const price=Math.round(Number(a.saleGeneralManwon)/1000)/10;
+    const type=String(a.type||'').trim().match(/([A-Za-z]\d*)$/)?.[1]?.toUpperCase()||'';
+    return [`${price}|${type}`,{price,type}];
+  })).values()].sort((a,b)=>a.type&&b.type?a.type.localeCompare(b.type,'ko',{numeric:true}):a.price-b.price);
+  const prices=[...new Set(entries.map(a=>a.price))].sort((a,b)=>a-b);
+  if(!entries.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
+  const label=prices.length>1
+    ? `<div class="kb-price-columns">${entries.map(a=>`<span class="kb-price-item"><b>${a.price.toFixed(1)}</b>${a.type?`<span>${esc(a.type)}</span>`:''}</span>`).join('')}</div>`
+    : `<b>${prices[0].toFixed(1)}</b>`;
+  const types=[...new Set(matching.map(a=>String(a.type||'').trim()).filter(Boolean))];
   const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||null).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
-  const typeNote=typeLabels.length?`<div class="rng">${typeLabels.map(esc).join(' · ')}</div>`:'';
-  return `<td class="tr-r td-kb"><b>${label}</b>${typeNote}</td>`;
+  const typeNote=prices.length===1&&typeLabels.length?`<div class="rng">${typeLabels.map(esc).join(' · ')}</div>`:'';
+  return `<td class="tr-r td-kb">${label}${typeNote}</td>`;
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
@@ -6622,42 +6694,51 @@ function pyTableHTML(d){
   const isSale=complexView==='sale';
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
-  const columnWidths=isSale?['24%','17%','19%','20%','20%']:['24%','18%','29%','29%'];
+  const columnWidths=isSale?['22%','20%','20%','19%','19%']:['24%','29%','29%','18%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
+    <tr><th>평형</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(complexPyLabel(p))}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
-      <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
+      <td>${esc(complexPyLabel(p))}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
+      <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
   </table>`;
 }
 async function loadComplexKbSalePrice(d){
   if(!d||complexView!=='sale')return;
   const key=kbSaleKey(d);
-  if(kbSalePriceKey===key&&kbSalePriceLoaded)return;
+  if(kbSalePriceKey===key&&kbSalePriceLoaded&&!kbSalePriceError)return;
   if(kbSalePricePromise?.key===key)return kbSalePricePromise.promise;
   kbSalePriceError=false;
-  const [lawd,dong,name]=key.split('|');
+  const [lawd,dong]=key.split('|');
+  const names=[d.complexIndexEntry?.name,d.name,...(d.complexIndexEntry?.names||[])].filter((value,index,list)=>value&&list.indexOf(value)===index);
   const promise=(async()=>{
-    const query=new URLSearchParams({kind:'kb-sale-general',lawd,name,dong});
-    const response=await fetch(`/api/dashboard-data?${query}`,{cache:'force-cache'});
-    if(!response.ok)throw Error('KB시세를 불러오지 못했습니다.');
-    const result=await response.json();
-    if(lastData!==d||complexView!=='sale')return;
-    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=false;kbSalePriceLoaded=true;
-    const table=document.getElementById('pyTable');
-    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
-    if(document.getElementById('complexDynamic'))selectPy(selPy);
-    const note=document.getElementById('kbSalePriceNote');
-    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
+    let result=null;
+    for(const name of names){
+      const query=new URLSearchParams({kind:'kb-sale-general',lawd,name,dong,matchVersion:'2'});
+      const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
+      if(!response.ok)throw Error('KB시세를 불러오지 못했습니다.');
+      result=await response.json();
+      if(result.complex?.areas?.some(area=>Number(area.saleGeneralManwon)>0))break;
+    }
+    if(lastData!==d)return;
+    kbSalePriceKey=key;kbSalePriceData=result.complex||null;kbSalePriceError=!result.complex;kbSalePriceLoaded=true;
+    if(complexView==='sale'){
+      const table=document.getElementById('pyTable');
+      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+      if(document.getElementById('complexDynamic'))selectPy(selPy);
+      const note=document.getElementById('kbSalePriceNote');
+      if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
+    }
   })().catch(error=>{
-    if(lastData!==d||complexView!=='sale')return;
+    if(lastData!==d)return;
     kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
-    const table=document.getElementById('pyTable');
-    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    if(complexView==='sale'){
+      const table=document.getElementById('pyTable');
+      if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
+    }
   }).finally(()=>{if(kbSalePricePromise?.key===key)kbSalePricePromise=null;});
   kbSalePricePromise={key,promise};
   return promise;
@@ -6678,7 +6759,7 @@ function tradesHTML(d, footNote){
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
-      return `<tr${cls}><td>${esc(size?complexPyLabel(size):t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}<span class="rng" style="font-size:9px">${t.area? ` (전용 ${t.area.toFixed(2)})`:''}</span>${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
@@ -6869,7 +6950,7 @@ function complexDynamicHTML(){
   const priceLabel = isSale ? '매매가' : '전세가';
   const d = curComplexData();
   if(!d){
-    return `<div class="sec"><div class="rng" style="padding:10px 0">최근 조회 기간 내 이 단지의 전세 실거래가 없습니다.</div></div>`;
+    return `<div class="sec"><div class="rng" style="padding:10px 0">${lastData?.jeonseLoading?'전세 시세를 불러오는 중…':'최근 조회 기간 내 이 단지의 전세 실거래가 없습니다.'}</div></div>`;
   }
   const ci = chartTarget(d);
   const p = d.byPy[ci];

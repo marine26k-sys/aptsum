@@ -33,7 +33,9 @@ export default async request=>{
   const data=await res.json();
   if(kind==='kb-sale-general'){
    const normalize=value=>String(value||'').normalize('NFKC').replace(/[\s·ㆍ,.-]/g,'').toLocaleLowerCase('ko-KR');
-   const name=normalize(q.get('name')),dong=normalize(q.get('dong'));
+   const dong=normalize(q.get('dong'));
+   const rawName=q.get('name')||'';
+   const name=normalize(rawName.replace(/\s*\[([^\]]+)\]\s*$/, (suffix, tag)=>normalize(tag)===dong?'':suffix));
    const matches=(data.complexes||[]).filter(item=>normalize(item.name)===name&&normalize(item.dong)===dong);
    return Response.json({collectedAt:data.collectedAt||null,kbReferenceDate:data.kbReferenceDate||null,complex:matches.length===1?matches[0]:null,matchCount:matches.length,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':'public, max-age=300'}});
   }
