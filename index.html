@@ -211,6 +211,7 @@ try {
   .listing-ask-map-cell b{display:block;font-size:8px;font-size:clamp(6px,2cqw,8px);font-weight:700;white-space:nowrap;overflow:hidden;overflow-wrap:normal;word-break:keep-all;letter-spacing:-.4px}
   .listing-ask-map-cell strong{display:block;margin-top:1px;font-size:9px;font-size:clamp(6px,2.3cqw,9px);font-weight:900;white-space:nowrap}
   .listing-ask-map-cell small{display:block;margin-top:1px;color:rgba(15,43,61,.68);font-size:7px;font-size:clamp(5px,1.7cqw,7px);white-space:nowrap}
+  .listing-kb-chip{display:inline-block;padding:1px 5px;border-radius:5px;background:#DDF2F2;color:#00565C;font-weight:700;white-space:nowrap}
   .listing-ask-map-legend{padding:2px 0 6px;text-align:center;color:var(--sub);font-size:9px}.listing-ask-map-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;overflow:hidden}
   .sec h3{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--teal);letter-spacing:.4px;padding:4px 10px;border-radius:6px;margin-bottom:9px}
 
@@ -8925,8 +8926,8 @@ function renderListingUndervalue(d){
       <div class="rng" style="margin-top:2px">${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${listingSubwayHTML(x)}</div>
       <div class="tbl-scroll"><table class="peer-table lst-table" style="margin-top:10px">
         <tr><th>단지</th><th>평형</th><th class="tr-r">3년 최고가</th><th class="tr-r">최저 호가</th></tr>
-        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}${x.kbPrice>0?`<div class="sub" style="color:var(--teal-dark)">KB시세 ${x.kbPrice.toFixed(1)}억</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
-        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}${p.kbPrice>0?`<div class="sub" style="color:var(--teal-dark)">KB시세 ${p.kbPrice.toFixed(1)}억</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
+        <tr style="background:var(--teal-soft)"><td><span class="${nmCls(x.apt)}" style="font-weight:700;color:var(--navy)">${esc(complexDisplayName(x.lawd||'',x.apt,x.umd,x.gu))}</span>${nameSub(x)}</td><td>${x.py}평<div class="sub">(전용 ${x.area})</div></td><td class="tr-r">${x.peak.toFixed(1)}억${x.peakYm?`<div class="sub">${peakYmLabel(x.peakYm)}</div>`:''}${x.kbPrice>0?`<div class="sub">${listingKbPriceHTML(x,'')}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${x.ask.toFixed(1)}억</b></td></tr>
+        ${x.peers.map(p=>`<tr><td><span class="${nmCls(p.apt)}">${esc(complexDisplayName(p.lawd||x.lawd||'',p.apt,p.umd,p.gu||x.gu))}</span>${nameSub(p)}</td><td>${esc(p.py)}평<div class="sub">(전용 ${p.area})</div></td><td class="tr-r">${p.peak.toFixed(1)}억${p.peakYm?`<div class="sub">${peakYmLabel(p.peakYm)}</div>`:''}${p.kbPrice>0?`<div class="sub">${listingKbPriceHTML(p,'')}</div>`:''}</td><td class="tr-r"><b style="color:var(--teal)">${p.ask.toFixed(1)}억</b></td></tr>`).join('')}
       </table></div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px">
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
@@ -9443,7 +9444,7 @@ function listingNameHTML(x, noUrgentBadge){
 }
 function listingKbPriceHTML(x,separator=' · '){
   const price=Number(x?.kbPrice);
-  return Number.isFinite(price)&&price>0?`<span style="color:var(--teal-dark);font-weight:700">${separator}KB시세 ${price.toFixed(1)}억</span>`:'';
+  return Number.isFinite(price)&&price>0?`${separator}<span class="listing-kb-chip">KB시세 ${price.toFixed(1)}억</span>`:'';
 }
 function listingSubwayHTML(x,color='var(--teal-dark)',separator=' · '){
   const raw=x?.subwayMinutes;
@@ -9510,7 +9511,7 @@ function listingAskMapHTML(d){
       const label=rateMode?`${province} ${name} · 호가 전주 대비 ${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}% · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`:`${province} ${name} · 최저 호가 평균 ${stat.avg.toFixed(1)}억 · KB시세 평균 ${stat.kbAvg?.toFixed(1)||'-'}억 · ${stat.values.length}개 매물`;
       const value=rateMode?`${stat.avg>=0?'+':''}${stat.avg.toFixed(1)}%`:`${stat.avg.toFixed(1)}억`;
       const outline=window.APTSUM_METRO_TILE_OUTLINE(rowIndex,column,province);
-      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small>${stat.kbAvg!==null?`<small>KB ${stat.kbAvg.toFixed(1)}억</small>`:''}</div>`;
+      return `<div class="listing-ask-map-cell" style="grid-column:${column+1};background:${rateMode?listingAskMapRateColor(stat.avg,min,max):listingAskMapColor(stat.avg,min,max)};${outline?`box-shadow:${outline};`:''}" aria-label="${esc(label)}"><b>${esc(window.APTSUM_METRO_TILE_NAME(name))}</b><strong>${value}</strong><small>${stat.values.length}건</small>${stat.kbAvg!==null?`<small><span class="listing-kb-chip">KB ${stat.kbAvg.toFixed(1)}억</span></small>`:''}</div>`;
     }).filter(Boolean).join('');
     if(cells)rowsHTML.push(`<div class="listing-ask-map-row">${cells}</div>`);
   });
