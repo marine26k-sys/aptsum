@@ -8,16 +8,25 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
 }));
 if (!args.master) throw new Error('--master=<전체 단지 매핑표 JSON 경로> is required');
 const freshKbTypes = args['kb-types'] ? JSON.parse(await readFile(args['kb-types'], 'utf8')) : null;
+const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g, '').toLocaleLowerCase('ko-KR');
+const regionCodes = new Map(REGIONS.flatMap(([, regions]) => regions));
 const freshTypesByNaverId = new Map();
+const freshIdsByIdentity = new Map();
 for (const complex of freshKbTypes?.complexes || []) {
   const ids = complex.targetNaverIds || (complex.matchedTarget?.naverId ? [complex.matchedTarget.naverId] : []);
   for (const naverId of ids) {
     if (!freshTypesByNaverId.has(Number(naverId))) freshTypesByNaverId.set(Number(naverId), []);
     freshTypesByNaverId.get(Number(naverId)).push(...(complex.areas || []));
   }
+  const target = complex.matchedTarget;
+  const lawd = target?.district ? regionCodes.get(target.district) : null;
+  if (lawd && target?.dong && target?.name && ids.length === 1) {
+    const identity = [lawd, normalize(target.dong), normalize(target.name)].join('|');
+    if (!freshIdsByIdentity.has(identity)) freshIdsByIdentity.set(identity, new Set());
+    freshIdsByIdentity.get(identity).add(Number(ids[0]));
+  }
 }
 
-const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g, '').toLocaleLowerCase('ko-KR');
 const exactAreaKey = (value) => {
   const text = String(value ?? '').trim();
   if (!/^\d+(?:\.\d+)?$/.test(text)) return '';
@@ -25,7 +34,6 @@ const exactAreaKey = (value) => {
   const normalizedFraction = fraction.replace(/0+$/, '');
   return normalizedFraction ? `${whole}.${normalizedFraction}` : whole;
 };
-const regionCodes = new Map(REGIONS.flatMap(([, regions]) => regions));
 const master = JSON.parse(await readFile(args.master, 'utf8'));
 const index = JSON.parse(await readFile('data/complex-index.json', 'utf8')).entries;
 const byIdentity = new Map();
@@ -43,14 +51,17 @@ const matchByIndex = new Map();
 let ambiguous = 0, unmatched = 0, complexesWithAreas = 0, typeCount = 0;
 for (const complex of index) {
   const candidates = new Map();
+  const freshIds = new Set();
   for (const name of new Set([complex.name, ...(complex.names || [])].filter(Boolean))) {
     for (const match of byIdentity.get(identityFor(complex, name)) || []) candidates.set(match.id, match.row);
+    for (const id of freshIdsByIdentity.get(identityFor(complex, name)) || []) freshIds.add(id);
   }
-  if (candidates.size !== 1) { if (candidates.size > 1) ambiguous++; else unmatched++; continue; }
-  const row = candidates.values().next().value;
+  const resolvedNaverId = candidates.size === 1 ? Number([...candidates.keys()][0]) : freshIds.size === 1 ? [...freshIds][0] : null;
+  if (!resolvedNaverId) { if (candidates.size > 1 || freshIds.size > 1) ambiguous++; else unmatched++; continue; }
+  const row = candidates.size === 1 ? candidates.values().next().value : null;
   const byArea = new Map();
   const exactExclusiveTypes = new Map();
-  for (const area of row['면적별'] || []) {
+  for (const area of row?.['면적별'] || []) {
     const exclusive = Number(area['전용면적']);
     const type = String(area['타입명'] || '').trim();
     // 실거래 행은 국토부 원본 전용면적을 소수점 둘째 자리까지 대조한다.
@@ -72,7 +83,7 @@ for (const complex of index) {
   }
   // After the one-time live KB collection finishes, supplement/replace gaps in the older mapping
   // with the freshly collected type inventory, including types that have no KB price.
-  for (const area of freshTypesByNaverId.get(Number([...candidates.keys()][0])) || []) {
+  for (const area of freshTypesByNaverId.get(resolvedNaverId) || []) {
     const exclusive = Number(area.exclusiveM2);
     if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
     const type = String(area.websiteTypeName || area.kbTypeName || '').trim();
@@ -98,21 +109,30 @@ for (const complex of index) {
   for (const name of new Set([complex.name, ...(complex.names || [])].filter(Boolean))) {
     const key = identityFor(complex, name);
     if (!matchByIndex.has(key)) matchByIndex.set(key, { ids: new Set(), lawd: complex.lawd, umd: complex.umd, areas, exactTypes });
-    matchByIndex.get(key).ids.add([...candidates.keys()][0]);
+    matchByIndex.get(key).ids.add(resolvedNaverId);
   }
 }
 
 const shards = new Map();
 const exactShards = new Map();
+const ambiguousKeys = new Map();
 let aliasesSkipped = 0, keysWritten = 0;
 for (const [key, entry] of matchByIndex) {
   if (entry.ids.size !== 1) { aliasesSkipped++; continue; }
   if (!shards.has(entry.lawd)) shards.set(entry.lawd, {});
   if (!exactShards.has(entry.lawd)) exactShards.set(entry.lawd, {});
+  if (!ambiguousKeys.has(entry.lawd)) ambiguousKeys.set(entry.lawd, new Set());
   const [, normalizedDong, normalizedName] = key.split('|');
   const lookupKey = `${normalizedName}|${normalizedDong}`;
   const items = shards.get(entry.lawd);
-  if (items[lookupKey]) { delete items[lookupKey]; aliasesSkipped++; continue; }
+  if (ambiguousKeys.get(entry.lawd).has(lookupKey)) continue;
+  if (items[lookupKey]) {
+    delete items[lookupKey];
+    delete exactShards.get(entry.lawd)[lookupKey];
+    ambiguousKeys.get(entry.lawd).add(lookupKey);
+    aliasesSkipped++;
+    continue;
+  }
   items[lookupKey] = entry.areas;
   exactShards.get(entry.lawd)[lookupKey] = entry.exactTypes;
   keysWritten++;
