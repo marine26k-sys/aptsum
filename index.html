@@ -221,7 +221,8 @@ try {
   .py-summary-table th,.py-summary-table td{padding:5px 2px;overflow:hidden}
   .py-summary-table td{vertical-align:top}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
-  .py-summary-table th:first-child,.py-summary-table td:first-child{width:20%;white-space:normal}
+  .py-summary-table td:first-child{white-space:nowrap}
+  .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
   .peer-table{table-layout:fixed}
@@ -6601,7 +6602,8 @@ function pyTableHTML(d){
   const isSale=complexView==='sale';
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
-  return `<table class="py-summary-table">
+  const columnWidths=isSale?['24%','17%','19%','20%','20%']:['24%','18%','29%','29%'];
+  return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
