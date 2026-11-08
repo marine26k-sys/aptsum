@@ -6613,7 +6613,7 @@ async function loadComplexKbSalePrice(d){
     const table=document.getElementById('pyTable');
     if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
     const note=document.getElementById('kbSalePriceNote');
-    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가';
+    if(note)note.textContent=result.collectedAt?`KB부동산 매매 일반가 (대출 기준가) · 기준 ${result.collectedAt.slice(0,10).replaceAll('-','.')}`:'KB부동산 매매 일반가 (대출 기준가)';
   })().catch(error=>{
     if(lastData!==d||complexView!=='sale')return;
     kbSalePriceKey=key;kbSalePriceData=null;kbSalePriceError=true;kbSalePriceLoaded=true;
@@ -6840,7 +6840,7 @@ function complexDynamicHTML(){
         ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(p.py)} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
       <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
-      ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:-3px 0 6px">KB부동산 매매 일반가</div>':''}
+      ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:-3px 0 6px">KB부동산 매매 일반가 (대출 기준가)</div>':''}
       <div id="pyTable">${pyTableHTML(d)}</div>
       <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 최근 평균 시세는 해당 월의 평균이며, 거래가 없으면 이전 월 시세를 유지</div>
     </div>
