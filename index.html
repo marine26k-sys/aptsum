@@ -6587,6 +6587,20 @@ function recentAverageCell(a){
 }
 let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
 function kbSaleKey(d){return `${d?.lawd||d?.splitLawd||sel.value}|${d?.umd||''}|${d?.name||''}`;}
+function kbSupplyPy(p){
+  const areas=kbSalePriceData?.areas||[];
+  const candidates=areas.filter(a=>Math.floor(Number(a.exclusiveM2))===p.sizeKey&&Number(a.supplyM2)>0);
+  if(!candidates.length)return null;
+  const counts=new Map();
+  candidates.forEach(a=>{
+    // KB 타입 앞 숫자는 해당 타입의 공급평형 표기이므로 보간값 대신 우선 사용한다.
+    const typePy=String(a.type||'').trim().match(/^(\d+)/)?.[1];
+    const py=typePy?Number(typePy):Math.floor(Number(a.supplyM2)/3.3);
+    if(Number.isFinite(py)&&py>0)counts.set(py,(counts.get(py)||0)+1);
+  });
+  if(!counts.size)return null;
+  return `${[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0]}평`;
+}
 function kbAreaPriceCell(p){
   const areas=kbSalePriceData?.areas||[];
   const prices=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>Math.round(Number(a.saleGeneralManwon)/1000)/10))].sort((a,b)=>a-b);
@@ -6607,7 +6621,7 @@ function pyTableHTML(d){
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td>${esc(isSale&&hasKb?kbSupplyPy(p)||p.py:p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
       ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
       <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
