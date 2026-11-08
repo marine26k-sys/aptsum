@@ -31,11 +31,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 공개 주간 호가 통계 미리 계산
-        run: node scripts/build-listing-ask-map.mjs
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if node scripts/build-listing-ask-map.mjs; then exit 0; fi
+            if [ "$attempt" -eq 6 ]; then exit 1; fi
+            echo "집계 실패 또는 업로드 진행 중, 1분 후 재시도 ($attempt/6)"
+            sleep 60
+          done
 
       - name: 지도 JSON 커밋 및 푸시
         run: |
-          git add data/listing-ask-map.json
+          git add data/listing-ask-map.json data/listing-ask-price-bands.json
           if git diff --cached --quiet; then
             echo "지도 데이터 변경 없음"
           else
