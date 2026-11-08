@@ -1592,7 +1592,17 @@ async function initFromURL(){
     if(p.get('pbp')) document.getElementById('priceBandPeriodN').value = p.get('pbp');
     if(p.get('pb')) document.getElementById('priceBandN').value = p.get('pb');
     if(p.get('pbb')==='past') document.getElementById('priceBandBasis').value = 'past';
-    if(p.get('q')) document.getElementById('q').value = p.get('q');
+    if(p.get('q')){
+      const qInput=document.getElementById('q'),sharedName=p.get('q');
+      qInput.value=sharedName;
+      // 새로고침·공유 URL에서는 입력값만 복원하면 검색 결과에서 직접 고른 단지라는 식별 정보가 사라진다.
+      // 이 상태로 search()가 실행되면 지역·동을 다시 선택하라는 안내만 나오므로 URL의 지역과 이름을 선택 상태로 복원한다.
+      if(requestedMode==='complex'&&p.get('r')){
+        qInput.dataset.pickedLawd=p.get('r');
+        qInput.dataset.pickedName=sharedName;
+        qInput.dataset.pickedApt=sharedName.replace(/\s*\[[^\]]+\]\s*$/,'');
+      }
+    }
     if(requestedMode==='listingfavorites'||hasSharedQuery){
       if(requestedMode==='complex'){ if(p.get('q')) search(); }
       else search();
