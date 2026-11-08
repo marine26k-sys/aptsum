@@ -4,7 +4,6 @@ const revisionCache=new Map();
 export const config={path:'/api/dashboard-data'};
 export function dashboardPath(kind,lawd){
  if(kind==='complex-index')return 'data/complex-index.json';
- if(kind==='kb-sale-general')return 'data/kb-sale-general.json';
  if(kind==='tier')return 'data/tier-map.json';
  if(kind==='regional')return 'data/regional-change.json';
  if(kind==='regional-detail'&&/^(?:\d{5}|(?:BC|HS|IC)-[가-힣]+)$/.test(lawd||''))return `data/regional-change-details/${lawd}.json`;
