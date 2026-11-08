@@ -4044,17 +4044,6 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
     const maxDate = maxTrade?`${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}`:null;
     const recent = arr[0];
-    const recentMonthStart = new Date();
-    recentMonthStart.setHours(0,0,0,0);
-    recentMonthStart.setDate(recentMonthStart.getDate()-30);
-    const recentMonthTrades = arr.filter(t=>{
-      const year=+String(t.ym).slice(0,4),month=+String(t.ym).slice(4,6),day=+t.d;
-      const date=new Date(year,month-1,day);
-      return Number.isFinite(date.getTime())&&date>=recentMonthStart;
-    });
-    const recentMonthAvg = recentMonthTrades.length
-      ? {v:R1(recentMonthTrades.reduce((sum,t)=>sum+t.amt,0)/recentMonthTrades.length),n:recentMonthTrades.length}
-      : null;
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
     // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
@@ -4066,6 +4055,8 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       const mA = priceHistory.filter(t=>t.ym===ym);
       return mA.length? {ym:ymLabel(ym), avg:R1(avgA(mA)), n:mA.length} : null;
     }).filter(Boolean), historyMonths).filter(m=>monthsAsc.some(ym=>ymLabel(ym)===m.ym));
+    const currentMonthPrice=monthly.at(-1);
+    const recentMonthAvg=currentMonthPrice?{v:currentMonthPrice.avg,n:currentMonthPrice.n||0,carriedFrom:currentMonthPrice.carriedFrom||null,ym:currentMonthPrice.ym}:null;
     // 층별 프리미엄: 층수 필터 이전(raw) 데이터 전체에서 같은 단지·평형 거래를 다시 모아 계산
     let floorBand = null;
     if(rawAll){
@@ -6571,6 +6562,11 @@ const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래�
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
 }
+function recentAverageCell(a){
+  if(!a)return '<span class="rng">-</span>';
+  const sub=a.carriedFrom?`${esc(a.carriedFrom)} 시세 유지`:`${a.n}건`;
+  return `<b>${a.v.toFixed(1)}</b><div class="rng">${sub}</div>`;
+}
 let kbSalePriceData=null,kbSalePriceKey=null,kbSalePricePromise=null,kbSalePriceError=false,kbSalePriceLoaded=false;
 function kbSaleKey(d){return `${d?.lawd||d?.splitLawd||sel.value}|${d?.umd||''}|${d?.name||''}`;}
 function kbAreaPriceCell(p){
@@ -6588,12 +6584,12 @@ function pyTableHTML(d){
   const key=kbSaleKey(lastData);
   const hasKb=kbSalePriceKey===key&&kbSalePriceLoaded;
   return `<table class="py-summary-table">
-    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">최근 1개월<br>평균</th><th class="tr-r th-recent">최근 거래</th></tr>
+    <tr><th>평형</th><th class="tr-r th-max">최고가</th>${isSale?'<th class="tr-r th-kb">KB시세</th>':''}<th class="tr-r th-teal">최근 평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}${p.isNewHigh?'<span class="nh">최고가</span>':''}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
       ${isSale?hasKb?kbAreaPriceCell(p):'<td class="tr-r td-kb"><span class="rng">조회 중</span></td>':''}
-      <td class="tr-r td-teal">${avgCell(p.recentMonthAvg)}</td>
+      <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
     </tr>`).join('')}
   </table>`;
@@ -6844,7 +6840,7 @@ function complexDynamicHTML(){
       <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:-3px 0 6px">KB부동산 매매 일반가</div>':''}
       <div id="pyTable">${pyTableHTML(d)}</div>
-      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 최근 1개월 평균은 최근 30일 내 직거래·이상 저가 제외 실거래 기준</div>
+      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 최근 평균 시세는 해당 월의 평균이며, 거래가 없으면 이전 월 시세를 유지</div>
     </div>
 
     <div class="sec">
