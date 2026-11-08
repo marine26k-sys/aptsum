@@ -6861,7 +6861,7 @@ function complexDynamicHTML(){
       <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
       ${isSale?'<div id="kbSalePriceNote" class="rng" style="margin:6px 0 0">KB부동산 매매 일반가 (대출 기준가)</div>':''}
-      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 최근 평균 시세는 해당 월의 평균이며, 거래가 없으면 이전 월 시세를 유지</div>
+      <div class="rng" style="margin-top:5px">KB시세는 같은 전용면적 기준 · 평균 시세는 최근 1개월 거래 기준</div>
     </div>
 
     <div class="sec">
@@ -9680,7 +9680,7 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}${x.commonInfoInHeader?'':`<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b>`}</span>`:listingNameHTML(x,true)}<small>${listingInfoHTML(x, multiRegion, smallPeakDate, x.commonInfoInHeader)}</small></span>
     </div>
-    ${smallPeakDate?`<div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최신 거래 없음'}</div>`:''}
+    ${smallPeakDate?`<div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최근 실거래 자료 없음'}</div>`:''}
     ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
     <span class="listing-trend-change">${prices}<span class="val" style="margin-left:auto;color:var(--${direction==='up'?'red':direction==='flat'?'sub':'blue'})">${direction==='up'?'▲':direction==='flat'?'보합 ':'▼'}${x.drop.toFixed(precision)}억</span></span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
@@ -9805,7 +9805,7 @@ function listingWithoutHistoryHTML(x,i,multiRegion,asOf,failed=false){
   const comparisonPeak=x.peak,comparisonLabel=(peakYmLabel(x.peakYm)?`<span style="font-size:.85em">(${peakYmLabel(x.peakYm)})</span> `:'')+'<span class="listing-ref-label">전고점</span>';
   return `<div class="listing-trend-row"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
     <span class="nm"><span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x,true)}</span><small>${listingInfoHTML(x,multiRegion,true,x.commonInfoInHeader)}</small></span></div>
-    <div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최신 거래 없음'}</div>
+    <div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최근 실거래 자료 없음'}</div>
     ${comparisonPeak>0?`<div class="listing-trend-peak">${comparisonLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:''}
     <span class="listing-trend-change"><span class="price now">${asOf?`<span class="date">${esc(listingTrendDate(asOf))}</span> `:''}${x.ask.toFixed(1)}억</span><span style="margin-left:auto;font-size:12px;color:var(--sub)">${failed?'호가 이력 조회 실패':'직전 이력 없음'}</span></span></div>`;
 }
