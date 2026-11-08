@@ -6577,7 +6577,7 @@ function kbAreaPriceCell(p){
   if(!prices.length)return `<td class="tr-r td-kb"><span class="rng">${kbSalePriceError?'조회 실패':'-'}</span></td>`;
   const label=prices.length===1?`${prices[0].toFixed(1)}`:`${prices[0].toFixed(1)}~${prices.at(-1).toFixed(1)}`;
   const types=[...new Set(areas.filter(a=>a.saleGeneralManwon>0&&Math.floor(Number(a.exclusiveM2))===p.sizeKey).map(a=>String(a.type||'').trim()).filter(Boolean))];
-  const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||type).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
+  const typeLabels=types.map(type=>type.match(/[A-Za-z]\d*$/)?.[0]?.toUpperCase()||(/^\d+$/.test(type)?`${type}형`:type)).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
   const typeNote=typeLabels.length?typeLabels.map(esc).join(' · '):'KB 일반가';
   return `<td class="tr-r td-kb"><b>${label}</b><div class="rng">${typeNote}</div></td>`;
 }
