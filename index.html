@@ -6668,8 +6668,9 @@ function tradeTypesForArea(value){
   return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
 function typeSuffixLabel(value){
-  const label=String(value??'').replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
-  return label||'-';
+  const original=String(value??'').trim();
+  const labels=original.split(/\s*[,·]\s*/).map(part=>part.replace(/^\d+(?:\.\d+)?\s*/,'').trim()).filter(Boolean);
+  return labels.join(' · ')||'-';
 }
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
