@@ -6732,7 +6732,8 @@ function tradesHTML(d, footNote){
     ${list.map(t=>{
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
-      const cls = t.ex ? ' class="exrow"' : '';
+      // 직거래는 제외 배지만 표시하고, 거래 내역은 다른 행과 동일한 톤으로 노출한다.
+      const cls = t.ex && t.ex !== '직거래' ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
       const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(type=>exclusiveTypeLabels(t.sizeKey,type)).map(esc).join(' · ')||'-':'-';
