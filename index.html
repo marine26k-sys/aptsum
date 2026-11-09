@@ -6668,8 +6668,10 @@ function tradeTypesForArea(value){
   return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
 function typeSuffixLabel(value){
-  const label=String(value??'').replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
-  return label||'-';
+  const original=String(value??'').trim();
+  const label=original.replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
+  // 일부 단지는 타입명이 "86"처럼 숫자만 제공된다. 이 경우 유일한 타입 식별자를 보존한다.
+  return label||original||'-';
 }
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
