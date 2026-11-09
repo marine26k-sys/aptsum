@@ -6667,17 +6667,21 @@ function tradeTypesForArea(value){
   const nearestDistance=candidates[0].distance;
   return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
+function typeSuffixLabel(value){
+  const label=String(value??'').replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
+  return label||'-';
+}
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
-  return rows.map(row=>`<div>${esc(row.type)} · <b>${Number(row.households).toLocaleString('ko-KR')}세대</b></div>`).join('');
+  return rows.map(row=>typeSuffixLabel(row.type)).filter(label=>label!=='-').map(label=>`<div>${esc(label)}</div>`).join('')||'<span class="rng">-</span>';
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
   const columnWidths=['20%','24%','19%','19%','18%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th>타입별<br>세대수</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>평형</th><th>타입</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
@@ -6704,7 +6708,7 @@ function tradesHTML(d, footNote){
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(esc).join(' · '):'-';
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(typeSuffixLabel).filter(label=>label!=='-').map(esc).join(' · ')||'-':'-';
       return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
