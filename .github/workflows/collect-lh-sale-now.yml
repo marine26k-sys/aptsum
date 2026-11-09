@@ -1,0 +1,36 @@
+name: One-time LH sale notice collection
+on:
+  push:
+    branches: [fix/trade-type-area-precision]
+    paths:
+      - scripts/collect-lh-sale.py
+      - .github/workflows/collect-lh-sale-now.yml
+permissions:
+  contents: write
+concurrency:
+  group: aptsum-lh-sale-one-time
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/trade-type-area-precision
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect current LH sale notices
+        env:
+          LH_DATA_GO_KR_KEY: ${{ secrets.LH_DATA_GO_KR_KEY }}
+        run: python scripts/collect-lh-sale.py
+      - name: Save collected data to PR #261
+        run: |
+          git config user.name 'aptsum-bot'
+          git config user.email 'aptsum-bot@users.noreply.github.com'
+          git add data/lh-sale.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'data: collect current LH sale notices [skip netlify]'
+            git push origin HEAD:fix/trade-type-area-precision
+          fi

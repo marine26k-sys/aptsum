@@ -122,7 +122,7 @@ def normalize(row, region):
 
 
 def main():
-    key = os.environ.get("LH_DATA_GO_KR_KEY", "").strip()
+    key = urllib.parse.unquote(os.environ.get("LH_DATA_GO_KR_KEY", "").strip())
     if not key:
         raise RuntimeError("LH_DATA_GO_KR_KEY 환경변수가 없습니다.")
     today = dt.datetime.now(KST).date()
