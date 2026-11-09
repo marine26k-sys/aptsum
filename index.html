@@ -6689,7 +6689,7 @@ function typeHouseholdCell(p){
   return rows.map(row=>{
     const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
-    return `<div>${esc(label)}${Number.isFinite(households)?` · ${households.toLocaleString('ko-KR')}`:''}</div>`;
+    return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
 }
 function pyTableHTML(d){
