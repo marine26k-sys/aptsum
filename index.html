@@ -6672,12 +6672,15 @@ function typeSuffixLabel(value){
   const labels=original.split(/\s*[,·]\s*/).map(part=>part.replace(/^\d+(?:\.\d+)?\s*/,'').trim()).filter(Boolean);
   return labels.join(' · ')||'-';
 }
+function exclusiveTypeLabels(sizeKey,value){
+  const suffixes=typeSuffixLabel(value).split(' · ').filter(label=>label&&label!=='-');
+  return suffixes.length?suffixes.map(suffix=>`${sizeKey}${suffix}`).join(' · '):String(sizeKey);
+}
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
   return rows.map(row=>{
-    const suffixes=typeSuffixLabel(row.type).split(' · ').filter(Boolean);
-    const label=suffixes.map(suffix=>suffix==='-'?String(p.sizeKey):`${p.sizeKey}${suffix}`).join(' · ');
+    const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
@@ -6714,7 +6717,7 @@ function tradesHTML(d, footNote){
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(typeSuffixLabel).filter(label=>label!=='-').map(esc).join(' · ')||'-':'-';
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(type=>exclusiveTypeLabels(t.sizeKey,type)).map(esc).join(' · ')||'-':'-';
       return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
