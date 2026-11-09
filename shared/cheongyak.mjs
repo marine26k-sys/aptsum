@@ -1,4 +1,4 @@
-export const CATEGORIES = {apt:'아파트',remainder:'무순위·잔여세대'};
+export const CATEGORIES = {apt:'아파트',remainder:'무순위·잔여세대','lh-sale':'LH 분양주택'};
 export const noticeKey = item => `${item.category}:${item.pblancNo}`;
 export function kstToday(now=new Date()){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
@@ -9,6 +9,14 @@ export function validDate(value){
   return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===value?value:null;
 }
 export function noticeStatus(item,today=kstToday()){
+  if(item?.category==='lh-sale'){
+    const status=String(item.pan_status||'').replace(/\s/g,'');
+    if(status.includes('접수중'))return 'open';
+    if(/마감|완료|발표|취소/.test(status))return 'closed';
+    if(status.includes('공고중'))return 'upcoming';
+    const deadline=validDate(item.apply_end);
+    if(deadline)return deadline<today?'closed':'upcoming';
+  }
   const start=validDate(item.apply_start),end=validDate(item.apply_end);
   if(end&&end<today)return 'closed';
   if(start&&start>today)return 'upcoming';
@@ -19,13 +27,13 @@ export function daysUntil(date,today=kstToday()){
   return validDate(date)?Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000):null;
 }
 export function officialURL(value){
-  try{const u=new URL(value);return u.protocol==='https:'&&['www.applyhome.co.kr','applyhome.co.kr'].includes(u.hostname)&&!u.username&&!u.password?u.href:null;}catch{return null;}
+  try{const u=new URL(value);return u.protocol==='https:'&&['www.applyhome.co.kr','applyhome.co.kr','apply.lh.or.kr'].includes(u.hostname)&&!u.username&&!u.password?u.href:null;}catch{return null;}
 }
 export function filterNotices(items,{status='active',category='',region='',query='',favoritesOnly=false,favorites=[]}={},today=kstToday()){
   const saved=new Set(favorites),q=query.replace(/\s/g,'').toLowerCase();
   return items.filter(item=>{
     const state=noticeStatus(item,today);
-    return ['apt','remainder'].includes(item.category)&&(status==='all'||(status==='active'?['open','upcoming'].includes(state):state===status))&&
+    return ['apt','remainder','lh-sale'].includes(item.category)&&(status==='all'||(status==='active'?['open','upcoming'].includes(state):state===status))&&
       (!category||item.category===category)&&(!region||item.region===region)&&
       (!q||`${item.name||''}${item.address||''}`.replace(/\s/g,'').toLowerCase().includes(q))&&
       (!favoritesOnly||saved.has(noticeKey(item)));

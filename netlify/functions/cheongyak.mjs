@@ -14,6 +14,9 @@ export default async function handler(request){
   const results=await Promise.all(urls.map(async url=>{try{const response=await fetch(url,{signal:AbortSignal.timeout(8000),cache:'no-store'});const data=response.ok?await response.json():null;return validData(data)?data:null;}catch{return null;}}));
   const latest=results.filter(Boolean).sort((a,b)=>updatedTime(b)-updatedTime(a))[0];
   if(!latest)return Response.json({error:'청약 공고를 불러오지 못했습니다.'},{status:503,headers:{'Cache-Control':'no-store'}});
-  const items=latest.items.filter(x=>regions.has(x.region)&&['apt','remainder'].includes(x.category));
-  return Response.json({...latest,items,count:items.length},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':'public, max-age=300'}});
+  const lhUrls=[`${origin}/data/lh-sale.json`,'https://raw.githubusercontent.com/marine26k-sys/aptsum/main/data/lh-sale.json'];
+  const lhResults=await Promise.all(lhUrls.map(async url=>{try{const response=await fetch(url,{signal:AbortSignal.timeout(8000),cache:'no-store'});const data=response.ok?await response.json():null;return Array.isArray(data?.items)&&Number.isFinite(updatedTime(data))&&data.items.every(x=>x?.category==='lh-sale'&&typeof x.name==='string'&&typeof x.pblancNo==='string')?data:null;}catch{return null;}}));
+  const lhLatest=lhResults.filter(Boolean).sort((a,b)=>updatedTime(b)-updatedTime(a))[0];
+  const items=[...latest.items.filter(x=>regions.has(x.region)&&['apt','remainder'].includes(x.category)),...(lhLatest?.items||[]).filter(x=>regions.has(x.region))];
+  return Response.json({...latest,items,count:items.length,lh_updated_at:lhLatest?.updated_at||null,lh_count:lhLatest?.items?.length||0},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':'public, max-age=300'}});
 }
