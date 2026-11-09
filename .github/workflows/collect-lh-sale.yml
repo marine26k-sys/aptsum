@@ -1,8 +1,8 @@
 name: LH 분양주택 공고 자동 갱신
 on:
   schedule:
-    # 한국시간 매일 오전 7시 15분
-    - cron: '15 22 * * *'
+    # 한국시간 매일 오전 7시 15분·오후 7시 15분
+    - cron: '15 10,22 * * *'
   workflow_dispatch:
 permissions:
   contents: write
