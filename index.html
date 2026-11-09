@@ -218,6 +218,7 @@ try {
   th{color:var(--sub);font-weight:500;font-size:10.5px;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);white-space:pre-line}
   td{padding:6px 4px;border-bottom:1px dashed var(--line)}
   #tradesBox th:nth-child(3),#tradesBox td:nth-child(3),#tradesBox th:nth-child(4),#tradesBox td:nth-child(4){font-size:10.5px}
+  #tradesBox th:nth-child(4),#tradesBox td:nth-child(4){text-align:right}
   .py-summary-table{table-layout:fixed;font-size:10.5px;background:#F8FAFC}
   .py-summary-table th,.py-summary-table td{padding:5px 2px;overflow:hidden}
   .py-summary-table td{vertical-align:top;border-bottom-color:#DFE7ED}
@@ -6727,7 +6728,7 @@ function tradesHTML(d, footNote){
   const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
   const remain = full.length - list.length;
   return `<table>
-    <tr><th>일자</th><th>평형</th><th>타입</th><th>층</th><th class="tr-r">금액</th></tr>
+    <tr><th>일자</th><th>공급(평)</th><th>전용(타입)</th><th>층</th><th class="tr-r">금액</th></tr>
     ${list.map(t=>{
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
