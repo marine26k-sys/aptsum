@@ -27,13 +27,14 @@ test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
-test('상세 거래내역은 타입표가 없어도 실거래 전용면적을 표시한다',()=>{
+test('상세 거래내역에는 전용면적 대신 매칭된 타입만 표시한다',()=>{
  const c=context();
  const data={byPy:[{sizeKey:84,py:34,max:5.8}],trades:[{date:'26.09.23',py:'34평',sizeKey:84,area:84.99,amt:5.8,floor:1}]};
  const htmlWithoutType=c.tradesHTML(data);
- assert.match(htmlWithoutType,/<td>84\.99<\/td>/);
- assert.doesNotMatch(htmlWithoutType,/<td>-<\/td>/);
+ assert.match(htmlWithoutType,/<td>-<\/td>/);
+ assert.doesNotMatch(htmlWithoutType,/84\.99/);
  c.complexTradeTypeData={'84.99':['112A']};
  const htmlWithType=c.tradesHTML(data);
- assert.match(htmlWithType,/<td>84\.99 \(84A\)<\/td>/);
+ assert.match(htmlWithType,/<td>84A<\/td>/);
+ assert.doesNotMatch(htmlWithType,/84\.99/);
 });
