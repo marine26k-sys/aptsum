@@ -222,8 +222,11 @@ try {
   .py-summary-table th,.py-summary-table td{padding:5px 2px;overflow:hidden}
   .py-summary-table td{vertical-align:top;border-bottom-color:#DFE7ED}
   .py-summary-table td:nth-child(-n+2){background:#F5F8FA}
-  .py-summary-table td.td-teal{background:#E8F4F3}
-  .py-summary-table td.td-recent{background:#EFF3F7}
+  .py-summary-table th.th-average{color:var(--navy);background:#E8EEF4;border-radius:6px 6px 0 0;border-bottom:2px solid #A9B8C8}
+  .py-summary-table td.td-average{background:#EFF3F7}
+  .py-summary-table th.th-recent{color:#fff;background:var(--teal);border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
+  .py-summary-table td.td-recent{background:#E8F4F3}
+  .py-summary-table td.td-recent b{color:var(--teal-dark)}
   .py-summary-table td.td-max{background:#FCEEEE}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
   .py-summary-table td:first-child{white-space:nowrap}
@@ -6694,11 +6697,11 @@ function pyTableHTML(d){
   if(!list.length) return '';
   const columnWidths=['18%','30%','18%','18%','16%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}</td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
-      <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
+      <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
