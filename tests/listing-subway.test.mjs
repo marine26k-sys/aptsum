@@ -33,13 +33,13 @@ test('매물 정보에는 세대수 다음에 지하철 분을 표시하고 누�
  const start=html.indexOf('function listingSubwayHTML('),end=html.indexOf('// 여러 구가 섞인 결과',start);
  const c=vm.createContext({Number,esc:value=>String(value)});
  vm.runInContext(html.slice(start,end),c);
- assert.equal(c.listingSubwayHTML({subwayMinutes:10}),'<br><span style="color:var(--teal-dark);font-weight:800">· 지하철 10분</span>');
+ assert.equal(c.listingSubwayHTML({subwayMinutes:10}),'<span style="color:var(--teal-dark);font-weight:700"> · 지하철 10분</span>');
  assert.equal(c.listingSubwayHTML({}), '');
  assert.equal(c.listingSubwayHTML({subwayMinutes:'-'}), '');
  const infoStart=html.indexOf('function listingInfoHTML('),infoEnd=html.indexOf('\nfunction ',infoStart+10);
  const infoTemplate=html.slice(infoStart,infoEnd);
  assert.ok(infoTemplate.indexOf('세대')<infoTemplate.lastIndexOf('listingSubwayHTML(x)'));
- assert.ok(infoTemplate.indexOf('x.fl?')<infoTemplate.lastIndexOf('listingSubwayHTML(x)'),'층수는 세대수와 같은 줄, 지하철은 다음 줄에 표시한다');
+ assert.ok(infoTemplate.indexOf('x.fl?')<infoTemplate.lastIndexOf('listingSubwayHTML(x)'),'층수 다음에 지하철 거리를 같은 줄로 표시한다');
  assert.doesNotMatch(html,/listing-subway-badge/);
 });
 

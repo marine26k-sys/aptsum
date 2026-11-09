@@ -37,24 +37,51 @@ const exactAreaKey = (value) => {
 const master = JSON.parse(await readFile(args.master, 'utf8'));
 const index = JSON.parse(await readFile('data/complex-index.json', 'utf8')).entries;
 const byIdentity = new Map();
+const byRegionAndName = new Map();
 for (const [id, row] of Object.entries(master)) {
   if (row['단지정보 상태'] !== '확인됨') continue;
   const lawd = regionCodes.get(row['구']);
   if (!lawd || !row['법정동'] || !row['단지명']) continue;
   const key = [lawd, normalize(row['법정동']), normalize(row['단지명'])].join('|');
   if (!byIdentity.has(key)) byIdentity.set(key, []);
-  byIdentity.get(key).push({ id, row });
+  const entry = { id, row, dong: normalize(row['법정동']) };
+  byIdentity.get(key).push(entry);
+  const nameKey = `${lawd}|${normalize(row['단지명'])}`;
+  if (!byRegionAndName.has(nameKey)) byRegionAndName.set(nameKey, []);
+  byRegionAndName.get(nameKey).push(entry);
 }
 
 const identityFor = (complex, name) => [complex.lawd, normalize(complex.umd), normalize(name)].join('|');
 const matchByIndex = new Map();
-let ambiguous = 0, unmatched = 0, complexesWithAreas = 0, typeCount = 0;
+let ambiguous = 0, unmatched = 0, prefixDongMatches = 0, complexesWithAreas = 0, typeCount = 0;
 for (const complex of index) {
   const candidates = new Map();
   const freshIds = new Set();
-  for (const name of new Set([complex.name, ...(complex.names || [])].filter(Boolean))) {
+  const names = new Set([complex.name, ...(complex.names || [])].filter(Boolean));
+  for (const name of names) {
     for (const match of byIdentity.get(identityFor(complex, name)) || []) candidates.set(match.id, match.row);
     for (const id of freshIdsByIdentity.get(identityFor(complex, name)) || []) freshIds.add(id);
+  }
+  // The complex index often includes a legal ri after the eup/myeon/dong
+  // (for example, "봉담읍 내리"), while the canonical map stores only the
+  // administrative eup/myeon/dong ("봉담읍"). Match that hierarchy only
+  // when the complex name and region identify exactly one canonical row.
+  if (!candidates.size) {
+    const complexDong = normalize(complex.umd);
+    const prefixCandidates = new Map();
+    for (const name of names) {
+      for (const match of byRegionAndName.get(`${complex.lawd}|${normalize(name)}`) || []) {
+        if (complexDong.startsWith(match.dong)) prefixCandidates.set(match.id, match.row);
+      }
+      for (const id of freshIdsByIdentity.get(identityFor(complex, name)) || []) freshIds.add(id);
+    }
+    if (prefixCandidates.size === 1) {
+      for (const [id, row] of prefixCandidates) candidates.set(id, row);
+      prefixDongMatches++;
+    } else if (prefixCandidates.size > 1) {
+      ambiguous++;
+      continue;
+    }
   }
   const resolvedNaverId = candidates.size === 1 ? Number([...candidates.keys()][0]) : freshIds.size === 1 ? [...freshIds][0] : null;
   if (!resolvedNaverId) { if (candidates.size > 1 || freshIds.size > 1) ambiguous++; else unmatched++; continue; }
@@ -86,7 +113,10 @@ for (const complex of index) {
   for (const area of freshTypesByNaverId.get(resolvedNaverId) || []) {
     const exclusive = Number(area.exclusiveM2);
     if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
-    const type = String(area.websiteTypeName || area.kbTypeName || '').trim();
+    // Keep the website/Naver type label. A raw KB label is unsafe when the
+    // Naver area match was ambiguous: it can duplicate or mislabel a confirmed
+    // type already present in the canonical map.
+    const type = String(area.websiteTypeName || '').trim();
     if (!type) continue;
     const exactKey = exactAreaKey(area.exclusiveM2);
     if (exactKey) {
@@ -142,4 +172,4 @@ const outDir = 'data/complex-type-households';
 await mkdir(outDir, { recursive: true });
 for (const file of await readdir(outDir)) await unlink(path.join(outDir, file));
 for (const [lawd, items] of shards) await writeFile(path.join(outDir, `${lawd}.json`), JSON.stringify({ items, exactExclusiveTypes: exactShards.get(lawd) || {} }));
-console.log(JSON.stringify({ indexComplexes: index.length, complexesWithTypes: complexesWithAreas, typeAreaRows: typeCount, lookupKeys: keysWritten, aliasesSkipped, ambiguous, unmatched, shards: shards.size }, null, 2));
+console.log(JSON.stringify({ indexComplexes: index.length, complexesWithTypes: complexesWithAreas, typeAreaRows: typeCount, lookupKeys: keysWritten, prefixDongMatches, aliasesSkipped, ambiguous, unmatched, shards: shards.size }, null, 2));

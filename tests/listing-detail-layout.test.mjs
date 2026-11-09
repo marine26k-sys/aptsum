@@ -18,11 +18,11 @@ test('metadata moves area only in the new layout and keeps floor text unaccented
 });
 
 test('individual header contains common building details while rows keep only their own floor',()=>{
- const c=vm.createContext({esc:String,buildAgeLabel:()=> '5년차',hdTop:()=>'',listingOccupancyLabel:()=> '입주 가능',listingFloorLabel:()=> '중층 이상',listingTrialBadgeHTML:()=>'',guShort:x=>x,listingSubwayHTML:x=>x?.subwayMinutes?` · 지하철 ${x.subwayMinutes}분`:''});
+ const c=vm.createContext({esc:String,buildAgeLabel:()=> '5년차',hdTop:()=>'',listingOccupancyLabel:()=> '입주 가능',listingFloorLabel:()=> '중층 이상',listingTrialBadgeHTML:()=>'',guShort:x=>x,listingSubwayHTML:(x,color,separator=' · ')=>x?.subwayMinutes?`<span>${separator}지하철 ${x.subwayMinutes}분</span>`:''});
  vm.runInContext(html.slice(html.indexOf('function listingInfoHTML('),html.indexOf('function listingTrendDate(')),c);
  const item={umd:'가상동',built:'202101',hh:1313,fl:'고/36',subwayMinutes:10};
  const header=c.listingHeaderHTML({individual:true,complexName:'가상 단지',complexRegion:'경기 가상시 가상동',rows:[item]},'단지 분석');
- assert.match(header,/경기 가상시 가상동/);assert.match(header,/5년차 · 1,313세대 · 지하철 10분/);
+ assert.match(header,/경기 가상시 가상동/);assert.match(header,/5년차 · 1,313세대 · <span>지하철 10분<\/span>/);
  const row=c.listingInfoHTML(item,false,true,true);assert.match(row,/고\/36층/);assert.doesNotMatch(row,/가상동|5년차|1,313세대/);
  assert.doesNotMatch(c.listingInfoHTML({...item,fl:''},false,true,true),/층/);
 });

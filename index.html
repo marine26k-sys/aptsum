@@ -218,16 +218,24 @@ try {
   th{color:var(--sub);font-weight:500;font-size:10.5px;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);white-space:pre-line}
   td{padding:6px 4px;border-bottom:1px dashed var(--line)}
   #tradesBox th:nth-child(3),#tradesBox td:nth-child(3),#tradesBox th:nth-child(4),#tradesBox td:nth-child(4){font-size:10.5px}
-  .py-summary-table{table-layout:fixed;font-size:10.5px}
+  #tradesBox th:nth-child(4),#tradesBox td:nth-child(4){text-align:right}
+  .py-summary-table{table-layout:fixed;font-size:10.5px;background:#F8FAFC}
   .py-summary-table th,.py-summary-table td{padding:5px 2px;overflow:hidden}
-  .py-summary-table td{vertical-align:top}
+  .py-summary-table td{vertical-align:top;border-bottom-color:#DFE7ED}
+  .py-summary-table td:nth-child(-n+2){background:#F5F8FA}
+  .py-summary-table th.th-average{color:var(--navy);background:#E8EEF4;border-radius:6px 6px 0 0;border-bottom:2px solid #A9B8C8}
+  .py-summary-table td.td-average{background:#EFF3F7}
+  .py-summary-table th.th-recent{color:#fff;background:var(--teal);border-radius:6px 6px 0 0;border-bottom:2px solid var(--teal)}
+  .py-summary-table td.td-recent{background:#E8F4F3}
+  .py-summary-table td.td-recent b{color:var(--teal-dark)}
+  .py-summary-table td.td-max{background:#FCEEEE}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
   .py-summary-table td:first-child{white-space:nowrap}
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
-  .py-summary-table .td-type{font-size:8.5px;line-height:1.35;white-space:nowrap;color:var(--sub)}
-  .py-summary-table .td-type b{font-size:8.5px;color:var(--navy)}
+  .py-summary-table .td-type{font-size:10.5px;line-height:1.35;white-space:nowrap;color:var(--navy);font-weight:400}
+  .py-summary-table .td-type b{font-size:inherit;color:inherit;font-weight:inherit}
   .peer-table{table-layout:fixed}
   .peer-table th{padding:2px 4px;font-size:9.5px;overflow-wrap:break-word}
   .peer-table td{padding:1px 4px;font-size:10px;border-bottom:1px dashed var(--line);overflow-wrap:break-word}
@@ -283,7 +291,7 @@ try {
   .nh{display:inline-block;font-size:7.5px;font-weight:700;color:#fff;background:var(--red);border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
   .trade-new-badge{display:inline-block;font-size:7.5px;font-weight:700;color:#fff!important;background:var(--teal)!important;border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
   .extag{display:inline-block;font-size:9px;font-weight:700;color:var(--sub);background:var(--slate-bg);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
-  tr.exrow td{opacity:.45}
+  .outlier-tag{color:#8A5A00;background:#FFF4D6;border-color:#F3D58A}
 
   .trend{display:flex;align-items:center;gap:10px;background:var(--slate-bg);border-radius:10px;padding:11px 14px}
   .trend.trend-by-size{display:grid;grid-template-columns:48px 58px minmax(0,1fr)}
@@ -6672,25 +6680,39 @@ function typeSuffixLabel(value){
   const labels=original.split(/\s*[,·]\s*/).map(part=>part.replace(/^\d+(?:\.\d+)?\s*/,'').trim()).filter(Boolean);
   return labels.join(' · ')||'-';
 }
+function exclusiveTypeLabels(sizeKey,value){
+  const suffixes=typeSuffixLabel(value).split(' · ').filter(label=>label&&label!=='-');
+  return suffixes.length?suffixes.map(suffix=>`${sizeKey}${suffix}`).join(' · '):String(sizeKey);
+}
 function typeHouseholdCell(p){
-  const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
-  if(!rows.length)return '<span class="rng">-</span>';
+  const byType=new Map();
+  for(const row of complexTypeHouseholdData?.[String(p.sizeKey)]||[]){
+    const type=String(row.type||'').trim();
+    if(type)byType.set(type,row);
+  }
+  // 타입 대응은 확인됐지만 세대수는 미매칭인 면적도 요약표에 표시한다.
+  for(const [area,types] of Object.entries(complexTradeTypeData||{})){
+    if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
+    for(const type of types)if(!byType.has(type))byType.set(type,{type,households:null});
+  }
+  const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
+  if(!rows.length)return `<div>${esc(p.sizeKey)}㎡</div>`;
   return rows.map(row=>{
-    const label=typeSuffixLabel(row.type);
+    const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
-    return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
+    return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
-  const columnWidths=['20%','24%','19%','19%','18%'];
+  const columnWidths=['18%','30%','18%','18%','16%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th>타입</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
+      <td>${esc(p.py)}</td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
-      <td class="tr-r td-teal">${recentAverageCell(p.recentMonthAvg)}</td>
+      <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
       <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
@@ -6706,15 +6728,16 @@ function tradesHTML(d, footNote){
   const maxMarked = new Set(); // list는 최신순 정렬이라, 평형별로 처음 만나는 최고가(=가장 최근 것)에만 표시
   const remain = full.length - list.length;
   return `<table>
-    <tr><th>일자</th><th>평형</th><th>타입</th><th>층</th><th class="tr-r">금액</th></tr>
+    <tr><th>일자</th><th>공급(평)</th><th>전용(타입)</th><th>층</th><th class="tr-r">금액</th></tr>
     ${list.map(t=>{
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
-      const cls = t.ex ? ' class="exrow"' : '';
+      // 제외 사유는 배지로만 구분하고, 거래 행은 모두 같은 강조도로 표시한다.
+      const exclusionLabel = t.ex === '저가' ? '이상치' : t.ex;
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(typeSuffixLabel).filter(label=>label!=='-').map(esc).join(' · ')||'-':'-';
-      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(type=>exclusiveTypeLabels(t.sizeKey,type)).map(esc).join(' · ')||'-':'-';
+      return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}

@@ -55,7 +55,7 @@ async function load(){
   const response=await fetch('/api/cheongyak',{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('network');const data=await response.json();if(!Array.isArray(data.items)||data.items.some(x=>!x||typeof x.name!=='string'||!x.pblancNo||x.units!=null&&!Array.isArray(x.units)||x.schedule!=null&&!Array.isArray(x.schedule)))throw Error('format');
   const payload=JSON.stringify(data),changed=payload!==lastPayload;
   const seen=new Set();items=data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&['apt','remainder','lh-sale'].includes(x.category)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x)));
-  $('updated').textContent=`최근 갱신 ${data.updated_at||'확인 불가'}${data.lh_updated_at?` · LH ${data.lh_updated_at}`:''} · 서울·경기·인천·부산`;
+  $('updated').textContent=`최근 갱신 ${data.updated_at||'확인 불가'}${data.lh_updated_at?` · LH ${data.lh_updated_at}`:''}\n서울·경기·인천·부산`;
   const match=String(data.updated_at||'').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) KST$/),updated=match?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
   $('warning').hidden=true;
   if(!Number.isFinite(updated)||Date.now()-updated>36*3600000){$('warning').hidden=false;$('warning').textContent='데이터 갱신이 지연되고 있습니다. 최근 공고는 청약홈에서 확인해 주세요.';}
