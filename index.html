@@ -6660,12 +6660,20 @@ function exactExclusiveKey(value){
   const normalizedFraction=fraction.replace(/0+$/,'');
   return normalizedFraction?`${whole}.${normalizedFraction}`:whole;
 }
+function removeCombinedTypeAliases(types){
+  const unique=[...new Set((types||[]).map(type=>String(type??'').trim()).filter(Boolean))];
+  const available=new Set(unique);
+  return unique.filter(type=>{
+    const parts=type.split(/\s*[,·]\s*/).map(part=>part.trim()).filter(Boolean);
+    return !(parts.length>1&&parts.every(part=>available.has(part)));
+  });
+}
 function tradeTypesForArea(value){
   if(!complexTradeTypeData)return null;
   const area=Number(value);
   if(!Number.isFinite(area)||area<=0)return null;
   const direct=complexTradeTypeData[exactExclusiveKey(area)];
-  if(Array.isArray(direct)&&direct.length)return direct;
+  if(Array.isArray(direct)&&direct.length)return removeCombinedTypeAliases(direct);
   // 수집 면적의 소수점 정밀도가 단지 타입표와 다를 수 있으므로 최대 0.05㎡까지 근접 매칭한다.
   const candidates=Object.entries(complexTradeTypeData)
     .map(([key,types])=>({area:Number(key),types,distance:Math.abs(Number(key)-area)}))
@@ -6673,7 +6681,7 @@ function tradeTypesForArea(value){
     .sort((a,b)=>a.distance-b.distance);
   if(!candidates.length||candidates[0].distance>0.05)return null;
   const nearestDistance=candidates[0].distance;
-  return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
+  return removeCombinedTypeAliases(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types));
 }
 function typeSuffixLabel(value){
   const original=String(value??'').trim();
@@ -6693,10 +6701,10 @@ function typeHouseholdCell(p){
   // 타입 대응은 확인됐지만 세대수는 미매칭인 면적도 요약표에 표시한다.
   for(const [area,types] of Object.entries(complexTradeTypeData||{})){
     if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
-    for(const type of types)if(!byType.has(type))byType.set(type,{type,households:null});
+    for(const type of removeCombinedTypeAliases(types))if(!byType.has(type))byType.set(type,{type,households:null});
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(!rows.length)return `<div>${esc(p.sizeKey)}㎡</div>`;
+  if(!rows.length)return `<div>${esc(p.sizeKey)}</div>`;
   return rows.map(row=>{
     const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
@@ -6736,7 +6744,10 @@ function tradesHTML(d, footNote){
       const exclusionLabel = t.ex === '저가' ? '이상치' : t.ex;
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(type=>exclusiveTypeLabels(t.sizeKey,type)).map(esc).join(' · ')||'-':'-';
+      const exclusiveArea=Number(t.area);
+      const exclusiveText=Number.isFinite(exclusiveArea)&&exclusiveArea>0?String(Math.round(exclusiveArea)):'';
+      const tradeTypes=Array.isArray(exactTypes)?removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'):[];
+      const typeLabel=tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
       return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
