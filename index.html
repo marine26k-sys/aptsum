@@ -6643,10 +6643,29 @@ function recentAverageCell(a){
 function complexPyLabel(p){return p.py;}
 let complexTypeHouseholdData=null,complexTradeTypeData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
 function exactExclusiveKey(value){
-  const text=String(value??'').trim();
-  if(!/^\d+(?:\.\d+)?$/.test(text))return '';
-  const [whole,fraction='']=text.split('.'),normalizedFraction=fraction.replace(/0+$/,'');
+  const area=Number(value);
+  if(!Number.isFinite(area)||area<=0)return '';
+  // 실거래 전용면적은 소수점 4자리까지, 타입 대응표는 2자리까지 제공된다.
+  // 반올림하면 경계값이 이웃 타입으로 넘어갈 수 있어 대응표 정밀도에 맞춰 버림한다.
+  const hundredths=Math.floor(area*100+1e-7);
+  const [whole,fraction='']=(hundredths/100).toFixed(2).split('.');
+  const normalizedFraction=fraction.replace(/0+$/,'');
   return normalizedFraction?`${whole}.${normalizedFraction}`:whole;
+}
+function tradeTypesForArea(value){
+  if(!complexTradeTypeData)return null;
+  const area=Number(value);
+  if(!Number.isFinite(area)||area<=0)return null;
+  const direct=complexTradeTypeData[exactExclusiveKey(area)];
+  if(Array.isArray(direct)&&direct.length)return direct;
+  // 수집 면적의 소수점 정밀도가 단지 타입표와 다를 수 있으므로 최대 0.05㎡까지 근접 매칭한다.
+  const candidates=Object.entries(complexTradeTypeData)
+    .map(([key,types])=>({area:Number(key),types,distance:Math.abs(Number(key)-area)}))
+    .filter(item=>Number.isFinite(item.area)&&Array.isArray(item.types)&&item.types.length)
+    .sort((a,b)=>a.distance-b.distance);
+  if(!candidates.length||candidates[0].distance>0.05)return null;
+  const nearestDistance=candidates[0].distance;
+  return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
@@ -6684,7 +6703,7 @@ function tradesHTML(d, footNote){
       if(isMax) maxMarked.add(t.sizeKey);
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
-      const exactTypes=t.area?complexTradeTypeData?.[exactExclusiveKey(t.area)]:null;
+      const exactTypes=t.area?tradeTypesForArea(t.area):null;
       const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(esc).join(' · '):'-';
       return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
