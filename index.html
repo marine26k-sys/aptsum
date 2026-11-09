@@ -6668,20 +6668,17 @@ function tradeTypesForArea(value){
   return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
 function typeSuffixLabel(value){
-  const original=String(value??'').trim();
-  const label=original.replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
-  // 일부 단지는 타입명이 "86"처럼 숫자만 제공된다. 이 경우 유일한 타입 식별자를 보존한다.
-  return label||original||'-';
+  const label=String(value??'').replace(/\d/g,'').replace(/[\s._-]+/g,'').trim();
+  return label||'-';
 }
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
   return rows.map(row=>{
     const label=typeSuffixLabel(row.type);
-    if(label==='-')return '';
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
-  }).filter(Boolean).join('')||'<span class="rng">-</span>';
+  }).join('');
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
