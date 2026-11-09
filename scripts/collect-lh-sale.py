@@ -122,9 +122,9 @@ def normalize(row, region):
 
 
 def main():
-    key = os.environ.get("DATA_GO_KR_KEY", "").strip()
+    key = os.environ.get("LH_DATA_GO_KR_KEY", "").strip()
     if not key:
-        raise RuntimeError("DATA_GO_KR_KEY 환경변수가 없습니다.")
+        raise RuntimeError("LH_DATA_GO_KR_KEY 환경변수가 없습니다.")
     today = dt.datetime.now(KST).date()
     posted_from = (today - dt.timedelta(days=180)).strftime("%Y.%m.%d")
     closing_until = (today + dt.timedelta(days=180)).strftime("%Y.%m.%d")

@@ -22,7 +22,7 @@ jobs:
           python-version: '3.12'
       - name: LH 분양주택 공고 수집
         env:
-          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          LH_DATA_GO_KR_KEY: ${{ secrets.LH_DATA_GO_KR_KEY }}
         run: python scripts/collect-lh-sale.py
       - name: 데이터 저장
         run: |
