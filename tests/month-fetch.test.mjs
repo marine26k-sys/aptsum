@@ -75,7 +75,7 @@ test('total failure stays retryable without showing a data warning', async () =>
   assert.doesNotMatch(html, /id="dataWarning"/);
   const start = html.indexOf('const CHUNK_CONCURRENCY =');
   const end = html.indexOf('async function ensureMonths(', start);
-  const ctx = vm.createContext({searchToken:1,mode:'compare'});
+  const ctx = vm.createContext({searchToken:1,mode:'compare',document:{getElementById:()=>({classList:{contains:()=>false}})}});
   vm.runInContext(html.slice(start,end), ctx);
   let fail = true;
   async function fetchMonth() { return fail ? allFailed : {items:[],failedMonths:[]}; }
@@ -87,7 +87,7 @@ test('total failure stays retryable without showing a data warning', async () =>
 });
 test('중지된 조회는 다음 청크를 새 조회의 연결로 다시 요청하지 않는다',async()=>{
  const start=html.indexOf('const CHUNK_CONCURRENCY ='),end=html.indexOf('async function ensureMonths(',start);
- const ctx=vm.createContext({searchToken:1,mode:'compare'});vm.runInContext(html.slice(start,end),ctx);
+ const ctx=vm.createContext({searchToken:1,mode:'compare',document:{getElementById:()=>({classList:{contains:()=>false}})}});vm.runInContext(html.slice(start,end),ctx);
  let calls=0;const chunks=Array.from({length:9},(_,i)=>[String(i)]);
  await ctx.fetchChunksLimited(chunks,async()=>{calls++;ctx.searchToken=2;return {items:[],failedMonths:[]};},'11620');
  assert.equal(calls,4);
