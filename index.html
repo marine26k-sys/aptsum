@@ -6674,7 +6674,12 @@ function typeSuffixLabel(value){
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
-  return rows.map(row=>typeSuffixLabel(row.type)).filter(label=>label!=='-').map(label=>`<div>${esc(label)}</div>`).join('')||'<span class="rng">-</span>';
+  return rows.map(row=>{
+    const label=typeSuffixLabel(row.type);
+    if(label==='-')return '';
+    const households=Number(row.households);
+    return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
+  }).filter(Boolean).join('')||'<span class="rng">-</span>';
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
