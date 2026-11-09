@@ -291,7 +291,7 @@ try {
   .nh{display:inline-block;font-size:7.5px;font-weight:700;color:#fff;background:var(--red);border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
   .trade-new-badge{display:inline-block;font-size:7.5px;font-weight:700;color:#fff!important;background:var(--teal)!important;border-radius:2.5px;padding:1px 4px;margin-left:4px;vertical-align:1px}
   .extag{display:inline-block;font-size:9px;font-weight:700;color:var(--sub);background:var(--slate-bg);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
-  tr.exrow td{opacity:.45}
+  .outlier-tag{color:#8A5A00;background:#FFF4D6;border-color:#F3D58A}
 
   .trend{display:flex;align-items:center;gap:10px;background:var(--slate-bg);border-radius:10px;padding:11px 14px}
   .trend.trend-by-size{display:grid;grid-template-columns:48px 58px minmax(0,1fr)}
@@ -6732,12 +6732,12 @@ function tradesHTML(d, footNote){
     ${list.map(t=>{
       const isMax = !t.ex && maxByPy[t.sizeKey] === t.amt && !maxMarked.has(t.sizeKey);
       if(isMax) maxMarked.add(t.sizeKey);
-      // 직거래는 제외 배지만 표시하고, 거래 내역은 다른 행과 동일한 톤으로 노출한다.
-      const cls = t.ex && t.ex !== '직거래' ? ' class="exrow"' : '';
+      // 제외 사유는 배지로만 구분하고, 거래 행은 모두 같은 강조도로 표시한다.
+      const exclusionLabel = t.ex === '저가' ? '이상치' : t.ex;
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
       const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(type=>exclusiveTypeLabels(t.sizeKey,type)).map(esc).join(' · ')||'-':'-';
-      return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}${t.ex==='직거래'?' 제외':''}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
