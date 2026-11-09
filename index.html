@@ -6704,7 +6704,7 @@ function typeHouseholdCell(p){
     for(const type of removeCombinedTypeAliases(types))if(!byType.has(type))byType.set(type,{type,households:null});
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(!rows.length)return `<div>${esc(p.sizeKey)}㎡</div>`;
+  if(!rows.length)return `<div>${esc(p.sizeKey)}</div>`;
   return rows.map(row=>{
     const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
