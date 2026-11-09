@@ -6747,7 +6747,7 @@ function tradesHTML(d, footNote){
       const exclusiveArea=Number(t.area);
       const exclusiveText=Number.isFinite(exclusiveArea)&&exclusiveArea>0?exclusiveArea.toFixed(2).replace(/\.?0+$/,''):'';
       const tradeTypes=Array.isArray(exactTypes)?removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'):[];
-      const typeLabel=[exclusiveText?esc(exclusiveText):'',tradeTypes.length?`(${tradeTypes.map(esc).join(' · ')})`: ''].filter(Boolean).join(' ')||'-';
+      const typeLabel=tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
       return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>

@@ -34,7 +34,7 @@ test('요약표 전용면적 숫자에는 제곱미터 단위를 붙이지 않�
  assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div>');
 });
 
-test('상세 거래내역은 전용면적을 단위 없이 표시하고 타입이 있으면 함께 표시한다',()=>{
+test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면적만 표시한다',()=>{
  const c=context();
  const data={byPy:[{sizeKey:84,py:34,max:5.8}],trades:[{date:'26.09.23',py:'34평',sizeKey:84,area:84.99,amt:5.8,floor:1}]};
  const htmlWithoutType=c.tradesHTML(data);
@@ -42,6 +42,7 @@ test('상세 거래내역은 전용면적을 단위 없이 표시하고 타입�
  assert.doesNotMatch(htmlWithoutType,/84\.99㎡/);
  c.complexTradeTypeData={'84.99':['112A']};
  const htmlWithType=c.tradesHTML(data);
- assert.match(htmlWithType,/<td>84\.99 \(84A\)<\/td>/);
+ assert.match(htmlWithType,/<td>84A<\/td>/);
+ assert.doesNotMatch(htmlWithType,/84\.99/);
  assert.doesNotMatch(htmlWithType,/84\.99㎡/);
 });
