@@ -18,25 +18,44 @@ REGIONS = {"11": "서울", "41": "경기", "28": "인천", "26": "부산"}
 
 def parse_payload(payload):
     """Support both the LH dsList envelope and the standard data.go.kr envelope."""
+    def rows_from(value):
+        if isinstance(value, list):
+            return value
+        if isinstance(value, dict):
+            nested = value.get("item")
+            if isinstance(nested, list):
+                return nested
+            if isinstance(nested, dict):
+                return [nested]
+        return None
+
     if isinstance(payload, list):
         for block in payload:
             if isinstance(block, dict):
-                rows = block.get("dsList") or block.get("items")
-                if isinstance(rows, list):
-                    return rows
+                for key in ("dsList", "items"):
+                    if key in block:
+                        rows = rows_from(block[key])
+                        if rows is not None:
+                            return rows
     if isinstance(payload, dict):
-        rows = payload.get("dsList") or payload.get("items")
-        if isinstance(rows, list):
-            return rows
+        for key in ("dsList", "items"):
+            if key in payload:
+                rows = rows_from(payload[key])
+                if rows is not None:
+                    return rows
         response = payload.get("response", payload)
         body = response.get("body", {}) if isinstance(response, dict) else {}
-        rows = body.get("items", []) if isinstance(body, dict) else []
-        if isinstance(rows, dict):
-            rows = rows.get("item", [])
-        if isinstance(rows, dict):
-            rows = [rows]
-        if isinstance(rows, list):
-            return rows
+        if isinstance(body, dict) and "items" in body:
+            rows = rows_from(body["items"])
+            if rows is not None:
+                return rows
+        error = payload.get("OpenAPI_ServiceResponse", {}).get("cmmMsgHeader", {})
+        if error:
+            code = str(error.get("returnReasonCode", ""))
+            message = str(error.get("errMsg", "LH API error"))
+            raise RuntimeError(f"LH API 오류 {code}: {message}")
+        keys = ", ".join(sorted(map(str, payload.keys())))
+        raise RuntimeError(f"LH API 응답 형식 확인 필요 (최상위 항목: {keys or '없음'})")
     raise RuntimeError("LH API 응답에서 공고 목록을 찾지 못했습니다.")
 
 
@@ -139,6 +158,7 @@ def main():
     items = []
     for code, region in REGIONS.items():
         page = 1
+        region_count = 0
         while True:
             rows = get_page(key, code, page, posted_from, closing_until)
             if not rows:
@@ -149,11 +169,12 @@ def main():
                 item = normalize(row, region)
                 if item:
                     items.append(item)
+                    region_count += 1
             if len(rows) < 100:
                 break
             page += 1
             time.sleep(0.15)
-        print(f"{region}: {len(items)} 누적", file=sys.stderr)
+        print(f"{region}: {region_count}건", file=sys.stderr)
 
     if not items:
         raise RuntimeError("LH 분양주택 공고가 0건입니다. 기존 파일은 유지합니다.")
