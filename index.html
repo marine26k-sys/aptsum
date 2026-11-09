@@ -6684,12 +6684,22 @@ function exclusiveTypeLabels(sizeKey,value){
   return suffixes.length?suffixes.map(suffix=>`${sizeKey}${suffix}`).join(' · '):String(sizeKey);
 }
 function typeHouseholdCell(p){
-  const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
+  const byType=new Map();
+  for(const row of complexTypeHouseholdData?.[String(p.sizeKey)]||[]){
+    const type=String(row.type||'').trim();
+    if(type)byType.set(type,row);
+  }
+  // 타입 대응은 확인됐지만 세대수는 미매칭인 면적도 요약표에 표시한다.
+  for(const [area,types] of Object.entries(complexTradeTypeData||{})){
+    if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
+    for(const type of types)if(!byType.has(type))byType.set(type,{type,households:null});
+  }
+  const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
   if(!rows.length)return `<div>${esc(p.sizeKey)}㎡</div>`;
   return rows.map(row=>{
     const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
-    return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
+    return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
 }
 function pyTableHTML(d){
