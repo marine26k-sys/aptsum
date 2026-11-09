@@ -953,7 +953,7 @@ try {
       <div class="tab-grp-name">발급</div>
       <div class="tab-grp-tabs"><a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a></div>
     </div>
-    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈</span></div>
+    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈 &amp; LH 분양</span></div>
     <div class="tab-grp">
       <div class="tab-grp-name">분양</div>
       <div class="tab-grp-tabs">
@@ -6667,17 +6667,26 @@ function tradeTypesForArea(value){
   const nearestDistance=candidates[0].distance;
   return [...new Set(candidates.filter(item=>item.distance-nearestDistance<=0.005).flatMap(item=>item.types))];
 }
+function typeSuffixLabel(value){
+  const original=String(value??'').trim();
+  const labels=original.split(/\s*[,·]\s*/).map(part=>part.replace(/^\d+(?:\.\d+)?\s*/,'').trim()).filter(Boolean);
+  return labels.join(' · ')||'-';
+}
 function typeHouseholdCell(p){
   const rows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   if(!rows.length)return '<span class="rng">-</span>';
-  return rows.map(row=>`<div>${esc(row.type)} · <b>${Number(row.households).toLocaleString('ko-KR')}세대</b></div>`).join('');
+  return rows.map(row=>{
+    const label=typeSuffixLabel(row.type);
+    const households=Number(row.households);
+    return `<div>${esc(label)}${Number.isFinite(households)?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
+  }).join('');
 }
 function pyTableHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   if(!list.length) return '';
   const columnWidths=['20%','24%','19%','19%','18%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
-    <tr><th>평형</th><th>타입별<br>세대수</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
+    <tr><th>평형</th><th>타입</th><th class="tr-r th-teal">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
       <td>${esc(p.py)}<div class="rng" style="font-size:9px">${esc(p.area)}</div></td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
@@ -6704,7 +6713,7 @@ function tradesHTML(d, footNote){
       const cls = t.ex ? ' class="exrow"' : '';
       const size= d.byPy.find(p=>p.sizeKey===t.sizeKey);
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
-      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(esc).join(' · '):'-';
+      const typeLabel=Array.isArray(exactTypes)&&exactTypes.length?exactTypes.map(typeSuffixLabel).filter(label=>label!=='-').map(esc).join(' · ')||'-':'-';
       return `<tr${cls}><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag">${esc(t.ex)} 제외</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>

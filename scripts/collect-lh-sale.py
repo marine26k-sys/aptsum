@@ -140,6 +140,14 @@ def normalize(row, region):
     }
 
 
+NON_APARTMENT_TITLE = re.compile(r"다세대주택|연립주택|단독주택|다가구주택|오피스텔|도시형생활주택")
+
+
+def is_apartment_notice(item):
+    """The LH sale category also contains non-apartment inventory; exclude explicit types."""
+    return not NON_APARTMENT_TITLE.search(item.get("name", ""))
+
+
 def main():
     key = urllib.parse.unquote(os.environ.get("LH_DATA_GO_KR_KEY", "").strip())
     if not key:
@@ -167,7 +175,7 @@ def main():
                 if first(row, "UPP_AIS_TP_CD", "upp_ais_tp_cd").zfill(2) != "05":
                     continue
                 item = normalize(row, region)
-                if item:
+                if item and is_apartment_notice(item):
                     items.append(item)
                     region_count += 1
             if len(rows) < 100:
