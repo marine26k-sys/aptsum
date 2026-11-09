@@ -38,11 +38,10 @@ test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면�
  const c=context();
  const data={byPy:[{sizeKey:84,py:34,max:5.8}],trades:[{date:'26.09.23',py:'34평',sizeKey:84,area:84.99,amt:5.8,floor:1}]};
  const htmlWithoutType=c.tradesHTML(data);
- assert.match(htmlWithoutType,/<td>84\.99<\/td>/);
- assert.doesNotMatch(htmlWithoutType,/84\.99㎡/);
+ assert.match(htmlWithoutType,/<td>85<\/td>/);
+ assert.doesNotMatch(htmlWithoutType,/84\.99/);
  c.complexTradeTypeData={'84.99':['112A']};
  const htmlWithType=c.tradesHTML(data);
  assert.match(htmlWithType,/<td>84A<\/td>/);
  assert.doesNotMatch(htmlWithType,/84\.99/);
- assert.doesNotMatch(htmlWithType,/84\.99㎡/);
 });
