@@ -2994,7 +2994,7 @@ function setMode(m, fromRestore){
   document.getElementById('molitUndervalueFilters').style.display = isMolitUndervalue ? '' : 'none';
   if(isMolitUndervalue)syncMolitUndervaluePriceUI(m);
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
-  document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
+  document.getElementById('lsPyRow').style.display = '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsHhRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsSubwayRow').style.display = (m==='listingbudget'&&!isIndividualListing())||m==='listingurgent' ? '' : 'none';
@@ -8944,7 +8944,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   }finally{if(myToken===searchToken){document.getElementById('loading').classList.remove('on');document.getElementById('btn').disabled=false;}}
 }
 
-function analyzeListingUndervalue(all, priceFilter){
+function analyzeListingUndervalue(all, filters){
   // 저평가 실매물 비교는 전용 48·59·72·84㎡ 기준 ±5㎡ 안에서만 한다.
   const listingAreaGroup = ex => {
     const n = Number(ex);
@@ -8981,7 +8981,7 @@ function analyzeListingUndervalue(all, priceFilter){
   });
   // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
+  return divergence.filter(x=>!filters || (lsAskMatch(x,filters) && lsPyMatch(x,filters))).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
@@ -9008,12 +9008,12 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
-    lsDataBounds(all,['ask']);
-    const priceFilter=lsGet();
+    lsDataBounds(all,['py','ask']);
+    const filters=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
-      askBand:lsAskText(priceFilter)==='전체'?null:lsAskText(priceFilter),filterLabel:'같은 구 비교',
+      askBand:lsAskText(filters)==='전체'?null:lsAskText(filters),pyBand:lsPyActive(filters)?lsPyText(filters):null,filterLabel:'같은 구 비교',
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
-      divergence: analyzeListingUndervalue(all,priceFilter) };
+      divergence: analyzeListingUndervalue(all,filters) };
     lastData = d;
     renderListingUndervalue(d);
     window.scrollTo(0, 0);
