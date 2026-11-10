@@ -927,7 +927,7 @@ try {
       <div class="tab-grp-name">분석</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabRegionalChange" href="./reb-weekly-index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>아파트 통계</a>
-          <a class="tab" id="tabUV" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 9 12l3 3 7-8"/><path d="M15 7h4v4"/></svg>저평가</a>
+          <a class="tab" id="tabUV" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 9 12l3 3 7-8"/><path d="M15 7h4v4"/></svg>저평가</a>
           <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>기간 변동률</a>
       </div>
     </div>
@@ -1048,8 +1048,8 @@ try {
       <button id="regionRankPriceBtn" type="button" role="tab" onclick="setRegionRankView('pyprice')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평당가 랭킹</button>
     </div>
     <div id="undervaluePicker" role="tablist" aria-label="저평가 기간 선택" style="display:none;gap:6px;margin:4px 0 6px">
-      <button id="uvShortBtn" type="button" role="tab" onclick="chooseUndervalueMode('shortval')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">단기</button>
-      <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">연간</button>
+      <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">연간</button>
+      <button id="uvShortBtn" type="button" role="tab" onclick="chooseUndervalueMode('shortval')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">단기</button>
       <button id="uvInversionBtn" type="button" role="tab" onclick="chooseUndervalueMode('inversion')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평형 비교</button>
     </div>
     <input class="q" id="q" type="text" placeholder="단지명 검색 (예: 동아 / 성수동 동아)" aria-label="단지명 검색" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
