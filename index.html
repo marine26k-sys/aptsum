@@ -2564,7 +2564,7 @@ function resetQueriedSliderDefaults(m){
   }
   if(isListingMode(m)){
     listingManualFacets.clear();
-    const defaults={py:[10,60],ask:[0,50],age:[1,LS_AGE_MAX],hh:[lsHhBase(),5000],rate:[LS_RATE_MIN,LS_RATE_MAX]};
+    const defaults={py:[LS_PY_MIN,lsPyBaseMax(m)],ask:[0,50],age:[1,LS_AGE_MAX],hh:[lsHhBase(),5000],rate:[LS_RATE_MIN,LS_RATE_MAX]};
     for(const [name,[min,max]] of Object.entries(defaults))for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=min;el.max=max;el.disabled=false;}
     lsSet();listingGapSet(20,30);
   }
@@ -2582,9 +2582,15 @@ function restoreQueriedSliders(m){
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
   if(isListingMode(m)&&v.ls){
     lsRestoreLimits(v.limits);
+    if(m==='longpeaklisting'){
+      const py=LS_FACETS.py;
+      for(const id of py.ids){const el=document.getElementById(id);el.min=LS_PY_MIN;el.max=LS_UNDERVALUE_PY_MAX;}
+    }
     lsRestoreManualFacets(v.manualFacets);
     // 구버전 저장값은 자동 조정된 범위와 직접 설정한 필터를 구분할 수 없다.
-    if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();else lsSet(v.ls);
+    if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();
+    else if(m==='longpeaklisting')lsSet({...v.ls,p0:Math.max(LS_PY_MIN,Math.min(LS_UNDERVALUE_PY_MAX,v.ls.p0??LS_PY_MIN)),p1:Math.max(LS_PY_MIN,Math.min(LS_UNDERVALUE_PY_MAX,v.ls.p1??LS_UNDERVALUE_PY_MAX))});
+    else lsSet(v.ls);
     if(m==='listingbudget')lsAlignUnadjustedToBounds();
   }
   if(m==='listinggap'&&v.gap)listingGapSet(v.gap.smallBand,v.gap.largeBand);
@@ -9103,6 +9109,8 @@ function listingBudgetBandOf(ask){
 const LS_AGE_MAX = 40;
 // 평형 슬라이더 범위 — 10평 이하·60평 이상은 "그 이하/이상 전부"(기존 체크박스 목록의 17~51평 범위를 넉넉히 포함)
 const LS_PY_MIN = 10, LS_PY_MAX = 60;
+const LS_UNDERVALUE_PY_MAX = 40;
+function lsPyBaseMax(m=mode){return m==='longpeaklisting'?LS_UNDERVALUE_PY_MAX:LS_PY_MAX;}
 const LS_SUBWAY_ALL = 60;
 const LS_SUBWAY_STEPS = [LS_SUBWAY_ALL,20,15,10,5];
 function lsSubwayValue(){return LS_SUBWAY_STEPS[+document.getElementById('lsSubwayMax').value]??LS_SUBWAY_ALL;}
@@ -9129,7 +9137,7 @@ function lsSet(v){
   document.getElementById('lsRateMin').value = Number.isFinite(v.r0) ? v.r0 : LS_RATE_MIN;
   document.getElementById('lsRateMax').value = Number.isFinite(v.r1) ? v.r1 : LS_RATE_MAX;
   document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
-  document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
+  document.getElementById('lsPyMax').value = v.p1 || lsPyBaseMax();
   const subwayMax=document.getElementById('lsSubwayMax');
   subwayMax.value=lsSubwayIndex(v.sw);
   lsSubwaySync();
