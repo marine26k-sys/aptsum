@@ -927,7 +927,7 @@ try {
       <div class="tab-grp-name">분석</div>
       <div class="tab-grp-tabs">
           <a class="tab" id="tabRegionalChange" href="./reb-weekly-index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>아파트 통계</a>
-          <a class="tab" id="tabUV" href="./index.html?m=shortval"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 9 12l3 3 7-8"/><path d="M15 7h4v4"/></svg>저평가</a>
+          <a class="tab" id="tabUV" href="./index.html?m=longpeak"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 9 12l3 3 7-8"/><path d="M15 7h4v4"/></svg>저평가</a>
           <a class="tab" id="tabLTR" href="./index.html?m=longtermrise"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>기간 변동률</a>
       </div>
     </div>
@@ -1048,8 +1048,8 @@ try {
       <button id="regionRankPriceBtn" type="button" role="tab" onclick="setRegionRankView('pyprice')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평당가 랭킹</button>
     </div>
     <div id="undervaluePicker" role="tablist" aria-label="저평가 기간 선택" style="display:none;gap:6px;margin:4px 0 6px">
-      <button id="uvShortBtn" type="button" role="tab" onclick="chooseUndervalueMode('shortval')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">단기</button>
-      <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">연간</button>
+      <button id="uvYearBtn" type="button" role="tab" onclick="chooseUndervalueMode('longpeak')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:#fff;font:inherit;font-weight:800">연간</button>
+      <button id="uvShortBtn" type="button" role="tab" onclick="chooseUndervalueMode('shortval')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">단기</button>
       <button id="uvInversionBtn" type="button" role="tab" onclick="chooseUndervalueMode('inversion')" style="flex:1;padding:8px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font:inherit;font-weight:800">평형 비교</button>
     </div>
     <input class="q" id="q" type="text" placeholder="단지명 검색 (예: 동아 / 성수동 동아)" aria-label="단지명 검색" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();search()}" style="width:100%" autocomplete="off">
@@ -1226,6 +1226,13 @@ try {
     </div>
     <div id="molitUndervalueFilters" class="ls-filters" style="display:none">
       <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
+        <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>평형</span><b id="muvPyTxt">전체</b></div>
+        <div class="ls-control"><div class="ls-dual" id="muvPyDual" style="--lo:0%;--hi:100%">
+          <input type="range" id="muvPyMin" min="10" max="40" step="1" value="10" oninput="molitUndervaluePySync(this)" onchange="molitUndervaluePyApply()" aria-label="최소 평형">
+          <input type="range" id="muvPyMax" min="10" max="40" step="1" value="40" oninput="molitUndervaluePySync(this)" onchange="molitUndervaluePyApply()" aria-label="최대 평형">
+        </div><div class="ls-numbers"><input type="number" id="muvPyMinNumber" min="10" max="40" step="1" aria-label="최소 평형 직접 입력" onchange="molitUndervaluePyNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="muvPyMaxNumber" min="10" max="40" step="1" aria-label="최대 평형 직접 입력" onchange="molitUndervaluePyNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>평</span></div></div>
+      </div>
+      <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
         <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>매매가</span><b id="muvPriceTxt">전체</b></div>
         <div class="ls-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
           <input type="range" id="muvPriceMin" min="0" max="100" step="0.5" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
@@ -1400,6 +1407,10 @@ function regionScopeLabel(items){
 let mode = 'complex';
 let lastData = null;
 const molitUndervaluePriceState={sources:new Map(),min:0,max:100,lo:0,hi:100,touched:false};
+const MOLIT_UNDERVALUE_PY_MIN=10, MOLIT_UNDERVALUE_PY_MAX=40;
+const molitUndervaluePyState={min:MOLIT_UNDERVALUE_PY_MIN,max:MOLIT_UNDERVALUE_PY_MAX,lo:MOLIT_UNDERVALUE_PY_MIN,hi:MOLIT_UNDERVALUE_PY_MAX};
+const molitUndervaluePyFilteredSources=new WeakSet();
+try{const saved=JSON.parse(localStorage.getItem('apc:molitUndervaluePy')||'null');if(saved){molitUndervaluePyState.lo=Math.max(MOLIT_UNDERVALUE_PY_MIN,Math.min(MOLIT_UNDERVALUE_PY_MAX,+saved.lo||MOLIT_UNDERVALUE_PY_MIN));molitUndervaluePyState.hi=Math.max(molitUndervaluePyState.lo,Math.min(MOLIT_UNDERVALUE_PY_MAX,+saved.hi||MOLIT_UNDERVALUE_PY_MAX));}}catch{}
 const molitUndervalueFilteredSources=new WeakSet();
 try{
   const saved=JSON.parse(localStorage.getItem('apc:molitUndervaluePrice')||'null');
@@ -2564,7 +2575,7 @@ function resetQueriedSliderDefaults(m){
   }
   if(isListingMode(m)){
     listingManualFacets.clear();
-    const defaults={py:[10,60],ask:[0,50],age:[1,LS_AGE_MAX],hh:[lsHhBase(),5000],rate:[LS_RATE_MIN,LS_RATE_MAX]};
+    const defaults={py:[LS_PY_MIN,lsPyBaseMax(m)],ask:[0,50],age:[1,LS_AGE_MAX],hh:[lsHhBase(),5000],rate:[LS_RATE_MIN,LS_RATE_MAX]};
     for(const [name,[min,max]] of Object.entries(defaults))for(const id of LS_FACETS[name].ids){const el=document.getElementById(id);el.min=min;el.max=max;el.disabled=false;}
     lsSet();listingGapSet(20,30);
   }
@@ -2582,9 +2593,15 @@ function restoreQueriedSliders(m){
   if(typeof v.by==='string'&&(!v.by||/^\d{1,2}(?:-\d{1,2}|\+)?$/.test(v.by)))setBuildYearValue(v.by);
   if(isListingMode(m)&&v.ls){
     lsRestoreLimits(v.limits);
+    if(m==='longpeaklisting'){
+      const py=LS_FACETS.py;
+      for(const id of py.ids){const el=document.getElementById(id);el.min=LS_PY_MIN;el.max=LS_UNDERVALUE_PY_MAX;}
+    }
     lsRestoreManualFacets(v.manualFacets);
     // 구버전 저장값은 자동 조정된 범위와 직접 설정한 필터를 구분할 수 없다.
-    if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();else lsSet(v.ls);
+    if(m==='listingbudget'&&!Array.isArray(v.manualFacets))lsSet();
+    else if(m==='longpeaklisting')lsSet({...v.ls,p0:Math.max(LS_PY_MIN,Math.min(LS_UNDERVALUE_PY_MAX,v.ls.p0??LS_PY_MIN)),p1:Math.max(LS_PY_MIN,Math.min(LS_UNDERVALUE_PY_MAX,v.ls.p1??LS_UNDERVALUE_PY_MAX))});
+    else lsSet(v.ls);
     if(m==='listingbudget')lsAlignUnadjustedToBounds();
   }
   if(m==='listinggap'&&v.gap)listingGapSet(v.gap.smallBand,v.gap.largeBand);
@@ -2992,9 +3009,9 @@ function setMode(m, fromRestore){
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
   const isMolitUndervalue=['shortval','longpeak','longpeakdong','inversion'].includes(m);
   document.getElementById('molitUndervalueFilters').style.display = isMolitUndervalue ? '' : 'none';
-  if(isMolitUndervalue)syncMolitUndervaluePriceUI(m);
+  if(isMolitUndervalue){syncMolitUndervaluePyUI();syncMolitUndervaluePriceUI(m);}
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
-  document.getElementById('lsPyRow').style.display = m==='longpeaklisting' ? 'none' : '';
+  document.getElementById('lsPyRow').style.display = '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsHhRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
   document.getElementById('lsSubwayRow').style.display = (m==='listingbudget'&&!isIndividualListing())||m==='listingurgent' ? '' : 'none';
@@ -8224,6 +8241,57 @@ function persistMolitUndervaluePrice(){
   const {min,max,lo,hi,touched}=molitUndervaluePriceState;
   try{localStorage.setItem('apc:molitUndervaluePrice',JSON.stringify({min,max,lo,hi,touched}));}catch{}
 }
+function syncMolitUndervaluePyUI(){
+  const state=molitUndervaluePyState,min=document.getElementById('muvPyMin'),max=document.getElementById('muvPyMax');
+  if(!min||!max)return;
+  min.value=state.lo;max.value=state.hi;
+  const minNumber=document.getElementById('muvPyMinNumber'),maxNumber=document.getElementById('muvPyMaxNumber');
+  if(document.activeElement!==minNumber)minNumber.value=state.lo;
+  if(document.activeElement!==maxNumber)maxNumber.value=state.hi;
+  document.getElementById('muvPyTxt').textContent=state.lo<=MOLIT_UNDERVALUE_PY_MIN&&state.hi>=MOLIT_UNDERVALUE_PY_MAX?'전체':`${state.lo}~${state.hi}평`;
+  const dual=document.getElementById('muvPyDual'),span=MOLIT_UNDERVALUE_PY_MAX-MOLIT_UNDERVALUE_PY_MIN;
+  dual.style.setProperty('--lo',((state.lo-MOLIT_UNDERVALUE_PY_MIN)/span*100)+'%');
+  dual.style.setProperty('--hi',((state.hi-MOLIT_UNDERVALUE_PY_MIN)/span*100)+'%');
+}
+function molitUndervaluePySync(input){
+  const state=molitUndervaluePyState,min=document.getElementById('muvPyMin'),max=document.getElementById('muvPyMax');let lo=+min.value,hi=+max.value;
+  if(lo>hi){if(input===min)hi=lo;else lo=hi;min.value=lo;max.value=hi;}
+  state.lo=lo;state.hi=hi;
+  try{localStorage.setItem('apc:molitUndervaluePy',JSON.stringify({lo,hi}));}catch{}
+  syncMolitUndervaluePyUI();
+}
+function molitUndervaluePyNumberApply(input){
+  const slider=document.getElementById(input.id==='muvPyMinNumber'?'muvPyMin':'muvPyMax'),min=+slider.min,max=+slider.max;
+  if(input.value.trim()===''||!Number.isFinite(+input.value)){syncMolitUndervaluePyUI();return;}
+  slider.value=Math.max(min,Math.min(max,Math.round(+input.value)));
+  molitUndervaluePySync(slider);molitUndervaluePyApply();
+}
+function molitUndervaluePyValue(mode,row){
+  if(mode==='inversion')return Number.parseFloat(String(row.underPy||'').replace(/[^\d.]/g,''));
+  return Number(row.py);
+}
+function molitUndervaluePyFilter(d){
+  if(molitUndervaluePyFilteredSources.has(d))return {data:d};
+  const mode=molitUndervaluePriceMode(d.mode),key=mode==='inversion'?'rows':'divergence',state=molitUndervaluePyState;
+  const rows=(d[key]||[]).filter(row=>{const py=molitUndervaluePyValue(mode,row);return Number.isFinite(py)&&py>=state.lo&&py<=state.hi;});
+  const data={...d,[key]:rows};
+  molitUndervaluePyFilteredSources.add(data);
+  molitUndervalueFilteredSources.add(data); // 페이지 추가 조회에서 평형·금액 필터를 다시 적용하지 않는다.
+  return {data};
+}
+function molitUndervaluePyApply(){
+  const currentMode=molitUndervaluePriceMode(mode),selectedMode=molitUndervaluePriceMode(lastData?.mode);
+  if(!lastData||selectedMode!==currentMode)return;
+  if(currentMode==='shortval')renderShortUndervalue(lastData);
+  else if(currentMode==='inversion')renderInversion(lastData);
+  else renderLongPeak(lastData);
+}
+function resetMolitUndervaluePyFilter(){
+  molitUndervaluePyState.lo=MOLIT_UNDERVALUE_PY_MIN;
+  molitUndervaluePyState.hi=MOLIT_UNDERVALUE_PY_MAX;
+  try{localStorage.removeItem('apc:molitUndervaluePy');}catch{}
+  syncMolitUndervaluePyUI();
+}
 function resetMolitUndervaluePriceFilter(){
   const state=molitUndervaluePriceState;
   const currentMode=molitUndervaluePriceMode(mode),source=molitUndervaluePriceMode(lastData?.mode)===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
@@ -8424,7 +8492,7 @@ function renderJeonseLongTermRise(d){
 }
 
 function renderInversion(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"rows",renderInversion);
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
@@ -8484,7 +8552,7 @@ ${uvSep(i)}
 }
 
 function renderShortUndervalue(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"divergence",renderShortUndervalue);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
@@ -8944,7 +9012,7 @@ async function searchListingTrend(myToken,lawd,silentScroll){
   }finally{if(myToken===searchToken){document.getElementById('loading').classList.remove('on');document.getElementById('btn').disabled=false;}}
 }
 
-function analyzeListingUndervalue(all, priceFilter){
+function analyzeListingUndervalue(all){
   // 저평가 실매물 비교는 전용 48·59·72·84㎡ 기준 ±5㎡ 안에서만 한다.
   const listingAreaGroup = ex => {
     const n = Number(ex);
@@ -8962,7 +9030,7 @@ function analyzeListingUndervalue(all, priceFilter){
     const nearest = rows
       .filter(o=> o.nid!==r.nid && o.lawd===r.lawd && listingAreaGroup(o.ex)===listingAreaGroup(r.ex) // 같은 구·같은 전용면적 기준 그룹 안에서 비교
         && Math.abs(o.peak - r.peak) / r.peak <= 0.02   // 최근 3년 최고가가 서로 비슷했던(±2%) 단지 — 엑셀 실거래최고가는 약 3년치 중 최고가(2026.09 운영자가 엑셀 추출 기간을 5년→3년으로 변경)
-        && o.ask < o.peak * 1.2                       // 비교 단지의 최저 호가가 해당 단지 3년 최고가보다 20% 이상 높으면 비교군에서 제외
+        && o.ask <= o.peak * 1.15                     // 비교 단지의 최저 호가가 해당 단지 3년 최고가보다 15% 초과 높으면 비교군에서 제외
         && (o.ask - r.ask) / r.ask > 0.02)               // 그중 지금 호가가 나보다 확실히(2% 초과) 높은 단지만 비교군 — 연간 저평가와 같은 규칙
       .sort((a,b)=> Math.abs(a.peak-r.peak) - Math.abs(b.peak-r.peak))
       // 한 단지는 비교군에 한 번만 — 엑셀이 단지·전용면적 단위라 같은 단지의 비슷한 평형(예: 전용 58·59)이 따로 잡혀
@@ -8971,17 +9039,18 @@ function analyzeListingUndervalue(all, priceFilter){
       .slice(0,4); // 본인 단지를 포함해 비교 표본 최대 5개
     if(nearest.length < 2) return; // 본인 포함 3개 이상일 때만
     const askMedian = median(nearest.map(o=>o.ask));
-    const gapPct = Math.round((r.ask - askMedian)/askMedian*100);
+    const exactGapPct = (r.ask - askMedian)/askMedian*100;
+    const gapPct = Math.round(exactGapPct);
     // 5% 이상 낮으면 채택. 25% 넘게(-26% 이하) 낮은 건 같은 가격대 단지끼리 현실적인 격차가 아니라 대개 지분·특수 매물이거나
     // 엑셀 입력 오류라 제외(운영자 확인용으로 급하게 볼 목록이 오염되지 않도록). 처음엔 30% 넘게였는데 2026.09 운영자 요청으로 25% 넘게 — -25%까지는 표시.
-    if(gapPct <= -5 && gapPct >= -25){
+    if(exactGapPct <= -5 && exactGapPct >= -25){
       const peers = nearest.map(o=>({apt:o.apt, py:o.py, area:o.ex, peak:o.peak, peakYm:o.peakYm, ask:o.ask, url:o.url, umd:o.umd})).sort((a,b)=>a.ask-b.ask);
       divergence.push({ ...r, area:r.ex, askMedian:R1(askMedian), gapAmt:R1(askMedian-r.ask), gapPct, groupN:nearest.length+1, peers });
     }
   });
   // 격차가 큰 100곳을 고른 뒤, 화면에는 저평가 단지의 최저 호가가 낮은 순으로(2026.09 운영자 요청)
   divergence.sort((a,b)=> a.gapPct-b.gapPct || b.gapAmt-a.gapAmt);
-  return divergence.filter(x=>!priceFilter || lsAskMatch(x,priceFilter)).sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
+  return divergence.sort((a,b)=> a.ask-b.ask || a.gapPct-b.gapPct);
 }
 
 async function searchListingUndervalue(myToken, lawd){
@@ -9008,12 +9077,14 @@ async function searchListingUndervalue(myToken, lawd){
       showError(failed.length ? '실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : '선택한 지역에 업로드된 실매물 데이터가 없습니다.');
       return;
     }
-    lsDataBounds(all,['ask']);
-    const priceFilter=lsGet();
+    const candidates=analyzeListingUndervalue(all);
+    // 슬라이더 경계는 전체 실매물 범위가 아니라 실제 저평가 비교 결과의 평형·호가 범위로 잡는다.
+    lsDataBounds(candidates,['py','ask']);
+    const filters=lsGet();
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
-      askBand:lsAskText(priceFilter)==='전체'?null:lsAskText(priceFilter),filterLabel:'같은 구 비교',
+      askBand:lsAskText(filters)==='전체'?null:lsAskText(filters),pyBand:lsPyActive(filters)?lsPyText(filters):null,filterLabel:'같은 구 비교',
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
-      divergence: analyzeListingUndervalue(all,priceFilter) };
+      divergence: candidates.filter(x=>lsAskMatch(x,filters)&&lsPyMatch(x,filters)) };
     lastData = d;
     renderListingUndervalue(d);
     window.scrollTo(0, 0);
@@ -9067,7 +9138,7 @@ function renderListingUndervalue(d){
       ${body}
     </div>
   </div>
-  <div class="src-note">같은 구·전용면적(48/59/72/84㎡ ±5㎡)에서 3년 최고가 ±2%인 단지와 비교합니다. 기준 단지를 포함해 최대 5곳이며, 비교군 호가가 기준 단지 3년 최고가보다 20% 이상 높으면 제외합니다. ${LISTING_MIN_HH}세대 이상·${listingOccupancyLabel()}·중층 이상 매물만 집계하고, 중앙값보다 25% 넘게 낮은 특이 호가는 제외합니다. 최저 호가순 · ‘급매’ 표시는 매물 문구 기준 · 출처: 네이버 부동산·국토교통부</div>`;
+  <div class="src-note">같은 구·전용면적(48/59/72/84㎡ ±5㎡)에서 3년 최고가 ±2%인 단지와 비교합니다. 기준 단지를 포함해 최대 5곳이며, 비교군 호가가 기준 단지 3년 최고가보다 15% 초과 높으면 제외합니다. ${LISTING_MIN_HH}세대 이상·${listingOccupancyLabel()}·중층 이상 매물만 집계하고, 중앙값보다 25% 넘게 낮은 특이 호가는 제외합니다. 최저 호가순 · ‘급매’ 표시는 매물 문구 기준 · 출처: 네이버 부동산·국토교통부</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -9101,6 +9172,8 @@ function listingBudgetBandOf(ask){
 const LS_AGE_MAX = 40;
 // 평형 슬라이더 범위 — 10평 이하·60평 이상은 "그 이하/이상 전부"(기존 체크박스 목록의 17~51평 범위를 넉넉히 포함)
 const LS_PY_MIN = 10, LS_PY_MAX = 60;
+const LS_UNDERVALUE_PY_MAX = 40;
+function lsPyBaseMax(m=mode){return m==='longpeaklisting'?LS_UNDERVALUE_PY_MAX:LS_PY_MAX;}
 const LS_SUBWAY_ALL = 60;
 const LS_SUBWAY_STEPS = [LS_SUBWAY_ALL,20,15,10,5];
 function lsSubwayValue(){return LS_SUBWAY_STEPS[+document.getElementById('lsSubwayMax').value]??LS_SUBWAY_ALL;}
@@ -9127,7 +9200,7 @@ function lsSet(v){
   document.getElementById('lsRateMin').value = Number.isFinite(v.r0) ? v.r0 : LS_RATE_MIN;
   document.getElementById('lsRateMax').value = Number.isFinite(v.r1) ? v.r1 : LS_RATE_MAX;
   document.getElementById('lsPyMin').value = v.p0 || LS_PY_MIN;
-  document.getElementById('lsPyMax').value = v.p1 || LS_PY_MAX;
+  document.getElementById('lsPyMax').value = v.p1 || lsPyBaseMax();
   const subwayMax=document.getElementById('lsSubwayMax');
   subwayMax.value=lsSubwayIndex(v.sw);
   lsSubwaySync();
@@ -9166,7 +9239,7 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
 }
 function resetAllSliderFilters(){
   if(document.getElementById('loading').classList.contains('on'))stopSearch();else searchToken++;
-  if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
+  if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePyFilter();resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
   if(mode==='newhigh'){document.getElementById('newHighPriceMin').value=0;document.getElementById('newHighPriceMax').value=100;newHighPriceSync();}
@@ -9990,7 +10063,7 @@ function renderListingBudget(d,limit=100){
 }
 
 function renderLongPeak(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"divergence",renderLongPeak);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
