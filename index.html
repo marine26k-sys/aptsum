@@ -8286,6 +8286,12 @@ function molitUndervaluePyApply(){
   else if(currentMode==='inversion')renderInversion(lastData);
   else renderLongPeak(lastData);
 }
+function resetMolitUndervaluePyFilter(){
+  molitUndervaluePyState.lo=MOLIT_UNDERVALUE_PY_MIN;
+  molitUndervaluePyState.hi=MOLIT_UNDERVALUE_PY_MAX;
+  try{localStorage.removeItem('apc:molitUndervaluePy');}catch{}
+  syncMolitUndervaluePyUI();
+}
 function resetMolitUndervaluePriceFilter(){
   const state=molitUndervaluePriceState;
   const currentMode=molitUndervaluePriceMode(mode),source=molitUndervaluePriceMode(lastData?.mode)===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
@@ -9232,7 +9238,7 @@ function lsDataBounds(items,names=['py','ask','age','hh','rate']){
 }
 function resetAllSliderFilters(){
   if(document.getElementById('loading').classList.contains('on'))stopSearch();else searchToken++;
-  if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePriceFilter();return;}
+  if(['shortval','longpeak','longpeakdong','inversion'].includes(mode)){resetMolitUndervaluePyFilter();resetMolitUndervaluePriceFilter();return;}
   if(isListingMode(mode)){resetListingFilters();return;}
   resetQueriedSliderDefaults(mode);
   if(mode==='newhigh'){document.getElementById('newHighPriceMin').value=0;document.getElementById('newHighPriceMax').value=100;newHighPriceSync();}
