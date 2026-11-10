@@ -4103,7 +4103,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const labelTrades=arr.length?arr:historyType;
     const max = arr.length?Math.max(...arr.map(t=>t.amt)):null;
     const maxTrade = arr.find(t=>t.amt===max); // arr는 최신순 정렬 → 동가 시 최근 거래 채택
-    const maxDate = maxTrade?`${maxTrade.ym.slice(0,4)}.${maxTrade.ym.slice(4)}.${String(maxTrade.d||'').padStart(2,'0')}`:null;
+    const maxDate = maxTrade?`${maxTrade.ym.slice(2,4)}.${maxTrade.ym.slice(4)}.${String(maxTrade.d||'').padStart(2,'0')}`:null;
     const recent = arr[0];
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
