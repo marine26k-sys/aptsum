@@ -1226,6 +1226,13 @@ try {
     </div>
     <div id="molitUndervalueFilters" class="ls-filters" style="display:none">
       <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
+        <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>평형</span><b id="muvPyTxt">전체</b></div>
+        <div class="ls-control"><div class="ls-dual" id="muvPyDual" style="--lo:0%;--hi:100%">
+          <input type="range" id="muvPyMin" min="10" max="40" step="1" value="10" oninput="molitUndervaluePySync(this)" onchange="molitUndervaluePyApply()" aria-label="최소 평형">
+          <input type="range" id="muvPyMax" min="10" max="40" step="1" value="40" oninput="molitUndervaluePySync(this)" onchange="molitUndervaluePyApply()" aria-label="최대 평형">
+        </div></div>
+      </div>
+      <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
         <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>매매가</span><b id="muvPriceTxt">전체</b></div>
         <div class="ls-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
           <input type="range" id="muvPriceMin" min="0" max="100" step="0.5" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
@@ -1400,6 +1407,10 @@ function regionScopeLabel(items){
 let mode = 'complex';
 let lastData = null;
 const molitUndervaluePriceState={sources:new Map(),min:0,max:100,lo:0,hi:100,touched:false};
+const MOLIT_UNDERVALUE_PY_MIN=10, MOLIT_UNDERVALUE_PY_MAX=40;
+const molitUndervaluePyState={min:MOLIT_UNDERVALUE_PY_MIN,max:MOLIT_UNDERVALUE_PY_MAX,lo:MOLIT_UNDERVALUE_PY_MIN,hi:MOLIT_UNDERVALUE_PY_MAX};
+const molitUndervaluePyFilteredSources=new WeakSet();
+try{const saved=JSON.parse(localStorage.getItem('apc:molitUndervaluePy')||'null');if(saved){molitUndervaluePyState.lo=Math.max(MOLIT_UNDERVALUE_PY_MIN,Math.min(MOLIT_UNDERVALUE_PY_MAX,+saved.lo||MOLIT_UNDERVALUE_PY_MIN));molitUndervaluePyState.hi=Math.max(molitUndervaluePyState.lo,Math.min(MOLIT_UNDERVALUE_PY_MAX,+saved.hi||MOLIT_UNDERVALUE_PY_MAX));}}catch{}
 const molitUndervalueFilteredSources=new WeakSet();
 try{
   const saved=JSON.parse(localStorage.getItem('apc:molitUndervaluePrice')||'null');
@@ -2998,7 +3009,7 @@ function setMode(m, fromRestore){
   document.getElementById('lsFilters').style.display = (m==='listingbudget'||m==='listingurgent'||m==='listingaskmap'||(m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? '' : 'none';
   const isMolitUndervalue=['shortval','longpeak','longpeakdong','inversion'].includes(m);
   document.getElementById('molitUndervalueFilters').style.display = isMolitUndervalue ? '' : 'none';
-  if(isMolitUndervalue)syncMolitUndervaluePriceUI(m);
+  if(isMolitUndervalue){syncMolitUndervaluePyUI();syncMolitUndervaluePriceUI(m);}
   document.getElementById('lsAskRow').style.display = m!=='listinggap' ? '' : 'none';
   document.getElementById('lsPyRow').style.display = '';
   document.getElementById('lsAgeRow').style.display = ((m==='listingtrend'||m==='listingrise')||m==='longpeaklisting') ? 'none' : '';
@@ -8230,6 +8241,42 @@ function persistMolitUndervaluePrice(){
   const {min,max,lo,hi,touched}=molitUndervaluePriceState;
   try{localStorage.setItem('apc:molitUndervaluePrice',JSON.stringify({min,max,lo,hi,touched}));}catch{}
 }
+function syncMolitUndervaluePyUI(){
+  const state=molitUndervaluePyState,min=document.getElementById('muvPyMin'),max=document.getElementById('muvPyMax');
+  if(!min||!max)return;
+  min.value=state.lo;max.value=state.hi;
+  document.getElementById('muvPyTxt').textContent=state.lo<=MOLIT_UNDERVALUE_PY_MIN&&state.hi>=MOLIT_UNDERVALUE_PY_MAX?'전체':`${state.lo}~${state.hi}평`;
+  const dual=document.getElementById('muvPyDual'),span=MOLIT_UNDERVALUE_PY_MAX-MOLIT_UNDERVALUE_PY_MIN;
+  dual.style.setProperty('--lo',((state.lo-MOLIT_UNDERVALUE_PY_MIN)/span*100)+'%');
+  dual.style.setProperty('--hi',((state.hi-MOLIT_UNDERVALUE_PY_MIN)/span*100)+'%');
+}
+function molitUndervaluePySync(input){
+  const state=molitUndervaluePyState,min=document.getElementById('muvPyMin'),max=document.getElementById('muvPyMax');let lo=+min.value,hi=+max.value;
+  if(lo>hi){if(input===min)hi=lo;else lo=hi;min.value=lo;max.value=hi;}
+  state.lo=lo;state.hi=hi;
+  try{localStorage.setItem('apc:molitUndervaluePy',JSON.stringify({lo,hi}));}catch{}
+  syncMolitUndervaluePyUI();
+}
+function molitUndervaluePyValue(mode,row){
+  if(mode==='inversion')return Number.parseFloat(String(row.underPy||'').replace(/[^\d.]/g,''));
+  return Number(row.py);
+}
+function molitUndervaluePyFilter(d){
+  if(molitUndervaluePyFilteredSources.has(d))return {data:d};
+  const mode=molitUndervaluePriceMode(d.mode),key=mode==='inversion'?'rows':'divergence',state=molitUndervaluePyState;
+  const rows=(d[key]||[]).filter(row=>{const py=molitUndervaluePyValue(mode,row);return Number.isFinite(py)&&py>=state.lo&&py<=state.hi;});
+  const data={...d,[key]:rows};
+  molitUndervaluePyFilteredSources.add(data);
+  molitUndervalueFilteredSources.add(data); // 페이지 추가 조회에서 평형·금액 필터를 다시 적용하지 않는다.
+  return {data};
+}
+function molitUndervaluePyApply(){
+  const currentMode=molitUndervaluePriceMode(mode),selectedMode=molitUndervaluePriceMode(lastData?.mode);
+  if(!lastData||selectedMode!==currentMode)return;
+  if(currentMode==='shortval')renderShortUndervalue(lastData);
+  else if(currentMode==='inversion')renderInversion(lastData);
+  else renderLongPeak(lastData);
+}
 function resetMolitUndervaluePriceFilter(){
   const state=molitUndervaluePriceState;
   const currentMode=molitUndervaluePriceMode(mode),source=molitUndervaluePriceMode(lastData?.mode)===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
@@ -8430,7 +8477,7 @@ function renderJeonseLongTermRise(d){
 }
 
 function renderInversion(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"rows",renderInversion);
   const multiRegion = regionMulti(d.rows);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
@@ -8490,7 +8537,7 @@ ${uvSep(i)}
 }
 
 function renderShortUndervalue(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"divergence",renderShortUndervalue);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
@@ -10000,7 +10047,7 @@ function renderListingBudget(d,limit=100){
 }
 
 function renderLongPeak(d){
-  const priceFilter=molitUndervaluePriceFilter(d);d=priceFilter.data;
+  const priceFilter=molitUndervaluePriceFilter(d);d=molitUndervaluePyFilter(priceFilter.data).data;
   d=molitPageData(d,"divergence",renderLongPeak);
   const regionName = d.scopeLabel || sel.options[sel.selectedIndex].textContent;
   const html = `
