@@ -54,7 +54,7 @@ export function applyNaverSupplyAreas(items, records, lawd) {
     const rounded = roundedTypes.get(`${name}|${Math.round(t.area)}`);
     const hit = exactTypes.has(exactKey) ? exactTypes.get(exactKey) :
       rounded?.areas.some(area => Math.abs(area - t.area) <= 0.05 + 1e-9) ? rounded : null;
-    if (!hit || households.get(name)?.size !== 1 || (t.hh != null && t.hh !== hit.hh)) return t;
+    if (!hit || (t.hh != null && t.hh !== hit.hh)) return t;
     return {...t,py:hit.py};
   });
 }

@@ -11,12 +11,18 @@ const freshKbTypes = args['kb-types'] ? JSON.parse(await readFile(args['kb-types
 const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g, '').toLocaleLowerCase('ko-KR');
 const regionCodes = new Map(REGIONS.flatMap(([, regions]) => regions));
 const freshTypesByNaverId = new Map();
+const supplyPyeongByType = new Map();
 const freshIdsByIdentity = new Map();
 for (const complex of freshKbTypes?.complexes || []) {
   const ids = complex.targetNaverIds || (complex.matchedTarget?.naverId ? [complex.matchedTarget.naverId] : []);
   for (const naverId of ids) {
     if (!freshTypesByNaverId.has(Number(naverId))) freshTypesByNaverId.set(Number(naverId), []);
     freshTypesByNaverId.get(Number(naverId)).push(...(complex.areas || []));
+  }
+  for (const area of complex.areas || []) {
+    const type = String(area.websiteTypeName || '').trim();
+    const supply = Number(area.supplyM2);
+    if (type && Number.isFinite(supply) && supply > 0) supplyPyeongByType.set(type, Math.floor(supply * 0.3025));
   }
   const target = complex.matchedTarget;
   const lawd = target?.district ? regionCodes.get(target.district) : null;
@@ -132,7 +138,7 @@ for (const complex of index) {
     }
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(type) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);

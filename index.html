@@ -5661,6 +5661,8 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
  const rows=index.filter(x=>allowed.has(x.lawd)&&norm(x.name)!==norm(x.umd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
  let hits=!includePartial&&exact.length?exact:rows.filter(x=>aptNames(x).some(n=>norm(n).includes(q)));
+ // 단지명 검색에서는 '에스클래스/S-클래스'를 생략하는 통용 약칭도 허용한다.
+ if(!hits.length){const brandless=s=>norm(s).replace(/에스클래스|s-?클래스|s-?class/gi,'');const shortQ=brandless(searchText);if(shortQ.length>=2)hits=rows.filter(x=>aptNames(x).some(n=>brandless(n).includes(shortQ)));}
  // 지역명과 단지명을 함께 입력한 경우(예: "봉천 두산") 연속 문자열 검색만으로는
  // 단지의 공식명이 "두산"인 후보를 찾지 못하므로, 모든 입력어가 지역 또는 단지명에
  // 각각 포함되고 그중 하나 이상은 단지명에 포함되는 후보로 보완한다.
@@ -6688,7 +6690,13 @@ function recentAverageCell(a){
   const sub=a.carriedFrom?esc(a.carriedFrom):`${a.n}건`;
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
-function complexPyLabel(p){return p.py;}
+function complexPyLabel(p){
+  const rows=complexTypeHouseholdData?.[String(p?.sizeKey)]||[];
+  const counts=new Map();
+  for(const row of rows){const py=Number(row.supplyPyeong),hh=Number(row.households);if(Number.isInteger(py)&&py>0&&Number.isFinite(hh)&&hh>0)counts.set(py,(counts.get(py)||0)+hh);}
+  if(counts.size){const [py]=[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0];return `${py}평`;}
+  return p.py;
+}
 let complexTypeHouseholdData=null,complexTradeTypeData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
 function exactExclusiveKey(value){
   const area=Number(value);
@@ -6758,7 +6766,7 @@ function pyTableHTML(d){
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}</td>
+      <td>${esc(complexPyLabel(p))}</td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
       <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
@@ -7567,7 +7575,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','exact-v2');
+        query.set('typeSchema','supply-pyeong-v3');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
