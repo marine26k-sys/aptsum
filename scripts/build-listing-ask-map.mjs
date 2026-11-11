@@ -50,10 +50,12 @@ const outputUrl = new URL('../data/listing-ask-map.json', import.meta.url);
 let previous = null;
 try { previous = JSON.parse(await readFile(outputUrl, 'utf8')); } catch {}
 const signature = value => JSON.stringify({ asOf: value.asOf || '', regions: value.regions || [] });
+const refreshedAt = new Date().toISOString();
 if (previous && signature(previous) === signature({ asOf, regions: results })) {
+  await writeFile(outputUrl, `${JSON.stringify({ ...previous, refreshedAt })}\n`);
   console.log(`지도 데이터 변경 없음: ${asOf || '기준일 없음'}, ${results.length}개 지역`);
 } else {
-  const output = { generatedAt: new Date().toISOString(), asOf, regions: results };
+  const output = { generatedAt: refreshedAt, refreshedAt, asOf, regions: results };
   await writeFile(outputUrl, `${JSON.stringify(output)}\n`);
   console.log(`지도 데이터 갱신 완료: ${asOf || '기준일 없음'}, ${results.length}개 지역`);
 }

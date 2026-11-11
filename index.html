@@ -4322,15 +4322,13 @@ function analyzeNewLow(all, months){
     newLow: results };
 }
 
-// ═══ 전용면적 평당가 탭 ═══
+// ═══ 평당가 랭킹 탭 ═══
 // 최근 3년 최고가를 공급면적 매칭이 적용된 표시 평형(t.py)으로 나눈다.
-// 미매칭 단지는 기존 공급면적 추정 평형을 사용하며 화면에 기준을 안내한다.
-const SQM_PER_PY = 3.3058; // 1평 = 3.3058㎡ (전용면적 → 전용평형 정밀 환산 상수, 보간 없음)
 function analyzePricePerPyeong(all, months){
   // 직거래는 최고가를 왜곡할 수 있어 제외 — 신고가 탭과 동일한 원칙.
   all = all.filter(t=>!t.direct);
   // 1) 단지+전용면적 내림 정수별 3년 최고가 산출 (동가면 최근 계약일 우선)
-  //    ※ 공급면적 평형(py)은 그룹 키가 아니라 표시·평대 필터에만 쓴다.
+  //    공급(평) t.py는 동일 단지의 평형 비교와 화면 표시에 사용한다.
   const byPy = {};
   // pyCount: (단지|동|구|평형)별 표본 개수 — 딱 1건뿐인 평형은 뒤에서 이상치로 간주해 제외
   // (예: 국토부 원본 데이터에 단지 공식 평형과 무관한 소형 전용면적 1건이 섞여 들어오면, 분모가 작다는
@@ -4342,7 +4340,7 @@ function analyzePricePerPyeong(all, months){
     const cur = byPy[pk];
     if(!cur || t.amt > cur.amt || (t.amt===cur.amt && dkey(t) > dkey(cur))) byPy[pk] = t;
   }
-  // 2) 단지별로 전용면적 평당가(만원/전용평) 계산 후, 평당가가 가장 높은 평형 1개만 대표로 채택
+  // 2) 단지별로 공급면적 평당가(만원/공급평) 계산 후, 평당가가 가장 높은 평형 1개만 대표로 채택
   const byComplex = {};
   for(const t of Object.values(byPy)){
     if(!t.area) continue; // 전용면적 정보 없는 거래는 평당가 계산 불가
@@ -4381,13 +4379,16 @@ function analyzeInversion(all, months){
     return Math.floor((Date.now() - new Date(y, mo-1, da).getTime()) / (24*3600*1000));
   };
   const recentMonths=calendarMonths(1),priorMonths=calendarMonths(6,1);
-  const meanArea=trades=>trades.length?trades.reduce((n,t)=>n+t.area,0)/trades.length:trades.referenceArea;
+  const meanSupplyPy=trades=>{
+    const values=trades.map(t=>Number(t.py)).filter(py=>Number.isFinite(py)&&py>0);
+    return values.length?values.reduce((sum,py)=>sum+py,0)/values.length:trades.referencePy;
+  };
   const byComplex = {};
   for(const t of all){ const ck = `${t.apt}|${t.umd}|${t.gu||''}`; (byComplex[ck]=byComplex[ck]||[]).push(t); }
   const DEV_MIN = 0.05; // 기준선 대비 5% 이상 틀어져야 신호로 인정
   const ppOf = trades => {
-    const avgArea=meanArea(trades);
-    return trades.price.v*10000/(avgArea/SQM_PER_PY);
+    const supplyPy=meanSupplyPy(trades);
+    return supplyPy>0?trades.price.v*10000/supplyPy:NaN;
   };
   const areaOf = trades => { // 평형 표시용 전용면적(㎡) — 가장 흔한 값을 대표값으로(buildRepRows와 동일 방식)
     const areaCnt={}; trades.forEach(t=>areaCnt[Math.floor(t.area)]=(areaCnt[Math.floor(t.area)]||0)+1);
@@ -4407,7 +4408,7 @@ function analyzeInversion(all, months){
     const [t1, t2] = top2.map(x=>x.py).sort((a,b)=> parseInt(a,10)-parseInt(b,10)); // 표시용으로 평형 크기순 정렬
     const bucket=(key,ms)=>{
       const source=byPy[key],list=source.filter(t=>ms.includes(t.ym));
-      list.price=monthlyPriceAverage(source,ms);list.referenceArea=source.length?source.reduce((n,t)=>n+t.area,0)/source.length:0;
+      list.price=monthlyPriceAverage(source,ms);list.referencePy=meanSupplyPy(source);
       return list;
     };
     const priorA=bucket(t1,priorMonths),priorB=bucket(t2,priorMonths);
@@ -4433,11 +4434,10 @@ function analyzeInversion(all, months){
     const recentRatio = Math.round(recentRatio0 * 100);
     // "안전마진" — 다른 평형의 지금 평당가에 평소(기준선) 비율을 그대로 적용했을 때 저평가 평형이
     // 원래 받았어야 할 "적정가"를 역산하고, 실제 최근 평균가와의 차액(억)을 마진으로 제시한다.
-    const underAvgArea = meanArea(underTrades);
-    const underPyExact = R1(underAvgArea / SQM_PER_PY);
+    const underSupplyPy = meanSupplyPy(underTrades);
     // baselineRatio0 = pp(lowPy)/pp(refPy) 관계이므로, underPy가 lowPy면 그대로 곱하고 refPy면 나눠야 함
     const fairPricePerPy = deviation < 0 ? ppOf(otherTrades) * baselineRatio0 : ppOf(otherTrades) / baselineRatio0; // 만원/평
-    const fairAmt = R1(fairPricePerPy * underPyExact / 10000); // 억
+    const fairAmt = R1(fairPricePerPy * underSupplyPy / 10000); // 억, 공급면적 기준
     // 적정가가 저평가 평형 자신의 최근 1년 실제 최고가보다 "높아야"(=이 평형이 아직 한 번도 못 찍어본
     // 가격대) 진짜 상승 여력이 있는 저평가로 본다(운영자 요청, 2026.09) — 적정가가 기존 최고가 이하면
     // 이미 그 가격대를 경험해본 적 있다는 뜻이라, 그냥 평범한 시세 등락이지 특별한 저평가 신호가 아님.
@@ -8569,7 +8569,7 @@ ${uvSep(i)}
     </div>
 
   </div>
-  <div class="src-note">전용면적 기준 평당가 (전용면적÷3.3058로 정밀 환산) 비교 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
+  <div class="src-note">공급(평) 기준 평당가 비교 · 단지 분석 표와 같은 평형 기준 · 출처: 국토교통부 (해제거래 제외) · 참고용 신호이며 투자 판단의 근거로 단독 사용은 권장하지 않음</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
