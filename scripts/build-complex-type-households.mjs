@@ -120,9 +120,11 @@ for (const complex of index) {
     // 같은 타입이 소수점 면적 차이로 중복 기재된 경우 한 번만 집계한다.
     types.set(type, Math.max(types.get(type) || 0, households));
   }
-  // After the one-time live KB collection finishes, supplement/replace gaps in the older mapping
-  // with the freshly collected type inventory, including types that have no KB price.
-  for (const area of freshTypesByNaverId.get(resolvedNaverId) || []) {
+  // A matched KB complex is authoritative for the full area-type inventory.
+  // Do not mix its type labels with older master-map rows, which can lack supply pyeong.
+  const freshAreas = freshTypesByNaverId.get(resolvedNaverId) || [];
+  if (freshAreas.length) { byArea.clear(); exactExclusiveTypes.clear(); }
+  for (const area of freshAreas) {
     const exclusive = Number(area.exclusiveM2);
     if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
     // Keep the website/Naver type label. A raw KB label is unsafe when the
