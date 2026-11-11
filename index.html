@@ -5664,7 +5664,7 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  // 붙여 쓴 검색어도 이름 안의 여러 연속 조각으로 나눠 찾는다.
  // 예: '평촌푸르지오' → '평촌' + '푸르지오', '중흥더센트럴' → '중흥' + '더센트럴'.
  if(!hits.length&&q.length>=4){
-  const orderedChunks=(candidate)=>{let qi=0,ci=0;while(qi<q.length){let found=null;for(let end=q.length;end>=qi+2;end--){const part=q.slice(qi,end),at=candidate.indexOf(part,ci);if(at>=0){found={end,at,length:end-qi};break;}}if(!found)return false;qi=found.end;ci=found.at+found.length;}return true;};
+  const orderedChunks=(candidate)=>{const seen=new Set();const visit=(qi,ci)=>{if(qi===q.length)return true;const state=`${qi}|${ci}`;if(seen.has(state))return false;seen.add(state);for(let end=q.length;end>=qi+2;end--){const part=q.slice(qi,end);let at=candidate.indexOf(part,ci);while(at>=0){if(visit(end,at+part.length))return true;at=candidate.indexOf(part,at+1);}}return false;};return visit(0,0);};
   hits=rows.filter(x=>aptNames(x).some(n=>orderedChunks(norm(n))));
  }
  // 지역명과 단지명을 함께 입력한 경우(예: "봉천 두산") 연속 문자열 검색만으로는

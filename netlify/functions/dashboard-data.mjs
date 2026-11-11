@@ -16,10 +16,12 @@ async function latestRevision(hostname){
  // A deploy preview can receive new commits while keeping the same Netlify URL.
  // Do not retain the prior PR head SHA in a warm function instance.
  if(preview){
-  const res=await fetch(`https://api.github.com/repos/${REPO}/${scope}?_=${Date.now()}`,{headers:{Accept:'application/vnd.github+json','Cache-Control':'no-cache'},cache:'no-store',signal:AbortSignal.timeout(10000)});
+  const cached=revisionCache.get(scope);if(cached&&cached.expires>Date.now())return cached.sha;
+  const res=await fetch(`https://api.github.com/repos/${REPO}/${scope}`,{headers:{Accept:'application/vnd.github+json','Cache-Control':'no-cache'},cache:'no-store',signal:AbortSignal.timeout(10000)});
   if(!res.ok)throw Error('revision unavailable');
   const info=await res.json(),sha=info.head?.sha;
   if(!/^[a-f0-9]{40}$/.test(sha))throw Error('invalid revision');
+  revisionCache.set(scope,{sha,expires:Date.now()+15000});
   return sha;
  }
  const cached=revisionCache.get(scope);if(cached&&cached.expires>Date.now())return cached.sha;
@@ -46,7 +48,7 @@ export default async request=>{
   if(kind==='complex-type-households'){
    const normalize=value=>String(value||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR');
    const key=`${normalize(q.get('name'))}|${normalize(q.get('dong'))}`;
-   return Response.json({areas:data.items?.[key]||null,exactExclusiveTypes:data.exactExclusiveTypes?.[key]||null,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=300','Netlify-CDN-Cache-Control':'public, max-age=3600'}});
+   return Response.json({areas:data.items?.[key]||null,exactExclusiveTypes:data.exactExclusiveTypes?.[key]||null,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':'public, max-age=60'}});
   }
   return Response.json({...data,dataRevision:revision},{headers:{'Cache-Control':'public, max-age=60','Netlify-CDN-Cache-Control':requested?'public, max-age=86400':'public, max-age=60'}});
  }catch{return Response.json({error:'dashboard_data_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}

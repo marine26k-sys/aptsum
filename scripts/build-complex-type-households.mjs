@@ -22,7 +22,13 @@ for (const complex of freshKbTypes?.complexes || []) {
   for (const area of complex.areas || []) {
     const type = String(area.websiteTypeName || '').trim();
     const supply = Number(area.supplyM2);
-    if (type && Number.isFinite(supply) && supply > 0) supplyPyeongByType.set(type, Math.floor(supply * 0.3025));
+    if (!type || !Number.isFinite(supply) || supply <= 0) continue;
+    for (const naverId of ids) {
+      const key = `${Number(naverId)}|${type}`;
+      const pyeong = Math.floor(supply * 0.3025);
+      if (!supplyPyeongByType.has(key)) supplyPyeongByType.set(key, pyeong);
+      else if (supplyPyeongByType.get(key) !== pyeong) supplyPyeongByType.set(key, null);
+    }
   }
   const target = complex.matchedTarget;
   const lawd = target?.district ? regionCodes.get(target.district) : null;
@@ -138,7 +144,7 @@ for (const complex of index) {
     }
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(type) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(`${resolvedNaverId}|${type}`) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);
