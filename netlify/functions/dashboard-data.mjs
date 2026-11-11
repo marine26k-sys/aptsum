@@ -13,6 +13,15 @@ export function dashboardPath(kind,lawd){
 }
 async function latestRevision(hostname){
  const preview=/^deploy-preview-(\d+)--aptsum\.netlify\.app$/.exec(hostname),scope=preview?'pulls/'+preview[1]:'commits/main';
+ // A deploy preview can receive new commits while keeping the same Netlify URL.
+ // Do not retain the prior PR head SHA in a warm function instance.
+ if(preview){
+  const res=await fetch(`https://api.github.com/repos/${REPO}/${scope}?_=${Date.now()}`,{headers:{Accept:'application/vnd.github+json','Cache-Control':'no-cache'},cache:'no-store',signal:AbortSignal.timeout(10000)});
+  if(!res.ok)throw Error('revision unavailable');
+  const info=await res.json(),sha=info.head?.sha;
+  if(!/^[a-f0-9]{40}$/.test(sha))throw Error('invalid revision');
+  return sha;
+ }
  const cached=revisionCache.get(scope);if(cached&&cached.expires>Date.now())return cached.sha;
  const res=await fetch(`https://api.github.com/repos/${REPO}/${scope}`,{headers:{Accept:'application/vnd.github+json'},signal:AbortSignal.timeout(10000)});
  if(!res.ok)throw Error('revision unavailable');
