@@ -6764,7 +6764,7 @@ function pyTableHTML(d){
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}</td>
+      <td>${esc(complexPyLabel(p))}</td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
       <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
