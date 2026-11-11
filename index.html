@@ -234,7 +234,7 @@ try {
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
-  .py-summary-table td.td-max .rng{white-space:nowrap;font-size:8px;letter-spacing:-.25px}
+  .py-summary-table td.td-max .rng{white-space:nowrap;font-size:9px;letter-spacing:0}
   .py-summary-table .td-type{font-size:10.5px;line-height:1.35;white-space:nowrap;color:var(--navy);font-weight:400}
   .py-summary-table .td-type b{font-size:inherit;color:inherit;font-weight:inherit}
   .peer-table{table-layout:fixed}
@@ -3780,6 +3780,23 @@ function ensureNaverNames(lawd){
 }
 const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
 function naverNameOf(lawd,apt,umd){const name=aptsumComplexIdentity.canonical(apt,umd,NAVER_NAMES[lawd]||{},lawd);return name===apt?null:name;}
+const complexSupplyPyShards=new Map();
+async function applyComplexSupplyPyeong(items){
+ const lawds=[...new Set(items.map(t=>t.lawd).filter(Boolean))];
+ await Promise.all(lawds.map(async lawd=>{
+  if(complexSupplyPyShards.has(lawd))return;
+  const promise=fetch(`/data/complex-supply-pyeong/${encodeURIComponent(lawd)}.json`,{cache:'default'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  complexSupplyPyShards.set(lawd,promise);
+  const data=await promise;complexSupplyPyShards.set(lawd,data?.items||{});
+ }));
+ return items.map(t=>{
+  const index=complexSupplyPyShards.get(t.lawd);if(!index||typeof index.then==='function')return t;
+  const name=naverNameOf(t.lawd,t.apt,t.umd)||t.apt;
+  const key=`${String(name||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR')}|${String(t.umd||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR')}`;
+  const py=index[key]?.[String(Math.floor(Number(t.area)))];
+  return Number.isInteger(py)&&py>0?{...t,py}:t;
+ });
+}
 function complexDisplayName(lawd,apt,umd,gu){
   let code=lawd||'';
   if(!code&&gu&&typeof REGIONS!=='undefined')code=REGIONS.flatMap(([,rows])=>rows).find(([name])=>name===gu)?.[1]||'';
@@ -5661,6 +5678,12 @@ async function complexSearchTargets(name,targets,includePartial=false,input=null
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
  const rows=index.filter(x=>allowed.has(x.lawd)&&norm(x.name)!==norm(x.umd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
  let hits=!includePartial&&exact.length?exact:rows.filter(x=>aptNames(x).some(n=>norm(n).includes(q)));
+ // 붙여 쓴 검색어도 이름 안의 여러 연속 조각으로 나눠 찾는다.
+ // 예: '평촌푸르지오' → '평촌' + '푸르지오', '중흥더센트럴' → '중흥' + '더센트럴'.
+ if(!hits.length&&q.length>=4){
+  const orderedChunks=(candidate)=>{const seen=new Set();const visit=(qi,ci)=>{if(qi===q.length)return true;const state=`${qi}|${ci}`;if(seen.has(state))return false;seen.add(state);for(let end=q.length;end>=qi+2;end--){const part=q.slice(qi,end);let at=candidate.indexOf(part,ci);while(at>=0){if(visit(end,at+part.length))return true;at=candidate.indexOf(part,at+1);}}return false;};return visit(0,0);};
+  hits=rows.filter(x=>aptNames(x).some(n=>orderedChunks(norm(n))));
+ }
  // 지역명과 단지명을 함께 입력한 경우(예: "봉천 두산") 연속 문자열 검색만으로는
  // 단지의 공식명이 "두산"인 후보를 찾지 못하므로, 모든 입력어가 지역 또는 단지명에
  // 각각 포함되고 그중 하나 이상은 단지명에 포함되는 후보로 보완한다.
@@ -5878,6 +5901,7 @@ async function runSearch(opts){
         });
       }
       let items = floorF(monthlyHistoryMode?merged:windowF(merged));
+      if(mode==='region'||mode==='pyprice')items=await applyComplexSupplyPyeong(items);
       // 헤더 제목: 4곳 이하면 이름을 나열, 5곳 이상이면 시/도 단위로 묶어서 표시 (2026.08 3→4개로 확대,
       // 2026.09 5곳+일 때 "강서구 외 15곳" 대신 "서울시, 경기도, 부산시, 인천시"처럼 규모를 보여주도록 변경)
       const scopeLabel = regionSel.length
@@ -6023,6 +6047,7 @@ async function runSearch(opts){
       let rawMerged = raw;
       rawMerged = mergeTradeAndPresaleForRanking(raw,rawP,lawd);
       let items = monthlyHistoryMode?floorF(rawMerged):windowF(floorF(rawMerged));
+      if(mode==='region'||mode==='pyprice')items=await applyComplexSupplyPyeong(items);
       if(mode==='region' || mode==='volume'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);
@@ -6688,7 +6713,13 @@ function recentAverageCell(a){
   const sub=a.carriedFrom?esc(a.carriedFrom):`${a.n}건`;
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
-function complexPyLabel(p){return p.py;}
+function complexPyLabel(p){
+  const rows=complexTypeHouseholdData?.[String(p?.sizeKey)]||[];
+  const counts=new Map();
+  for(const row of rows){const py=Number(row.supplyPyeong),hh=Number(row.households);if(Number.isInteger(py)&&py>0&&Number.isFinite(hh)&&hh>0)counts.set(py,(counts.get(py)||0)+hh);}
+  if(counts.size){const [py]=[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0];return `${py}평`;}
+  return p.py;
+}
 let complexTypeHouseholdData=null,complexTradeTypeData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
 function exactExclusiveKey(value){
   const area=Number(value);
@@ -6758,7 +6789,7 @@ function pyTableHTML(d){
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
-      <td>${esc(p.py)}</td>
+      <td>${esc(complexPyLabel(p))}</td>
       <td class="td-type">${typeHouseholdCell(p)}</td>
       <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
@@ -7567,7 +7598,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','exact-v2');
+        query.set('typeSchema','supply-pyeong-v3');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
