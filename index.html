@@ -6688,7 +6688,13 @@ function recentAverageCell(a){
   const sub=a.carriedFrom?esc(a.carriedFrom):`${a.n}건`;
   return `<b>${a.v.toFixed(1)}</b>${sub?`<div class="rng">${sub}</div>`:''}`;
 }
-function complexPyLabel(p){return p.py;}
+function complexPyLabel(p){
+  const rows=complexTypeHouseholdData?.[String(p?.sizeKey)]||[];
+  const counts=new Map();
+  for(const row of rows){const py=Number(row.supplyPyeong),hh=Number(row.households);if(Number.isInteger(py)&&py>0&&Number.isFinite(hh)&&hh>0)counts.set(py,(counts.get(py)||0)+hh);}
+  if(counts.size){const [py]=[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0];return `${py}평`;}
+  return p.py;
+}
 let complexTypeHouseholdData=null,complexTradeTypeData=null,complexTypeHouseholdKey='',complexTypeHouseholdPromise=null,complexTypeHouseholdLoaded=false;
 function exactExclusiveKey(value){
   const area=Number(value);
@@ -7567,7 +7573,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','exact-v2');
+        query.set('typeSchema','supply-pyeong-v3');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
