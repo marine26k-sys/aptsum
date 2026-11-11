@@ -27,7 +27,10 @@ export default async request=>{
  // Popup details must use the revision returned by their regional summary.
  if(q.get('kind')==='regional-detail'&&!requested)return new Response('Revision required',{status:400});
  try{
-  const revision=requested||await latestRevision(new URL(request.url).hostname);
+  const hostname=new URL(request.url).hostname,preview=/^deploy-preview-\d+--aptsum\.netlify\.app$/.test(hostname);
+  // Production complex search only needs the latest main snapshot. Resolving its SHA
+  // through the GitHub API first adds an avoidable network round trip on autocomplete.
+  const revision=requested||(kind==='complex-index'&&!preview?'main':await latestRevision(hostname));
   const res=await fetch(`https://raw.githubusercontent.com/${REPO}/${revision}/${path}`,{signal:AbortSignal.timeout(15000)});
   if(!res.ok)throw Error('data unavailable');
   const data=await res.json();
