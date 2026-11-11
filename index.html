@@ -5628,16 +5628,35 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
   );
 }
 
-let complexSearchIndex=null;
+let complexSearchIndex=null,complexSearchIndexPromise=null;
+async function loadComplexSearchIndex(){
+ if(complexSearchIndex)return complexSearchIndex;
+ if(!complexSearchIndexPromise){
+  complexSearchIndexPromise=(async()=>{
+   // 자동완성은 포커스와 입력이 겹쳐 실행될 수 있으므로, 요청은 호출자끼리 공유한다.
+   // 프리뷰는 배포 파일을 바로 읽고, 운영은 배포 없이 갱신되는 최신 목록 API를 읽는다.
+   const isPreview=typeof location!=='undefined'&&/^deploy-preview-\d+--aptsum\.netlify\.app$/.test(location.hostname);
+   let response;
+   if(isPreview){try{response=await fetch('/data/complex-index.json',{cache:'default'});}catch{}}
+   if(!response?.ok){try{response=await fetch('/api/dashboard-data?kind=complex-index',{cache:'default'});}catch{}}
+   if(!response?.ok)response=await fetch('/data/complex-index.json',{cache:'default'});
+   if(!response.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');
+   const payload=await response.json();
+   if(!Array.isArray(payload.entries))throw Error('단지 검색 목록 형식이 올바르지 않습니다. 다시 조회해 주세요.');
+   return payload.entries;
+  })().then(entries=>{complexSearchIndex=entries;return entries;}).catch(error=>{complexSearchIndexPromise=null;throw error;});
+ }
+ return complexSearchIndexPromise;
+}
 async function complexSearchTargets(name,targets,includePartial=false,input=null){
- if(!complexSearchIndex){let r;try{r=await fetch('/api/dashboard-data?kind=complex-index',{cache:'no-store'});}catch{}if(!r?.ok)r=await fetch('/data/complex-index.json',{cache:'no-store'});if(!r.ok)throw Error('단지 검색 목록을 불러오지 못했습니다. 다시 조회해 주세요.');complexSearchIndex=(await r.json()).entries;}
- const searchTargets=targets?.length?targets:[...new Map(complexSearchIndex.map(x=>[x.lawd,{lawd:x.lawd,name:x.region||regionNameByLawd(x.lawd)}])).values()];
+ const index=await loadComplexSearchIndex();
+ const searchTargets=targets?.length?targets:[...new Map(index.map(x=>[x.lawd,{lawd:x.lawd,name:x.region||regionNameByLawd(x.lawd)}])).values()];
  const searchText=String(name).replace(/\s*\[[^\]]+\]\s*$/,'').trim();
  const norm=s=>String(s).replace(/\s/g,'').toLowerCase(),q=norm(searchText),tokens=searchText.split(/\s+/).map(norm).filter(Boolean),allowed=new Set(searchTargets.map(t=>t.lawd));
  const picked=input|| (typeof document==='undefined'?null:document.getElementById('q'));
  const selectedLawd=!includePartial && typeof mode!=='undefined' && (mode==='complex'||mode==='compare') && picked?.dataset.pickedName===name ? picked.dataset.pickedLawd : null;
  const selectedDong=!includePartial?String(name).match(/\[([^\]]+)\]\s*$/)?.[1]:null;
- const rows=complexSearchIndex.filter(x=>allowed.has(x.lawd)&&norm(x.name)!==norm(x.umd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
+ const rows=index.filter(x=>allowed.has(x.lawd)&&norm(x.name)!==norm(x.umd)&&(!selectedLawd||x.lawd===selectedLawd)&&(!selectedDong||norm(x.umd)===norm(selectedDong))),aptNames=x=>[x.name,...(x.names||[])].filter(Boolean),exact=rows.filter(x=>aptNames(x).some(n=>norm(n)===q));
  let hits=!includePartial&&exact.length?exact:rows.filter(x=>aptNames(x).some(n=>norm(n).includes(q)));
  // 지역명과 단지명을 함께 입력한 경우(예: "봉천 두산") 연속 문자열 검색만으로는
  // 단지의 공식명이 "두산"인 후보를 찾지 못하므로, 모든 입력어가 지역 또는 단지명에
