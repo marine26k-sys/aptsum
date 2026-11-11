@@ -2918,6 +2918,9 @@ function setMode(m, fromRestore){
   closeExpandedComplexMap();
   const floatingHead=document.getElementById('cmpSummaryFloatingHead');if(floatingHead)floatingHead.hidden=true;
   mode = m;
+  // 단지 검색 목록은 약 3MB라 입력 후 처음 요청하면 로딩 문구가 오래 보인다.
+  // 단지분석/비교 화면에 들어올 때 미리 받아, 사용자가 입력할 때는 검색만 하도록 한다.
+  if(m==='complex'||m==='compare')setTimeout(()=>{if(mode===m)loadComplexSearchIndex().catch(()=>{});},0);
   if(m==='region'&&!fromRestore) regionRankView='complex';
   syncRegionRankPicker();
   syncUndervaluePicker();
