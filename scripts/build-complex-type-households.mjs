@@ -159,6 +159,7 @@ for (const complex of index) {
 
 const shards = new Map();
 const exactShards = new Map();
+const supplyPyeongShards = new Map();
 const ambiguousKeys = new Map();
 let aliasesSkipped = 0, keysWritten = 0;
 for (const [key, entry] of matchByIndex) {
@@ -179,6 +180,17 @@ for (const [key, entry] of matchByIndex) {
   }
   items[lookupKey] = entry.areas;
   exactShards.get(entry.lawd)[lookupKey] = entry.exactTypes;
+  const bySize = {};
+  for (const [size, rows] of Object.entries(entry.areas)) {
+    const counts = new Map();
+    for (const row of rows) {
+      const py = Number(row.supplyPyeong), hh = Number(row.households);
+      if (Number.isInteger(py) && py > 0 && Number.isFinite(hh) && hh > 0) counts.set(py, (counts.get(py) || 0) + hh);
+    }
+    if (counts.size) bySize[size] = [...counts].sort((a,b) => b[1]-a[1] || a[0]-b[0])[0][0];
+  }
+  if (!supplyPyeongShards.has(entry.lawd)) supplyPyeongShards.set(entry.lawd, {});
+  supplyPyeongShards.get(entry.lawd)[lookupKey] = bySize;
   keysWritten++;
 }
 
@@ -186,4 +198,8 @@ const outDir = 'data/complex-type-households';
 await mkdir(outDir, { recursive: true });
 for (const file of await readdir(outDir)) await unlink(path.join(outDir, file));
 for (const [lawd, items] of shards) await writeFile(path.join(outDir, `${lawd}.json`), JSON.stringify({ items, exactExclusiveTypes: exactShards.get(lawd) || {} }));
+const supplyPyeongDir = 'data/complex-supply-pyeong';
+await mkdir(supplyPyeongDir, { recursive: true });
+for (const file of await readdir(supplyPyeongDir)) await unlink(path.join(supplyPyeongDir, file));
+for (const [lawd, items] of supplyPyeongShards) await writeFile(path.join(supplyPyeongDir, `${lawd}.json`), JSON.stringify({ items }));
 console.log(JSON.stringify({ indexComplexes: index.length, complexesWithTypes: complexesWithAreas, typeAreaRows: typeCount, lookupKeys: keysWritten, prefixDongMatches, aliasesSkipped, ambiguous, unmatched, shards: shards.size }, null, 2));

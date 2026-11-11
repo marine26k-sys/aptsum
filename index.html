@@ -3780,6 +3780,23 @@ function ensureNaverNames(lawd){
 }
 const naverKey = s => String(s||'').replace(/\s/g,'').replace(/아파트$/,'');
 function naverNameOf(lawd,apt,umd){const name=aptsumComplexIdentity.canonical(apt,umd,NAVER_NAMES[lawd]||{},lawd);return name===apt?null:name;}
+const complexSupplyPyShards=new Map();
+async function applyComplexSupplyPyeong(items){
+ const lawds=[...new Set(items.map(t=>t.lawd).filter(Boolean))];
+ await Promise.all(lawds.map(async lawd=>{
+  if(complexSupplyPyShards.has(lawd))return;
+  const promise=fetch(`/data/complex-supply-pyeong/${encodeURIComponent(lawd)}.json`,{cache:'default'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  complexSupplyPyShards.set(lawd,promise);
+  const data=await promise;complexSupplyPyShards.set(lawd,data?.items||{});
+ }));
+ return items.map(t=>{
+  const index=complexSupplyPyShards.get(t.lawd);if(!index||typeof index.then==='function')return t;
+  const name=naverNameOf(t.lawd,t.apt,t.umd)||t.apt;
+  const key=`${String(name||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR')}|${String(t.umd||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR')}`;
+  const py=index[key]?.[String(Math.floor(Number(t.area)))];
+  return Number.isInteger(py)&&py>0?{...t,py}:t;
+ });
+}
 function complexDisplayName(lawd,apt,umd,gu){
   let code=lawd||'';
   if(!code&&gu&&typeof REGIONS!=='undefined')code=REGIONS.flatMap(([,rows])=>rows).find(([name])=>name===gu)?.[1]||'';
@@ -5884,6 +5901,7 @@ async function runSearch(opts){
         });
       }
       let items = floorF(monthlyHistoryMode?merged:windowF(merged));
+      if(mode==='region'||mode==='pyprice')items=await applyComplexSupplyPyeong(items);
       // 헤더 제목: 4곳 이하면 이름을 나열, 5곳 이상이면 시/도 단위로 묶어서 표시 (2026.08 3→4개로 확대,
       // 2026.09 5곳+일 때 "강서구 외 15곳" 대신 "서울시, 경기도, 부산시, 인천시"처럼 규모를 보여주도록 변경)
       const scopeLabel = regionSel.length
@@ -6029,6 +6047,7 @@ async function runSearch(opts){
       let rawMerged = raw;
       rawMerged = mergeTradeAndPresaleForRanking(raw,rawP,lawd);
       let items = monthlyHistoryMode?floorF(rawMerged):windowF(floorF(rawMerged));
+      if(mode==='region'||mode==='pyprice')items=await applyComplexSupplyPyeong(items);
       if(mode==='region' || mode==='volume'){
         items = pyBandMultiFilter(items);
         items = applyBuildYearFilter(items);

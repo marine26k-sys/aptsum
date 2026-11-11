@@ -117,6 +117,9 @@ async function main() {
     try { calibratedAreas = JSON.parse(await readFile(path.join("data/supply-area-naver", `${lawd}.json`), "utf-8")); } catch {}
     let naverNames = {};
     try { naverNames = JSON.parse(await readFile(path.join("data/naver-names", `${lawd}.json`), "utf-8")); } catch {}
+    let complexSupplyPyeong = {};
+    try { complexSupplyPyeong = JSON.parse(await readFile(path.join("data/complex-supply-pyeong", `${lawd}.json`), "utf-8")).items || {}; } catch {}
+    const normalizeComplexKey = value => String(value || "").normalize("NFKC").replace(/[\s·ㆍ()\[\]{}.,_-]/g, "").toLocaleLowerCase("ko-KR");
     for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
       let ymFiles;
       try { ymFiles = (await readdir(path.join(dir, lawd))).filter((f) => f.endsWith(".json")); }
@@ -127,7 +130,10 @@ async function main() {
         let j;
         try { j = JSON.parse(await readFile(path.join(dir, lawd, f), "utf-8")); }
         catch { continue; }
-        for (const t of applyNaverSupplyAreas(j.items || [], calibratedAreas, lawd)) {
+        for (const rawTrade of applyNaverSupplyAreas(j.items || [], calibratedAreas, lawd)) {
+          const canonicalName = naverNames[`${rawTrade.apt}|${rawTrade.umd}`] || rawTrade.apt;
+          const supplyPy = complexSupplyPyeong[`${normalizeComplexKey(canonicalName)}|${normalizeComplexKey(rawTrade.umd)}`]?.[String(Math.floor(Number(rawTrade.area)))];
+          const t = Number.isInteger(supplyPy) && supplyPy > 0 ? { ...rawTrade, py: supplyPy } : rawTrade;
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평당가 계산 불가
           totalTx++;
