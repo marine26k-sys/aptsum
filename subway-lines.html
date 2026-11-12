@@ -108,6 +108,7 @@
   <div id="app"><div class="loading">불러오는 중…</div></div>
 </div>
 
+<script src="/shared/github-data.js"></script>
 <script>
 // 준공연도 → 연식 표기(2026.09) — index.html의 buildAgeLabel()과 동일 규칙.
 // 년차는 준공한 해를 1년차로 세는 1-based 표기(2026년 준공 = 1년차, 2002년 준공 = 25년차).
@@ -151,8 +152,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 let DATA = null;
 let activeLine = "";
 async function fetchLatestTier(){
- let response;try{response=await fetch('/api/dashboard-data?kind=tier',{cache:'no-store'});}catch{}
- return response?.ok?response:fetch('./data/tier-map.json',{cache:'no-store'});
+ return aptsumGithubData.json('data/tier-map.json');
 }
 let TIER = null; // data/tier-map.json — "이 지역 단지"를 처음 누를 때 딱 한 번만 불러와 캐싱
 let openStationKey = ""; // 지금 목록이 펼쳐진 역(라인id+역이름) — 하나만 펼쳐지게
@@ -175,9 +175,7 @@ function restoreState(){
 
 async function load(){
   try{
-    const res = await fetch("./data/subway-lines.json", { cache: "no-store" });
-    if(!res.ok) throw new Error("no data");
-    DATA = await res.json();
+    DATA = await aptsumGithubData.json('data/subway-lines.json');
     const saved = restoreState();
     if(saved && DATA.lines.some(l => l.id === saved.activeLine)){
       activeLine = saved.activeLine;
@@ -187,8 +185,7 @@ async function load(){
     }
     if(openStationKey){
       try{
-        const r2 = await fetchLatestTier();
-        if(r2.ok) TIER = await r2.json();
+        TIER = await fetchLatestTier();
       }catch(e){ /* 펼쳐진 패널은 그대로 두되 아래 empty 처리로 폴백 */ }
     }
     history.replaceState({ subway: { activeLine, openStationKey } }, "");
@@ -211,8 +208,7 @@ window.addEventListener("popstate", async (e) => {
   openStationKey = snap.openStationKey;
   if(openStationKey && !TIER){
     try{
-      const res = await fetchLatestTier();
-      if(res.ok) TIER = await res.json();
+      TIER = await fetchLatestTier();
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
   }
   saveState();
@@ -254,8 +250,7 @@ async function toggleRegion(lineId, name){
   const myToken = ++toggleToken;
   if(!TIER){
     try{
-      const res = await fetchLatestTier();
-      if(res.ok) TIER = await res.json();
+      TIER = await fetchLatestTier();
     }catch(e){ /* 아래 empty 처리로 폴백 */ }
     if(myToken !== toggleToken) return; // 기다리는 동안 다른 역을 눌러 더 최신 요청이 발급됨 — 이 결과는 폐기
   }

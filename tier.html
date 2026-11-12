@@ -128,6 +128,7 @@
   <div id="app"><div class="tier-loading-box">불러오는 중…</div></div>
 </div>
 
+<script src="/shared/github-data.js"></script>
 <script>
 // 준공연도 → 연식 표기(2026.09) — index.html의 buildAgeLabel()과 동일 규칙.
 // 년차는 준공한 해를 1년차로 세는 1-based 표기(2026년 준공 = 1년차, 2002년 준공 = 25년차).
@@ -182,10 +183,7 @@ let tierState = { province: "", grade: null, region: "", dong: "", q: "", shown:
 
 async function load(){
   try{
-    let res;try{res=await fetch("/api/dashboard-data?kind=tier",{cache:"no-store"});}catch{}
-    if(!res?.ok)res=await fetch("./data/tier-map.json",{cache:"no-store"});
-    if(!res.ok) throw new Error("no data");
-    tierData = await res.json();
+    tierData = await aptsumGithubData.json('data/tier-map.json');
     history.replaceState({ tier: tierSnapshot() }, "");
     render();
   }catch(e){

@@ -69,9 +69,9 @@ body{font-family:'Noto Sans KR',sans-serif;line-height:1.6}header{display:block}
 <li>아파트썸 자체 집계이며, 매물 등록·삭제·호가 변경에 따라 과거 수치도 바뀔 수 있습니다.</li>
 </ul></div></details></div></main><script type="module">
 import {REGIONS} from '/shared/regions.mjs';
+import {githubJson} from '/shared/github-data.mjs';
 const $=s=>document.querySelector(s), grid=$('#grid');
 const state={mapRegion:'all',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
-const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-map.json';
 const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
 const PROVINCE_LABELS={서울:'서울시',경기:'경기도',인천:'인천시',부산:'부산시'};
 $('#mapRegionControls').addEventListener('click',event=>{const button=event.target.closest('button[data-region]');if(!button)return;state.mapRegion=button.dataset.region;for(const item of $('#mapRegionControls').querySelectorAll('button'))item.setAttribute('aria-pressed',String(item===button));render();state.drawMap?.();});
@@ -92,7 +92,7 @@ function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url,options={}){const r=await fetch(url,{credentials:'same-origin',cache:'default',...options});if(!r.ok)throw Error(String(r.status));return r.json()}
-async function loadAskMap(){if(location.hostname.includes('deploy-preview-'))try{return await fetchJson('/data/listing-ask-map.json')}catch{}try{return await fetchJson(liveAskMapUrl,{cache:'no-cache'})}catch{return fetchJson('/data/listing-ask-map.json')}}
+async function loadAskMap(){return githubJson('data/listing-ask-map.json')}
 function render(){
  const title=$('#title'),currentWeek=weekInfo(state.asOf);title.textContent=currentWeek?`${currentWeek.label.replace(/^\d+년 /,'')} 호가 변동률`:'호가 주간 평균';
  $('#comparisonPeriod').textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';
@@ -155,9 +155,8 @@ function renderWeeklyRanking(){
 
 let priceBandDataPromise=null;
 function loadPriceBandData(){
- if(!priceBandDataPromise){const local='/data/listing-ask-price-bands.json',remote='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-price-bands.json';
-  const urls=location.hostname.includes('deploy-preview-')?[local,remote]:[remote,local];
-  priceBandDataPromise=(async()=>{for(const url of urls)try{const data=await fetchJson(url,{cache:'no-cache'});if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===5))return new Map(data.regions.map(x=>[String(x.lawd),x]))}catch{}throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
+ if(!priceBandDataPromise){
+  priceBandDataPromise=(async()=>{const data=await githubJson('data/listing-ask-price-bands.json');if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===5))return new Map(data.regions.map(x=>[String(x.lawd),x]));throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
  }
  return priceBandDataPromise;
 }

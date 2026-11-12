@@ -46,6 +46,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "변경된 데이터 없음"
           else
-            git commit -m "chore: 급지 대시보드 데이터 갱신 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "chore: 급지 대시보드 데이터 갱신 $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip netlify]"
             git push
           fi
