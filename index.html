@@ -6712,8 +6712,8 @@ function curComplexData(){
   if(complexView==='jeonse'&&lastData?.jeonseLoading)return null;
   return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData;
 }
-const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
-const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
+const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월 평균보다 25% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
@@ -8636,7 +8636,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전·최근 3개월 평균가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 1~4층·직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
+  <div class="src-note">이전·최근 3개월 평균가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 1~4층·직거래·직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8686,7 +8686,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">이전·최근 6개월 최고가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
+  <div class="src-note">이전·최근 6개월 최고가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 직거래·직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -10147,7 +10147,7 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (직전 정상 거래월 평균보다 25%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
