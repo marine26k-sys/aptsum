@@ -3723,26 +3723,25 @@ function buildYearLabel(){
   return analysisAgeLabel(v);
 }
 function markOutliers(arr){
-  // 같은 단지·전용면적의 직전 거래보다 25% 이상 낮은 경우만 저가 이상치로 표시한다.
-  // 미래 거래까지 포함한 기간 중앙값은 입주·시세 단계 변화 전 거래를 잘못 이상치로 분류할 수 있다.
+  // 같은 단지·전용면적에서 직전 달 평균 거래가보다 25% 이상 낮은 거래만 저가 이상치로 표시한다.
+  // 직거래는 기준 평균에서 제외하고, 직전 달에 거래가 없으면 비교하지 않는다.
   const trades=[];
   for(const t of arr){
     if(t.direct){t.ex='직거래';continue;}
     t.ex=null;
-    const date=`${String(t.ym||'')}${String(t.d||'').padStart(2,'0')}`,amount=Number(t.amt);
-    if(/^\d{8}$/.test(date)&&Number.isFinite(amount)&&amount>0)trades.push({t,date,amount});
+    const ym=String(t.ym||''),amount=Number(t.amt);
+    if(/^\d{6}$/.test(ym)&&Number.isFinite(amount)&&amount>0)trades.push({t,ym,amount});
   }
-  trades.sort((a,b)=>a.date.localeCompare(b.date));
-  let previousPrice=null;
-  for(let i=0;i<trades.length;){
-    let end=i+1;
-    while(end<trades.length&&trades[end].date===trades[i].date)end++;
-    const sameDay=trades.slice(i,end);
-    if(previousPrice!=null)for(const {t,amount} of sameDay){
-      if(amount<=previousPrice*.75)t.ex='저가';
-    }
-    previousPrice=median(sameDay.map(({amount})=>amount));
-    i=end;
+  trades.sort((a,b)=>a.ym.localeCompare(b.ym));
+  const monthly={};
+  for(const trade of trades)(monthly[trade.ym] ||= []).push(trade);
+  const ymOffset=(ym,delta)=>{const d=new Date(+ym.slice(0,4),+ym.slice(4,6)-1+delta,1);return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;};
+  const months=Object.keys(monthly).sort();
+  for(const ym of months){
+    const previous=monthly[ymOffset(ym,-1)];
+    if(!previous?.length)continue;
+    const previousAverage=previous.reduce((sum,{amount})=>sum+amount,0)/previous.length;
+    for(const {t,amount} of monthly[ym])if(amount<=previousAverage*.75)t.ex='저가';
   }
   return arr.filter(t=>!t.ex);
 }
