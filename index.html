@@ -1600,6 +1600,7 @@ async function initFromURL(){
     const [q0,q1] = p.has('lq') ? p.get('lq').split('~').map(Number) : [0,50];
     const sw=p.has('lsw')&&/^\d{1,2}$/.test(p.get('lsw'))?Number(p.get('lsw')):undefined;
     lsSet({a0,a1,h,h1,r0,r1,p0,p1,q0,q1,sw});
+    if(Number.isFinite(p0)&&Number.isFinite(p1)&&(p0>LS_PY_MIN||p1<lsPyBaseMax(requestedMode)))listingManualFacets.add('py');
   }
   document.getElementById('listingOccupancy').value = normalizeListingOccupancy(p.get('occupancy'),requestedMode);
   listingTrendUploadId = '';
@@ -9373,7 +9374,7 @@ function lsAskBounds(items){
 }
 function lsAskText(v){const {min,max}=lsAskLimits();return mode==='listingbudget'&&!listingManualFacets.has('ask')||v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){if(mode==='listingbudget'&&!listingManualFacets.has('ask'))return true;const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
-function lsPyActive(v){return v.p0>LS_PY_MIN||v.p1<lsPyBaseMax();}
+function lsPyActive(v){return listingManualFacets.has('py')&&(v.p0>LS_PY_MIN||v.p1<lsPyBaseMax());}
 function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
