@@ -40,7 +40,7 @@ jobs:
         run: node scripts/collect-supply-area.mjs --only=41820,41830,41800 --limit=500 --max-minutes=180
       - name: 급지 데이터 갱신
         run: |
-          node scripts/build-tier-map.mjs
+          node scripts/build-tier-map.mjs --months=36
           git add data/tier-map.json
           if ! git diff --cached --quiet; then
             git commit -m 'chore: 경기3군 포함 급지 데이터 갱신'

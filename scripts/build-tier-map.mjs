@@ -7,11 +7,11 @@ import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 //
 // 대상 범위: 서울·경기·인천·부산(2026.09 인천 재포함, 운영자 요청) — REGIONS에 있는 4개 시·도 전부 다룬다.
 //
-// "평당가" 계산(단지 분석의 최근 1개월 평균 시세와 동일한 기간·이상치 기준):
-// 1) 단지+전용면적 내림 정수별로 현재 월의 정상 거래 평균을 낸다. 현재 월에 정상 거래가 없으면
-//    데이터가 있는 가장 최근 월의 평균을 사용한다. 직거래와 직전 정상 거래월 평균보다 25% 이상 낮은
-//    거래는 단지 분석과 동일하게 제외한다.
-// 2) 평형별 월평균가를 공급면적 평형으로 나눈 뒤, 그중 평당가가 가장 높은 평형 딱 1개를
+// "평당가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평당가"(pyprice) 탭과 같은 골격, 기준만 다름):
+// 1) 단지+전용면적 내림 정수별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
+//    1건뿐인 평형은 이상치 방지로 제외 — pyprice 탭과 동일 원칙, 우연히 섞인 이례적 면적 1건이 대표로
+//    잘못 뽑히는 걸 막음).
+// 2) 그렇게 나온 평형별 최고가를 각 평형의 평당가로 환산한 뒤, 그중 평당가가 가장 높은 평형 딱 1개를
 //    그 단지의 대표값으로 채택 — 같은 단지라도 소형평이 대형평보다 평당가가 높은 경우가 흔해서(동일
 //    단지 안에서도 평형별 프리미엄 차이가 큼), 대표 평형을 고정하지 않고 자동 선정.
 //    단, 후보는 20~39평 범위로 한정(2026.09, 운영자 요청) — 초소형(원룸/오피스텔급) 평형이 이례적으로
@@ -25,7 +25,7 @@ import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 // 정밀 계산 대신 collect-trades.mjs가 각 거래에 이미 붙여둔 t.py(공급면적 관행 기준 평형 라벨 —
 // shared/rtms-parse.mjs의 areaToPy(), data/supply-area 실측치로 보정된 보간표)를 그대로 재사용한다.
 //
-// 사용법: node scripts/build-tier-map.mjs
+// 사용법: node scripts/build-tier-map.mjs [--months=36]
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -64,22 +64,29 @@ function buildProvinceMap() {
 }
 const provinceOf = buildProvinceMap();
 const ALLOWED_PROVINCES = new Set(["서울", "경기", "인천", "부산"]); // 2026.09 인천 재포함(운영자 요청) — 원래도 배치 수집 대상이었는데 대시보드에서만 빼뒀던 것
+const MIN_SAMPLES_PER_TYPE = 2; // 평형별 표본이 1건뿐이면 이상치 방지로 대표 후보에서 제외(pyprice 탭과 동일 원칙)
 const PY_MIN = 20, PY_MAX = 39; // 대표 평형 후보를 20~39평 범위로 한정(2026.09, 운영자 요청) — 초소형/초대형 평형의
 // 이례적 평당가가 단지 대표값으로 잘못 뽑히는 걸 막기 위함. 범위 밖 평형은 표본이 많아도 대표 후보에서 제외.
 const NAVER_COMBINED_HH = new Set(["안양 동안구|비산동|은하수,샛별5,6단지"]);
 
 async function main() {
+  const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
+  const months = parseInt(args.months, 10) || 36; // "3년 내 최고가" 기준(운영자 요청, 2026.09) — 6개월 → 2년 → 3년으로 변경
+
   const analyzeDir = "data/analyze";
   let lawdDirs;
   try { lawdDirs = await readdir(analyzeDir); }
   catch { console.error(`${analyzeDir} 없음 — collect-trades.mjs가 먼저 돌아야 함`); process.exit(1); }
 
-  // 현재월은 단지 분석과 같은 한국시간 기준으로 고정하고, 거래월 파일 전체를
-  // 살펴 현재월에 거래가 없는 평형은 저장된 데이터 중 가장 최근 거래월을 사용한다.
-  const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const currentYm = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  // 최근 N개월 ym 목록(YYYYMM) 계산
+  const now = new Date();
+  const recentYms = new Set();
+  for (let i = 0; i < months; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    recentYms.add(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
 
-  // "구|동|단지명|전용면적 내림 정수" -> 평형별 월 거래 내역 — 최근 월 평균 평당가 계산에 사용
+  // "구|동|단지명|전용면적 내림 정수" -> { maxAmt, count } — 공급면적 평형은 별도 표시·평당가 계산에 사용
   const pyGroups = new Map();
   // 단지명 표기가 "청담 르엘"/"청담르엘"처럼 띄어쓰기만 다른 경우 서로 다른 단지로 갈라져 급지 목록에
   // 중복으로 뜨던 문제(2026.09 제보) — 그룹 키는 공백을 제거한 이름으로 통일해서 합치되, 화면에 보여줄
@@ -119,7 +126,7 @@ async function main() {
       catch { continue; } // 매매·분양권 중 한쪽 폴더가 아직 없는 지역도 있으므로 개별적으로 스킵
       for (const f of ymFiles) {
         const ym = f.replace(".json", "");
-        if (!/^\d{6}$/.test(ym) || ym > currentYm) continue;
+        if (!recentYms.has(ym)) continue;
         let j;
         try { j = JSON.parse(await readFile(path.join(dir, lawd, f), "utf-8")); }
         catch { continue; }
@@ -133,9 +140,11 @@ async function main() {
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
           const pk = `${ck}|${Math.floor(t.area)}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, trades: [], presaleOnly: true };
-          g.trades.push({ ym: String(t.ym || ym), amt: Number(t.amt), area: Number(t.area), py: t.py });
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, pyCounts: {}, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
+          g.count++;
+          g.pyCounts[t.py] = (g.pyCounts[t.py] || 0) + 1;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
+          if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "기간 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
           const variants = nameVariantsByCk.get(ck) || {};
           // 급지 분석·교통 호재도 index.html의 실거래 탭과 같은 네이버 단지명을 표시한다.
@@ -185,43 +194,16 @@ async function main() {
     }
   } catch { /* hhcnt 없어도 계속 진행 */ }
 
-  // 단지 분석과 동일하게 월별 정상 거래 평균을 계산한다. 거래가 없는 월은
-  // 직전 정상 거래월 평균을 이어 쓰며, 저장된 거래월 전체에서 가장 최근 평균을 고른다.
-  function monthlyAverages(trades) {
-    const grouped = new Map();
-    for (const trade of trades) {
-      if (!/^\d{6}$/.test(trade.ym) || !Number.isFinite(trade.amt) || trade.amt <= 0) continue;
-      if (!grouped.has(trade.ym)) grouped.set(trade.ym, []);
-      grouped.get(trade.ym).push(trade);
-    }
-    let previousClean = [];
-    const averages = [];
-    for (const [ym, values] of [...grouped].sort((a,b) => a[0].localeCompare(b[0]))) {
-      const previousAverage = previousClean.length ? previousClean.reduce((sum,t) => sum + t.amt, 0) / previousClean.length : null;
-      const clean = values.filter(t => previousAverage === null || t.amt > previousAverage * 0.75);
-      if (clean.length) {
-        previousClean = clean;
-        const pyCounts = new Map();
-        for (const trade of clean) if (Number.isInteger(trade.py) && trade.py > 0) pyCounts.set(trade.py, (pyCounts.get(trade.py) || 0) + 1);
-        const py = [...pyCounts].sort((a,b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? null;
-        averages.push({ ym, amt: Math.round(clean.reduce((sum,t) => sum + t.amt, 0) / clean.length * 10) / 10, area: clean.reduce((sum,t) => sum + t.area, 0) / clean.length, py });
-      }
-    }
-    return averages;
-  }
-
-  // 단지별로 평형(py) 중 최근 월평균 평당가가 가장 높은 것 1개만 대표로 채택
+  // 단지별로 평형(py) 중 평당가가 가장 높은 것 1개만 대표로 채택
   const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
-    const monthly = monthlyAverages(g.trades);
-    const currentAverage = monthly.at(-1);
-    if (!currentAverage || !Number.isInteger(currentAverage.py)) continue;
-    const py = currentAverage.py;
-    if (py < PY_MIN || py > PY_MAX) continue; // 최근 평균 기준 공급평형이 20~39평 밖이면 대표 후보에서 제외
+    g.py = +Object.entries(g.pyCounts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
+    if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
+    if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
-    const ppy = Math.round((currentAverage.amt * 10000) / py); // 최근 월평균 매매가(만원) ÷ 공급면적 기준 평형
+    const ppy = Math.round((g.maxAmt * 10000) / g.py); // 평당가(만원/평) = 기간 내 최고가(만원) ÷ 공급면적 기준 평형
     const cur = byComplex.get(ck);
-    if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, py, ppy, average: currentAverage });
+    if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, ppy });
   }
 
   const result = [];
@@ -232,8 +214,8 @@ async function main() {
     const displayName = variants ? Object.entries(variants).sort((a, b) => b[1] - a[1])[0][0] : c.name;
     result.push({
       gu: c.region, province: c.province, dong: c.dong, nm: displayName,
-      ppy: c.ppy, py: c.py, ar: Number.isFinite(c.average.area) ? Math.floor(c.average.area) : null, // 최근 월평균 거래 면적(㎡)
-      amt: Math.round(c.average.amt * 10000), avgYm: c.average.ym, // 최근 거래월 평균 매매가(만원 단위) 및 평균 기준월
+      ppy: c.ppy, py: c.py, ar: c.area != null ? Math.floor(c.area) : null, // 평당가(만원/평), 대표 평형(참고용), 그 거래의 전용면적(㎡, 다른 탭과 동일하게 내림)
+      amt: Math.round(c.maxAmt * 10000), // 그 평형의 기간 내 최고가(매매가, 만원 단위) — 화면에 평당가와 함께 표시
       g: gradeOf(c.ppy),
       hh: hh.hh ?? null, by: hh.by ?? null,
       presaleOnly: !!c.presaleOnly, // 매매 실거래가 아직 없어 분양권·입주권만으로 집계된 단지(프론트에서 배지 표시용)
@@ -288,8 +270,9 @@ async function main() {
       generated: new Date().toISOString(),
       tx: totalTx,
       complexes: result.length,
+      months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지 분석의 평균 시세(1개월)와 동일한 현재 월 정상 거래 평균 기준 (직거래·직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외). 현재 월 거래가 없으면 저장된 거래 데이터 중 가장 최근 정상 거래월 평균을 사용합니다. 매매·분양권·입주권을 포함하며, ${PY_MIN}~${PY_MAX}평 범위에서 평당가 (공급면적 기준, 3.3㎡=1평)가 가장 높은 평형을 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+전용면적 내림 정수별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평당가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,

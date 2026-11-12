@@ -252,7 +252,7 @@ async function main() {
   // 한 대시보드 생성이 실패해도 다른 대시보드는 최신 수집 자료로 갱신한다.
   for (const [label, args] of [
     ["단지 검색 목록", ["scripts/build-complex-index.mjs"]],
-    ["급지 대시보드", ["scripts/build-tier-map.mjs"]],
+    ["급지 대시보드", ["scripts/build-tier-map.mjs", "--months=36"]],
     ["지역 변동률", ["scripts/build-regional-change.mjs"]],
   ]) {
     console.log(`\n=== ${label} 데이터 갱신 ===`);
