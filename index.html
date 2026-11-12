@@ -9288,7 +9288,7 @@ function lsRestoreManualFacets(facets){
 }
 function lsAlignUnadjustedToBounds(){if(mode!=='listingbudget')return;for(const [name,facet] of Object.entries(LS_FACETS))if(!listingManualFacets.has(name)){const [lo,hi]=facet.ids.map(id=>document.getElementById(id));lo.value=lo.min;hi.value=hi.max;}lsSync();}
 function lsFacetLimits(name){const el=document.getElementById(LS_FACETS[name].ids[0]);return {min:+el.min,max:+el.max};}
-function lsFacetActive(name,v){if((mode==='listingbudget'||mode==='listingurgent')&&!listingManualFacets.has(name))return false;const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
+function lsFacetActive(name,v){if((mode==='listingbudget'||mode==='listingurgent')&&name!=='py'&&!listingManualFacets.has(name))return false;const f=LS_FACETS[name],b=lsFacetLimits(name);return v[f.keys[0]]>b.min || v[f.keys[1]]<b.max;}
 function lsFacetMatch(name,x,v){if(!lsFacetActive(name,v))return true;const f=LS_FACETS[name],n=f.value(x);return Number.isFinite(n)&&n>=v[f.keys[0]]&&n<=v[f.keys[1]];}
 function lsDataBounds(items,names=['py','ask','age','hh','rate']){
   const v=lsGet(),active=Object.fromEntries(names.map(name=>[name,lsFacetActive(name,v)]));
@@ -9374,7 +9374,7 @@ function lsAskBounds(items){
 }
 function lsAskText(v){const {min,max}=lsAskLimits();return mode==='listingbudget'&&!listingManualFacets.has('ask')||v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){if(mode==='listingbudget'&&!listingManualFacets.has('ask'))return true;const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
-function lsPyActive(v){return (mode==='longpeaklisting'||listingManualFacets.has('py'))&&lsFacetActive('py',v);}
+function lsPyActive(v){return lsFacetActive('py',v);}
 function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
