@@ -4,11 +4,6 @@ on:
   # 정기/수동 실거래 수집은 collect-trades.mjs가 종료 전에 급지 데이터를 함께 생성한다.
   # 이 워크플로는 실거래 재수집 없이 급지만 별도로 재계산할 때 사용한다.
   workflow_dispatch:
-    inputs:
-      months:
-        description: "최근 몇 개월 내 거래를 볼지(기본 36 = 3년, 평형별 3년 내 최고가 기준)"
-        required: false
-        default: "36"
 
 permissions:
   contents: write
@@ -36,9 +31,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 독립 수동 실행도 기본 급지 기준(최근 36개월)을 사용한다.
+      # 현재 월 거래가 없는 단지는 저장된 데이터 중 가장 최근 정상 거래월 평균을 사용한다.
       - name: 급지 대시보드 데이터 생성 (data/tier-map.json)
-        run: node scripts/build-tier-map.mjs --months=${{ inputs.months || '36' }}
+        run: node scripts/build-tier-map.mjs
 
       - name: 커밋 & 푸시
         run: |
