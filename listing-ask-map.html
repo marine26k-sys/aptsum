@@ -73,6 +73,7 @@ const $=s=>document.querySelector(s), grid=$('#grid');
 const state={mapRegion:'all',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
 const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-map.json';
 const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
+const PROVINCE_LABELS={서울:'서울시',경기:'경기도',인천:'인천시',부산:'부산시'};
 $('#mapRegionControls').addEventListener('click',event=>{const button=event.target.closest('button[data-region]');if(!button)return;state.mapRegion=button.dataset.region;for(const item of $('#mapRegionControls').querySelectorAll('button'))item.setAttribute('aria-pressed',String(item===button));render();state.drawMap?.();});
 $('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
 function displayRate(n,digits=1){const text=n.toFixed(digits);return Number(text)===0?(0).toFixed(digits):text}
@@ -194,7 +195,8 @@ async function renderPriceBandTable(){
   }else metric=await loadRegion(lawd);
   if(request!==priceBandRequest||askView!=='bands')return;
   const weeks=(metric.weekly||[]).filter(w=>w.previousAsOf).slice(-8),observedBands=weeks.flatMap(w=>Object.keys(w.priceBands||{})).filter(key=>/^\d+$/.test(key)).map(Number).filter(b=>b>=4),maxBand=observedBands.length?Math.max(...observedBands):3,bands=Array.from({length:maxBand-3},(_,i)=>i+4);
-  const regionTitle=region?.name==='전체'?region.province:[region?.province,region?.name].filter(Boolean).join(' ');
+  const provinceTitle=PROVINCE_LABELS[region?.province]||region?.province;
+  const regionTitle=region?.name==='전체'?provinceTitle:[provinceTitle,region?.name].filter(Boolean).join(' ');
   const header=$('#monthlyPanel .card-hd').cloneNode(true);header.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));header.querySelector('h2').textContent=`${regionTitle||''} 금액대별 호가 변동률`;const sub=header.querySelector('.meta');sub.style.cssText='color:#b7cbd5;text-align:center';const basis=document.createElement('div');basis.className='meta';basis.style.cssText='color:#fff;opacity:1;text-align:center;font-size:12px;font-weight:800;margin-top:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.09)';basis.textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';sub.after(basis);sub.remove();header.querySelector('.regional-vs')?.remove();
   const legend=document.createElement('div');legend.className='legend';legend.innerHTML='상승 <span style="color:#ef4444">■</span> · 보합 □ · 하락 <span style="color:#2563eb">■</span> · — 비교 자료 부족 · 단위: %';
   const table=document.createElement('table');table.className='price-band-table';const head=table.createTHead().insertRow(),first=document.createElement('th');first.scope='col';first.textContent='금액대';head.append(first);
