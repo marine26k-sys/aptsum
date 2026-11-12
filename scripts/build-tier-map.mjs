@@ -64,7 +64,6 @@ function buildProvinceMap() {
 }
 const provinceOf = buildProvinceMap();
 const ALLOWED_PROVINCES = new Set(["서울", "경기", "인천", "부산"]); // 2026.09 인천 재포함(운영자 요청) — 원래도 배치 수집 대상이었는데 대시보드에서만 빼뒀던 것
-const MIN_SAMPLES_PER_TYPE = 1; // 최근 한 달 평균은 단지 분석과 동일하게 단일 정상 거래도 반영
 const PY_MIN = 20, PY_MAX = 39; // 대표 평형 후보를 20~39평 범위로 한정(2026.09, 운영자 요청) — 초소형/초대형 평형의
 // 이례적 평당가가 단지 대표값으로 잘못 뽑히는 걸 막기 위함. 범위 밖 평형은 표본이 많아도 대표 후보에서 제외.
 const NAVER_COMBINED_HH = new Set(["안양 동안구|비산동|은하수,샛별5,6단지"]);
@@ -134,9 +133,7 @@ async function main() {
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
           const pk = `${ck}|${Math.floor(t.area)}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, pyCounts: {}, trades: [], count: 0, presaleOnly: true };
-          g.count++;
-          g.pyCounts[t.py] = (g.pyCounts[t.py] || 0) + 1;
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, trades: [], presaleOnly: true };
           g.trades.push({ ym: String(t.ym || ym), amt: Number(t.amt), area: Number(t.area), py: t.py });
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
           pyGroups.set(pk, g);
@@ -204,7 +201,10 @@ async function main() {
       const clean = values.filter(t => previousAverage === null || t.amt > previousAverage * 0.75);
       if (clean.length) {
         previousClean = clean;
-        averages.push({ ym, amt: Math.round(clean.reduce((sum,t) => sum + t.amt, 0) / clean.length * 10) / 10, area: clean.reduce((sum,t) => sum + t.area, 0) / clean.length });
+        const pyCounts = new Map();
+        for (const trade of clean) if (Number.isInteger(trade.py) && trade.py > 0) pyCounts.set(trade.py, (pyCounts.get(trade.py) || 0) + 1);
+        const py = [...pyCounts].sort((a,b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? null;
+        averages.push({ ym, amt: Math.round(clean.reduce((sum,t) => sum + t.amt, 0) / clean.length * 10) / 10, area: clean.reduce((sum,t) => sum + t.area, 0) / clean.length, py });
       }
     }
     return averages;
@@ -213,16 +213,15 @@ async function main() {
   // 단지별로 평형(py) 중 최근 월평균 평당가가 가장 높은 것 1개만 대표로 채택
   const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
-    g.py = +Object.entries(g.pyCounts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
-    if (g.count < MIN_SAMPLES_PER_TYPE) continue;
-    if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const monthly = monthlyAverages(g.trades);
     const currentAverage = monthly.at(-1);
-    if (!currentAverage) continue;
+    if (!currentAverage || !Number.isInteger(currentAverage.py)) continue;
+    const py = currentAverage.py;
+    if (py < PY_MIN || py > PY_MAX) continue; // 최근 평균 기준 공급평형이 20~39평 밖이면 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
-    const ppy = Math.round((currentAverage.amt * 10000) / g.py); // 최근 월평균 매매가(만원) ÷ 공급면적 기준 평형
+    const ppy = Math.round((currentAverage.amt * 10000) / py); // 최근 월평균 매매가(만원) ÷ 공급면적 기준 평형
     const cur = byComplex.get(ck);
-    if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, ppy, average: currentAverage });
+    if (!cur || ppy > cur.ppy) byComplex.set(ck, { ...g, py, ppy, average: currentAverage });
   }
 
   const result = [];
