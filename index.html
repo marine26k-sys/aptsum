@@ -1173,9 +1173,9 @@ try {
     <div id="newHighPriceFilters" class="ls-filters analysis-select-slider" style="display:none">
       <div class="ls-hd"><span>금액대</span><b id="newHighPriceTxt">전체</b></div>
       <div class="ls-control"><div class="ls-dual" id="newHighPriceDual">
-        <input type="range" id="newHighPriceMin" min="0" max="100" step="0.5" value="0" oninput="newHighPriceSync(this)" aria-label="최소 신고가(억)">
-        <input type="range" id="newHighPriceMax" min="0" max="100" step="0.5" value="100" oninput="newHighPriceSync(this)" aria-label="최대 신고가(억)">
-      </div><div class="ls-numbers"><input type="number" id="newHighPriceMinNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최소 신고가(억) 직접 입력"><span>~</span><input type="number" id="newHighPriceMaxNumber" min="0" max="100" step="0.5" onchange="newHighPriceNumberSync(this)" aria-label="최대 신고가(억) 직접 입력"><span>억</span></div></div>
+        <input type="range" id="newHighPriceMin" min="0" max="100" step="0.1" value="0" oninput="newHighPriceSync(this)" aria-label="최소 신고가(억)">
+        <input type="range" id="newHighPriceMax" min="0" max="100" step="0.1" value="100" oninput="newHighPriceSync(this)" aria-label="최대 신고가(억)">
+      </div><div class="ls-numbers"><input type="number" id="newHighPriceMinNumber" min="0" max="100" step="0.1" onchange="newHighPriceNumberSync(this)" aria-label="최소 신고가(억) 직접 입력"><span>~</span><input type="number" id="newHighPriceMaxNumber" min="0" max="100" step="0.1" onchange="newHighPriceNumberSync(this)" aria-label="최대 신고가(억) 직접 입력"><span>억</span></div></div>
     </div>
     <div id="lsFilters" class="ls-filters" style="display:none">
 
@@ -1192,8 +1192,8 @@ try {
       <div class="ls-row" id="lsAskRow" style="display:none">
         <div class="ls-hd"><span>매매가</span><b id="lsAskTxt">전체</b></div>
         <div class="ls-control"><div class="ls-dual" id="lsAskDual">
-          <input type="range" id="lsAskMin" min="0" max="50" step="0.5" value="0" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 매매가(억)">
-          <input type="range" id="lsAskMax" min="0" max="50" step="0.5" value="50" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 매매가(억)">
+          <input type="range" id="lsAskMin" min="0" max="50" step="0.1" value="0" oninput="lsSync(this)" onchange="lsApply()" aria-label="최소 매매가(억)">
+          <input type="range" id="lsAskMax" min="0" max="50" step="0.1" value="50" oninput="lsSync(this)" onchange="lsApply()" aria-label="최대 매매가(억)">
         </div><div class="ls-numbers"><input type="number" id="lsAskMinNumber" aria-label="최소 매매가(억) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="lsAskMaxNumber" aria-label="최대 매매가(억) 직접 입력" onchange="lsNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>억</span></div></div>
       </div>
       <div class="ls-row" id="lsAgeRow">
@@ -1236,8 +1236,8 @@ try {
       <div class="ls-row" style="display:flex;align-items:center;gap:10px;margin:3px 0;min-height:35px">
         <div class="ls-hd" style="flex:0 0 80px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.35"><span>매매가</span><b id="muvPriceTxt">전체</b></div>
         <div class="ls-control"><div class="ls-dual" id="muvPriceDual" style="--lo:0%;--hi:100%">
-          <input type="range" id="muvPriceMin" min="0" max="100" step="0.5" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
-          <input type="range" id="muvPriceMax" min="0" max="100" step="0.5" value="100" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최고 금액(억)">
+          <input type="range" id="muvPriceMin" min="0" max="100" step="0.1" value="0" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최저 금액(억)">
+          <input type="range" id="muvPriceMax" min="0" max="100" step="0.1" value="100" oninput="molitUndervaluePriceSync(this)" onchange="molitUndervaluePriceApply()" aria-label="최고 금액(억)">
         </div><div class="ls-numbers"><input type="number" id="muvPriceMinNumber" aria-label="최저 매매가(억) 직접 입력" onchange="molitUndervaluePriceNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>~</span><input type="number" id="muvPriceMaxNumber" aria-label="최고 매매가(억) 직접 입력" onchange="molitUndervaluePriceNumberApply(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"><span>억</span></div></div>
       </div>
     </div>
@@ -4229,9 +4229,11 @@ function analyzeRegion(all, months){
 // "선택 조회기간(고정 3년) 내 최고가"가 최근 한 달(30일) 이내 계약된 단지만 추출 — 매매·분양권·입주권 모두 집계
 // (지역/등락 랭킹과 동일하게 mergeTradeAndPresaleForRanking으로 병합된 데이터를 그대로 받음)
 // 신축 첫 거래가 트리비얼하게 "신고가"로 잡히는 것을 막기 위해 표본 3건 이상만 인정.
+function salePriceTenthFloor(value){return Math.floor(value*10+1e-8)/10;}
+function salePriceTenthCeil(value){return Math.ceil(value*10-1e-8)/10;}
 function newHighPriceRange(){return ['newHighPriceMin','newHighPriceMax'].map(id=>+document.getElementById(id).value);}
 function setNewHighPriceRange(range){
-  const valid=Array.isArray(range)&&range.length===2&&range.every(n=>Number.isFinite(n)&&n>=0&&n<=100&&n*2===Math.round(n*2))&&range[0]<=range[1];
+  const valid=Array.isArray(range)&&range.length===2&&range.every(n=>Number.isFinite(n)&&n>=0&&n<=100&&Math.abs(n*10-Math.round(n*10))<1e-7)&&range[0]<=range[1];
   const [lo,hi]=valid?range:[0,100];document.getElementById('newHighPriceMin').value=lo;document.getElementById('newHighPriceMax').value=hi;newHighPriceSync();
 }
 function newHighPriceSync(changed){
@@ -4243,7 +4245,7 @@ function newHighPriceSync(changed){
 }
 function newHighPriceNumberSync(input){
   const slider=document.getElementById(input.id.replace('Number',''));
-  if(input.value.trim()!==''&&Number.isFinite(+input.value))slider.value=Math.max(0,Math.min(100,Math.round(+input.value*2)/2));
+  if(input.value.trim()!==''&&Number.isFinite(+input.value))slider.value=Math.max(0,Math.min(100,Math.round(+input.value*10)/10));
   newHighPriceSync(slider);
 }
 
@@ -8362,7 +8364,7 @@ function resetMolitUndervaluePriceFilter(){
   const state=molitUndervaluePriceState;
   const currentMode=molitUndervaluePriceMode(mode),source=molitUndervaluePriceMode(lastData?.mode)===currentMode?lastData:null,key=currentMode==='inversion'?'rows':'divergence';
   const values=source?(source[key]||[]).map(row=>molitUndervaluePriceValue(currentMode,row)).filter(value=>Number.isFinite(value)&&value>0):[];
-  if(values.length){state.min=Math.floor(Math.min(...values)*2)/2;state.max=Math.max(state.min+0.5,Math.ceil(Math.max(...values)*2)/2);}
+  if(values.length){state.min=salePriceTenthFloor(Math.min(...values));state.max=Math.max(state.min+0.1,salePriceTenthCeil(Math.max(...values)));}
   else{state.min=0;state.max=100;}
   state.lo=state.min;state.hi=state.max;state.touched=false;
   persistMolitUndervaluePrice();
@@ -8390,7 +8392,7 @@ function molitUndervaluePriceFilter(d){
   if(!isFilteredSource&&state.sources.get(mode)!==d){
     const values=(d[key]||[]).map(x=>molitUndervaluePriceValue(mode,x)).filter(n=>Number.isFinite(n)&&n>0);
     if(values.length){
-      const min=Math.floor(Math.min(...values)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...values)*2)/2);
+      const min=salePriceTenthFloor(Math.min(...values)),max=Math.max(min+0.1,salePriceTenthCeil(Math.max(...values)));
       if(!state.touched){state.min=min;state.max=max;state.lo=min;state.hi=max;}
       else{state.min=Math.min(0,min,state.lo);state.max=Math.max(100,max,state.hi);state.lo=Math.max(state.min,state.lo);state.hi=Math.max(state.lo,Math.min(state.max,state.hi));}
     }
@@ -9274,7 +9276,7 @@ function lsSet(v){
 }
 const LS_FACETS={
   py:{ids:['lsPyMin','lsPyMax'],keys:['p0','p1'],step:1,value:x=>x.py},
-  ask:{ids:['lsAskMin','lsAskMax'],keys:['q0','q1'],step:0.5,value:x=>x.ask},
+  ask:{ids:['lsAskMin','lsAskMax'],keys:['q0','q1'],step:0.1,value:x=>x.ask},
   age:{ids:['lsAgeMin','lsAgeMax'],keys:['a0','a1'],step:1,value:x=>{const year=parseInt(x.built,10);return year?new Date().getFullYear()-year+1:NaN;}},
   hh:{ids:['lsHhMin','lsHhMax'],keys:['h','h1'],step:1,value:x=>x.hh},
   rate:{ids:['lsRateMin','lsRateMax'],keys:['r0','r1'],step:1,value:x=>x.peak>0?Math.round((x.ask-x.peak)/x.peak*100):NaN}
@@ -9362,7 +9364,7 @@ function lsAskLimits(){const el=document.getElementById('lsAskMin');return {min:
 function lsAskBounds(items){
  const prices=items.filter(x=>x.ask>0 && x.hh>=lsHhBase()).map(x=>x.ask);
  if(!prices.length)return;
- const min=Math.floor(Math.min(...prices)*2)/2,max=Math.max(min+0.5,Math.ceil(Math.max(...prices)*2)/2);
+ const min=salePriceTenthFloor(Math.min(...prices)),max=Math.max(min+0.1,salePriceTenthCeil(Math.max(...prices)));
  const lo=document.getElementById('lsAskMin'),hi=document.getElementById('lsAskMax');
  const oldMin=+lo.min,oldMax=+hi.max,oldLo=+lo.value,oldHi=+hi.value;
  lo.min=hi.min=min;lo.max=hi.max=max;
