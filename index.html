@@ -3724,7 +3724,7 @@ function buildYearLabel(){
 }
 function markOutliers(arr){
   // 같은 단지·전용면적에서 직전 달 평균 거래가보다 25% 이상 낮은 거래만 저가 이상치로 표시한다.
-  // 직거래는 기준 평균에서 제외하고, 직전 달에 거래가 없으면 비교하지 않는다.
+  // 직거래와 이상치는 기준 평균에서 제외하고, 직전 달 정상 거래가 없으면 비교하지 않는다.
   const trades=[];
   for(const t of arr){
     if(t.direct){t.ex='직거래';continue;}
@@ -3739,9 +3739,11 @@ function markOutliers(arr){
   const months=Object.keys(monthly).sort();
   for(const ym of months){
     const previous=monthly[ymOffset(ym,-1)];
-    if(!previous?.length)continue;
-    const previousAverage=previous.reduce((sum,{amount})=>sum+amount,0)/previous.length;
-    for(const {t,amount} of monthly[ym])if(amount<=previousAverage*.75)t.ex='저가';
+    const previousClean=(previous||[]).filter(({t})=>!t.ex);
+    if(previousClean.length){
+      const previousAverage=previousClean.reduce((sum,{amount})=>sum+amount,0)/previousClean.length;
+      for(const {t,amount} of monthly[ym])if(amount<=previousAverage*.75)t.ex='저가';
+    }
   }
   return arr.filter(t=>!t.ex);
 }
