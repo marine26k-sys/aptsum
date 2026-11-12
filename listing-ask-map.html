@@ -73,6 +73,7 @@ const $=s=>document.querySelector(s), grid=$('#grid');
 const state={mapRegion:'all',sample:'all',data:new Map(),asOf:'',previousAsOf:''};
 const liveAskMapUrl='https://raw.githubusercontent.com/marine26k-sys/aptsum/refs/heads/main/data/listing-ask-map.json';
 const regionLookup=new Map(REGIONS.flatMap(([province,items])=>items.map(([name,lawd])=>[String(lawd),{province,name}])));
+const PROVINCE_LABELS={서울:'서울시',경기:'경기도',인천:'인천시',부산:'부산시'};
 $('#mapRegionControls').addEventListener('click',event=>{const button=event.target.closest('button[data-region]');if(!button)return;state.mapRegion=button.dataset.region;for(const item of $('#mapRegionControls').querySelectorAll('button'))item.setAttribute('aria-pressed',String(item===button));render();state.drawMap?.();});
 $('#sharePage').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else await navigator.clipboard.writeText(location.href)}catch{}};
 function displayRate(n,digits=1){const text=n.toFixed(digits);return Number(text)===0?(0).toFixed(digits):text}
@@ -162,6 +163,7 @@ function loadPriceBandData(){
 }
 loadPriceBandData().catch(()=>{});
 let askView='map',priceBandRequest=0;
+const MIN_PRICE_BAND_COMPLEXES=1;
 const priceBandRegion=$('#priceBandRegion'),priceBandPanel=$('#priceBandPanel');
 function setPriceBandProvince(province){
  const regions=REGIONS.find(([name])=>name===province)?.[1]||[];priceBandRegion.replaceChildren();
@@ -193,13 +195,15 @@ async function renderPriceBandTable(){
   }else metric=await loadRegion(lawd);
   if(request!==priceBandRequest||askView!=='bands')return;
   const weeks=(metric.weekly||[]).filter(w=>w.previousAsOf).slice(-8),observedBands=weeks.flatMap(w=>Object.keys(w.priceBands||{})).filter(key=>/^\d+$/.test(key)).map(Number).filter(b=>b>=4),maxBand=observedBands.length?Math.max(...observedBands):3,bands=Array.from({length:maxBand-3},(_,i)=>i+4);
-  const header=$('#monthlyPanel .card-hd').cloneNode(true);header.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));header.querySelector('h2').textContent=`${region?.province||''} ${region?.name||''} 금액대별 호가 변동률`;const sub=header.querySelector('.meta');sub.style.cssText='color:#b7cbd5;text-align:center';const basis=document.createElement('div');basis.className='meta';basis.style.cssText='color:#fff;opacity:1;text-align:center;font-size:12px;font-weight:800;margin-top:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.09)';basis.textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';sub.after(basis);sub.remove();header.querySelector('.regional-vs')?.remove();
-  const legend=document.createElement('div');legend.className='legend';legend.innerHTML='상승 <span style="color:#ef4444">■</span> · 보합 □ · 하락 <span style="color:#2563eb">■</span> · — 자료 부족 · 단위: %';
+  const provinceTitle=PROVINCE_LABELS[region?.province]||region?.province;
+  const regionTitle=region?.name==='전체'?provinceTitle:[provinceTitle,region?.name].filter(Boolean).join(' ');
+  const header=$('#monthlyPanel .card-hd').cloneNode(true);header.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));header.querySelector('h2').textContent=`${regionTitle||''} 금액대별 호가 변동률`;const sub=header.querySelector('.meta');sub.style.cssText='color:#b7cbd5;text-align:center';const basis=document.createElement('div');basis.className='meta';basis.style.cssText='color:#fff;opacity:1;text-align:center;font-size:12px;font-weight:800;margin-top:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.09)';basis.textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';sub.after(basis);sub.remove();header.querySelector('.regional-vs')?.remove();
+  const legend=document.createElement('div');legend.className='legend';legend.innerHTML='상승 <span style="color:#ef4444">■</span> · 보합 □ · 하락 <span style="color:#2563eb">■</span> · — 비교 자료 부족 · 단위: %';
   const table=document.createElement('table');table.className='price-band-table';const head=table.createTHead().insertRow(),first=document.createElement('th');first.scope='col';first.textContent='금액대';head.append(first);
   for(const week of weeks){const th=document.createElement('th');th.scope='col';const info=weekInfo(week.asOf);th.textContent=info?info.label.replace(/^\d+년\s*/, '').replace('주차','주'):week.weekStart.slice(5);th.title=weekLabel(week.asOf);head.append(th)}
-  const max=Math.max(.1,...weeks.flatMap(w=>bands.map(b=>w.priceBands?.[String(b)]).filter(x=>x?.count>=3&&Number.isFinite(x.rate)).map(x=>Math.abs(Number(displayRate(x.rate))))));
-  const body=table.createTBody();for(const band of bands){const tr=body.insertRow(),th=document.createElement('th');th.scope='row';th.textContent=`${band}억대`;tr.append(th);for(const week of weeks){const td=tr.insertCell(),v=week.priceBands?.[String(band)];if(!v||v.count<3||!Number.isFinite(v.rate)){td.className='empty';td.textContent='—';td.title=v?`비교 단지 ${v.count}개 · 표본 부족`:'비교 자료 없음';continue}const val=Number(displayRate(v.rate));td.textContent=displayRate(v.rate);td.title=`${band}억대 · 비교 단지 ${v.count}개`;if(val){const alpha=.12+.40*Math.min(1,Math.abs(val)/max);td.style.background=val>0?`rgba(239,68,68,${alpha})`:`rgba(59,130,246,${alpha})`}}}
-  const note=document.createElement('div');note.className='price-band-note';note.textContent='금액대는 해당 주의 단지·전용면적별 평균 최저 호가 기준입니다. 같은 평형을 직전 주와 비교한 뒤 단지별 동일 비중으로 평균합니다. 비교 가능한 단지가 3개 미만이면 —로 표시합니다. 자료는 하루 한 번 갱신됩니다.';
+  const max=Math.max(.1,...weeks.flatMap(w=>bands.map(b=>w.priceBands?.[String(b)]).filter(x=>x?.count>=MIN_PRICE_BAND_COMPLEXES&&Number.isFinite(x.rate)).map(x=>Math.abs(Number(displayRate(x.rate))))));
+  const body=table.createTBody();for(const band of bands){const tr=body.insertRow(),th=document.createElement('th');th.scope='row';th.textContent=`${band}억대`;tr.append(th);for(const week of weeks){const td=tr.insertCell(),v=week.priceBands?.[String(band)];if(!v||v.count<MIN_PRICE_BAND_COMPLEXES||!Number.isFinite(v.rate)){td.className='empty';td.textContent='—';td.title=v?`비교 단지 ${v.count}개 · 표본 부족`:'비교 자료 없음';continue}const val=Number(displayRate(v.rate));td.textContent=displayRate(v.rate);td.title=`${band}억대 · 비교 단지 ${v.count}개${v.count<3?' · 표본 적음':''}`;if(val){const alpha=.12+.40*Math.min(1,Math.abs(val)/max);td.style.background=val>0?`rgba(239,68,68,${alpha})`:`rgba(59,130,246,${alpha})`}}}
+  const note=document.createElement('div');note.className='price-band-note';note.textContent='금액대는 해당 주의 단지·전용면적별 평균 최저 호가 기준입니다. 같은 평형을 직전 주와 비교한 뒤 단지별 동일 비중으로 평균합니다. 비교 가능한 단지가 1개 이상이면 표시하며, 표본이 적은 금액대는 참고용으로 확인해 주세요. 자료는 하루 한 번 갱신됩니다.';
   priceBandPanel.replaceChildren(header,legend);if(weeks.length&&bands.length)priceBandPanel.append(table);else{const empty=document.createElement('p');empty.className='price-band-note';empty.textContent='선택한 지역의 금액대별 비교 자료가 없습니다.';priceBandPanel.append(empty)}priceBandPanel.append(note);requestAnimationFrame(fitPriceBandTitle);if(document.fonts)document.fonts.ready.then(fitPriceBandTitle);
  }catch{if(request===priceBandRequest)priceBandPanel.innerHTML='<div class="price-band-note">금액대별 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'}
 }

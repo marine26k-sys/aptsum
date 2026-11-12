@@ -3722,19 +3722,29 @@ function buildYearLabel(){
   if(!v) return null;
   return analysisAgeLabel(v);
 }
-function markOutliers(arr, months){
+function markOutliers(arr){
+  // 같은 단지·전용면적에서 직전 달 평균 거래가보다 25% 이상 낮은 거래만 저가 이상치로 표시한다.
+  // 직거래와 이상치는 기준 평균에서 제외한다. 직전 달에 정상 거래가 없으면 그보다 최근에
+  // 정상 거래가 있었던 가장 가까운 달의 평균을 사용한다.
+  const trades=[];
   for(const t of arr){
-    // ⚠️ 여기서 t.ex를 캐싱해 재계산을 건너뛰면 안 됨 — 거래 객체(t)는 monthCache에서 여러 화면(단지 분석/등락 랭킹/저평가)이
-    // 공유 참조로 재사용하는데, 화면마다 arr(층 필터)·months(기간)가 달라 같은 거래라도 판정 기준(비교군)이 달라진다.
-    // 이전 화면에서 계산된 값을 그대로 스킵하면 탭 진입 순서에 따라 결과가 달라지는 버그가 생기므로 매번 새로 계산한다.
-    if(t.direct){ t.ex='직거래'; continue; }
-    const mi = months.indexOf(t.ym);
-    const win = arr.filter(o=>o!==t && !o.direct && Math.abs(months.indexOf(o.ym)-mi)<=3).map(o=>o.amt);
-    if(win.length>=2){
-      const ref = median(win);
-      if(t.amt < ref*0.7){ t.ex='저가'; continue; }
+    if(t.direct){t.ex='직거래';continue;}
+    t.ex=null;
+    const ym=String(t.ym||''),amount=Number(t.amt);
+    if(/^\d{6}$/.test(ym)&&Number.isFinite(amount)&&amount>0)trades.push({t,ym,amount});
+  }
+  trades.sort((a,b)=>a.ym.localeCompare(b.ym));
+  const monthly={};
+  for(const trade of trades)(monthly[trade.ym] ||= []).push(trade);
+  const months=Object.keys(monthly).sort();
+  let previousClean=[];
+  for(const ym of months){
+    if(previousClean.length){
+      const previousAverage=previousClean.reduce((sum,{amount})=>sum+amount,0)/previousClean.length;
+      for(const {t,amount} of monthly[ym])if(amount<=previousAverage*.75)t.ex='저가';
     }
-    t.ex = null;
+    const currentClean=monthly[ym].filter(({t})=>!t.ex);
+    if(currentClean.length)previousClean=currentClean;
   }
   return arr.filter(t=>!t.ex);
 }
@@ -4914,6 +4924,8 @@ function esc(s){ return String(s??'').replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&
 // 이미 지역을 고르고 난 뒤의 결과 헤더는 서울처럼 구 이름만 보여도 문맥상 충분해서 이 지점에서만 축약.
 // "A · B · C", "A 외 N곳" 형태(복수 지역 선택 시)도 각 지역명을 개별로 축약한 뒤 그대로 이어붙임.
 function shortRegionOne(s){
+  // 전체 조회 제목의 중복 접미어("서울시 전체", "수원시 전체")를 제거한다.
+  s = String(s||'').replace(/\s+전체$/,'');
   const m = String(s||'').match(/^(\S+)\s(\S+구)$/);
   return m ? m[2] : s;
 }
@@ -6702,8 +6714,8 @@ function curComplexData(){
   if(complexView==='jeonse'&&lastData?.jeonseLoading)return null;
   return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData;
 }
-const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
-const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 시세 (동일 평형 전후 3개월 중앙값) 대비 30% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
+const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월 평균보다 25% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
@@ -8626,7 +8638,7 @@ function renderShortUndervalue(d){
     </div>
 
   </div>
-  <div class="src-note">이전·최근 3개월 평균가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 1~4층·직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
+  <div class="src-note">이전·최근 3개월 평균가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 1~4층·직거래·직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -8676,7 +8688,7 @@ function renderPeak(d){
     </div>
 
   </div>
-  <div class="src-note">이전·최근 6개월 최고가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 직거래·시세보다 30% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
+  <div class="src-note">이전·최근 6개월 최고가 비교 (각 2건 이상) · 전용 48/59/72/84㎡, 각 ±5㎡로 구분 · 직거래·직전 정상 거래월 평균보다 25% 이상 낮은 거래 제외 · 출처: 국토교통부 실거래가 (해제 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
@@ -10137,7 +10149,7 @@ function renderLongPeak(d){
     </div>
 
   </div>
-  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (시세 대비 30%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
+  <div class="src-note">${d.prevYearLabel} 최고가 vs ${d.recentYearLabel} 최고가 비교 (각 2건 이상 표본 필요)${d.sameDongOnly? ' · 같은 동 안에서만 비교' : ''} · 전용 48㎡ ±5㎡, 59㎡ ±5㎡, 72㎡ ±5㎡, 84㎡ ±5㎡끼리만 각각 비교 · 직거래·저가 (직전 정상 거래월 평균보다 25%↓) 거래 제외 · 출처: 국토교통부 (해제거래 제외)</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
