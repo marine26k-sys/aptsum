@@ -4924,6 +4924,8 @@ function esc(s){ return String(s??'').replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&
 // 이미 지역을 고르고 난 뒤의 결과 헤더는 서울처럼 구 이름만 보여도 문맥상 충분해서 이 지점에서만 축약.
 // "A · B · C", "A 외 N곳" 형태(복수 지역 선택 시)도 각 지역명을 개별로 축약한 뒤 그대로 이어붙임.
 function shortRegionOne(s){
+  // 전체 조회 제목의 중복 접미어("서울시 전체", "수원시 전체")를 제거한다.
+  s = String(s||'').replace(/\s+전체$/,'');
   const m = String(s||'').match(/^(\S+)\s(\S+구)$/);
   return m ? m[2] : s;
 }
