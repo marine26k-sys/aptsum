@@ -9374,7 +9374,7 @@ function lsAskBounds(items){
 }
 function lsAskText(v){const {min,max}=lsAskLimits();return mode==='listingbudget'&&!listingManualFacets.has('ask')||v.q0===min && v.q1===max ? '전체' : `${v.q0.toFixed(1)}~${v.q1.toFixed(1)}억`;}
 function lsAskMatch(x,v){if(mode==='listingbudget'&&!listingManualFacets.has('ask'))return true;const {min,max}=lsAskLimits();return (v.q0===min || x.ask>=v.q0) && (v.q1===max || x.ask<=v.q1);}
-function lsPyActive(v){return listingManualFacets.has('py')&&(v.p0>LS_PY_MIN||v.p1<lsPyBaseMax());}
+function lsPyActive(v){return v.p0>LS_PY_MIN||v.p1<lsPyBaseMax();}
 function lsPyText(v){return v.p0===v.p1?`${v.p0}평`:!lsPyActive(v)?'전체':`${v.p0}~${v.p1}평`;}
 function lsRateActive(v){return lsFacetActive('rate',v);}
 function lsRateText(v){const f=n=>(n>0?'+':'')+n+'%';return !lsRateActive(v)?'전체':v.r0===v.r1?f(v.r0):`${f(v.r0)} ~ ${f(v.r1)}`;}
