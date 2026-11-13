@@ -167,6 +167,7 @@ async function load(){
     render(data);
     initTabClicks();
     loadListingMeta();
+    loadListingUsage();
     initSubscribers();
     initApplications();
   }catch(e){
@@ -216,6 +217,13 @@ function render(d){
       </label>
       <div id="listingStatus" role="status" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--ink);white-space:pre-line"></div>
       <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·세안고·분양권 각각 중층 이상 및 저층 포함 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
+      <div style="margin-top:14px;padding-top:11px;border-top:1px solid var(--line)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <b style="font-size:12px;color:var(--navy)">구독자별 API 조회량 · 최근 24시간</b>
+          <button id="refreshListingUsage" type="button" style="padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
+        </div>
+        <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
+      </div>
     </div>
 
     <div class="card" id="appCard">
@@ -618,6 +626,36 @@ async function loadListingMeta(){
       : "아직 업로드된 데이터가 없습니다.";
   }catch(e){ box.textContent = "현재 데이터 정보를 불러오지 못했습니다."; }
 }
+
+function listingUsageTime(value){
+  if(!value)return "기록 없음";
+  return new Date(value).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"Asia/Seoul"});
+}
+
+async function loadListingUsage(){
+  const box=$("#listingUsage");
+  if(!box)return;
+  box.textContent="조회 기록 불러오는 중…";
+  try{
+    const res=await fetch("/api/listings?usage=1",{cache:"no-store",credentials:"same-origin"});
+    if(res.status===401)throw new Error("관리자 인증이 만료됐습니다. 새로고침 후 다시 로그인하세요.");
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error("조회 기록을 불러오지 못했습니다.");
+    const items=Array.isArray(data.items)?data.items:[];
+    const flagged=items.filter(x=>x.suspicious||x.blockedAt).length;
+    setCardBadge("listingCard",flagged?`조회 주의 ${flagged}`:"");
+    const intro=`시간당 ${Number(data.warnPerHour||120).toLocaleString()}회부터 주의 표시 · ${Number(data.limitPerHour||300).toLocaleString()}회 초과 시 다음 정각까지 자동 제한`;
+    const note="주의 표시는 확인 대상이며 자동 해지가 아닙니다. 공용 코드는 사용량만 합산하고 계정별 제한은 개인 코드에 적용합니다.";
+    if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
+    box.innerHTML=`<div style="margin-bottom:3px">${esc(intro)}</div><div style="margin-bottom:5px">${esc(note)}</div>`+items.slice(0,30).map(x=>{
+      const state=x.blockedAt?["자동 제한 발생","#b42318"]:x.suspicious?["과다 조회 의심","#9a6700"]:["정상","var(--teal-dark)"];
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · ${Number(x.regions24h||0)}개 지역 · 마지막 ${esc(listingUsageTime(x.lastAt))}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
+    }).join("");
+    if(items.length>30)box.insertAdjacentHTML("beforeend",`<div style="padding-top:5px">조회 기록이 있는 계정 ${items.length}개 중 상위 30개 표시</div>`);
+  }catch(error){box.textContent=error.message||"조회 기록을 불러오지 못했습니다.";}
+}
+
+document.getElementById("refreshListingUsage")?.addEventListener("click",loadListingUsage);
 
 function loadSheetJS(){
   if(window.XLSX) return Promise.resolve();

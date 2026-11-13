@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
+import { LISTING_USAGE_LIMIT_PER_HOUR, LISTING_USAGE_WARN_PER_HOUR, listListingUsage, recordListingRequest } from "../../shared/listing-usage.mjs";
 
 // 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터 — 2026.09 신규.
 //
@@ -13,6 +14,7 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 //   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
 //   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 2주의 최저 호가 이력 조회
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
+//   GET  ?usage=1       관리자 세션 필요 — 최근 24시간 구독자별 API 조회량·이상 사용 현황
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
 //
@@ -44,6 +46,26 @@ function hasListingsAccess(session) {
   if (session.kind === "shared") return true;
   // Missing scope is retained for legacy full-access subscribers.
   return !session.sub?.scope || session.sub.scope === "all" || session.sub.scope === "listings";
+}
+
+async function checkListingUsage(session, isAdmin, lawd, route) {
+  if (isAdmin || !session) return null;
+  const accountId = session.kind === "personal" ? session.sub.id : "shared";
+  try {
+    return await recordListingRequest(getStore("listing-usage"), accountId, { lawd, route, enforceLimit: session.kind === "personal" });
+  } catch (error) {
+    // Usage logging should not interrupt paid browsing; the Netlify edge limit remains active.
+    console.error("listing_usage_tracking_failed", error?.message || error);
+    return null;
+  }
+}
+
+function usageLimitResponse() {
+  const retryAfter = Math.max(1, 3600 - Math.floor(Date.now() / 1000) % 3600);
+  return Response.json({ error: "listing_usage_limit", retryAfter }, {
+    status: 429,
+    headers: { "Cache-Control": "private, no-store", "Vary": "Cookie", "Retry-After": String(retryAfter) },
+  });
 }
 
 const str = (v, max = 200) => String(v ?? "").slice(0, max);
@@ -218,12 +240,25 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
+    if (q.get("usage") === "1") {
+      if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
+      const subscribersStore = getStore("subscribers");
+      const { blobs } = await subscribersStore.list({ prefix: "sub:" });
+      const subscribers = (await Promise.all(blobs.map(({ key }) => subscribersStore.get(key, { type: "json", consistency: "strong" })))).filter(Boolean);
+      return json({
+        items: await listListingUsage(getStore("listing-usage"), subscribers),
+        warnPerHour: LISTING_USAGE_WARN_PER_HOUR,
+        limitPerHour: LISTING_USAGE_LIMIT_PER_HOUR,
+      });
+    }
     const floorScope=q.get("floorScope")||"mid";
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
       const trial=q.get("trial")==="1";
       const session=isAdmin?null:await getSubscriberSession(request,secret);
       if(!trial&&!isAdmin&&!hasListingsAccess(session))return json({error:"subscriber_required"},401);
+      const usage = await checkListingUsage(session, isAdmin, "search", "search");
+      if (usage && !usage.allowed) return usageLimitResponse();
       const query=str(q.get("search"),80).normalize("NFKC").trim();
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
@@ -256,6 +291,8 @@ export default async (request) => {
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     const session=isAdmin?null:await getSubscriberSession(request,secret);
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
+    const usage = await checkListingUsage(session, isAdmin, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
+    if (usage && !usage.allowed) return usageLimitResponse();
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
