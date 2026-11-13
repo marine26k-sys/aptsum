@@ -19,6 +19,12 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 // Blob 이력 저장이 길어지지 않도록 put은 지역별로 나눠 보낸다.
 export const config = {
   path: "/api/listings",
+  // Edge-enforced ceiling that slows automated bulk extraction while allowing ordinary browsing.
+  rateLimit: {
+    windowLimit: 240,
+    windowSize: 60,
+    aggregateBy: ["ip"],
+  },
 };
 
 const LAWDS = new Set(ALL_LAWDS);
@@ -31,6 +37,13 @@ function json(body, status = 200) {
     status,
     headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" },
   });
+}
+
+function hasListingsAccess(session) {
+  if (!session) return false;
+  if (session.kind === "shared") return true;
+  // Missing scope is retained for legacy full-access subscribers.
+  return !session.sub?.scope || session.sub.scope === "all" || session.sub.scope === "listings";
 }
 
 const str = (v, max = 200) => String(v ?? "").slice(0, max);
@@ -208,8 +221,9 @@ export default async (request) => {
     const floorScope=q.get("floorScope")||"mid";
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
-      const trial=q.get("trial")==="1" || (!isAdmin && !(await getSubscriberSession(request, secret)));
-      if(trial && q.get("trial")!=="1")return json({error:"subscriber_required"},401);
+      const trial=q.get("trial")==="1";
+      const session=isAdmin?null:await getSubscriberSession(request,secret);
+      if(!trial&&!isAdmin&&!hasListingsAccess(session))return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).normalize("NFKC").trim();
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
@@ -240,7 +254,8 @@ export default async (request) => {
       return json(await loadCurrentAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
-    if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
+    const session=isAdmin?null:await getSubscriberSession(request,secret);
+    if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
