@@ -1,5 +1,7 @@
 export const LISTING_USAGE_WARN_PER_HOUR = 120;
 export const LISTING_USAGE_LIMIT_PER_HOUR = 300;
+export const LISTING_UNIQUE_REGION_WARN_PER_HOUR = 12;
+export const LISTING_UNIQUE_REGION_LIMIT_PER_HOUR = 20;
 export const LISTING_USAGE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const hourStamp = time => new Date(time).toISOString().slice(0, 13).replace(/[-T:]/g, "");
@@ -13,16 +15,21 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 export async function recordListingRequest(store, accountId, { lawd = "search", route = "current", now = Date.now(), enforceLimit = true } = {}) {
   const stamp = hourStamp(now);
   const key = `hour:${accountId}:${stamp}`;
-  for (let attempt = 0; attempt < 12; attempt++) {
+  for (let attempt = 0; attempt < 64; attempt++) {
     const prior = await store.getWithMetadata(key, { type: "json", consistency: "strong" });
     const data = prior?.data;
     if (data?.blockedAt) return { allowed: false, requests: data.requests, blockedAt: data.blockedAt };
 
     const next = data ? { ...data } : { accountId, hour: stamp, requests: 0, regions: {}, routes: {}, minutes: {}, regionMinutes: {}, lastAt: 0 };
-    if (enforceLimit && next.requests >= LISTING_USAGE_LIMIT_PER_HOUR) {
+    const uniqueRegions = Object.keys(next.regions || {}).filter(code => code !== "search").length;
+    const isNewRegion = lawd !== "search" && !next.regions?.[lawd];
+    const requestLimitReached = enforceLimit && next.requests >= LISTING_USAGE_LIMIT_PER_HOUR;
+    const regionLimitReached = enforceLimit && isNewRegion && uniqueRegions >= LISTING_UNIQUE_REGION_LIMIT_PER_HOUR;
+    if (requestLimitReached || regionLimitReached) {
       next.blockedAt = now;
+      next.blockedReason = regionLimitReached ? "region_limit" : "request_limit";
       const result = await store.setJSON(key, next, { onlyIfMatch: prior.etag });
-      if (result.modified) return { allowed: false, requests: next.requests, blockedAt: next.blockedAt };
+      if (result.modified) return { allowed: false, requests: next.requests, blockedAt: next.blockedAt, reason: next.blockedReason };
     } else {
       next.requests++;
       next.lastAt = now;
@@ -37,7 +44,7 @@ export async function recordListingRequest(store, accountId, { lawd = "search", 
         : await store.setJSON(key, next, { onlyIfNew: true });
       if (result.modified) return { allowed: true, requests: next.requests, blockedAt: null };
     }
-    await delay(4 + Math.random() * 12);
+    await delay(Math.min(60, 4 + attempt * 2) + Math.random() * 12);
   }
   throw new Error("listing_usage_write_conflict");
 }
@@ -61,7 +68,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
     if (Math.max(Number(data.lastAt) || 0, Number(data.blockedAt) || 0) < windowStart) return;
-    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), searches24h: 0, regions: new Set(), lastAt: 0, blockedAt: 0 };
+    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Set(), lastAt: 0, blockedAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
     entry.blockedAt = Math.max(entry.blockedAt, Number(data.blockedAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
@@ -72,15 +79,22 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
         entry.peakHours.set(hourStamp(minuteTime), (entry.peakHours.get(hourStamp(minuteTime)) || 0) + requests);
       }
     }
+    const regionsByHour = new Map();
     for (const [minute, regions] of Object.entries(data.regionMinutes || {})) {
       const minuteTime = minuteStart(minute);
       if (minuteTime < windowStart || minuteTime > now) continue;
       for (const [code, count] of Object.entries(regions || {})) {
         if (code === "search") entry.searches24h += Number(count) || 0;
-        else entry.regions.add(code);
+        else {
+          entry.regions.add(code);
+          const hour = hourStamp(minuteTime);
+          regionsByHour.set(hour, regionsByHour.get(hour) || new Set());
+          regionsByHour.get(hour).add(code);
+        }
       }
     }
     entry.peakHour = Math.max(entry.peakHour, ...entry.peakHours.values(), 0);
+    entry.peakRegionsHour = Math.max(entry.peakRegionsHour, ...[...regionsByHour.values()].map(regions => regions.size), 0);
     grouped.set(data.accountId, entry);
   }));
   await Promise.all(staleKeys.map(key => store.delete(key).catch(() => {})));
@@ -91,10 +105,11 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     name: entry.accountId === "shared" ? "공용 코드" : (names.get(entry.accountId) || "삭제된 구독자"),
     requests24h: entry.requests24h,
     peakHour: entry.peakHour,
+    peakRegionsHour: entry.peakRegionsHour,
     searches24h: entry.searches24h,
     regions24h: entry.regions.size,
     lastAt: entry.lastAt,
     blockedAt: entry.blockedAt || null,
-    suspicious: entry.peakHour >= LISTING_USAGE_WARN_PER_HOUR,
+    suspicious: entry.peakHour >= LISTING_USAGE_WARN_PER_HOUR || entry.peakRegionsHour >= LISTING_UNIQUE_REGION_WARN_PER_HOUR,
   })).sort((a, b) => Number(!!b.blockedAt) - Number(!!a.blockedAt) || Number(b.suspicious) - Number(a.suspicious) || b.requests24h - a.requests24h);
 }

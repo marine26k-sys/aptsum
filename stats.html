@@ -644,12 +644,12 @@ async function loadListingUsage(){
     const items=Array.isArray(data.items)?data.items:[];
     const flagged=items.filter(x=>x.suspicious||x.blockedAt).length;
     setCardBadge("listingCard",flagged?`조회 주의 ${flagged}`:"");
-    const intro=`시간당 ${Number(data.warnPerHour||120).toLocaleString()}회부터 주의 표시 · ${Number(data.limitPerHour||300).toLocaleString()}회 초과 시 다음 정각까지 자동 제한`;
+    const intro=`시간당 조회 ${Number(data.warnPerHour||120).toLocaleString()}회 또는 지역 ${Number(data.warnRegionsPerHour||12).toLocaleString()}곳부터 주의 표시 · 조회 ${Number(data.limitPerHour||300).toLocaleString()}회 또는 지역 ${Number(data.limitRegionsPerHour||20).toLocaleString()}곳 초과 시 다음 정각까지 제한`;
     const note="주의 표시는 확인 대상이며 자동 해지가 아닙니다. 공용 코드는 사용량만 합산하고 계정별 제한은 개인 코드에 적용합니다.";
     if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
     box.innerHTML=`<div style="margin-bottom:3px">${esc(intro)}</div><div style="margin-bottom:5px">${esc(note)}</div>`+items.slice(0,30).map(x=>{
       const state=x.blockedAt?["자동 제한 발생","#b42318"]:x.suspicious?["과다 조회 의심","#9a6700"]:["정상","var(--teal-dark)"];
-      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · ${Number(x.regions24h||0)}개 지역 · 전국검색 ${Number(x.searches24h||0).toLocaleString()}회 · 마지막 ${esc(listingUsageTime(x.lastAt))}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · 지역 ${Number(x.regions24h||0)}곳 (시간당 최대 ${Number(x.peakRegionsHour||0)}곳) · 전국검색 ${Number(x.searches24h||0).toLocaleString()}회 · 마지막 ${esc(listingUsageTime(x.lastAt))}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
     }).join("");
     if(items.length>30)box.insertAdjacentHTML("beforeend",`<div style="padding-top:5px">조회 기록이 있는 계정 ${items.length}개 중 상위 30개 표시</div>`);
   }catch(error){box.textContent=error.message||"조회 기록을 불러오지 못했습니다.";}

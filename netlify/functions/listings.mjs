@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
-import { LISTING_USAGE_LIMIT_PER_HOUR, LISTING_USAGE_WARN_PER_HOUR, listListingUsage, recordListingRequest } from "../../shared/listing-usage.mjs";
+import { LISTING_USAGE_LIMIT_PER_HOUR, LISTING_USAGE_WARN_PER_HOUR, LISTING_UNIQUE_REGION_LIMIT_PER_HOUR, LISTING_UNIQUE_REGION_WARN_PER_HOUR, listListingUsage, recordListingRequest } from "../../shared/listing-usage.mjs";
 
 // 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터 — 2026.09 신규.
 //
@@ -54,15 +54,19 @@ async function checkListingUsage(session, isAdmin, lawd, route) {
   try {
     return await recordListingRequest(getStore("listing-usage"), accountId, { lawd, route, enforceLimit: session.kind === "personal" });
   } catch (error) {
-    // Usage logging should not interrupt paid browsing; the Netlify edge limit remains active.
+    // Do not fail open: an unavailable counter must not make bulk extraction unlimited.
     console.error("listing_usage_tracking_failed", error?.message || error);
-    return null;
+    return { allowed: false, reason: "tracking_unavailable" };
   }
 }
 
-function usageLimitResponse() {
+function usageLimitResponse(reason) {
+  if (reason === "tracking_unavailable") return Response.json({ error: "listing_usage_unavailable", retryAfter: 60 }, {
+    status: 503,
+    headers: { "Cache-Control": "private, no-store", "Vary": "Cookie", "Retry-After": "60" },
+  });
   const retryAfter = Math.max(1, 3600 - Math.floor(Date.now() / 1000) % 3600);
-  return Response.json({ error: "listing_usage_limit", retryAfter }, {
+  return Response.json({ error: "listing_usage_limit", reason, retryAfter }, {
     status: 429,
     headers: { "Cache-Control": "private, no-store", "Vary": "Cookie", "Retry-After": String(retryAfter) },
   });
@@ -249,6 +253,8 @@ export default async (request) => {
         items: await listListingUsage(getStore("listing-usage"), subscribers),
         warnPerHour: LISTING_USAGE_WARN_PER_HOUR,
         limitPerHour: LISTING_USAGE_LIMIT_PER_HOUR,
+        warnRegionsPerHour: LISTING_UNIQUE_REGION_WARN_PER_HOUR,
+        limitRegionsPerHour: LISTING_UNIQUE_REGION_LIMIT_PER_HOUR,
       });
     }
     const floorScope=q.get("floorScope")||"mid";
@@ -262,17 +268,20 @@ export default async (request) => {
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
       const usage = await checkListingUsage(session, isAdmin, "search", "search");
-      if (usage && !usage.allowed) return usageLimitResponse();
-      const items=[],failed=[],floorMissing=[];
+      if (usage && !usage.allowed) return usageLimitResponse(usage.reason);
+      const matches=new Map(),failed=[],floorMissing=[];
       const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd}))).filter(t=>!trial||TRIAL_LAWDS.has(t.lawd));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
         try{
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
           if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&listingSearchMatch(x,t.gu,query)))floorMissing.push(t.gu);
-          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query))items.push({...x,...t,asOf:data.asOf});
+          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query)){
+            const key=`${t.lawd}|${x.nid}|${x.umd||''}`;
+            if(!matches.has(key))matches.set(key,{nid:x.nid,apt:x.apt,umd:x.umd||'',...t,asOf:data?.asOf||null});
+          }
         }catch(e){failed.push(t.gu);}
       }));
-      return json({items,failedRegions:failed,floorMissing,trial});
+      return json({items:[...matches.values()],failedRegions:failed,floorMissing,trial});
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd) && !(q.get("askMap") === "1" && q.get("all") === "1")) return json({ error: "invalid_lawd" }, 400);
@@ -294,7 +303,7 @@ export default async (request) => {
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
     const usage = await checkListingUsage(session, isAdmin, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
-    if (usage && !usage.allowed) return usageLimitResponse();
+    if (usage && !usage.allowed) return usageLimitResponse(usage.reason);
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];

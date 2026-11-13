@@ -3131,12 +3131,15 @@ function renderCompareCandidates(input,hits){
 }
 
 async function listingApiError(response,fallback='요청을 처리하지 못했습니다.'){
-  if(response.status===429){
+  if(response.status===429||response.status===503){
     const data=await response.json().catch(()=>({}));
+    if(data.error==='listing_usage_unavailable')return new Error('조회 제한 확인이 잠시 불가능합니다. 1분 후 다시 조회해 주세요.');
     if(data.error==='listing_usage_limit'){
       const minutes=Math.max(1,Math.ceil((Number(data.retryAfter)||60)/60));
+      if(data.reason==='region_limit')return new Error(`시간당 조회 가능한 지역 수 한도에 도달했습니다. 약 ${minutes}분 후 다시 조회해 주세요.`);
       return new Error(`시간당 실매물 조회 한도에 도달했습니다. 약 ${minutes}분 후 다시 조회해 주세요.`);
     }
+    if(response.status===503)return new Error('요청을 잠시 처리할 수 없습니다. 잠시 후 다시 조회해 주세요.');
     return new Error('요청이 많아 잠시 제한됐습니다. 잠시 후 다시 조회해 주세요.');
   }
   return new Error(`${fallback} (HTTP ${response.status})`);
