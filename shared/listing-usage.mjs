@@ -61,19 +61,26 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
     if (Math.max(Number(data.lastAt) || 0, Number(data.blockedAt) || 0) < windowStart) return;
-    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, regions: new Set(), lastAt: 0, blockedAt: 0 };
-    entry.peakHour = Math.max(entry.peakHour, Number(data.requests) || 0);
+    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), searches24h: 0, regions: new Set(), lastAt: 0, blockedAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
     entry.blockedAt = Math.max(entry.blockedAt, Number(data.blockedAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
       const minuteTime = minuteStart(minute);
-      if (minuteTime >= windowStart && minuteTime <= now) entry.requests24h += Number(count) || 0;
+      if (minuteTime >= windowStart && minuteTime <= now) {
+        const requests = Number(count) || 0;
+        entry.requests24h += requests;
+        entry.peakHours.set(hourStamp(minuteTime), (entry.peakHours.get(hourStamp(minuteTime)) || 0) + requests);
+      }
     }
     for (const [minute, regions] of Object.entries(data.regionMinutes || {})) {
       const minuteTime = minuteStart(minute);
       if (minuteTime < windowStart || minuteTime > now) continue;
-      for (const code of Object.keys(regions || {})) if (code !== "search") entry.regions.add(code);
+      for (const [code, count] of Object.entries(regions || {})) {
+        if (code === "search") entry.searches24h += Number(count) || 0;
+        else entry.regions.add(code);
+      }
     }
+    entry.peakHour = Math.max(entry.peakHour, ...entry.peakHours.values(), 0);
     grouped.set(data.accountId, entry);
   }));
   await Promise.all(staleKeys.map(key => store.delete(key).catch(() => {})));
@@ -84,6 +91,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     name: entry.accountId === "shared" ? "공용 코드" : (names.get(entry.accountId) || "삭제된 구독자"),
     requests24h: entry.requests24h,
     peakHour: entry.peakHour,
+    searches24h: entry.searches24h,
     regions24h: entry.regions.size,
     lastAt: entry.lastAt,
     blockedAt: entry.blockedAt || null,

@@ -257,12 +257,12 @@ export default async (request) => {
       const trial=q.get("trial")==="1";
       const session=isAdmin?null:await getSubscriberSession(request,secret);
       if(!trial&&!isAdmin&&!hasListingsAccess(session))return json({error:"subscriber_required"},401);
-      const usage = await checkListingUsage(session, isAdmin, "search", "search");
-      if (usage && !usage.allowed) return usageLimitResponse();
       const query=str(q.get("search"),80).normalize("NFKC").trim();
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
+      const usage = await checkListingUsage(session, isAdmin, "search", "search");
+      if (usage && !usage.allowed) return usageLimitResponse();
       const items=[],failed=[],floorMissing=[];
       const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd}))).filter(t=>!trial||TRIAL_LAWDS.has(t.lawd));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
@@ -291,10 +291,10 @@ export default async (request) => {
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
     const session=isAdmin?null:await getSubscriberSession(request,secret);
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
-    const usage = await checkListingUsage(session, isAdmin, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
-    if (usage && !usage.allowed) return usageLimitResponse();
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
+    const usage = await checkListingUsage(session, isAdmin, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
+    if (usage && !usage.allowed) return usageLimitResponse();
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
