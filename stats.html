@@ -208,6 +208,14 @@ function render(d){
       <div id="tabBody" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
+    <div class="card" id="usageCard">
+      <div class="card-title">구독자 API 사용량 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 계정별 최근 24시간</span></div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:6px">
+        <button id="refreshListingUsage" type="button" style="padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
+      </div>
+      <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
+    </div>
+
     <div class="card" id="listingCard">
       <div class="card-title">실매물 엑셀 업로드 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 네이버 실매물 분석</span></div>
       <div id="listingMeta" style="font-size:12px;color:var(--sub);margin-bottom:10px">현재 데이터 확인 중…</div>
@@ -217,13 +225,6 @@ function render(d){
       </label>
       <div id="listingStatus" role="status" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--ink);white-space:pre-line"></div>
       <div style="font-size:10px;color:var(--sub);margin-top:6px;line-height:1.6">엑셀은 이 브라우저 안에서만 읽고, 단지·전용면적별 요약(최근 3년 실거래 최고가, 입주가능·세안고·분양권 각각 중층 이상 및 저층 포함 최저 호가)만 서버에 저장합니다. 새로 올리면 이전 데이터를 통째로 교체합니다.</div>
-      <div style="margin-top:14px;padding-top:11px;border-top:1px solid var(--line)">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
-          <b style="font-size:12px;color:var(--navy)">구독자별 API 조회량 · 최근 24시간</b>
-          <button id="refreshListingUsage" type="button" style="padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
-        </div>
-        <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
-      </div>
     </div>
 
     <div class="card" id="appCard">
@@ -275,7 +276,7 @@ function setupCollapsible(){
       title.style.marginBottom = isOpen ? "" : "0";
       arrow.style.transform = isOpen ? "" : "rotate(-90deg)";
     };
-    set(false);
+    set(card.id === "usageCard");
     title.addEventListener("click", () => {
       const now = body.hidden;
       set(now);
@@ -643,7 +644,7 @@ async function loadListingUsage(){
     if(!res.ok)throw new Error("조회 기록을 불러오지 못했습니다.");
     const items=Array.isArray(data.items)?data.items:[];
     const flagged=items.filter(x=>x.suspicious).length;
-    setCardBadge("listingCard",flagged?`조회 주의 ${flagged}`:"");
+    setCardBadge("usageCard",flagged?`조회 주의 ${flagged}`:"");
     const intro=`시간당 조회 ${Number(data.warnPerHour||120).toLocaleString()}회 또는 지역 ${Number(data.warnRegionsPerHour||12).toLocaleString()}곳부터 관리자 확인 표시`;
     const note="주의 표시는 검토용이며 구독자별 API를 자동 제한하거나 구독을 해지하지 않습니다. 필요하면 구독자 코드에서 직접 이용을 중지할 수 있습니다. 사이트 보호용 IP 분당 제한은 별도로 적용되고, 공용 코드는 합산 기록만 표시합니다.";
     if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
