@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { hasValidStatsSession } from "../../shared/sessions.mjs";
 import { getSubscriberSession } from "../../shared/subscribers.mjs";
 import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
+import { LISTING_USAGE_WARN_PER_HOUR, LISTING_UNIQUE_REGION_WARN_PER_HOUR, listListingUsage, recordListingRequest } from "../../shared/listing-usage.mjs";
 
 // 구독 전용 "저평가 실매물 (입주가능, 중층 이상)" 탭 데이터 — 2026.09 신규.
 //
@@ -13,12 +14,19 @@ import { REGIONS, ALL_LAWDS } from "../../shared/regions.mjs";
 //   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
 //   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 2주의 최저 호가 이력 조회
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
+//   GET  ?usage=1       관리자 세션 필요 — 최근 24시간 구독자별 API 조회량·이상 사용 현황
 //   POST {action:"put", uploadId, asOf, regions:{"시|구": items[]}}  관리자 — 지역 묶음 저장(여러 번 나눠 보냄)
 //   POST {action:"finish", uploadId, asOf, lawds[], rows, types}     관리자 — 이번 업로드에 없는 지역 삭제·메타 기록
 //
 // Blob 이력 저장이 길어지지 않도록 put은 지역별로 나눠 보낸다.
 export const config = {
   path: "/api/listings",
+  // Edge-enforced ceiling that slows automated bulk extraction while allowing ordinary browsing.
+  rateLimit: {
+    windowLimit: 240,
+    windowSize: 60,
+    aggregateBy: ["ip"],
+  },
 };
 
 const LAWDS = new Set(ALL_LAWDS);
@@ -31,6 +39,27 @@ function json(body, status = 200) {
     status,
     headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" },
   });
+}
+
+function hasListingsAccess(session) {
+  if (!session) return false;
+  if (session.kind === "shared") return true;
+  // Missing scope is retained for legacy full-access subscribers.
+  return !session.sub?.scope || session.sub.scope === "all" || session.sub.scope === "listings";
+}
+
+async function checkListingUsage(session, lawd, route) {
+  // Admin and subscriber cookies can coexist. Count requests only when a valid
+  // subscriber session is present, attributing personal and shared codes correctly.
+  if (!session) return null;
+  const accountId = session.kind === "personal" ? session.sub.id : "shared";
+  try {
+    return await recordListingRequest(getStore("listing-usage"), accountId, { lawd, route });
+  } catch (error) {
+    // Tracking is for review only; logging failures must not interrupt subscriber access.
+    console.error("listing_usage_tracking_failed", error?.message || error);
+    return null;
+  }
 }
 
 const str = (v, max = 200) => String(v ?? "").slice(0, max);
@@ -205,25 +234,42 @@ export default async (request) => {
       if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
       return json((await store.get("meta", { type: "json", consistency: "strong" })) || null);
     }
+    if (q.get("usage") === "1") {
+      if (!isAdmin) return json({ error: "stats_auth_required" }, 401);
+      const subscribersStore = getStore("subscribers");
+      const { blobs } = await subscribersStore.list({ prefix: "sub:" });
+      const subscribers = (await Promise.all(blobs.map(({ key }) => subscribersStore.get(key, { type: "json", consistency: "strong" })))).filter(Boolean);
+      return json({
+        items: await listListingUsage(getStore("listing-usage"), subscribers),
+        warnPerHour: LISTING_USAGE_WARN_PER_HOUR,
+        warnRegionsPerHour: LISTING_UNIQUE_REGION_WARN_PER_HOUR,
+      });
+    }
     const floorScope=q.get("floorScope")||"mid";
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
-      const trial=q.get("trial")==="1" || (!isAdmin && !(await getSubscriberSession(request, secret)));
-      if(trial && q.get("trial")!=="1")return json({error:"subscriber_required"},401);
+      const trial=q.get("trial")==="1";
+      const session=await getSubscriberSession(request,secret);
+      if(!trial&&!isAdmin&&!hasListingsAccess(session))return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).normalize("NFKC").trim();
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
-      const items=[],failed=[],floorMissing=[];
+      await checkListingUsage(session, "search", "search");
+      const matches=new Map(),failed=[],floorMissing=[];
       const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd}))).filter(t=>!trial||TRIAL_LAWDS.has(t.lawd));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
         try{
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
           if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&listingSearchMatch(x,t.gu,query)))floorMissing.push(t.gu);
-          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query))items.push({...x,...t,asOf:data.asOf});
+          for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query)){
+            // Keep one candidate per exclusive-area type; individual complex views need every type.
+            const key=`${t.lawd}|${x.nid}|${x.umd||''}|${x.ex}`;
+            if(!matches.has(key))matches.set(key,{nid:x.nid,apt:x.apt,umd:x.umd||'',...t,asOf:data?.asOf||null});
+          }
         }catch(e){failed.push(t.gu);}
       }));
-      return json({items,failedRegions:failed,floorMissing,trial});
+      return json({items:[...matches.values()],failedRegions:failed,floorMissing,trial});
     }
     const lawd = q.get("lawd") || "";
     if (!LAWDS.has(lawd) && !(q.get("askMap") === "1" && q.get("all") === "1")) return json({ error: "invalid_lawd" }, 400);
@@ -240,9 +286,11 @@ export default async (request) => {
       return json(await loadCurrentAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
-    if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !(await getSubscriberSession(request, secret))) return json({ error: "subscriber_required" }, 401);
+    const session=await getSubscriberSession(request,secret);
+    if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
+    await checkListingUsage(session, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
