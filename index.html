@@ -9121,8 +9121,13 @@ async function searchListingUndervalue(myToken, lawd){
     // 슬라이더 경계는 전체 실매물 범위가 아니라 실제 저평가 비교 결과의 평형·호가 범위로 잡는다.
     lsDataBounds(candidates,['py','ask']);
     const filters=lsGet();
+    const askLimits=lsAskLimits();
+    const askSelected=listingManualFacets.has('ask')||filters.q0>askLimits.min+1e-8||filters.q1<askLimits.max-1e-8;
+    const bandStart=Math.round(filters.q0);
+    const askHeaderBand=askSelected&&bandStart>=1&&Math.abs(filters.q0-bandStart)<1e-8&&Math.abs(filters.q1-(bandStart+0.9))<1e-8?`${bandStart}억대`:null;
     const d = { found:true, mode:'longpeaklisting', asOf, failedRegions:failed,
       askBand:lsAskText(filters)==='전체'?null:lsAskText(filters),pyBand:lsPyActive(filters)?lsPyText(filters):null,filterLabel:'같은 구 비교',
+      askHeaderBand,
       scopeLabel: regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent,
       divergence: candidates.filter(x=>lsAskMatch(x,filters)&&lsPyMatch(x,filters)) };
     lastData = d;
@@ -9167,10 +9172,11 @@ function renderListingUndervalue(d){
         <span class="rng">비교군 호가 중앙값 <b style="font-size:14px;color:var(--teal-dark)">${x.askMedian.toFixed(1)}억</b> 대비 <b style="font-size:14px;color:var(--blue)">▼${x.gapAmt.toFixed(1)}억 (${Math.abs(x.gapPct)}%)</b></span>
       </div>
     </div>`).join('') + uvBrandSep();
+  const headerTitle=d.askHeaderBand?`${shortRegionLabel(d.scopeLabel||'')} ${d.askHeaderBand}`:null;
   // "입주가능 · 중층 이상"은 이 탭 결과를 해석하는 핵심 조건이라 제목 아래 청록 배지로 표시 — 제목보다 작게(2026.09 운영자 요청)
   const html = `
   <div class="card">
-    ${listingHeaderHTML(d, '저평가 실매물', '최근 3년 최고가', '현재 최저 실매물')}
+    ${listingHeaderHTML(d, '저평가 실매물', '최근 3년 최고가', '현재 최저 실매물', headerTitle)}
     <div class="sec">
       <div class="rng" style="margin-bottom:4px;color:var(--teal-dark)">3년 최고가가 비슷한 비교군보다 현재 호가가 5~15% 낮은 단지</div>
       ${hint(`호가 기준 · ${LISTING_MIN_HH}세대↑ · ${listingOccupancyLabel()} · 저층 매물 제외`)}
