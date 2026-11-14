@@ -49,8 +49,19 @@ function hasListingsAccess(session) {
 }
 
 async function checkListingUsage(session, isAdmin, lawd, route) {
+  // An admin stats cookie can coexist with a personal subscriber cookie in the same
+  // browser. Attribute those requests to the personal account when it is present.
+  if (session?.kind === "personal") {
+    try {
+      return await recordListingRequest(getStore("listing-usage"), session.sub.id, { lawd, route });
+    } catch (error) {
+      // Tracking is for review only; logging failures must not interrupt subscriber access.
+      console.error("listing_usage_tracking_failed", error?.message || error);
+      return null;
+    }
+  }
   if (isAdmin || !session) return null;
-  const accountId = session.kind === "personal" ? session.sub.id : "shared";
+  const accountId = "shared";
   try {
     return await recordListingRequest(getStore("listing-usage"), accountId, { lawd, route });
   } catch (error) {
@@ -247,7 +258,7 @@ export default async (request) => {
     if(!["mid","all"].includes(floorScope))return json({error:"invalid_floor_scope"},400);
     if(q.has("search")) {
       const trial=q.get("trial")==="1";
-      const session=isAdmin?null:await getSubscriberSession(request,secret);
+      const session=await getSubscriberSession(request,secret);
       if(!trial&&!isAdmin&&!hasListingsAccess(session))return json({error:"subscriber_required"},401);
       const query=str(q.get("search"),80).normalize("NFKC").trim();
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
@@ -283,7 +294,7 @@ export default async (request) => {
       return json(await loadCurrentAskMap(store, lawd));
     }
     // 무료 체험(2026.09 운영자 요청): 강남구는 인증 없이도 조회 가능 — 나머지 지역은 구독자·관리자만
-    const session=isAdmin?null:await getSubscriberSession(request,secret);
+    const session=await getSubscriberSession(request,secret);
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
