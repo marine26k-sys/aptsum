@@ -1,7 +1,10 @@
+import { ALL_REGIONS } from "./regions.mjs";
+
 export const LISTING_USAGE_WARN_PER_HOUR = 120;
 export const LISTING_UNIQUE_REGION_WARN_PER_HOUR = 12;
 export const LISTING_USAGE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
+const regionNames = new Map(ALL_REGIONS.map(([name, code]) => [code, name]));
 const hourStamp = time => new Date(time).toISOString().slice(0, 13).replace(/[-T:]/g, "");
 const hourStart = stamp => Date.parse(`${stamp.slice(0,4)}-${stamp.slice(4,6)}-${stamp.slice(6,8)}T${stamp.slice(8,10)}:00:00Z`);
 const minuteStamp = time => new Date(time).toISOString().slice(0, 16).replace(/[-T:]/g, "");
@@ -56,7 +59,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
     if ((Number(data.lastAt) || 0) < windowStart) return;
-    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Set(), lastAt: 0 };
+    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Map(), lastAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
       const minuteTime = minuteStart(minute);
@@ -73,7 +76,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
       for (const [code, count] of Object.entries(regions || {})) {
         if (code === "search") entry.searches24h += Number(count) || 0;
         else {
-          entry.regions.add(code);
+          entry.regions.set(code, (entry.regions.get(code) || 0) + (Number(count) || 0));
           const hour = hourStamp(minuteTime);
           regionsByHour.set(hour, regionsByHour.get(hour) || new Set());
           regionsByHour.get(hour).add(code);
@@ -95,6 +98,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     peakRegionsHour: entry.peakRegionsHour,
     searches24h: entry.searches24h,
     regions24h: entry.regions.size,
+    regions: [...entry.regions].map(([code, requests]) => ({ code, name: regionNames.get(code) || code, requests })).sort((a, b) => a.name.localeCompare(b.name, "ko")),
     lastAt: entry.lastAt,
     suspicious: entry.peakHour >= LISTING_USAGE_WARN_PER_HOUR || entry.peakRegionsHour >= LISTING_UNIQUE_REGION_WARN_PER_HOUR,
   })).sort((a, b) => Number(b.suspicious) - Number(a.suspicious) || b.requests24h - a.requests24h);

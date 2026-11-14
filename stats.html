@@ -647,11 +647,12 @@ async function loadListingUsage(){
     const intro=`시간당 조회 ${Number(data.warnPerHour||120).toLocaleString()}회 또는 지역 ${Number(data.warnRegionsPerHour||12).toLocaleString()}곳부터 관리자 확인 표시`;
     const note="주의 표시는 검토용이며 구독자별 API를 자동 제한하거나 구독을 해지하지 않습니다. 필요하면 구독자 코드에서 직접 이용을 중지할 수 있습니다. 사이트 보호용 IP 분당 제한은 별도로 적용되고, 공용 코드는 합산 기록만 표시합니다.";
     if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
-    box.innerHTML=`<div style="margin-bottom:3px">${esc(intro)}</div><div style="margin-bottom:5px">${esc(note)}</div>`+items.slice(0,30).map(x=>{
+    box.innerHTML=`<div style="margin-bottom:3px">${esc(intro)}</div><div style="margin-bottom:5px">${esc(note)}</div><div style="margin-bottom:5px">최근 24시간 조회 계정 ${items.length}개 · 지역별 횟수 포함</div>`+items.map(x=>{
       const state=x.suspicious?["확인 필요","#9a6700"]:["기록 중","var(--teal-dark)"];
-      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · 지역 ${Number(x.regions24h||0)}곳 (시간당 최대 ${Number(x.peakRegionsHour||0)}곳) · 전국검색 ${Number(x.searches24h||0).toLocaleString()}회 · 마지막 ${esc(listingUsageTime(x.lastAt))}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
+      const regions=(x.regions||[]).map(r=>`${esc(r.name||r.code)} ${Number(r.requests||0).toLocaleString()}회`).join(" · ");
+      const regionDetails=regions?`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--teal-dark);font-weight:700">지역별 호출 횟수 보기 (${Number(x.regions24h||0)}곳)</summary><div style="padding:5px 0;color:var(--sub);overflow-wrap:anywhere">${regions}</div></details>`:"";
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br><small style="color:var(--sub)">계정 ID ${esc(x.accountId)}</small><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · 지역 ${Number(x.regions24h||0)}곳 (시간당 최대 ${Number(x.peakRegionsHour||0)}곳) · 전국검색 ${Number(x.searches24h||0).toLocaleString()}회 · 마지막 ${esc(listingUsageTime(x.lastAt))}${regionDetails}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
     }).join("");
-    if(items.length>30)box.insertAdjacentHTML("beforeend",`<div style="padding-top:5px">조회 기록이 있는 계정 ${items.length}개 중 상위 30개 표시</div>`);
   }catch(error){box.textContent=error.message||"조회 기록을 불러오지 못했습니다.";}
 }
 
