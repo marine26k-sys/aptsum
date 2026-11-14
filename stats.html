@@ -208,14 +208,6 @@ function render(d){
       <div id="tabBody" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
-    <div class="card" id="usageCard">
-      <div class="card-title">구독자 API 사용량 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 계정별 최근 24시간</span></div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:6px">
-        <button id="refreshListingUsage" type="button" style="padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
-      </div>
-      <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
-    </div>
-
     <div class="card" id="listingCard">
       <div class="card-title">실매물 엑셀 업로드 <span style="font-size:10.5px;font-weight:700;color:var(--teal-dark)">· 네이버 실매물 분석</span></div>
       <div id="listingMeta" style="font-size:12px;color:var(--sub);margin-bottom:10px">현재 데이터 확인 중…</div>
@@ -243,6 +235,17 @@ function render(d){
       <div style="font-size:10px;color:var(--sub);margin-bottom:8px">만료일을 비우면 무기한입니다. 만료일이 지나면 그날 밤 12시에 자동으로 막힙니다.</div>
       <div id="subStatus" role="status" style="min-height:16px;font-size:12px;color:var(--teal-dark);margin-bottom:4px"></div>
       <div id="subList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <b style="font-size:12px;color:var(--navy)">구독자 API 조회량</b>
+            <span style="font-size:10.5px;color:var(--sub)">· 계정별 최근 24시간</span>
+            <span id="listingUsageBadge" style="display:none;padding:1px 7px;border-radius:9px;background:#d95d5d;color:#fff;font-size:10px;font-weight:800"></span>
+          </div>
+          <button id="refreshListingUsage" type="button" style="flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
+        </div>
+        <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
+      </div>
     </div>
 
     <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
@@ -276,7 +279,7 @@ function setupCollapsible(){
       title.style.marginBottom = isOpen ? "" : "0";
       arrow.style.transform = isOpen ? "" : "rotate(-90deg)";
     };
-    set(card.id === "usageCard");
+    set(false);
     title.addEventListener("click", () => {
       const now = body.hidden;
       set(now);
@@ -644,7 +647,8 @@ async function loadListingUsage(){
     if(!res.ok)throw new Error("조회 기록을 불러오지 못했습니다.");
     const items=Array.isArray(data.items)?data.items:[];
     const flagged=items.filter(x=>x.suspicious).length;
-    setCardBadge("usageCard",flagged?`조회 주의 ${flagged}`:"");
+    const badge=$("#listingUsageBadge");
+    if(badge){badge.textContent=flagged?`조회 주의 ${flagged}`:"";badge.style.display=flagged?"inline-flex":"none";}
     const intro=`시간당 조회 ${Number(data.warnPerHour||120).toLocaleString()}회 또는 지역 ${Number(data.warnRegionsPerHour||12).toLocaleString()}곳부터 관리자 확인 표시`;
     const note="주의 표시는 검토용이며 구독자별 API를 자동 제한하거나 구독을 해지하지 않습니다. 필요하면 구독자 코드에서 직접 이용을 중지할 수 있습니다. 사이트 보호용 IP 분당 제한은 별도로 적용되고, 공용 코드는 합산 기록만 표시합니다.";
     if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
