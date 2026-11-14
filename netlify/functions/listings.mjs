@@ -48,20 +48,11 @@ function hasListingsAccess(session) {
   return !session.sub?.scope || session.sub.scope === "all" || session.sub.scope === "listings";
 }
 
-async function checkListingUsage(session, isAdmin, lawd, route) {
-  // An admin stats cookie can coexist with a personal subscriber cookie in the same
-  // browser. Attribute those requests to the personal account when it is present.
-  if (session?.kind === "personal") {
-    try {
-      return await recordListingRequest(getStore("listing-usage"), session.sub.id, { lawd, route });
-    } catch (error) {
-      // Tracking is for review only; logging failures must not interrupt subscriber access.
-      console.error("listing_usage_tracking_failed", error?.message || error);
-      return null;
-    }
-  }
-  if (isAdmin || !session) return null;
-  const accountId = "shared";
+async function checkListingUsage(session, lawd, route) {
+  // Admin and subscriber cookies can coexist. Count requests only when a valid
+  // subscriber session is present, attributing personal and shared codes correctly.
+  if (!session) return null;
+  const accountId = session.kind === "personal" ? session.sub.id : "shared";
   try {
     return await recordListingRequest(getStore("listing-usage"), accountId, { lawd, route });
   } catch (error) {
@@ -264,7 +255,7 @@ export default async (request) => {
       if(query.replace(/\s/g,"").length<2)return json({error:"query_too_short"},400);
       const occupancy=q.get("occupancy")||"available";
       if(!["available","tenant","presale"].includes(occupancy))return json({error:"invalid_occupancy"},400);
-      await checkListingUsage(session, isAdmin, "search", "search");
+      await checkListingUsage(session, "search", "search");
       const matches=new Map(),failed=[],floorMissing=[];
       const entries=REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>({gu:`${si} ${gu}`,lawd}))).filter(t=>!trial||TRIAL_LAWDS.has(t.lawd));
       for(let start=0;start<entries.length;start+=10)await Promise.all(entries.slice(start,start+10).map(async t=>{
@@ -298,7 +289,7 @@ export default async (request) => {
     if (!TRIAL_LAWDS.has(lawd) && !isAdmin && !hasListingsAccess(session)) return json({ error: "subscriber_required" }, 401);
     const occupancy = q.get("occupancy") || "available";
     if (!["available", "tenant", "presale"].includes(occupancy)) return json({error:"invalid_occupancy"},400);
-    await checkListingUsage(session, isAdmin, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
+    await checkListingUsage(session, lawd, new URL(request.url).searchParams.get("history") === "1" ? "history" : "current");
     const selectedItems = items => listingItemsForFloor(items,occupancy,floorScope);
     if (q.get("history") === "1") {
       const index = (await store.get(historyIndexKey(lawd), { type: "json", consistency: "strong" })) || [];
