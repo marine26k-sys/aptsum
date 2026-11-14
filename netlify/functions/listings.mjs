@@ -263,7 +263,8 @@ export default async (request) => {
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
           if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&listingSearchMatch(x,t.gu,query)))floorMissing.push(t.gu);
           for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query)){
-            const key=`${t.lawd}|${x.nid}|${x.umd||''}`;
+            // Keep one candidate per exclusive-area type; individual complex views need every type.
+            const key=`${t.lawd}|${x.nid}|${x.umd||''}|${x.ex}`;
             if(!matches.has(key))matches.set(key,{nid:x.nid,apt:x.apt,umd:x.umd||'',...t,asOf:data?.asOf||null});
           }
         }catch(e){failed.push(t.gu);}

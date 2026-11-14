@@ -15,7 +15,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 // when a subscriber opens several regions at once.
 export async function recordListingRequest(store, accountId, { lawd = "search", route = "current", now = Date.now() } = {}) {
   const stamp = hourStamp(now);
-  const key = `hour:${accountId}:${stamp}`;
+  // Spread parallel multi-region reads across 16 account-hour shards. One blob per
+  // account-hour made every region contend on the same ETag write; one blob per
+  // region would create too many blobs for the seven-day retention window.
+  const shard = [...String(lawd)].reduce((hash, ch) => (hash * 31 + ch.charCodeAt(0)) >>> 0, 0) % 16;
+  const key = `hour:${accountId}:${shard}:${stamp}`;
   for (let attempt = 0; attempt < 64; attempt++) {
     const prior = await store.getWithMetadata(key, { type: "json", consistency: "strong" });
     const data = prior?.data;
@@ -59,7 +63,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
     if ((Number(data.lastAt) || 0) < windowStart) return;
-    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Map(), lastAt: 0 };
+    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Map(), regionsByHour: new Map(), lastAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
       const minuteTime = minuteStart(minute);
@@ -69,7 +73,6 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
         entry.peakHours.set(hourStamp(minuteTime), (entry.peakHours.get(hourStamp(minuteTime)) || 0) + requests);
       }
     }
-    const regionsByHour = new Map();
     for (const [minute, regions] of Object.entries(data.regionMinutes || {})) {
       const minuteTime = minuteStart(minute);
       if (minuteTime < windowStart || minuteTime > now) continue;
@@ -78,13 +81,13 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
         else {
           entry.regions.set(code, (entry.regions.get(code) || 0) + (Number(count) || 0));
           const hour = hourStamp(minuteTime);
-          regionsByHour.set(hour, regionsByHour.get(hour) || new Set());
-          regionsByHour.get(hour).add(code);
+          entry.regionsByHour.set(hour, entry.regionsByHour.get(hour) || new Set());
+          entry.regionsByHour.get(hour).add(code);
         }
       }
     }
     entry.peakHour = Math.max(entry.peakHour, ...entry.peakHours.values(), 0);
-    entry.peakRegionsHour = Math.max(entry.peakRegionsHour, ...[...regionsByHour.values()].map(regions => regions.size), 0);
+    entry.peakRegionsHour = Math.max(entry.peakRegionsHour, ...[...entry.regionsByHour.values()].map(regions => regions.size), 0);
     grouped.set(data.accountId, entry);
   }));
   await Promise.all(staleKeys.map(key => store.delete(key).catch(() => {})));
