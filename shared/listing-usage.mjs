@@ -1,7 +1,5 @@
 export const LISTING_USAGE_WARN_PER_HOUR = 120;
-export const LISTING_USAGE_LIMIT_PER_HOUR = 300;
 export const LISTING_UNIQUE_REGION_WARN_PER_HOUR = 12;
-export const LISTING_UNIQUE_REGION_LIMIT_PER_HOUR = 20;
 export const LISTING_USAGE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const hourStamp = time => new Date(time).toISOString().slice(0, 13).replace(/[-T:]/g, "");
@@ -12,38 +10,28 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // One aggregate blob per account and UTC hour. ETag conditional writes avoid lost increments
 // when a subscriber opens several regions at once.
-export async function recordListingRequest(store, accountId, { lawd = "search", route = "current", now = Date.now(), enforceLimit = true } = {}) {
+export async function recordListingRequest(store, accountId, { lawd = "search", route = "current", now = Date.now() } = {}) {
   const stamp = hourStamp(now);
   const key = `hour:${accountId}:${stamp}`;
   for (let attempt = 0; attempt < 64; attempt++) {
     const prior = await store.getWithMetadata(key, { type: "json", consistency: "strong" });
     const data = prior?.data;
-    if (data?.blockedAt) return { allowed: false, requests: data.requests, blockedAt: data.blockedAt };
-
     const next = data ? { ...data } : { accountId, hour: stamp, requests: 0, regions: {}, routes: {}, minutes: {}, regionMinutes: {}, lastAt: 0 };
-    const uniqueRegions = Object.keys(next.regions || {}).filter(code => code !== "search").length;
-    const isNewRegion = lawd !== "search" && !next.regions?.[lawd];
-    const requestLimitReached = enforceLimit && next.requests >= LISTING_USAGE_LIMIT_PER_HOUR;
-    const regionLimitReached = enforceLimit && isNewRegion && uniqueRegions >= LISTING_UNIQUE_REGION_LIMIT_PER_HOUR;
-    if (requestLimitReached || regionLimitReached) {
-      next.blockedAt = now;
-      next.blockedReason = regionLimitReached ? "region_limit" : "request_limit";
-      const result = await store.setJSON(key, next, { onlyIfMatch: prior.etag });
-      if (result.modified) return { allowed: false, requests: next.requests, blockedAt: next.blockedAt, reason: next.blockedReason };
-    } else {
-      next.requests++;
-      next.lastAt = now;
-      next.regions[lawd] = (next.regions[lawd] || 0) + 1;
-      next.routes[route] = (next.routes[route] || 0) + 1;
-      const minute = minuteStamp(now);
-      next.minutes[minute] = (next.minutes[minute] || 0) + 1;
-      next.regionMinutes[minute] ||= {};
-      next.regionMinutes[minute][lawd] = (next.regionMinutes[minute][lawd] || 0) + 1;
-      const result = prior
-        ? await store.setJSON(key, next, { onlyIfMatch: prior.etag })
-        : await store.setJSON(key, next, { onlyIfNew: true });
-      if (result.modified) return { allowed: true, requests: next.requests, blockedAt: null };
-    }
+    // Older deploys could set these fields; clear them so monitoring never keeps blocking a user.
+    delete next.blockedAt;
+    delete next.blockedReason;
+    next.requests++;
+    next.lastAt = now;
+    next.regions[lawd] = (next.regions[lawd] || 0) + 1;
+    next.routes[route] = (next.routes[route] || 0) + 1;
+    const minute = minuteStamp(now);
+    next.minutes[minute] = (next.minutes[minute] || 0) + 1;
+    next.regionMinutes[minute] ||= {};
+    next.regionMinutes[minute][lawd] = (next.regionMinutes[minute][lawd] || 0) + 1;
+    const result = prior
+      ? await store.setJSON(key, next, { onlyIfMatch: prior.etag })
+      : await store.setJSON(key, next, { onlyIfNew: true });
+    if (result.modified) return { allowed: true, requests: next.requests };
     await delay(Math.min(60, 4 + attempt * 2) + Math.random() * 12);
   }
   throw new Error("listing_usage_write_conflict");
@@ -68,9 +56,8 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
     if (Math.max(Number(data.lastAt) || 0, Number(data.blockedAt) || 0) < windowStart) return;
-    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Set(), lastAt: 0, blockedAt: 0 };
+    const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Set(), lastAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
-    entry.blockedAt = Math.max(entry.blockedAt, Number(data.blockedAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
       const minuteTime = minuteStart(minute);
       if (minuteTime >= windowStart && minuteTime <= now) {
@@ -109,7 +96,6 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     searches24h: entry.searches24h,
     regions24h: entry.regions.size,
     lastAt: entry.lastAt,
-    blockedAt: entry.blockedAt || null,
     suspicious: entry.peakHour >= LISTING_USAGE_WARN_PER_HOUR || entry.peakRegionsHour >= LISTING_UNIQUE_REGION_WARN_PER_HOUR,
-  })).sort((a, b) => Number(!!b.blockedAt) - Number(!!a.blockedAt) || Number(b.suspicious) - Number(a.suspicious) || b.requests24h - a.requests24h);
+  })).sort((a, b) => Number(b.suspicious) - Number(a.suspicious) || b.requests24h - a.requests24h);
 }
