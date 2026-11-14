@@ -2256,18 +2256,18 @@ function addRegion(v){
   // (2026.08 — 전에는 칩만 갱신되고 sel.value는 그대로라 다른 탭으로 넘어가면 예전 지역이 남아있었음)
   if(!isAllScope(v) && add.length) sel.value = v;
   saveRecentRegionSearch(add);
-  listingGapCapPreviewKey='';listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
+  listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
 }
 function removeRegion(lawd){
   regionSel = regionSel.filter(x=>x.lawd!==lawd);
-  listingGapCapPreviewKey='';listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
+  listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
 }
 function removeRegionGroup(lawds){
   const set = new Set(lawds);
   regionSel = regionSel.filter(x=>!set.has(x.lawd));
-  listingGapCapPreviewKey='';listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
+  listingFilterSourceItems=[];saveRegionSel(); renderRegionChips();
 }
-function clearRegions(){ regionSel = []; listingGapCapPreviewKey='';listingFilterSourceItems=[]; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
+function clearRegions(){ regionSel = []; listingFilterSourceItems=[]; saveRegionSel(); renderRegionChips(); saveNativeRegionResult(); }
 function resetListingRegion(){
   if(document.getElementById('loading')?.classList.contains('on'))stopSearch();else searchToken++;
   regionSel=[];
@@ -2280,7 +2280,7 @@ function resetListingRegion(){
       if(rowLabel)rowLabel.textContent='지역 선택';
     });
   }
-  listingGapCapPreviewKey='';listingFilterSourceItems=[];
+  listingFilterSourceItems=[];
   saveRegionSel();renderRegionChips();syncRegionPickBtn();updateRegionFavBtn();renderFavRegions();saveNativeRegionResult();
   document.getElementById('error')?.classList.remove('on');
   const result=document.getElementById('result');if(result){result.classList.remove('on');result.replaceChildren();}
@@ -2303,7 +2303,6 @@ function renderRegionChips(){
       <span onclick="clearRegions()" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--sub);text-decoration:underline;margin-left:2px">전체 해제</span>
     </div>
     <div class="rng" style="padding:0 2px">${regionSel.length}개 지역 통합 조회</div>`;
-  previewListingGapInvestmentMax();
 }
 loadRegionSel();
 
@@ -2900,7 +2899,7 @@ function setMode(m, fromRestore){
   if(!fromRestore){
     // 실제 탭을 새로 열 때는 이전 탭의 현재 지역을 이어받지 않는다.
     // 최근 검색 지역 5개는 별도 캐시에 남겨 두어 필요하면 다시 선택할 수 있다.
-    regionSel=[];sel.value='';listingGapCapPreviewKey='';listingFilterSourceItems=[];
+    regionSel=[];sel.value='';listingFilterSourceItems=[];
     saveRegionSel();
   }
   if (isListingMode(m) && !fromRestore && isListingTrial()) {
@@ -8782,7 +8781,6 @@ function listingOccupancyLabel(){ return {available:'입주 가능',tenant:'세�
 const LISTING_GAP_BANDS=[{v:'under1',lo:0,hi:1,l:'갭 1억 미만'},...Array.from({length:9},(_,i)=>({v:String(i+1),lo:i+1,hi:i+2,l:`갭 ${i+1}억대`})),{v:'10+',lo:10,hi:Infinity,l:'갭 10억 이상'}];
 let listingGapInvestmentBand=null;
 let listingGapInvestmentMaxCap=30;
-let listingGapCapPreviewKey='';
 function listingGapInvestmentBandOf(gap){return gap<1?'under1':gap>=10?'10+':String(Math.floor(gap));}
 function listingGapInvestmentBandLabel(v){return LISTING_GAP_BANDS.find(b=>b.v===v)?.l||'전체';}
 function listingGapInvestmentValues(){const b=LISTING_GAP_BANDS.find(x=>x.v===listingGapInvestmentBand);if(b)return {min:b.lo,max:b.hi,band:b.v};const min=+document.getElementById('listingGapInvestmentMin').value,max=+document.getElementById('listingGapInvestmentMax').value;return {min,max:max>=listingGapInvestmentMaxCap-1e-9?Infinity:max,band:null};}
@@ -8799,39 +8797,6 @@ function listingGapInvestmentSetMax(rows){
   if(Number(lo.value)>nextCap)lo.value=String(nextCap);
   if(Number(lo.value)>Number(hi.value))lo.value=hi.value;
   listingGapInvestmentSync();
-}
-async function previewListingGapInvestmentMax(){
-  if(typeof mode==='undefined'||!['listingbudget','listingurgent'].includes(mode))return;
-  const occupancy=listingOccupancy();
-  const targets=regionSel.length?regionSel.slice():(sel.value&&!isAllScope(sel.value)?[{lawd:sel.value}]:[]);
-  if(!targets.length)return;
-  const key=targets.map(x=>x.lawd).join('|')+':'+occupancy+':'+listingFloor();
-  if(key===listingGapCapPreviewKey)return;
-  listingGapCapPreviewKey=key;
-  listingFilterSourceItems=[];
-  if(typeof listingManualFacets!=='undefined')listingManualFacets.clear();
-  // 지역이 바뀌면 이전 지역에서 사용하던 범위를 먼저 해제하고 새 지역의 실제 범위로 다시 맞춘다.
-  lsSet({q0:0,q1:50,a0:1,a1:LS_AGE_MAX,h:lsHhBase(),h1:5000,r0:LS_RATE_MIN,r1:LS_RATE_MAX,p0:LS_PY_MIN,p1:LS_PY_MAX});
-  if(mode==='listingbudget'){
-    listingGapInvestmentBand=null;
-    listingGapInvestmentMaxCap=30;
-    document.getElementById('listingGapInvestmentMin').max=30;
-    document.getElementById('listingGapInvestmentMax').max=30;
-    document.getElementById('listingGapInvestmentMin').value=0;
-    document.getElementById('listingGapInvestmentMax').value=30;
-  }
-  try{
-    const responses=await Promise.all(targets.map(t=>fetch(`/api/listings?lawd=${encodeURIComponent(t.lawd)}&occupancy=${occupancy}&floorScope=${listingFloor()}`,{credentials:'same-origin',cache:'no-store'})));
-    if(responses.some(r=>!r.ok))return;
-    const payloads=await Promise.all(responses.map(r=>r.json()));
-    const currentTargets=regionSel.length?regionSel.slice():(sel.value&&!isAllScope(sel.value)?[{lawd:sel.value}]:[]);
-    const currentKey=currentTargets.map(x=>x.lawd).join('|')+':'+listingOccupancy()+':'+listingFloor();
-    if(currentKey!==key)return;
-    const items=payloads.flatMap(x=>x.items||[]);
-    listingFilterSourceItems=items;
-    lsDataBounds(items,mode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);
-    if(mode==='listingbudget')listingGapInvestmentSetMax(items);
-  }catch{}
 }
 function listingGapInvestmentRangeSync(el){listingGapInvestmentBand=null;listingManualFacets.add('gap');const lo=document.getElementById('listingGapInvestmentMin'),hi=document.getElementById('listingGapInvestmentMax');if(+lo.value>+hi.value){if(el===lo)hi.value=lo.value;else lo.value=hi.value;}listingGapInvestmentSync();}
 function listingGapInvestmentNumberApply(input){const slider=document.getElementById(input.id.replace('Number',''));if(!slider)return;const n=Number(input.value);if(Number.isFinite(n))slider.value=Math.max(+slider.min,Math.min(+slider.max,Math.round(n*10)/10));listingGapInvestmentRangeSync(slider);listingGapInvestmentApply();}
