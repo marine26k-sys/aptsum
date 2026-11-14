@@ -9777,17 +9777,27 @@ function renderListingAskMap(d){
 }
 function listingHeaderHTML(d, badge, vsPrev, vsRecent, title, badgeClass){
   const manual=typeof listingManualFacets!=='undefined'?listingManualFacets:new Set();
+  const priceBandMatch=label=>String(label||'').match(/^(\d+)(?:\.0)?~\1(?:\.9)억$/);
+  const askLabel=d.askBand||(d.askLabel&&d.askLabel!=='전체'?d.askLabel:null);
+  const askBandMatch=priceBandMatch(askLabel);
+  let headerPriceBand=askBandMatch&&Number(askBandMatch[1])>=1?`${askBandMatch[1]}억대`:null;
+  if(!headerPriceBand&&!d.individual&&['longpeaklisting','listingaskmap','listingtrend','listingrise','listingbudget','listingurgent'].includes(d.mode)){
+    const range=lsGet(),limits=lsAskLimits();
+    const askSelected=manual.has('ask')||range.q0>limits.min+1e-8||range.q1<limits.max-1e-8;
+    const start=Math.round(range.q0);
+    if(askSelected&&start>=1&&Math.abs(range.q0-start)<1e-8&&Math.abs(range.q1-(start+0.9))<1e-8)headerPriceBand=`${start}억대`;
+  }
+  const headerTitle=title||(headerPriceBand&&!d.individual?`${shortRegionLabel(d.scopeLabel||'')} ${headerPriceBand}`:null);
   const built=d.individual?(d.rows||[]).find(x=>x.built)?.built:null;
   const hh=d.individual?(d.rows||[]).find(x=>x.hh)?.hh:null;
   const subwayRow=d.individual?(d.rows||[]).find(x=>x.subwayMinutes!==undefined&&x.subwayMinutes!==null):null;
-  const askBand=d.askBand||(d.askLabel&&d.askLabel!=='전체'?d.askLabel:null);
   const gv=typeof listingGapInvestmentValues==='function'?listingGapInvestmentValues():null;
   const gapLabel=manual.has('gap')&&gv&&!(gv.min===0&&gv.max===Infinity)?`갭 ${gv.min.toFixed(1)}~${gv.max===Infinity?listingGapInvestmentMaxCap.toFixed(1):gv.max.toFixed(1)}억`:null;
-  const filters=[askBand,d.pyBand,d.filterLabel,gapLabel].filter(Boolean).map(text=>`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(text)}</span>`);
+  const filters=[askLabel,d.pyBand,d.filterLabel,gapLabel].filter(Boolean).map(text=>`<span style="color:#7FD4D9;font-weight:700;white-space:nowrap">${esc(text)}</span>`);
   const separator='<span aria-hidden="true" style="color:rgba(255,255,255,.55)">·</span>';
   return `<div class="card-hd">
       ${hdTop(badge, true, badgeClass)}
-      <h2${d.individual?' class="listing-complex-title"':''}>${esc(d.individual?d.complexName:(title || shortRegionLabel(d.scopeLabel||'')))}</h2>
+      <h2${d.individual?' class="listing-complex-title"':''}>${esc(d.individual?d.complexName:(headerTitle || shortRegionLabel(d.scopeLabel||'')))}</h2>
       ${d.individual?`<div style="text-align:center;font-size:12px;font-weight:600;line-height:1.5;margin:4px 0 8px;color:rgba(255,255,255,.8)">${[esc(d.complexRegion||''),built?buildAgeLabel(built):'',hh?`${hh.toLocaleString()}세대`:'',subwayRow?listingSubwayHTML(subwayRow,'#fff',''):null].filter(Boolean).join(' · ')}</div>`:''}
       <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:5px 0 2px;font-size:11.5px;line-height:1.4">
         <span style="background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:2px 9px;white-space:nowrap">${listingOccupancyLabel()} · ${listingFloorLabel()}</span>
