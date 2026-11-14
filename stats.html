@@ -167,7 +167,6 @@ async function load(){
     render(data);
     initTabClicks();
     loadListingMeta();
-    loadListingUsage();
     initSubscribers();
     initApplications();
   }catch(e){
@@ -234,18 +233,11 @@ function render(d){
       </form>
       <div style="font-size:10px;color:var(--sub);margin-bottom:8px">만료일을 비우면 무기한입니다. 만료일이 지나면 그날 밤 12시에 자동으로 막힙니다.</div>
       <div id="subStatus" role="status" style="min-height:16px;font-size:12px;color:var(--teal-dark);margin-bottom:4px"></div>
-      <div id="subList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <b style="font-size:12px;color:var(--navy)">구독자 API 조회량</b>
-            <span style="font-size:10.5px;color:var(--sub)">· 계정별 최근 24시간</span>
-            <span id="listingUsageBadge" style="display:none;padding:1px 7px;border-radius:9px;background:#d95d5d;color:#fff;font-size:10px;font-weight:800"></span>
-          </div>
-          <button id="refreshListingUsage" type="button" style="flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
-        </div>
-        <div id="listingUsage" role="status" style="font-size:11px;color:var(--sub);line-height:1.6">불러오는 중…</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 5px">
+        <b style="font-size:11px;color:var(--navy)">계정별 API 사용량 · 최근 24시간</b>
+        <button id="refreshListingUsage" type="button" style="flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--teal-dark);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer">새로고침</button>
       </div>
+      <div id="subList" style="font-size:12px;color:var(--sub)">불러오는 중…</div>
     </div>
 
     <div class="note">배포 전 누적치는 페이지 로드 수 기준입니다. 배포 후에는 같은 IP·브라우저의 같은 페이지 요청을 KST 하루에 한 번만 반영합니다.<br>공유 네트워크·브라우저 변경 등에 따라 실제 유니크 방문자 수와는 다를 수 있습니다.</div>
@@ -323,7 +315,15 @@ async function subApi(body){
   if(!res.ok) throw new Error({ name_required:"이름을 입력하세요.", invalid_expires:"만료일 형식이 올바르지 않습니다.", not_found:"이미 삭제된 구독자입니다." }[d.error] || "처리하지 못했습니다. 잠시 후 다시 시도하세요.");
   return d;
 }
-function subRow(s){
+function subscriberUsageHtml(usage, error=""){
+  if(error)return `<div style="margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);font-size:10.5px;color:#d95d5d">API 사용량을 불러오지 못했습니다.</div>`;
+  const requests=Number(usage?.requests24h)||0;
+  const regions=Array.isArray(usage?.regions)?usage.regions:[];
+  const details=regions.length?`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--teal-dark);font-weight:700">지역별 횟수 보기 (${regions.length}곳)</summary><div style="padding:5px 0;color:var(--sub);overflow-wrap:anywhere">${regions.map(r=>`${esc(r.name||r.code)} ${Number(r.requests||0).toLocaleString()}회`).join(" · ")}</div></details>`:"";
+  const warning=usage?.suspicious?` <b style="color:#9a6700">· 확인 필요</b>`:"";
+  return `<div style="margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--sub)"><b style="color:var(--navy)">최근 24시간 API</b>${warning}<br>${requests.toLocaleString()}회 · 시간당 최대 ${Number(usage?.peakHour||0).toLocaleString()}회 · 지역 ${Number(usage?.regions24h||0)}곳 · 전국검색 ${Number(usage?.searches24h||0).toLocaleString()}회${usage?.lastAt?` · 마지막 ${esc(listingUsageTime(usage.lastAt))}`:""}${details}</div>`;
+}
+function subRow(s, usage, usageError=""){
   const now = Date.now();
   const expired = s.expiresAt && s.expiresAt <= now;
   const state = s.revoked ? ["해지됨","#d95d5d"] : expired ? ["만료됨","#d95d5d"] : ["사용 중","var(--teal-dark)"];
@@ -346,6 +346,7 @@ function subRow(s){
         ${s.revoked ? btn("restore","해지 취소") : btn("revoke","해지","#d95d5d")}
         ${btn("delete","삭제")}
       </div>
+      ${subscriberUsageHtml(usage,usageError)}
     </div>`;
 }
 function subscriberCounts(subscribers, now = Date.now()){
@@ -358,11 +359,21 @@ async function loadSubscribers(msg = ""){
   if(!box) return;
   try{
     const d = await subApi();
+    let usageData=null,usageError="";
+    try{usageData=await fetchListingUsage();}catch(e){usageError=e.message||"조회량을 불러오지 못했습니다.";}
+    const usageItems=Array.isArray(usageData?.items)?usageData.items:[];
+    const usageById=new Map(usageItems.map(x=>[x.accountId,x]));
     const counts = subscriberCounts(d.subscribers);
     setCardBadge("subCard", `발급 ${counts.total}개 · 사용 중 ${counts.active}개`);
-    box.innerHTML = `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#DDF2F2;color:var(--teal-dark);font-weight:800">현재 발급 ${counts.total}개 · 사용 중 ${counts.active}개 · 만료 ${counts.expired}개 · 해지 ${counts.revoked}개</div><div style="font-size:10px;margin-bottom:8px">삭제한 코드는 개수에서 제외됩니다.</div>` + (d.subscribers.length
-      ? d.subscribers.map(subRow).join("")
-      : `<div style="padding:8px 0">아직 발급한 코드가 없습니다.</div>`)
+    const knownIds=new Set(d.subscribers.map(s=>s.id));
+    const subscriberRows=d.subscribers.length
+      ? d.subscribers.map(sub=>subRow(sub,usageById.get(sub.id),usageError)).join("")
+      : `<div style="padding:8px 0">아직 발급한 코드가 없습니다.</div>`;
+    const otherUsage=usageItems.filter(x=>x.accountId==="shared"||!knownIds.has(x.accountId)).map(x=>{
+      const name=x.accountId==="shared"?"공용 코드":"삭제된 구독자";
+      return `<div class="page-row" style="display:block"><b style="font-size:13px;color:var(--ink)">${name}</b><div style="font-size:10.5px;color:var(--sub)">계정 ID ${esc(x.accountId)}</div>${subscriberUsageHtml(x)}</div>`;
+    }).join("");
+    box.innerHTML = `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#DDF2F2;color:var(--teal-dark);font-weight:800">현재 발급 ${counts.total}개 · 사용 중 ${counts.active}개 · 만료 ${counts.expired}개 · 해지 ${counts.revoked}개</div><div style="font-size:10px;margin-bottom:8px">최근 24시간 계정별 API 호출 횟수와 지역별 내역을 각 코드 아래에 표시합니다. 시간당 120회 또는 12개 지역부터는 관리자 확인 표시만 하며 자동 차단·해지는 하지 않습니다. 삭제한 코드는 발급 개수에서 제외됩니다.</div>` + subscriberRows + otherUsage
       + `<div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">`
       + (d.sharedCodeEnabled
         ? `공용 비번(SUBSCRIBER_CODE)도 아직 쓸 수 있습니다. 모두 개인 코드로 옮기면 Netlify 환경변수에서 SUBSCRIBER_CODE를 지우고 재배포하세요. 그러면 공용 비번으로 로그인한 기기는 로그아웃됩니다.`
@@ -376,6 +387,7 @@ async function loadSubscribers(msg = ""){
 function initSubscribers(){
   const form = $("#subForm");
   if(!form) return;
+  document.getElementById("refreshListingUsage")?.addEventListener("click",()=>loadSubscribers());
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const btn = form.querySelector("button");
@@ -636,32 +648,13 @@ function listingUsageTime(value){
   return new Date(value).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"Asia/Seoul"});
 }
 
-async function loadListingUsage(){
-  const box=$("#listingUsage");
-  if(!box)return;
-  box.textContent="조회 기록 불러오는 중…";
-  try{
-    const res=await fetch("/api/listings?usage=1",{cache:"no-store",credentials:"same-origin"});
-    if(res.status===401)throw new Error("관리자 인증이 만료됐습니다. 새로고침 후 다시 로그인하세요.");
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok)throw new Error("조회 기록을 불러오지 못했습니다.");
-    const items=Array.isArray(data.items)?data.items:[];
-    const flagged=items.filter(x=>x.suspicious).length;
-    const badge=$("#listingUsageBadge");
-    if(badge){badge.textContent=flagged?`조회 주의 ${flagged}`:"";badge.style.display=flagged?"inline-flex":"none";}
-    const intro=`시간당 조회 ${Number(data.warnPerHour||120).toLocaleString()}회 또는 지역 ${Number(data.warnRegionsPerHour||12).toLocaleString()}곳부터 관리자 확인 표시`;
-    const note="주의 표시는 검토용이며 구독자별 API를 자동 제한하거나 구독을 해지하지 않습니다. 필요하면 구독자 코드에서 직접 이용을 중지할 수 있습니다. 사이트 보호용 IP 분당 제한은 별도로 적용되고, 공용 코드는 합산 기록만 표시합니다.";
-    if(!items.length){box.innerHTML=`<div>${esc(intro)}</div><div style="margin-top:4px">${esc(note)}</div><div style="margin-top:4px">최근 24시간 조회 기록이 없습니다.</div>`;return;}
-    box.innerHTML=`<div style="margin-bottom:3px">${esc(intro)}</div><div style="margin-bottom:5px">${esc(note)}</div><div style="margin-bottom:5px">최근 24시간 조회 계정 ${items.length}개 · 지역별 횟수 포함</div>`+items.map(x=>{
-      const state=x.suspicious?["확인 필요","#9a6700"]:["기록 중","var(--teal-dark)"];
-      const regions=(x.regions||[]).map(r=>`${esc(r.name||r.code)} ${Number(r.requests||0).toLocaleString()}회`).join(" · ");
-      const regionDetails=regions?`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--teal-dark);font-weight:700">지역별 호출 횟수 보기 (${Number(x.regions24h||0)}곳)</summary><div style="padding:5px 0;color:var(--sub);overflow-wrap:anywhere">${regions}</div></details>`:"";
-      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--slate-bg)"><span style="min-width:0"><b style="color:var(--ink)">${esc(x.name)}</b><br><small style="color:var(--sub)">계정 ID ${esc(x.accountId)}</small><br>${Number(x.requests24h||0).toLocaleString()}회 · 시간당 최대 ${Number(x.peakHour||0).toLocaleString()}회 · 지역 ${Number(x.regions24h||0)}곳 (시간당 최대 ${Number(x.peakRegionsHour||0)}곳) · 전국검색 ${Number(x.searches24h||0).toLocaleString()}회 · 마지막 ${esc(listingUsageTime(x.lastAt))}${regionDetails}</span><b style="flex:none;color:${state[1]}">${state[0]}</b></div>`;
-    }).join("");
-  }catch(error){box.textContent=error.message||"조회 기록을 불러오지 못했습니다.";}
+async function fetchListingUsage(){
+  const res=await fetch("/api/listings?usage=1",{cache:"no-store",credentials:"same-origin"});
+  if(res.status===401)throw new Error("관리자 인증이 만료됐습니다.");
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error("조회 기록을 불러오지 못했습니다.");
+  return data;
 }
-
-document.getElementById("refreshListingUsage")?.addEventListener("click",loadListingUsage);
 
 function loadSheetJS(){
   if(window.XLSX) return Promise.resolve();
