@@ -55,7 +55,7 @@ export async function listListingUsage(store, subscribers, now = Date.now()) {
     if (timestamp < queryStart || timestamp > now) return;
     const data = await store.get(key, { type: "json", consistency: "strong" });
     if (!data) return;
-    if (Math.max(Number(data.lastAt) || 0, Number(data.blockedAt) || 0) < windowStart) return;
+    if ((Number(data.lastAt) || 0) < windowStart) return;
     const entry = grouped.get(data.accountId) || { accountId: data.accountId, requests24h: 0, peakHour: 0, peakHours: new Map(), peakRegionsHour: 0, searches24h: 0, regions: new Set(), lastAt: 0 };
     entry.lastAt = Math.max(entry.lastAt, Number(data.lastAt) || 0);
     for (const [minute, count] of Object.entries(data.minutes || {})) {
