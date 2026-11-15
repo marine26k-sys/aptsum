@@ -9854,6 +9854,30 @@ function toggleListingTrendHistory(button){
   history.hidden=!history.hidden;
   button.setAttribute('aria-expanded',String(!history.hidden));
   button.querySelector('.history-chevron').textContent=history.hidden?'▾':'▴';
+  syncListingTrendHistoryBulkButton();
+}
+function syncListingTrendHistoryBulkButton(){
+  const button=document.getElementById('listingTrendHistoryAll');
+  if(!button)return;
+  const histories=[...document.querySelectorAll('#result .listing-trend-history')];
+  const allExpanded=histories.length>0&&histories.every(history=>!history.hidden);
+  button.textContent=allExpanded?'그래프 전체 접기':'그래프 전체 펼치기';
+  button.setAttribute('aria-expanded',String(allExpanded));
+}
+function toggleAllListingTrendHistory(){
+  const histories=[...document.querySelectorAll('#result .listing-trend-history')];
+  if(!histories.length)return;
+  const expand=histories.some(history=>history.hidden);
+  histories.forEach(history=>{
+    history.hidden=!expand;
+    const control=history.closest('.listing-trend-row')?.querySelector('button[aria-controls]');
+    if(control){
+      control.setAttribute('aria-expanded',String(expand));
+      const chevron=control.querySelector('.history-chevron');
+      if(chevron)chevron.textContent=expand?'▴':'▾';
+    }
+  });
+  syncListingTrendHistoryBulkButton();
 }
 function listingTrendHistoryHTML(points, id){
   if(points.length <= 2) return '';
@@ -9995,6 +10019,7 @@ function renderListingTrend(source){
     : !d.rows.length
       ? `<div class="rng" style="padding:10px 0">${state.days!==15?'선택한 기간에 호가 변동이 확인된 단지가 없습니다.':d.trendContinuous ? `최근 3개 기록에서 두 번 연속 ${word}한 단지·평형이 없습니다.` : `${all?'조건에 맞는 단지·평형이 없습니다.':`최근 2주 이전 가격 구간의 최저 호가 대비 최신 호가가 ${rising?'오른':'내린'} 단지·평형이 없습니다.`}`}</div>`
       : d.rows.map((x,i)=>listingTrendRowHTML(x,i,multiRegion,all?'all':rising?'up':'down',true)).join('');
+  const hasHistoryGraphs=body.includes('class="listing-trend-history"');
   const html = `<div class="card">
     ${listingHeaderHTML(d, `최저 호가 변동 · ${word}`, null, null)}
     <div class="sec">
@@ -10003,6 +10028,7 @@ function renderListingTrend(source){
       <div class="ls-filters" style="margin:10px 0;padding:9px 12px"><div class="ls-hd"><span>호가 변동 확인일</span><b id="listingTrendDaysLabel">${state.days===15?'전체':`최근 ${state.days}일 이내`}</b></div><div class="ls-control"><input type="range" min="1" max="15" step="1" value="${state.days}" aria-label="호가 변동 확인 기간" aria-valuetext="${state.days===15?'전체':`최근 ${state.days}일 이내`}" oninput="document.getElementById('listingTrendDaysLabel').textContent=this.value==='15'?'전체':'최근 '+this.value+'일 이내';this.setAttribute('aria-valuetext',document.getElementById('listingTrendDaysLabel').textContent)" onchange="listingTrendDaysApply(this.value)"></div><div class="ls-hd"><span>1일</span><span>전체</span></div><div class="rng" style="margin-top:4px">기준일부터 선택한 일수 전까지 비교 · 14일 이력 내</div></div>
       ${listingLinkLegend()}
       ${listingTrendGraphLegend(state.days===15)}
+      ${hasHistoryGraphs?'<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button id="listingTrendHistoryAll" type="button" aria-expanded="false" onclick="toggleAllListingTrendHistory()" style="padding:6px 11px;border:1px solid var(--teal-light);border-radius:9px;background:#fff;color:var(--teal-dark);font:inherit;font-size:11px;font-weight:800;cursor:pointer">그래프 전체 펼치기</button></div>':''}
       ${d.missingRegions?.length ? `<div class="rng">선택 기록 없음: ${esc(d.missingRegions.join(', '))}</div>` : ''}
       ${body}
     </div></div>
