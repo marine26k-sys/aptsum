@@ -6,7 +6,7 @@ if (!apiKey) throw new Error('REB_RONE_API_KEY is required');
 
 const API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do';
 const TABLES = {
-  average: 'A_2024_00061',
+  average: 'A_2024_00060',
   median: 'A_2024_00062',
 };
 const REGIONS = ['서울', '경기', '인천', '부산'];
@@ -109,7 +109,7 @@ for (const row of monthlyRows) {
 if (!districtMonthly.length) throw new Error('R-ONE returned no usable district price data');
 const output = {
   source: '한국부동산원 R-ONE Open API',
-  sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00062.do?isMobileYn=N',
+  sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00060.do?isMobileYn=N',
   tables: TABLES,
   unit: '천원',
   aggregation: '월별 아파트 매매가격의 연도별 산술평균 (단위: 천원)',

@@ -2,7 +2,7 @@ name: Refresh R-ONE apartment sale prices
 
 on:
   schedule:
-    - cron: "0 15 20 * *" # Monthly at 00:00 KST on the 21st.
+    - cron: "0 15 15 * *" # Monthly at 00:00 KST on the 16th, after monthly R-ONE updates.
   workflow_dispatch:
   push:
     branches: [feat/undervalue-listing-layout]
