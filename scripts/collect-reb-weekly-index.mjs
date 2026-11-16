@@ -87,8 +87,8 @@ for (const table of TABLES) {
     region[table.key] = rows;
     regionsByKey.set(key, region);
   }
-  const labels = collected.flatMap(item => item.rows.map(row => row.date)).filter(Boolean).sort();
-  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf: labels.at(-1) || '' };
+  const latestRow = collected.flatMap(item => item.rows).sort((a, b) => a.period.localeCompare(b.period)).at(-1);
+  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf: latestRow?.date || '' };
 }
 
 const regions = [...regionsByKey.values()].sort((a, b) => PROVINCES.indexOf(a.province) - PROVINCES.indexOf(b.province) || a.name.localeCompare(b.name, 'ko'));
