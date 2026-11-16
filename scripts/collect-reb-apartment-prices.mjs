@@ -1,3 +1,4 @@
+import { findMonthlyReleaseDate } from './reb-release-date.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
@@ -93,6 +94,7 @@ for (const values of Object.values(regions)) values.sort((a, b) => a.year - b.ye
 const monthlyRows = [...monthly.values()].filter(row => Number.isFinite(row.average) && Number.isFinite(row.median));
 const asOf = monthlyRows.map(row => row.month).sort().at(-1);
 if (!asOf || !Object.keys(regions).length) throw new Error('R-ONE returned no usable apartment price data');
+const publishedAt = await findMonthlyReleaseDate(`${asOf.slice(0, 4)}-${asOf.slice(4)}`);
 
 const tileContext = { window: {} };
 vm.runInNewContext(await readFile('shared/metro-tile-map.js', 'utf8'), tileContext);
@@ -114,6 +116,7 @@ const output = {
   unit: '천원',
   aggregation: '월별 아파트 매매가격의 연도별 산술평균 (단위: 천원)',
   asOf: asOf.slice(0, 4) + '-' + asOf.slice(4),
+  publishedAt,
   updatedAt: new Date().toISOString(),
   regions,
   districtMonthly,

@@ -1,3 +1,4 @@
+import { findMonthlyReleaseDate } from './reb-release-date.mjs';
 import { writeFile } from 'node:fs/promises';
 
 const apiKey = process.env.REB_RONE_API_KEY;
@@ -89,6 +90,10 @@ for (const table of TABLES) {
   }
   const latestRow = collected.flatMap(item => item.rows).sort((a, b) => a.period.localeCompare(b.period)).at(-1);
   meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf: latestRow?.date || '' };
+  if (table.key === 'monthly' && latestRow) {
+    const period = String(latestRow.period);
+    meta.monthly.publishedAt = await findMonthlyReleaseDate(`${period.slice(0, 4)}-${period.slice(4)}`);
+  }
 }
 
 const regions = [...regionsByKey.values()].sort((a, b) => PROVINCES.indexOf(a.province) - PROVINCES.indexOf(b.province) || a.name.localeCompare(b.name, 'ko'));
