@@ -5,6 +5,7 @@ on:
     paths:
       - data/reb-weekly-index.json
       - data/reb-apartment-prices.json
+      - data/reb-apartment-size-prices.json
       - data/move-in.json
   workflow_dispatch:
     inputs:
@@ -15,6 +16,7 @@ on:
         options:
           - data/reb-weekly-index.json
           - data/reb-apartment-prices.json
+          - data/reb-apartment-size-prices.json
           - data/move-in.json
 permissions:
   contents: write
@@ -40,7 +42,7 @@ jobs:
             node scripts/publish-apartment-stats.mjs "$SELECTED_FILE"
           else
             git fetch --depth=1 origin "$BEFORE"
-            for file in data/reb-weekly-index.json data/reb-apartment-prices.json data/move-in.json; do
+            for file in data/reb-weekly-index.json data/reb-apartment-prices.json data/reb-apartment-size-prices.json data/move-in.json; do
               if ! git diff --quiet "$BEFORE" HEAD -- "$file"; then
                 node scripts/publish-apartment-stats.mjs "$file"
               fi

@@ -1,0 +1,36 @@
+name: Refresh R-ONE apartment size-specific sale prices
+
+on:
+  schedule:
+    - cron: "0 15 25 * *" # 00:00 KST on the 26th, after the KOSIS monthly refresh.
+    - cron: "0 15 27 * *" # 00:00 KST on the 28th, retry if the release was delayed.
+  workflow_dispatch:
+  push:
+    branches: [fix/reb-apartment-prices-refresh-16th-20261116]
+    paths:
+      - .github/workflows/collect-reb-apartment-size-prices.yml
+      - scripts/collect-reb-apartment-size-prices.mjs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apartment-statistics-publish
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Collect official size-specific transaction average prices
+        env:
+          REB_RONE_API_KEY: ${{ secrets.REB_RONE_API_KEY }}
+        run: node scripts/collect-reb-apartment-size-prices.mjs
+      - name: Publish without site deployment
+        run: node scripts/publish-apartment-stats.mjs data/reb-apartment-size-prices.json
