@@ -4135,7 +4135,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const last4Q = [...new Set(months.map(qKeyOf))].slice(0,4).reverse(); // 오래된→최신 순
   const byPy = Object.entries(groups).map(([sizeKey, arrRaw])=>{
     const clean = markOutliers(arrRaw, priceHistoryMonths(arrRaw,months));
-    const arr = clean.length? clean : arrRaw;
+    const arr = clean;
     const historyType=historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey);
     const labelTrades=arr.length?arr:historyType;
     const max = arr.length?Math.max(...arr.map(t=>t.amt)):null;
@@ -4143,6 +4143,9 @@ function analyzeComplex(all, name, months, rawAll, lawd){
     const maxDate = maxTrade?`${maxTrade.ym.slice(2,4)}.${maxTrade.ym.slice(4)}.${String(maxTrade.d||'').padStart(2,'0')}`:null;
     const recent = arr[0];
     const priceHistory=markOutliers(historyHits.filter(t=>exclusiveAreaKey(t)===+sizeKey).map(t=>({...t})),priceHistoryMonths(historyHits,months));
+    // Only-excluded groups (for example, areas represented solely by direct deals) must not
+    // create an empty supply-area row in the summary. Keep older valid history if present.
+    if(!arr.length&&!priceHistory.length)return null;
     const quarters = last4Q.map(qk => ({ label: qLabelOf(qk), avg: periodAvg(priceHistory, qMap[qk]) }));
     // 단기 추세는 1~4층(저층 할인 왜곡 방지) 제외한 별도 데이터로 계산 — 평형별 요약표의 분기 평균과는 무관 (2026.07 등락 랭킹·저평가 탭과 동일 기준으로 통일)
     const arrTrend = priceHistory.filter(t=>parseInt(t.floor,10)>=5);
@@ -4170,7 +4173,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       recentMonthAvg, max, maxDate, quarters, trend,
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: !!recent && recent.amt>=max && arr.length>=3, monthly, floorBand };
-  }).sort((a,b)=>a.sizeKey-b.sizeKey);
+  }).filter(Boolean).sort((a,b)=>a.sizeKey-b.sizeKey);
   return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:metaHits[0].lawd, umd:metaHits[0].umd, build:complexTradeBuild(metaHits),
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -5654,6 +5657,13 @@ function renderSubway(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
+// 국토부 입주권 원자료의 특이 거래. KB 공식 평형(전용 59㎡)에 없는 면적 56.0736㎡로
+// 신고된 직거래 1건이라 해당 매물/시세 분석에서 제외한다.
+function isKnownExceptionalPresaleTrade(t){
+  return String(t?.apt||'').replace(/\s/g,'')==='잠실래미안아이파크'&&t?.umd==='신천동'&&
+    t?.ym==='202506'&&String(t?.d||'').padStart(2,'0')==='27'&&Math.abs(Number(t?.area)-56.0736)<0.0001&&
+    Number(t?.amt)===19.2&&Number(t?.direct)===1&&(t?.ownership==='입주권'||t?.kind==='입주권');
+}
 // 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
 // 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
 // 1) 분양권 단지명을 매매 쪽 표기에 맞춤(exact→substring), 2) 매매에 아예 없는(분양권 전용) 단지는 분양권끼리도 표기 통일
@@ -5664,7 +5674,7 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
   // 확인 가능한 단지명 거래만 전 탭의 분석·랭킹에 사용한다.
   return aptsumComplexIdentity.mergeSources(
     (raw||[]).filter(t=>!isDongOnlyTradeName(t)),
-    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)),
+    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKnownExceptionalPresaleTrade(t)),
     NAVER_NAMES[lawd]||{},lawd
   );
 }
