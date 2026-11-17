@@ -94,7 +94,13 @@ for (const values of Object.values(regions)) values.sort((a, b) => a.year - b.ye
 const monthlyRows = [...monthly.values()].filter(row => Number.isFinite(row.average) && Number.isFinite(row.median));
 const asOf = monthlyRows.map(row => row.month).sort().at(-1);
 if (!asOf || !Object.keys(regions).length) throw new Error('R-ONE returned no usable apartment price data');
-const publishedAt = await findMonthlyReleaseDate(`${asOf.slice(0, 4)}-${asOf.slice(4)}`);
+let publishedAt = '';
+try {
+  publishedAt = await findMonthlyReleaseDate(`${asOf.slice(0, 4)}-${asOf.slice(4)}`);
+} catch (error) {
+  // Keep the new price series flowing if the release-notice page is temporarily unavailable.
+  console.warn(`Monthly release date unavailable for ${asOf}: ${error.message}`);
+}
 
 const tileContext = { window: {} };
 vm.runInNewContext(await readFile('shared/metro-tile-map.js', 'utf8'), tileContext);

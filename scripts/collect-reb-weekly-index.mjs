@@ -89,10 +89,18 @@ for (const table of TABLES) {
     regionsByKey.set(key, region);
   }
   const latestRow = collected.flatMap(item => item.rows).sort((a, b) => a.period.localeCompare(b.period)).at(-1);
-  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf: latestRow?.date || '' };
+  const latestPeriod = String(latestRow?.period || '');
+  const asOf = table.key === 'monthly' && /^\d{6}$/.test(latestPeriod)
+    ? `${latestPeriod.slice(0, 4)}년 ${Number(latestPeriod.slice(4))}월`
+    : latestRow?.date || '';
+  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf };
   if (table.key === 'monthly' && latestRow) {
-    const period = String(latestRow.period);
-    meta.monthly.publishedAt = await findMonthlyReleaseDate(`${period.slice(0, 4)}-${period.slice(4)}`);
+    try {
+      meta.monthly.publishedAt = await findMonthlyReleaseDate(`${latestPeriod.slice(0, 4)}-${latestPeriod.slice(4)}`);
+    } catch (error) {
+      // Publication metadata must not block publishing refreshed weekly/monthly index values.
+      console.warn(`Monthly release date unavailable for ${latestPeriod}: ${error.message}`);
+    }
   }
 }
 

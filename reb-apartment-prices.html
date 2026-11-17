@@ -42,7 +42,7 @@
 <script>
 (()=>{const $=id=>document.getElementById(id),eok=n=>(Number(n)/100000).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),stateKey='aptsum-reb-apartment-prices-state';let data=null,region='서울',mapRegion='all',metric='average',regions=[],view='map';
 function saveState(){try{sessionStorage.setItem(stateKey,JSON.stringify({region,mapRegion,metric,view}))}catch{}}
-function formatReleaseDate(){const value=data.publishedAt||(data.asOf==='2026-10'?'2026-11-16':'');const match=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);return match?`${match[1]}.${match[2]}.${match[3]}`:'확인 중'}
+function formatReleaseDate(){const match=String(data.publishedAt||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(match)return `${match[1]}.${match[2]}.${match[3]}`;return data.asOf==='2026-10'?'2026.11.16':'확인 중'}
 function renderPriceMap(){
  const rows=data.districtMonthly||[],select=$('priceMapPeriod'),periods=[...new Set(rows.map(r=>r.period))].sort().reverse(),selected=periods.includes(select.value)?select.value:periods[0]||'';
  select.innerHTML=periods.map(p=>`<option value="${p}"${p===selected?' selected':''}>${p.replace('-','년 ')}월</option>`).join('');select.onchange=renderPriceMap;
