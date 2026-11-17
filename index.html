@@ -584,7 +584,6 @@ try {
 <script>const ADSENSE_ENABLED=false; if(ADSENSE_ENABLED && document.documentElement.classList.contains('analysis-menu')){const adScript=document.createElement('script');adScript.async=true;adScript.crossOrigin='anonymous';adScript.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8856204814619199';document.head.appendChild(adScript);}</script>
 <script src="/assets/subscriber-session.js?v=1"></script>
 <script src="/shared/complex-identity.js?v=1"></script>
-<script src="/shared/kb-area-singleton-exclusions.js?v=1"></script>
 <script src="/shared/metro-tile-map.js"></script>
 <link rel="stylesheet" href="/assets/page-header.css">
 </head>
@@ -5658,17 +5657,25 @@ function renderSubway(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
-// 같은 단지에서 다른 거래면적은 KB 타입에 매칭되고, 이 면적만 3년간 단 1건이며
-// KB 타입에 없는 것으로 확인된 계약을 거래 원본과 정확히 대조해 공통 제외한다.
-function kbAreaSingletonKey(lawd,name,umd,ym,day,area,amount,direct,ownership,source){
-  const n=Number(area),price=Number(amount);
-  if(!Number.isFinite(n)||!Number.isFinite(price))return '';
-  return [String(lawd),String(name||'').replace(/\s/g,''),String(umd||''),String(ym||''),String(day||'').padStart(2,'0'),n.toFixed(4),price.toFixed(2),Number(direct)||0,String(ownership||''),source].join('|');
-}
-const KB_AREA_SINGLETON_EXCLUSION_KEYS=new Set((window.APTSUM_KB_AREA_SINGLETON_EXCLUSIONS||[]).map(row=>kbAreaSingletonKey(...row)));
-function isKbAreaSingletonExclusion(t,lawd,source){
-  const name=aptsumComplexIdentity.canonical(t?.apt,t?.umd,NAVER_NAMES[lawd]||{},lawd);
-  return KB_AREA_SINGLETON_EXCLUSION_KEYS.has(kbAreaSingletonKey(lawd,name,t?.umd,t?.ym,t?.d,t?.area,t?.amt,t?.direct,t?.ownership||t?.kind||'',source));
+// KB 면적 목록에 타입이 없고 최근 3년 거래가 1건뿐인 것으로 확인된 특이 거래.
+// 공용 매매·분양권 병합 단계에서 제외해 각 분석/랭킹 탭에 함께 반영한다.
+function isKnownExceptionalPresaleTrade(t,lawd){
+  const name=String(t?.apt||'').replace(/\s/g,'');
+  const day=String(t?.d||'').padStart(2,'0');
+  const exceptional=[
+    // KB 전용면적 목록에 없는 단일 거래로 확인된 입주권·특이 면적 거래.
+    ['잠실래미안아이파크','신천동','202506','27',56.0736,19.2,1,'입주권'],
+    ['광명자이더샵포레나','광명동','202511','14',29.8504,4.5,0,'입주권'],
+    [['광주송정중흥S-클래스파크뷰','송정중흥S-클래스파크뷰'],'송정동','202408','16',51.767,4.4,0,''],
+    ['두산위브더제니스센트럴여의','숭의동','202407','22',97.02,3.9,0,'입주권'],
+    ['부평역해링턴플레이스','부평동','202409','10',44.226,2.9,0,''],
+  ];
+  const canonicalName=aptsumComplexIdentity.canonical(t?.apt,t?.umd,NAVER_NAMES[lawd]||{},lawd).replace(/\s/g,'');
+  return exceptional.some(([apt,umd,ym,d,area,amount,direct,ownership])=>
+    (Array.isArray(apt)?apt.includes(canonicalName)||apt.includes(name):canonicalName===apt)&&
+    t?.umd===umd&&t?.ym===ym&&day===d&&Math.abs(Number(t?.area)-area)<0.0001&&
+    Number(t?.amt)===amount&&Number(t?.direct)===direct&&(t?.ownership||t?.kind||'')===ownership
+  );
 }
 // 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
 // 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
@@ -5679,8 +5686,8 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
   // 짧은 문자열 유사 매칭으로 동명의 K-apt 단지(예: 봉천동 → 봉천동아제2)에 붙는 일을 막고
   // 확인 가능한 단지명 거래만 전 탭의 분석·랭킹에 사용한다.
   return aptsumComplexIdentity.mergeSources(
-    (raw||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKbAreaSingletonExclusion(t,lawd,'sale')),
-    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKbAreaSingletonExclusion(t,lawd,'presale')),
+    (raw||[]).filter(t=>!isDongOnlyTradeName(t)),
+    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKnownExceptionalPresaleTrade(t,lawd)),
     NAVER_NAMES[lawd]||{},lawd
   );
 }
