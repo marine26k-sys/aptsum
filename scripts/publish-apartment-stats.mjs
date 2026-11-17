@@ -4,7 +4,7 @@ import {gzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
-const allowed=new Set(['data/reb-weekly-index.json','data/reb-apartment-prices.json','data/reb-apartment-size-prices.json','data/move-in.json']);
+const allowed=new Set(['data/reb-weekly-index.json','data/reb-apartment-prices.json','data/move-in.json']);
 const files=process.argv.slice(2);
 if(!files.length||files.some(file=>!allowed.has(file)))throw Error('Specify supported apartment statistics JSON files');
 for(const file of files){const data=JSON.parse(readFileSync(file,'utf8'));if(!data||typeof data!=='object')throw Error(`Invalid data: ${file}`);}
