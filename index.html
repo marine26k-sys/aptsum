@@ -5657,12 +5657,25 @@ function renderSubway(d){
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
 
-// 국토부 입주권 원자료의 특이 거래. KB 공식 평형(전용 59㎡)에 없는 면적 56.0736㎡로
-// 신고된 직거래 1건이라 해당 매물/시세 분석에서 제외한다.
-function isKnownExceptionalPresaleTrade(t){
-  return String(t?.apt||'').replace(/\s/g,'')==='잠실래미안아이파크'&&t?.umd==='신천동'&&
-    t?.ym==='202506'&&String(t?.d||'').padStart(2,'0')==='27'&&Math.abs(Number(t?.area)-56.0736)<0.0001&&
-    Number(t?.amt)===19.2&&Number(t?.direct)===1&&(t?.ownership==='입주권'||t?.kind==='입주권');
+// KB 면적 목록에 타입이 없고 최근 3년 거래가 1건뿐인 것으로 확인된 특이 거래.
+// 공용 매매·분양권 병합 단계에서 제외해 각 분석/랭킹 탭에 함께 반영한다.
+function isKnownExceptionalPresaleTrade(t,lawd){
+  const name=String(t?.apt||'').replace(/\s/g,'');
+  const day=String(t?.d||'').padStart(2,'0');
+  const exceptional=[
+    // KB 전용면적 목록에 없는 단일 거래로 확인된 입주권·특이 면적 거래.
+    ['잠실래미안아이파크','신천동','202506','27',56.0736,19.2,1,'입주권'],
+    ['광명자이더샵포레나','광명동','202511','14',29.8504,4.5,0,'입주권'],
+    [['광주송정중흥S-클래스파크뷰','송정중흥S-클래스파크뷰'],'송정동','202408','16',51.767,4.4,0,''],
+    ['두산위브더제니스센트럴여의','숭의동','202407','22',97.02,3.9,0,'입주권'],
+    ['부평역해링턴플레이스','부평동','202409','10',44.226,2.9,0,''],
+  ];
+  const canonicalName=aptsumComplexIdentity.canonical(t?.apt,t?.umd,NAVER_NAMES[lawd]||{},lawd).replace(/\s/g,'');
+  return exceptional.some(([apt,umd,ym,d,area,amount,direct,ownership])=>
+    (Array.isArray(apt)?apt.includes(canonicalName)||apt.includes(name):canonicalName===apt)&&
+    t?.umd===umd&&t?.ym===ym&&day===d&&Math.abs(Number(t?.area)-area)<0.0001&&
+    Number(t?.amt)===amount&&Number(t?.direct)===direct&&(t?.ownership||t?.kind||'')===ownership
+  );
 }
 // 랭킹류(지역/거래량/등락/저평가) 공용: 매매 데이터에 분양권을 이름 정규화해서 합친다.
 // 표기(띄어쓰기 등)만 다른 같은 단지가 별개 항목으로 갈라지지 않도록 정규화 —
@@ -5674,7 +5687,7 @@ function mergeTradeAndPresaleForRanking(raw,rawP,lawd){
   // 확인 가능한 단지명 거래만 전 탭의 분석·랭킹에 사용한다.
   return aptsumComplexIdentity.mergeSources(
     (raw||[]).filter(t=>!isDongOnlyTradeName(t)),
-    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKnownExceptionalPresaleTrade(t)),
+    (rawP||[]).filter(t=>!isDongOnlyTradeName(t)&&!isKnownExceptionalPresaleTrade(t,lawd)),
     NAVER_NAMES[lawd]||{},lawd
   );
 }
