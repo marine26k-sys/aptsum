@@ -4035,22 +4035,33 @@ function complexSupplyAreaFloorGroup(sizeKey,groupFloor){
 }
 function complexSupplyAreaFloorForTrade(t,enabled=true){
   if(!enabled)return null;
-  // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
-  const types=tradeTypesForArea(t?.area);
-  if(!Array.isArray(types)||!types.length)return null;
   const rows=complexTypeHouseholdData?.[String(exclusiveAreaKey(t))]||[];
   const clusters=complexSupplyAreaFloorClusters(exclusiveAreaKey(t));
+  if(!clusters.length)return null;
   const householdsByGroup=new Map();
-  for(const type of types){
-    const row=rows.find(item=>String(item.type||'').trim()===String(type||'').trim());
-    const floor=Number.isInteger(row?.supplyAreaFloor)?Number(row.supplyAreaFloor):null;
+  for(const row of rows){
+    const floor=Number(row?.supplyAreaFloor);
     if(!Number.isInteger(floor))continue;
     const groupFloor=clusters.find(group=>group.includes(floor))?.[0]??floor;
     householdsByGroup.set(groupFloor,(householdsByGroup.get(groupFloor)||0)+Math.max(0,Number(row?.households)||0));
   }
+  const largestHouseholdGroup=()=>[...householdsByGroup].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??null;
+  // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
+  const types=tradeTypesForArea(t?.area);
+  if(Array.isArray(types)&&types.length){
+    const matchedHouseholdsByGroup=new Map();
+    for(const type of types){
+      const row=rows.find(item=>String(item.type||'').trim()===String(type||'').trim());
+      const floor=Number.isInteger(row?.supplyAreaFloor)?Number(row.supplyAreaFloor):null;
+      if(!Number.isInteger(floor))continue;
+      const groupFloor=clusters.find(group=>group.includes(floor))?.[0]??floor;
+      matchedHouseholdsByGroup.set(groupFloor,(matchedHouseholdsByGroup.get(groupFloor)||0)+Math.max(0,Number(row?.households)||0));
+    }
+    if(matchedHouseholdsByGroup.size)return [...matchedHouseholdsByGroup].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0];
+  }
   // 공급면적 정수 차이가 1~2㎡인 이웃 타입은 같은 그룹으로 둔다.
-  // 동일 전용면적이 여러 공급 그룹에 걸리는 거래는 세대수가 더 큰 그룹에 귀속한다.
-  return [...householdsByGroup].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??null;
+  // 동일 전용면적에서 타입 매칭이 없거나 여러 그룹에 걸리면 세대수가 가장 큰 그룹에 귀속한다.
+  return largestHouseholdGroup();
 }
 function complexAreaGroupKey(t,enabled=true){
   const area=exclusiveAreaKey(t),supplyFloor=complexSupplyAreaFloorForTrade(t,enabled);
