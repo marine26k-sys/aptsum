@@ -216,7 +216,8 @@ export function listingItemsForFloor(items,occupancy,floorScope='mid'){
 export function listingTypeHistoryKey(item){
   const identity=String(item?.nid||'')+'|'+item?.ex;
   const py=Number(item?.py);
-  if(Number.isFinite(py)&&py>0&&['supply-pyeong-exclusive-v1','supply-area-floor-v1'].includes(item?.groupVersion))return `${identity}|p${py}`;
+  // Production snapshots predate groupVersion but already contain the source Naver supply pyeong.
+  if(Number.isFinite(py)&&py>0&&(!item?.groupVersion||['supply-pyeong-exclusive-v1','supply-area-floor-v1'].includes(item.groupVersion)))return `${identity}|p${py}`;
   if(item?.groupVersion==='supply-pyeong-exclusive-v1')return `${identity}|unmatched`;
   return `${identity}|legacy`;
 }
