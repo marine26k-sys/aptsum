@@ -689,9 +689,14 @@ async function listingSupplyFloorResolver(rows){
       const ex=String(Math.round(Number(row['전용면적(㎡)']))),areaRows=catalog[key]?.[ex]||[];
       const groups=clustersFor(areaRows);if(!groups.length)return null;
       const py=Math.round(Number(row['면적(평)']));
-      const matched=new Set(areaRows.filter(type=>Number(type.supplyPyeong)===py).map(type=>groups.find(group=>group.includes(Number(type.supplyAreaFloor)))?.[0]).filter(Number.isInteger));
-      if(matched.size===1)return [...matched][0];
-      // KB 공급평이 구분되지 않는 타입이거나 KB에 없는 단지는 단일 그룹일 때만 안전하게 귀속한다.
+      const matchedHouseholds=new Map();
+      for(const type of areaRows){
+        if(Number(type.supplyPyeong)!==py)continue;
+        const groupFloor=groups.find(group=>group.includes(Number(type.supplyAreaFloor)))?.[0];
+        if(Number.isInteger(groupFloor))matchedHouseholds.set(groupFloor,(matchedHouseholds.get(groupFloor)||0)+Math.max(0,Number(type.households)||0));
+      }
+      if(matchedHouseholds.size)return [...matchedHouseholds].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0];
+      // KB 공급평이 일치하지 않거나 KB에 없는 단지는 단일 그룹일 때만 안전하게 귀속한다.
       return groups.length===1?groups[0][0]:null;
     };
   }catch{return ()=>null;}
