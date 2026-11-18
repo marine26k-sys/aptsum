@@ -9669,7 +9669,7 @@ async function resolveListingName(myToken){
   const data=await response.json();if(myToken!==searchToken)return null;
   if(data.floorMissing?.length){showError('저층 포함 자료가 없어 엑셀 재업로드가 필요합니다. ('+esc(data.floorMissing.join(', '))+')');return null;}
   const grouped=new Map();
-  for(const x of data.items||[]){if(isListingTrial()&&x.lawd!==LISTING_TRIAL_LAWD)continue;const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
+  for(const x of data.items||[]){if(isListingTrial()&&x.lawd!==LISTING_TRIAL_LAWD)continue;const key=`${x.lawd}|${x.nid}|${x.umd||''}`;if(!grouped.has(key))grouped.set(key,{key,lawd:x.lawd,nid:x.nid,name:x.gu,apt:x.apt,umd:x.umd||'',items:[],asOf:x.asOf});grouped.get(key).items.push(x);}
   listingNameChoices=[...grouped.values()].sort((a,b)=>a.apt.localeCompare(b.apt,'ko')||a.name.localeCompare(b.name,'ko')||a.umd.localeCompare(b.umd,'ko'));
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
