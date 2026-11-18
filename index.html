@@ -4025,8 +4025,16 @@ function complexSupplyAreaFloorForTrade(t,enabled=true){
   if(!Array.isArray(types)||!types.length)return null;
   const rows=complexTypeHouseholdData?.[String(exclusiveAreaKey(t))]||[];
   const byType=new Map(rows.map(row=>[String(row.type||'').trim(),Number.isInteger(row.supplyAreaFloor)?Number(row.supplyAreaFloor):null]));
-  const floors=new Set(types.map(type=>byType.get(String(type||'').trim())).filter(Number.isInteger));
-  return floors.size===1?[...floors][0]:null;
+  const householdsByFloor=new Map();
+  for(const type of types){
+    const row=rows.find(item=>String(item.type||'').trim()===String(type||'').trim());
+    const floor=byType.get(String(type||'').trim());
+    if(!Number.isInteger(floor))continue;
+    householdsByFloor.set(floor,(householdsByFloor.get(floor)||0)+Math.max(0,Number(row?.households)||0));
+  }
+  // 동일 전용면적이 여러 공급 타입에 걸리면 더 큰 세대수 그룹에 귀속해
+  // 미분류 혼합 행이 생기거나 타입 목록이 두 행에 반복되는 것을 막는다.
+  return [...householdsByFloor].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??null;
 }
 function complexAreaGroupKey(t,enabled=true){
   const area=exclusiveAreaKey(t),supplyFloor=complexSupplyAreaFloorForTrade(t,enabled);
