@@ -9065,18 +9065,18 @@ function syncListingTrendUpload(choices){
   el.value=listingTrendUploadId;
 
 }
-function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down',minHouseholds=LISTING_MIN_HH,includeAll=false){
+function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,direction='down',minHouseholds=LISTING_MIN_HH,includeAll=false,historyKey=listingTypeHistoryKey){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
   if(idx<1)return [];
   const previousUploadId=snapshots[idx-1].uploadId,byType=new Map();
   for(const snapshot of snapshots.slice(0,idx+1)) for(const item of snapshot.items||[]){
-    const key=listingTypeHistoryKey(item);
+    const key=historyKey(item);
     if(!byType.has(key))byType.set(key,[]);
     byType.get(key).push({date:snapshot.asOf,uploadId:snapshot.uploadId,ask:item.ask});
   }
   const rows=[];
   for(const item of current.items||[]){
-    const points=byType.get(listingTypeHistoryKey(item))||[];
+    const points=byType.get(historyKey(item))||[];
     if(points.length<2 || item.hh<minHouseholds || (ls && !lsPyMatch(item,ls)))continue;
     const prev=points[points.length-2],now=points[points.length-1];
     if(prev.uploadId!==previousUploadId || now.uploadId!==current.uploadId || now.ask!==item.ask)continue;
@@ -9089,6 +9089,24 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
     rows.push({...item,lawd,gu,previousPricePoint:baseline,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100,points});
   }
   return rows;
+}
+// 호가 변동 탭은 현재 운영판과 동일하게 단지+전용면적 단위로 되돌려 비교한다.
+// 저장된 새 자료가 공급평형별로 나뉘어 있어도 탭 안에서 다시 기존 단위로 합친다.
+function listingTrendProductionKey(item){return `${item?.nid||''}|${item?.ex}`;}
+function listingTrendProductionItems(items){
+  const groups=new Map();
+  for(const item of items||[]){
+    const key=listingTrendProductionKey(item),group=groups.get(key)||{best:item,n:0,pyCounts:new Map()};
+    const count=Number(item.n)>0?Number(item.n):1;
+    group.n+=count;
+    const py=Number(item.py);if(Number.isFinite(py)&&py>0)group.pyCounts.set(py,(group.pyCounts.get(py)||0)+count);
+    if(Number(item.ask)>0&&Number(item.ask)<Number(group.best.ask))group.best=item;
+    groups.set(key,group);
+  }
+  return [...groups.values()].map(group=>{
+    const py=[...group.pyCounts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??group.best.py;
+    return {...group.best,n:group.n,py};
+  });
 }
 function listingTypeHistoryKey(item){
   const identity=`${item?.nid||''}|${item?.ex}`;
@@ -9157,11 +9175,13 @@ async function searchListingTrend(myToken,lawd,silentScroll){
       const chosen=current.uploadId===selectedId?current:selected;
       if(!chosen){missing.push(t.name);continue;}
       if(chosen.asOf && (!asOf||chosen.asOf>asOf))asOf=chosen.asOf;
-      currentItems.push(...(chosen.items||[]));
+      const trendChosen={...chosen,items:listingTrendProductionItems(chosen.items)};
+      const trendSnapshots=snapshots.map(snapshot=>({...snapshot,items:listingTrendProductionItems(snapshot.items)}));
+      currentItems.push(...trendChosen.items);
       const idx=snapshots.findIndex(s=>s.uploadId===selectedId);
       historyCount=Math.max(historyCount,idx+1);
-      rows.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,continuous,direction));
-      dayCandidates.push(...listingTrendSnapshotRows(chosen,snapshots,null,t.lawd,t.name,false,'all',LISTING_MIN_HH,true));
+      rows.push(...listingTrendSnapshotRows(trendChosen,trendSnapshots,null,t.lawd,t.name,continuous,direction,LISTING_MIN_HH,false,listingTrendProductionKey));
+      dayCandidates.push(...listingTrendSnapshotRows(trendChosen,trendSnapshots,null,t.lawd,t.name,false,'all',LISTING_MIN_HH,true,listingTrendProductionKey));
     }
     // 방향을 바꿔도 선택 범위가 달라지지 않도록 전체 매물에서 경계를 구한다.
     lsDataBounds(currentItems,['py','ask']);Object.assign(ls,lsGet());
