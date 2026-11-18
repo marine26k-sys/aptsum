@@ -12,6 +12,7 @@ const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\sÂ
 const regionCodes = new Map(REGIONS.flatMap(([, regions]) => regions));
 const freshTypesByNaverId = new Map();
 const supplyPyeongByType = new Map();
+const supplyAreaFloorByType = new Map();
 const freshIdsByIdentity = new Map();
 for (const complex of freshKbTypes?.complexes || []) {
   const ids = complex.targetNaverIds || (complex.matchedTarget?.naverId ? [complex.matchedTarget.naverId] : []);
@@ -28,6 +29,9 @@ for (const complex of freshKbTypes?.complexes || []) {
       const pyeong = Math.floor(supply * 0.3025);
       if (!supplyPyeongByType.has(key)) supplyPyeongByType.set(key, pyeong);
       else if (supplyPyeongByType.get(key) !== pyeong) supplyPyeongByType.set(key, null);
+      const areaFloor = Math.floor(supply);
+      if (!supplyAreaFloorByType.has(key)) supplyAreaFloorByType.set(key, areaFloor);
+      else if (supplyAreaFloorByType.get(key) !== areaFloor) supplyAreaFloorByType.set(key, null);
     }
   }
   const target = complex.matchedTarget;
@@ -146,7 +150,7 @@ for (const complex of index) {
     }
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(`${resolvedNaverId}|${type}`) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(`${resolvedNaverId}|${type}`) ?? null, supplyAreaFloor: supplyAreaFloorByType.get(`${resolvedNaverId}|${type}`) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);

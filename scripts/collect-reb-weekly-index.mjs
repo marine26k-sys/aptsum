@@ -1,3 +1,4 @@
+import { findMonthlyReleaseDate } from './reb-release-date.mjs';
 import { writeFile } from 'node:fs/promises';
 
 const apiKey = process.env.REB_RONE_API_KEY;
@@ -87,8 +88,20 @@ for (const table of TABLES) {
     region[table.key] = rows;
     regionsByKey.set(key, region);
   }
-  const labels = collected.flatMap(item => item.rows.map(row => row.date)).filter(Boolean).sort();
-  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf: labels.at(-1) || '' };
+  const latestRow = collected.flatMap(item => item.rows).sort((a, b) => a.period.localeCompare(b.period)).at(-1);
+  const latestPeriod = String(latestRow?.period || '');
+  const asOf = table.key === 'monthly' && /^\d{6}$/.test(latestPeriod)
+    ? `${latestPeriod.slice(0, 4)}년 ${Number(latestPeriod.slice(4))}월`
+    : latestRow?.date || '';
+  meta[table.key] = { tableId: table.id, cycle: table.cycle, item: table.item, asOf };
+  if (table.key === 'monthly' && latestRow) {
+    try {
+      meta.monthly.publishedAt = await findMonthlyReleaseDate(`${latestPeriod.slice(0, 4)}-${latestPeriod.slice(4)}`);
+    } catch (error) {
+      // Publication metadata must not block publishing refreshed weekly/monthly index values.
+      console.warn(`Monthly release date unavailable for ${latestPeriod}: ${error.message}`);
+    }
+  }
 }
 
 const regions = [...regionsByKey.values()].sort((a, b) => PROVINCES.indexOf(a.province) - PROVINCES.indexOf(b.province) || a.name.localeCompare(b.name, 'ko'));

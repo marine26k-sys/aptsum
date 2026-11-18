@@ -92,7 +92,7 @@ function weekInfo(value){const d=new Date(String(value||'').replaceAll('.','-')+
 function weekLabel(value){const w=weekInfo(value);return w?`${w.label} (${w.range})`:value||'';}
 function previousFor(item,snapshots,index){const key=itemKey(item);const found=snapshotItems(snapshots[index-1]).find(x=>itemKey(x)===key&&ask(x)>0);return found||null}
 async function fetchJson(url,options={}){const r=await fetch(url,{credentials:'same-origin',cache:'default',...options});if(!r.ok)throw Error(String(r.status));return r.json()}
-async function loadAskMap(){return githubJson('data/listing-ask-map.json')}
+async function loadAskMap(){return githubJson('data/listing-ask-map.json','main',{usePreviewBranch:false})}
 function render(){
  const title=$('#title'),currentWeek=weekInfo(state.asOf);title.textContent=currentWeek?`${currentWeek.label.replace(/^\d+년 /,'')} 호가 변동률`:'호가 주간 평균';
  $('#comparisonPeriod').textContent='네이버부동산 / 중층 이상 / 최저 매물 비교';
@@ -156,7 +156,7 @@ function renderWeeklyRanking(){
 let priceBandDataPromise=null;
 function loadPriceBandData(){
  if(!priceBandDataPromise){
-  priceBandDataPromise=(async()=>{const data=await githubJson('data/listing-ask-price-bands.json');if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===5))return new Map(data.regions.map(x=>[String(x.lawd),x]));throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
+  priceBandDataPromise=(async()=>{const data=await githubJson('data/listing-ask-price-bands.json','main',{usePreviewBranch:false});if(Array.isArray(data.regions)&&data.regions.length===regionLookup.size&&data.regions.every(x=>x.priceBandVersion===5))return new Map(data.regions.map(x=>[String(x.lawd),x]));throw Error('금액대 집계 자료 없음')})().catch(error=>{priceBandDataPromise=null;throw error});
  }
  return priceBandDataPromise;
 }

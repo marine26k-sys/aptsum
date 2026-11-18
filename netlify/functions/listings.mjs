@@ -11,7 +11,7 @@ import { LISTING_USAGE_WARN_PER_HOUR, LISTING_UNIQUE_REGION_WARN_PER_HOUR, listL
 // 실거래 최고가 + 입주가능·중층 이상 최저 호가)한 결과만 이 함수로 보내고, 여기서 지역(lawd)별로 Netlify Blobs에 저장한다.
 // 원본 엑셀·요약 데이터 모두 GitHub(=정적 배포 루트)에 올리지 않기 위한 구조다.
 //
-//   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. 단 TRIAL_LAWDS(강남구)는 누구나
+//   GET  ?lawd=<코드>   구독자(또는 관리자) 세션 필요 — 그 지역 요약 {asOf, items}. nid+umd를 주면 해당 단지만 반환. 단 TRIAL_LAWDS(강남구)는 누구나
 //   GET  ?lawd=<코드>&history=1   같은 지역 인증 규칙으로 최근 2주의 최저 호가 이력 조회
 //   GET  ?meta=1        관리자 세션 필요 — 마지막 업로드 정보
 //   GET  ?usage=1       관리자 세션 필요 — 최근 24시간 구독자별 API 조회량·이상 사용 현황
@@ -84,7 +84,7 @@ export async function buildAskMap(store, lawd, suppliedIndex) {
     if (data.asOf > week.last) week.last = data.asOf;
     for (const item of listingItemsForFloor(data.items, 'available', 'mid')) {
       if (!(item.ask > 0)) continue;
-      const itemKey = String(item.nid) + '|' + item.ex;
+      const itemKey = listingTypeHistoryKey(item);
       const values = week.items.get(itemKey) || [];
       values.push(item.ask);
       week.items.set(itemKey, values);
@@ -198,7 +198,10 @@ export function cleanItem(x) {
     occupancy: ["tenant", "presale"].includes(x.occupancy) ? x.occupancy : "available",
     ...(num(x.rentMean)>0?{rentMean:num(x.rentMean),rentCount:num(x.rentCount)>0?Math.floor(num(x.rentCount)):null}:{}),
     ...(validLatest?{latestSale:{price:num(latest.price),date:latestDate,floor:latest.floor!==null&&latest.floor!==undefined&&String(latest.floor).trim()!==""&&Number.isInteger(Number(latest.floor))?Number(latest.floor):null}}:{}),
-    ex, py: num(x.py), peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
+    ex, py: num(x.py),
+    ...(x.supplyAreaFloor!==null&&x.supplyAreaFloor!==undefined&&Number.isInteger(num(x.supplyAreaFloor))?{supplyAreaFloor:num(x.supplyAreaFloor)}:{}),
+    ...(x.groupVersion==='supply-pyeong-exclusive-v1'?{groupVersion:'supply-pyeong-exclusive-v1'}:{}),
+    peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
     url: /^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(url) ? url : "",
   };
@@ -210,11 +213,19 @@ export function listingItemsForFloor(items,occupancy,floorScope='mid'){
     return floorScope==='all'?{...base,...allFloors}:base;
   });
 }
+export function listingTypeHistoryKey(item){
+  const identity=String(item?.nid||'')+'|'+item?.ex;
+  const py=Number(item?.py);
+  // Production snapshots predate groupVersion but already contain the source Naver supply pyeong.
+  if(Number.isFinite(py)&&py>0&&(!item?.groupVersion||['supply-pyeong-exclusive-v1','supply-area-floor-v1'].includes(item.groupVersion)))return `${identity}|p${py}`;
+  if(item?.groupVersion==='supply-pyeong-exclusive-v1')return `${identity}|unmatched`;
+  return `${identity}|legacy`;
+}
 export function snapshotForHistory(data, occupancy, details = false) {
   if (!data) return null;
   const items = listingItemsForFloor(data.items,occupancy);
   return { asOf:data.asOf, uploadId:data.uploadId,
-    items:details ? items : items.map(i => ({nid:i.nid, ex:i.ex, ask:i.ask})) };
+    items:details ? items : items.map(i => ({nid:i.nid, ex:i.ex, ask:i.ask, py:i.py,supplyAreaFloor:i.supplyAreaFloor,groupVersion:i.groupVersion})) };
 }
 
 export default async (request) => {
@@ -263,8 +274,8 @@ export default async (request) => {
           const data=await store.get(`lawd:${t.lawd}`,{type:"json",consistency:"strong"});
           if(floorScope==='all'&&(data?.items||[]).some(x=>!x.allFloors&&(x.occupancy||'available')===occupancy&&listingSearchMatch(x,t.gu,query)))floorMissing.push(t.gu);
           for(const x of listingItemsForFloor(data?.items,occupancy,floorScope))if(listingSearchMatch(x,t.gu,query)){
-            // Keep one candidate per exclusive-area type; individual complex views need every type.
-            const key=`${t.lawd}|${x.nid}|${x.umd||''}|${x.ex}`;
+            // Broad name search returns only one minimal candidate per complex; details are fetched after selection.
+            const key=`${t.lawd}|${x.nid}|${x.umd||''}`;
             if(!matches.has(key))matches.set(key,{nid:x.nid,apt:x.apt,umd:x.umd||'',...t,asOf:data?.asOf||null});
           }
         }catch(e){failed.push(t.gu);}
@@ -305,7 +316,14 @@ export default async (request) => {
       return json({ snapshots: snapshots.filter(Boolean) });
     }
     const data = await store.get(`lawd:${lawd}`, { type: "json", consistency: "strong" });
-    return json(data ? {...data,items:selectedItems(data.items),floorDataAvailable:floorScope!=="all"||data.items.every(x=>!!x.allFloors)} : { asOf: null, items: [],floorDataAvailable:true }); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
+    if(!data)return json({asOf:null,items:[],floorDataAvailable:true}); // 업로드된 엑셀에 없는 지역 — 오류가 아니라 "매물 없음"
+    let items=selectedItems(data.items);
+    if(q.has("nid")){
+      const nid=q.get("nid"),umd=q.get("umd");
+      if(!nid||umd===null)return json({error:"invalid_complex"},400);
+      items=items.filter(x=>String(x.nid)===nid&&String(x.umd||"")===umd);
+    }
+    return json({...data,items,floorDataAvailable:floorScope!=="all"||data.items.every(x=>!!x.allFloors)});
   }
 
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);

@@ -631,6 +631,17 @@ const MID_UP = new Set(["중층","고층"]); // "중층 이상" — 저층·1층
 // 최고가(실거래최고가)는 매물 상태와 무관한 평형 단위 값이라 모든 행에서 그대로 모은다.
 const MOVE_IN = "입주가능";
 
+// 엑셀에서 세대수가 "1,199" 같은 문자로 들어와도 숫자로 읽는다.
+function listingNumber(value){
+  if(typeof value==="number")return Number.isFinite(value)?value:null;
+  const text=String(value??"").trim().replace(/,/g,"");
+  if(!text||text==="-")return null;
+  const match=text.match(/-?\d+(?:\.\d+)?/);
+  if(!match)return null;
+  const number=Number(match[0]);
+  return Number.isFinite(number)?number:null;
+}
+
 async function loadListingMeta(){
   const box = $("#listingMeta");
   if(!box) return;
@@ -666,29 +677,32 @@ function loadSheetJS(){
   });
 }
 
-// 단지ID+전용면적(㎡) 단위로 묶는다 — 엑셀의 실거래최고가는 전용면적 단위로 붙어 있다(같은 단지·같은 전용면적이면 항상 같은 값).
+// 공급(평)은 네이버부동산 원본값을 그대로 쓴다. 전용면적이 같아도 공급평이 다르면 별도 타입이다.
 function summarizeListings(rows){
-  const groups = new Map(); // "시|구" -> Map(단지ID|전용 -> 집계)
+  const groups = new Map(); // "시|구" -> Map(단지ID|전용|공급평 -> 집계)
   let asOf = "";
   for(const r of rows){
     const region = `${String(r["시"]).trim()}|${String(r["구"]).trim()}`;
     const d = String(r["확인일"] ?? "").trim();
     if(d > asOf) asOf = d;
-    const ex = Math.round(+r["전용면적(㎡)"]);
+    const ex = Math.round(listingNumber(r["전용면적(㎡)"])||0);
     if(!(ex > 0)) continue;
     const g = groups.get(region) || new Map();
     groups.set(region, g);
-    const k = `${r["단지ID"]}|${ex}`;
-    const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:+r["세대수"]||null,
-      built:String(r["준공년월"]??""), ex, pyCnt:{}, peak:0, peakYm:"", offers:{} };
+    const supplyPyeong=listingNumber(r["면적(평)"]),supplyKey=Number.isFinite(supplyPyeong)&&supplyPyeong>0?String(supplyPyeong):'unmatched';
+    const k = `${r["단지ID"]}|${ex}|${supplyKey}`;
+    const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:null,
+      built:String(r["준공년월"]??""), ex, groupVersion:'supply-pyeong-exclusive-v1', pyCnt:{}, peak:0, peakYm:"", offers:{} };
     g.set(k, x);
+    const hh=listingNumber(r["세대수"]);
+    if(!(x.hh>0)&&hh>0)x.hh=hh;
     const subwayRaw=r["역거리 (분)"]??r["역거리(분)"]??r["지하철 (분)"]??r["지하철(분)"],subwayMinutes=subwayRaw===null||subwayRaw===undefined||String(subwayRaw).trim()===""||String(subwayRaw).trim()==="-"?NaN:Number(subwayRaw);
     if(Number.isFinite(subwayMinutes)&&subwayMinutes>=0)x.subwayMinutes=subwayMinutes;
     const rentMean=Number(r["전세평균(억)"]),rentCount=Number(r["전세거래건수"]);
     if(Number.isFinite(rentMean)&&rentMean>0){x.rentMean=rentMean;x.rentCount=Number.isFinite(rentCount)&&rentCount>0?Math.floor(rentCount):null;}
-    const py = +r["면적(평)"];
+    const py = supplyPyeong;
     if(py) x.pyCnt[py] = (x.pyCnt[py]||0) + 1;
-    const peak = +r["실거래최고가(억)"];
+    const peak = listingNumber(r["실거래최고가(억)"])||0;
     if(peak > x.peak){ x.peak = peak; x.peakYm = String(r["실거래최고_시점"] ?? ""); }
     const latestPrice=Number(r["최근 거래금액(억)"]),latestDate=String(r["최근 거래일"]??"").replace(/[-./\s]/g,"");
     const latestFloor=r["최근 거래층"];
@@ -699,7 +713,7 @@ function summarizeListings(rows){
     const floorType=String(r["층구분"]).trim();
     if(!["저층","중층","고층"].includes(floorType) || ![MOVE_IN,"세안고","분양권"].includes(occupancy)) continue;
     const offer = x.offers[occupancy] ||= {ask:Infinity,n:0,allFloors:{ask:Infinity,n:0}};
-    const ask = +r["매매가(억)"];
+    const ask = listingNumber(r["매매가(억)"])||0;
     if(!(ask > 0)) continue;
     const detail={ask,fl:String(r["층"]??""),dong:String(r["동"]??""),url:String(r["매물링크"]??""),d,urgent:r["급매"]==="급매"?1:0};
     offer.allFloors.n++;
@@ -722,7 +736,10 @@ function summarizeListings(rows){
     if(items.length){ regions[region] = items; types += items.length; }
   }
   const asOfLabel = asOf.length===8 ? `${asOf.slice(0,4)}.${asOf.slice(4,6)}.${asOf.slice(6)}` : asOf;
-  return { regions, types, asOf: asOfLabel };
+  const summary=Object.values(regions).flat();
+  return { regions, types, asOf: asOfLabel,
+    householdTypes:summary.filter(x=>x.hh>0).length,
+    availableMidOffers:summary.filter(x=>x.occupancy==="available"&&x.midAvailable&&x.hh>=100).length };
 }
 
 async function postListings(body){
@@ -752,7 +769,8 @@ async function uploadListingFile(file){
     const missing = LISTING_COLS.filter(c => !(rows[0] && c in rows[0]));
     if(!rows.length || missing.length) throw new Error(`필요한 컬럼이 없습니다: ${missing.join(", ") || "(데이터 없음)"}`);
 
-    const { regions, types, asOf: dataAsOf } = summarizeListings(rows);
+    status.textContent = '네이버 공급평형별로 자료 정리 중…';
+    const { regions, types, asOf: dataAsOf, householdTypes, availableMidOffers } = summarizeListings(rows);
     const asOf=listingUploadAsOf(file.name,dataAsOf);
     const keys = Object.keys(regions);
     if(!keys.length) throw new Error("비교 가능한 평형이 없습니다(입주가능·세안고는 실거래최고가, 분양권은 중층 이상 매물 확인 필요).");
@@ -771,6 +789,7 @@ async function uploadListingFile(file){
     status.textContent = `${lawds.length}개 지역 저장 완료\n업로드를 마무리하는 중…`;
     const fin = await postListings({ action:"finish", uploadId, asOf, lawds, rows: rows.length, types, fileName: file.name });
     status.innerHTML = `<b style="color:var(--teal-dark)">업로드 완료</b> — ${esc(asOf)} 기준 · ${lawds.length}개 지역 · ${types.toLocaleString()}개 평형`
+      + `<br>세대수 확인 ${householdTypes.toLocaleString()}/${types.toLocaleString()}개 · 100세대 이상 입주가능·중층 이상 ${availableMidOffers.toLocaleString()}개`
       + (unknown.length ? `<br><span style="color:#d95d5d">지역코드를 못 찾아 제외: ${esc(unknown.join(", "))}</span>` : "")
       + (fin.removed && fin.removed.length ? `<br>이번 파일에 없어 삭제된 지역 ${fin.removed.length}곳` : "");
     loadListingMeta();

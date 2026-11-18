@@ -1,3 +1,4 @@
+import { findMonthlyReleaseDate } from './reb-release-date.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
@@ -6,7 +7,7 @@ if (!apiKey) throw new Error('REB_RONE_API_KEY is required');
 
 const API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do';
 const TABLES = {
-  average: 'A_2024_00061',
+  average: 'A_2024_00060',
   median: 'A_2024_00062',
 };
 const REGIONS = ['서울', '경기', '인천', '부산'];
@@ -93,6 +94,13 @@ for (const values of Object.values(regions)) values.sort((a, b) => a.year - b.ye
 const monthlyRows = [...monthly.values()].filter(row => Number.isFinite(row.average) && Number.isFinite(row.median));
 const asOf = monthlyRows.map(row => row.month).sort().at(-1);
 if (!asOf || !Object.keys(regions).length) throw new Error('R-ONE returned no usable apartment price data');
+let publishedAt = '';
+try {
+  publishedAt = await findMonthlyReleaseDate(`${asOf.slice(0, 4)}-${asOf.slice(4)}`);
+} catch (error) {
+  // Keep the new price series flowing if the release-notice page is temporarily unavailable.
+  console.warn(`Monthly release date unavailable for ${asOf}: ${error.message}`);
+}
 
 const tileContext = { window: {} };
 vm.runInNewContext(await readFile('shared/metro-tile-map.js', 'utf8'), tileContext);
@@ -109,11 +117,12 @@ for (const row of monthlyRows) {
 if (!districtMonthly.length) throw new Error('R-ONE returned no usable district price data');
 const output = {
   source: '한국부동산원 R-ONE Open API',
-  sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00062.do?isMobileYn=N',
+  sourceUrl: 'https://www.reb.or.kr/r-one/portal/stat/easyStatPage/A_2024_00060.do?isMobileYn=N',
   tables: TABLES,
   unit: '천원',
   aggregation: '월별 아파트 매매가격의 연도별 산술평균 (단위: 천원)',
   asOf: asOf.slice(0, 4) + '-' + asOf.slice(4),
+  publishedAt,
   updatedAt: new Date().toISOString(),
   regions,
   districtMonthly,

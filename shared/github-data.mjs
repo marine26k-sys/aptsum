@@ -1,18 +1,18 @@
 const repository = 'marine26k-sys/aptsum';
 
-function ref(branch = 'main') {
-  const match = location.hostname.match(/^deploy-preview-(\d+)--/);
+function ref(branch = 'main', usePreviewBranch = true) {
+  const match = usePreviewBranch && location.hostname.match(/^deploy-preview-(\d+)--/);
   return match ? `refs/pull/${match[1]}/head` : `refs/heads/${branch}`;
 }
 
-export function githubRawUrl(path, branch = 'main') {
+export function githubRawUrl(path, branch = 'main', usePreviewBranch = true) {
   const safePath = String(path).split('/').map(encodeURIComponent).join('/');
-  return `https://raw.githubusercontent.com/${repository}/${ref(branch)}/${safePath}?_=${Date.now()}`;
+  return `https://raw.githubusercontent.com/${repository}/${ref(branch, usePreviewBranch)}/${safePath}?_=${Date.now()}`;
 }
 
-export async function githubJson(path, branch = 'main') {
+export async function githubJson(path, branch = 'main', {usePreviewBranch = true} = {}) {
   try {
-    const response = await fetch(githubRawUrl(path, branch), { cache: 'no-store' });
+    const response = await fetch(githubRawUrl(path, branch, usePreviewBranch), { cache: 'no-store' });
     if (!response.ok) throw new Error(`GitHub data request failed (${response.status}): ${path}`);
     return await response.json();
   } catch (githubError) {
