@@ -32,7 +32,8 @@ function verifiedPresaleAreaCorrection(item, lawd) {
     row.lawds.includes(String(lawd || '')) &&
     norm(row.apt) === norm(item?.apt) &&
     norm(row.umd) === norm(item?.umd) &&
-    Math.abs(Number(item?.area) - row.reported) <= 0.005
+    (Math.abs(Number(item?.area) - row.reported) <= 0.005 ||
+      Math.abs(Number(item?.area) - row.exclusive) <= 0.005)
   );
   return match ? { area: match.exclusive, py: supplyAreaToPy(match.supply) } : null;
 }
