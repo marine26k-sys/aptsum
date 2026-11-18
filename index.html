@@ -9066,13 +9066,13 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
   if(idx<1)return [];
   const previousUploadId=snapshots[idx-1].uploadId,byType=new Map();
   for(const snapshot of snapshots.slice(0,idx+1)) for(const item of snapshot.items||[]){
-    const key=`${item.nid}|${item.ex}`;
+    const key=listingTypeHistoryKey(item);
     if(!byType.has(key))byType.set(key,[]);
     byType.get(key).push({date:snapshot.asOf,uploadId:snapshot.uploadId,ask:item.ask});
   }
   const rows=[];
   for(const item of current.items||[]){
-    const points=byType.get(`${item.nid}|${item.ex}`)||[];
+    const points=byType.get(listingTypeHistoryKey(item))||[];
     if(points.length<2 || item.hh<minHouseholds || (ls && !lsPyMatch(item,ls)))continue;
     const prev=points[points.length-2],now=points[points.length-1];
     if(prev.uploadId!==previousUploadId || now.uploadId!==current.uploadId || now.ask!==item.ask)continue;
@@ -9085,6 +9085,12 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
     rows.push({...item,lawd,gu,previousPricePoint:baseline,prevAsk:baseline.ask,drop:+change.toFixed(2),dropPct:change/baseline.ask*100,points});
   }
   return rows;
+}
+function listingTypeHistoryKey(item){
+  const identity=`${item?.nid||''}|${item?.ex}`;
+  if(item?.groupVersion!=='supply-area-floor-v1')return `${identity}|legacy`;
+  const group=item.supplyAreaFloor!==null&&item.supplyAreaFloor!==undefined&&Number.isInteger(Number(item.supplyAreaFloor))?`s${Number(item.supplyAreaFloor)}`:'unmatched';
+  return `${identity}|${group}`;
 }
 function listingPreviousPricePoint(points,currentAsk){
   if(points.length<2||points.at(-1).ask!==currentAsk)return null;
@@ -9590,8 +9596,8 @@ function deleteListingBudgetFavorite(index){
 function listingBudgetNewKeys(current,snapshots){
   const idx=snapshots.findIndex(s=>s.uploadId===current.uploadId);
   if(idx<1)return null;
-  const previous=new Set((snapshots[idx-1].items||[]).map(x=>`${x.nid}|${x.ex}`));
-  return new Set((current.items||[]).filter(x=>!previous.has(`${x.nid}|${x.ex}`)).map(x=>`${x.nid}|${x.ex}`));
+  const previous=new Set((snapshots[idx-1].items||[]).map(listingTypeHistoryKey));
+  return new Set((current.items||[]).filter(x=>!previous.has(listingTypeHistoryKey(x))).map(listingTypeHistoryKey));
 }
 function getListingRecentComplexes(){
   try{const rows=JSON.parse(localStorage.getItem('aptsum:listing-recent-complexes')||'[]');return Array.isArray(rows)?rows.filter(x=>x&&typeof x.key==='string'&&x.key.length<=150&&/^\d{5}$/.test(x.lawd)&&typeof x.apt==='string'&&x.apt.length<=100&&typeof x.region==='string'&&x.region.length<=100).slice(0,5):[];}catch{return [];}
@@ -9704,12 +9710,12 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
           const foundIdx=snapshots.findIndex(s=>s.uploadId===d.uploadId);
           const idx=foundIdx>=0?foundIdx:snapshots.length-1;
           const previous=idx>0?snapshots[idx-1]:null;
-          previousByKey=new Map((previous?.items||[]).map(x=>[`${x.nid}|${x.ex}`,x]));
+          previousByKey=new Map((previous?.items||[]).map(x=>[listingTypeHistoryKey(x),x]));
         }
         for(const x of d.items||[]){
-          const previous=previousByKey?.get(`${x.nid}|${x.ex}`);
+          const previous=previousByKey?.get(listingTypeHistoryKey(x));
           const rate=previous?.ask>0&&x.ask>0?(x.ask-previous.ask)/previous.ask*100:null;
-          all.push({ ...x, lawd:t.lawd, gu:t.name, askRate:rate, newlyAppeared:!!newKeys?.has(`${x.nid}|${x.ex}`) });
+          all.push({ ...x, lawd:t.lawd, gu:t.name, askRate:rate, newlyAppeared:!!newKeys?.has(listingTypeHistoryKey(x)) });
         }
       }catch(e){
         if(e.auth) throw e;
@@ -10033,7 +10039,7 @@ function previousListingPricePoint(item,snapshots,now=Date.now()){
     const digits=String(snapshot.asOf||'').replace(/[^0-9]/g,'');
     const day=digits.length===8?Date.parse(`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}T00:00:00Z`):NaN;
     if(!(day>=start&&day<=end))continue;
-    const x=(snapshot.items||[]).find(x=>String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&Number.isFinite(x.ask)&&x.ask>0);
+    const x=(snapshot.items||[]).find(x=>listingTypeHistoryKey(x)===listingTypeHistoryKey(item)&&Number.isFinite(x.ask)&&x.ask>0);
     if(x)points.push({date:snapshot.asOf,ask:x.ask,day});
   }
   points.sort((a,b)=>a.day-b.day);
@@ -10196,7 +10202,7 @@ function listingWithoutHistoryHTML(x,i,multiRegion,asOf,failed=false){
     <span class="listing-trend-change"><span class="price now">${asOf?`<span class="date">${esc(listingTrendDate(asOf))}</span> `:''}${x.ask.toFixed(1)}억</span><span style="margin-left:auto;font-size:12px;color:var(--sub)">${failed?'호가 이력 조회 실패':'직전 이력 없음'}</span></span></div>`;
 }
 function individualListingTrend(item, trends){
-  return (trends||[]).find(x=>String(x.nid)===String(item.nid)&&Number(x.ex)===Number(item.ex)&&x.lawd===item.lawd&&x.ask===item.ask)||null;
+  return (trends||[]).find(x=>listingTypeHistoryKey(x)===listingTypeHistoryKey(item)&&x.lawd===item.lawd&&x.ask===item.ask)||null;
 }
 function renderListingBudget(d,limit=100){
   const presale=listingOccupancy()==='presale';
