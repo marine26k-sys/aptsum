@@ -235,6 +235,7 @@ try {
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
   .py-summary-table td.td-max .rng{white-space:nowrap;font-size:9px;letter-spacing:0}
+  .py-summary-table td.td-max .no-trade-label{white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;line-height:1.2}
   .py-summary-table .td-type{font-size:10.5px;line-height:1.35;white-space:nowrap;color:var(--navy);font-weight:400}
   .py-summary-table .td-type b{font-size:inherit;color:inherit;font-weight:inherit}
   .peer-table{table-layout:fixed}
@@ -6930,7 +6931,7 @@ function pyTableHTML(d){
       <td class="td-type">${typeHouseholdCell(p)}</td>
       <td class="tr-r td-average">${recentAverageCell(p.recentMonthAvg)}</td>
       <td class="tr-r td-recent">${p.recent?`<b>${p.recent.amt.toFixed(1)}</b><div class="rng">${esc(p.recent.ym)}.${String(p.recent.day||'').padStart(2,'0')}</div>`:'<span class="rng">-</span>'}</td>
-      <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
+      <td class="tr-r td-max">${p.rentOnly||p.max==null?`<span class="rng no-trade-label">${esc(p.noTradeLabel||(p.rentOnly?'매매 거래 없음':'조회 기간 거래 없음'))}</span>`:`<b>${p.max.toFixed(1)}</b><div class="rng">${esc(p.maxDate)}</div>`}</td>
     </tr>`).join('')}
   </table>`;
 }
