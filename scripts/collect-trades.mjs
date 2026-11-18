@@ -96,7 +96,7 @@ async function correctPresaleAreasForLawd(items, lawd) {
       .catch(() => []);
     presaleAreaMaps.set(lawd, promise);
   }
-  return correctPresaleSupplyAreas(items, await presaleAreaMaps.get(lawd));
+  return correctPresaleSupplyAreas(items, await presaleAreaMaps.get(lawd), lawd);
 }
 
 async function exists(p) {
