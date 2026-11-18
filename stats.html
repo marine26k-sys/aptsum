@@ -666,46 +666,9 @@ function loadSheetJS(){
   });
 }
 
-function normalizeListingTypeName(value){return String(value||'').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR');}
-async function listingSupplyFloorResolver(rows){
-  try{
-    const {REGIONS}=await import('/shared/regions.mjs');
-    const lawdByRegion=new Map(REGIONS.flatMap(([si,list])=>list.map(([gu,lawd])=>[`${si}|${gu}`,String(lawd)])));
-    const wanted=[...new Set(rows.map(row=>lawdByRegion.get(`${String(row['시']).trim()}|${String(row['구']).trim()}`)).filter(Boolean))];
-    const catalogs=new Map();
-    let cursor=0;
-    await Promise.all(Array.from({length:Math.min(6,wanted.length)},async()=>{
-      while(cursor<wanted.length){const lawd=wanted[cursor++];try{const response=await fetch(`/data/complex-type-households/${encodeURIComponent(lawd)}.json`,{cache:'default'});if(response.ok)catalogs.set(lawd,(await response.json()).items||{});}catch{}}
-    }));
-    const clustersFor=areaRows=>{
-      const floors=[...new Set((areaRows||[]).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b),groups=[];
-      for(const floor of floors){const last=groups.at(-1);if(last&&floor-last.at(-1)<3)last.push(floor);else groups.push([floor]);}
-      return groups;
-    };
-    return row=>{
-      const lawd=lawdByRegion.get(`${String(row['시']).trim()}|${String(row['구']).trim()}`),catalog=catalogs.get(lawd);
-      if(!catalog)return null;
-      const key=`${normalizeListingTypeName(row['단지명'])}|${normalizeListingTypeName(row['법정동'])}`;
-      const ex=String(Math.round(Number(row['전용면적(㎡)']))),areaRows=catalog[key]?.[ex]||[];
-      const groups=clustersFor(areaRows);if(!groups.length)return null;
-      const py=Math.round(Number(row['면적(평)']));
-      const matchedHouseholds=new Map();
-      for(const type of areaRows){
-        if(Number(type.supplyPyeong)!==py)continue;
-        const groupFloor=groups.find(group=>group.includes(Number(type.supplyAreaFloor)))?.[0];
-        if(Number.isInteger(groupFloor))matchedHouseholds.set(groupFloor,(matchedHouseholds.get(groupFloor)||0)+Math.max(0,Number(type.households)||0));
-      }
-      if(matchedHouseholds.size)return [...matchedHouseholds].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0];
-      // KB 공급평이 일치하지 않거나 KB에 없는 단지는 단일 그룹일 때만 안전하게 귀속한다.
-      return groups.length===1?groups[0][0]:null;
-    };
-  }catch{return ()=>null;}
-}
-
-// 단지ID+전용면적+KB 공급면적 그룹 단위로 묶는다. 동일 전용면적의 공급면적 정수부 차이가 3㎡ 미만이면 같은 그룹이다.
-async function summarizeListings(rows){
-  const supplyFloorForRow=await listingSupplyFloorResolver(rows);
-  const groups = new Map(); // "시|구" -> Map(단지ID|전용|공급그룹 -> 집계)
+// 공급(평)은 네이버부동산 원본값을 그대로 쓴다. 전용면적이 같아도 공급평이 다르면 별도 타입이다.
+function summarizeListings(rows){
+  const groups = new Map(); // "시|구" -> Map(단지ID|전용|공급평 -> 집계)
   let asOf = "";
   for(const r of rows){
     const region = `${String(r["시"]).trim()}|${String(r["구"]).trim()}`;
@@ -715,10 +678,10 @@ async function summarizeListings(rows){
     if(!(ex > 0)) continue;
     const g = groups.get(region) || new Map();
     groups.set(region, g);
-    const mappedFloor=supplyFloorForRow(r),supplyKey=Number.isInteger(mappedFloor)?`s${mappedFloor}`:'unmatched';
+    const supplyPyeong=Number(r["면적(평)"]),supplyKey=Number.isFinite(supplyPyeong)&&supplyPyeong>0?String(supplyPyeong):'unmatched';
     const k = `${r["단지ID"]}|${ex}|${supplyKey}`;
     const x = g.get(k) || { nid:String(r["단지ID"]), apt:String(r["단지명"]), umd:String(r["법정동"]), hh:+r["세대수"]||null,
-      built:String(r["준공년월"]??""), ex, supplyAreaFloor:Number.isInteger(mappedFloor)?mappedFloor:null, groupVersion:'supply-area-floor-v1', pyCnt:{}, peak:0, peakYm:"", offers:{} };
+      built:String(r["준공년월"]??""), ex, groupVersion:'supply-pyeong-exclusive-v1', pyCnt:{}, peak:0, peakYm:"", offers:{} };
     g.set(k, x);
     const subwayRaw=r["역거리 (분)"]??r["역거리(분)"]??r["지하철 (분)"]??r["지하철(분)"],subwayMinutes=subwayRaw===null||subwayRaw===undefined||String(subwayRaw).trim()===""||String(subwayRaw).trim()==="-"?NaN:Number(subwayRaw);
     if(Number.isFinite(subwayMinutes)&&subwayMinutes>=0)x.subwayMinutes=subwayMinutes;
@@ -790,8 +753,8 @@ async function uploadListingFile(file){
     const missing = LISTING_COLS.filter(c => !(rows[0] && c in rows[0]));
     if(!rows.length || missing.length) throw new Error(`필요한 컬럼이 없습니다: ${missing.join(", ") || "(데이터 없음)"}`);
 
-    status.textContent = 'KB 공급면적 타입 대조 중…';
-    const { regions, types, asOf: dataAsOf } = await summarizeListings(rows);
+    status.textContent = '네이버 공급평형별로 자료 정리 중…';
+    const { regions, types, asOf: dataAsOf } = summarizeListings(rows);
     const asOf=listingUploadAsOf(file.name,dataAsOf);
     const keys = Object.keys(regions);
     if(!keys.length) throw new Error("비교 가능한 평형이 없습니다(입주가능·세안고는 실거래최고가, 분양권은 중층 이상 매물 확인 필요).");

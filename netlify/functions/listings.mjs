@@ -200,7 +200,7 @@ export function cleanItem(x) {
     ...(validLatest?{latestSale:{price:num(latest.price),date:latestDate,floor:latest.floor!==null&&latest.floor!==undefined&&String(latest.floor).trim()!==""&&Number.isInteger(Number(latest.floor))?Number(latest.floor):null}}:{}),
     ex, py: num(x.py),
     ...(x.supplyAreaFloor!==null&&x.supplyAreaFloor!==undefined&&Number.isInteger(num(x.supplyAreaFloor))?{supplyAreaFloor:num(x.supplyAreaFloor)}:{}),
-    ...(x.groupVersion==='supply-area-floor-v1'?{groupVersion:'supply-area-floor-v1'}:{}),
+    ...(x.groupVersion==='supply-pyeong-exclusive-v1'?{groupVersion:'supply-pyeong-exclusive-v1'}:{}),
     peak: peak > 0 ? peak : 0, peakYm: str(x.peakYm, 6), ask, n: num(x.n) || 1,
     fl: str(x.fl, 12), dong: str(x.dong, 20), d: str(x.d, 8), urgent: x.urgent ? 1 : 0,
     url: /^https:\/\/(fin\.land|new\.land|m\.land|land)\.naver\.com\//.test(url) ? url : "",
@@ -215,9 +215,9 @@ export function listingItemsForFloor(items,occupancy,floorScope='mid'){
 }
 export function listingTypeHistoryKey(item){
   const identity=String(item?.nid||'')+'|'+item?.ex;
-  if(item?.groupVersion!=='supply-area-floor-v1')return `${identity}|legacy`;
-  const group=item.supplyAreaFloor!==null&&item.supplyAreaFloor!==undefined&&Number.isInteger(Number(item.supplyAreaFloor))?`s${Number(item.supplyAreaFloor)}`:'unmatched';
-  return `${identity}|${group}`;
+  if(item?.groupVersion!=='supply-pyeong-exclusive-v1')return `${identity}|legacy`;
+  const py=Number(item.py),group=Number.isFinite(py)&&py>0?String(py):'unmatched';
+  return `${identity}|p${group}`;
 }
 export function snapshotForHistory(data, occupancy, details = false) {
   if (!data) return null;

@@ -9088,9 +9088,9 @@ function listingTrendSnapshotRows(current,snapshots,ls,lawd,gu,continuous=false,
 }
 function listingTypeHistoryKey(item){
   const identity=`${item?.nid||''}|${item?.ex}`;
-  if(item?.groupVersion!=='supply-area-floor-v1')return `${identity}|legacy`;
-  const group=item.supplyAreaFloor!==null&&item.supplyAreaFloor!==undefined&&Number.isInteger(Number(item.supplyAreaFloor))?`s${Number(item.supplyAreaFloor)}`:'unmatched';
-  return `${identity}|${group}`;
+  if(item?.groupVersion!=='supply-pyeong-exclusive-v1')return `${identity}|legacy`;
+  const py=Number(item.py),group=Number.isFinite(py)&&py>0?String(py):'unmatched';
+  return `${identity}|p${group}`;
 }
 function listingPreviousPricePoint(points,currentAsk){
   if(points.length<2||points.at(-1).ask!==currentAsk)return null;
