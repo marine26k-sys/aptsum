@@ -215,9 +215,10 @@ export function listingItemsForFloor(items,occupancy,floorScope='mid'){
 }
 export function listingTypeHistoryKey(item){
   const identity=String(item?.nid||'')+'|'+item?.ex;
-  if(item?.groupVersion!=='supply-pyeong-exclusive-v1')return `${identity}|legacy`;
-  const py=Number(item.py),group=Number.isFinite(py)&&py>0?String(py):'unmatched';
-  return `${identity}|p${group}`;
+  const py=Number(item?.py);
+  if(Number.isFinite(py)&&py>0&&['supply-pyeong-exclusive-v1','supply-area-floor-v1'].includes(item?.groupVersion))return `${identity}|p${py}`;
+  if(item?.groupVersion==='supply-pyeong-exclusive-v1')return `${identity}|unmatched`;
+  return `${identity}|legacy`;
 }
 export function snapshotForHistory(data, occupancy, details = false) {
   if (!data) return null;
