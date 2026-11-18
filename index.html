@@ -4035,7 +4035,8 @@ function complexSupplyAreaFloorGroup(sizeKey,groupFloor){
 }
 function complexSupplyAreaFloorForTrade(t,enabled=true){
   if(!enabled)return null;
-  const types=complexTradeTypeData?.[exactExclusiveKey(t?.area)];
+  // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
+  const types=tradeTypesForArea(t?.area);
   if(!Array.isArray(types)||!types.length)return null;
   const rows=complexTypeHouseholdData?.[String(exclusiveAreaKey(t))]||[];
   const clusters=complexSupplyAreaFloorClusters(exclusiveAreaKey(t));
