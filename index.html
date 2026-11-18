@@ -7082,7 +7082,7 @@ function selectPy(i){
   document.getElementById('pyTable').innerHTML = pyTableHTML(d);
   const ci = chartTarget(d);
   const p = d.byPy[ci];
-  document.getElementById('pyChips').querySelectorAll('.chip').forEach((chip,j)=>{if(j>0){const size=d.byPy[j-1];chip.textContent=`${complexPyLabel(size)}평 (전용 ${size.sizeKey}${complexSupplyAreaLabel(size)?` · ${complexSupplyAreaLabel(size)}`:''})`;}});
+  document.getElementById('pyChips').querySelectorAll('.chip').forEach((chip,j)=>{if(j>0){const size=d.byPy[j-1];chip.textContent=`${complexPyLabel(size)}평 (전용 ${size.sizeKey})`;}});
   document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${complexPyLabel(p)}평 (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
   document.getElementById('chartBox').innerHTML = !p || p.rentOnly ? `<div class="rng" style="padding:8px 0">해당 평형 ${complexView==='jeonse'?'전세':'매매'} 거래 없음</div>` : chartSVG(p.monthly, complexPyLabel(p), d, priceLabel, complexRowGroupKey(p));
   if(isSale){
@@ -7118,10 +7118,10 @@ function jeonseRatioHTML(){
   if(!rows.length) return '';
   const rep = rows.slice().sort((a,b)=>b.n-a.n)[0]; // 전세 거래 최다 평형
   const others = rows.filter(r=>complexRowGroupKey(r)!==complexRowGroupKey(rep)).sort((a,b)=>b.n-a.n)
-    .map(r=>`${esc(r.py)} (전용 ${r.sizeKey}${complexSupplyAreaLabel(r)?` · ${complexSupplyAreaLabel(r)}`:''}) <b style="color:var(--teal)">${r.pct}%</b>`).join(' · ');
+    .map(r=>`${esc(r.py)} (전용 ${r.sizeKey}) <b style="color:var(--teal)">${r.pct}%</b>`).join(' · ');
   return `
     <div class="sec" style="padding-bottom:0">
-      <h3>전세가율 — ${esc(rep.py)} (전용 ${rep.sizeKey}${complexSupplyAreaLabel(rep)?` · ${complexSupplyAreaLabel(rep)}`:''} · 전세 거래 최다)</h3>
+      <h3>전세가율 — ${esc(rep.py)} (전용 ${rep.sizeKey} · 전세 거래 최다)</h3>
       <div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 4px">
         <span style="font-size:26px;font-weight:700;color:var(--teal)">${rep.pct}%</span>
         <span class="rng">전세 ${rep.jv}억 ÷ 매매 ${rep.sv}억</span>
@@ -7145,7 +7145,7 @@ function complexDynamicHTML(){
     <div class="sec">
       <div class="chips" id="pyChips">
         <span class="chip on" onclick="selectPy(-1)">전체</span>
-        ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(complexPyLabel(p))} (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})</span>`).join('')}
+        ${d.byPy.map((p,i)=>`<span class="chip" onclick="selectPy(${i})">${esc(complexPyLabel(p))} (전용 ${p.sizeKey})</span>`).join('')}
       </div>
       <h3 style="touch-action:manipulation;user-select:none" onclick="tapComplexLiveRefresh()">평형별 요약 — ${isSale?'매매':'전세'} 시세 (억)</h3><div id="complexLiveStatus" role="status" style="font-size:12px;color:var(--teal-dark);margin-bottom:6px"></div>
       <div id="pyTable">${pyTableHTML(d)}</div>
