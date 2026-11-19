@@ -6806,7 +6806,7 @@ function curComplexData(){
   return complexView==='jeonse' ? completeJeonseSizeRows(lastData) : lastData;
 }
 const SALE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 직거래 제외 · 직전 정상 거래월이 6개월 이내일 때 평균보다 25% 이상 낮은 거래 제외 · 분양권·입주권 (국토부 별도 API)도 매매와 합산해 평균·차트·최고가에 반영';
-const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월 평균보다 25% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
+const JEONSE_TRADES_FOOT = '기간 평균은 월별 동일 비중 · 무거래월은 직전 월평균 유지 · 평균·차트·최고가는 직거래 및 직전 정상 거래월이 6개월 이내일 때 평균보다 25% 이상 낮은 전세 거래 제외 · 월세가 붙은 계약 (반전세 포함)은 집계에서 제외한 순수 전세만 집계';
 
 function avgCell(a){
   return a? `<b>${a.v.toFixed(1)}</b><div class="rng">${a.n}건</div>` : '<span class="rng">-</span>';
