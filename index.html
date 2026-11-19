@@ -6898,7 +6898,8 @@ function exclusiveTypeLabels(sizeKey,value){
 }
 function typeHouseholdCell(p){
   const allAreaRows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
-  if(!Number.isInteger(p.supplyAreaFloor)&&allAreaRows.length)return '<span class="rng">공급 타입 미분류</span>';
+  const exclusiveLabel=`${esc(p.sizeKey)}㎡`;
+  if(!Number.isInteger(p.supplyAreaFloor)&&allAreaRows.length)return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
   const byType=new Map();
   const floors=p.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
   for(const row of allAreaRows){
@@ -6916,7 +6917,7 @@ function typeHouseholdCell(p){
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(!rows.length)return `<div>${esc(p.sizeKey)}</div>`;
+  if(!rows.length)return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
   return rows.map(row=>{
   const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
