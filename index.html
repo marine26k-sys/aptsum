@@ -6798,7 +6798,7 @@ function completeJeonseSizeRows(sale){
       quarters:p.quarters.map(q=>({label:q.label,avg:null})),monthly:[],trend:null,floorBand:null});
   }
   if(!rows.length)return rent||null;
-  rows.sort((a,b)=>a.sizeKey-b.sizeKey);
+  rows.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
   return {...sale,...(rent||{}),byPy:rows,trades:rent?.trades||[],count:rent?.count||0};
 }
 function curComplexData(){
@@ -7795,10 +7795,18 @@ async function loadComplexTypeHouseholds(d){
     }
     if(complexTypeHouseholdKey!==key)return;
     complexTypeHouseholdData=areas;complexTradeTypeData=exactTypes;complexTypeHouseholdLoaded=true;
+    const active=lastData;
+    const currentBefore=curComplexData();
+    const selectedGroup=selPy>=0?complexRowGroupKey(currentBefore?.byPy?.[selPy]):null;
+    const sortBySupplyPyeong=data=>data?.byPy?.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
+    sortBySupplyPyeong(active);sortBySupplyPyeong(active?.jeonse);
+    const current=curComplexData();
+    if(selectedGroup&&current?.byPy){
+      const selectedIndex=current.byPy.findIndex(row=>complexRowGroupKey(row)===selectedGroup);
+      selPy=selectedIndex>=0?selectedIndex:-1;
+    }
     const table=document.getElementById('pyTable');
-    if(table?.isConnected)table.innerHTML=pyTableHTML(curComplexData());
-    const trades=document.getElementById('tradesBox');
-    if(trades?.isConnected)trades.innerHTML=tradesHTML(curComplexData(),complexView==='sale'?SALE_TRADES_FOOT:JEONSE_TRADES_FOOT);
+    if(table?.isConnected)selectPy(selPy);
   })().finally(()=>{if(complexTypeHouseholdKey===key)complexTypeHouseholdPromise=null;});
   return complexTypeHouseholdPromise;
 }
