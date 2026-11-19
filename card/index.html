@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0E2433">
+  <title>아파트썸 | 아파트 시장 데이터 분석</title>
+  <meta name="description" content="청약 공고 원문, 국토부 실거래가, 네이버 실매물 정보를 바탕으로 아파트 시장을 분석하는 아파트썸 공식 채널.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="아파트썸 | 아파트 시장 데이터 분석">
+  <meta property="og:description" content="청약 공고 원문·국토부 실거래가·네이버 실매물 정보를 바탕으로 지역별 주거 시장 흐름을 분석합니다.">
+  <meta property="og:url" content="https://aptsum.kr/card/">
+  <meta name="color-scheme" content="light">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#0E2433;--navy2:#16344A;--teal:#00828A;--teal2:#00666D;--ink:#1A2A33;--muted:#71808A;--line:#E4EAED;--paper:#FBF5EA}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 50% -10%,#DCEFF0 0,transparent 42%),#F4F7F7;color:var(--ink);font-family:"Noto Sans KR",sans-serif;display:grid;place-items:center;padding:28px 18px}
+    a{color:inherit;text-decoration:none}
+    .card{width:min(100%,440px);background:#fff;border:1px solid rgba(14,36,51,.07);border-radius:28px;overflow:hidden;box-shadow:0 24px 70px rgba(14,36,51,.13)}
+    .hero{position:relative;overflow:hidden;background:var(--navy);color:#fff;padding:32px 30px 29px}
+    .hero:after{content:"";position:absolute;width:230px;height:230px;border-radius:50%;right:-96px;top:-115px;border:1px solid rgba(131,209,210,.16);box-shadow:0 0 0 24px rgba(131,209,210,.035),0 0 0 50px rgba(131,209,210,.025)}
+    .brand{position:relative;z-index:1;display:flex;align-items:center;gap:11px;font-size:15px;font-weight:800;letter-spacing:-.4px}
+    .mark{width:32px;height:32px;color:#83D1D2}
+    .eyebrow{position:relative;z-index:1;margin:34px 0 9px;color:#83D1D2;font-size:10px;font-weight:800;letter-spacing:2.5px}
+    h1{position:relative;z-index:1;margin:0;font-size:32px;line-height:1.32;letter-spacing:-1.5px;font-weight:900}
+    h1 span{color:#69D4D9}
+    .subtitle{position:relative;z-index:1;margin:12px 0 0;color:rgba(255,255,255,.73);font-size:13px;line-height:1.7}
+    .body{padding:25px 24px 23px}
+    .expertise{margin:0 0 22px;padding:14px;border:1px solid #DDE8EA;border-radius:13px;background:#F7FAFA}
+    .expertise-label{margin:0 0 10px;color:var(--teal2);font-size:9px;font-weight:900;letter-spacing:1.6px}
+    .data-sources{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+    .data-source{min-width:0;padding:9px 8px;border-radius:9px;background:#fff;border:1px solid #E9EFF0}
+    .data-source b{display:block;color:var(--teal);font-size:9px;letter-spacing:.5px}
+    .data-source span{display:block;margin-top:4px;color:var(--navy);font-size:10px;font-weight:800;line-height:1.4}
+    .source-note{margin:9px 0 0;color:var(--muted);font-size:10px;line-height:1.55}
+    .label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.7px;margin:0 0 12px}
+    .links{display:grid;gap:9px}
+    .link{min-height:58px;border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;transition:transform .16s,border-color .16s,box-shadow .16s}
+    .link:hover{transform:translateY(-1px);border-color:#9BCFD1;box-shadow:0 5px 16px rgba(14,36,51,.07)}
+    .icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
+    .icon svg{width:20px;height:20px}
+    .ig{background:linear-gradient(140deg,#F9CE34,#EE2A7B 58%,#6228D7)}
+    .threads{background:#111}
+    .blog{background:#03C75A}
+    .youtube{background:#FF0033}
+    .name{font-size:14px;font-weight:800}
+    .handle{font-size:11px;color:var(--muted);margin-top:1px}
+    .arrow{margin-left:auto;color:#A0ADB4;font-size:20px;line-height:1}
+    .site{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:13px 16px;border-radius:13px;background:var(--teal);color:white;font-size:13px;font-weight:800;transition:background .16s}
+    .site:hover{background:var(--teal2)}
+    .share-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+    .share{border:1px solid var(--line);background:#fff;border-radius:12px;min-height:43px;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);cursor:pointer}
+    .share:hover{background:#F5FAFA;border-color:#A8D4D6}
+    .note{text-align:center;color:#9AA6AC;font-size:10px;margin:18px 0 0}
+    @media(max-width:380px){body{padding:14px}.hero{padding:27px 23px 25px}.body{padding:21px 18px}.card{border-radius:23px}h1{font-size:29px}.data-source{padding:8px 6px}.data-source span{font-size:9px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <header class="hero">
+      <a class="brand" href="https://aptsum.kr/" aria-label="아파트썸 홈페이지">
+        <svg class="mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="currentColor" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="currentColor" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="currentColor"/></svg>
+        <span>아파트썸</span>
+      </a>
+      <p class="eyebrow">APTSUM · APARTMENT DATA ANALYSIS</p>
+      <h1>데이터로 읽는<br><span>아파트 시장</span></h1>
+      <p class="subtitle">청약 공고 원문과 실거래·실매물 데이터를 바탕으로<br>지역과 단지별 주거 시장 흐름을 분석합니다.</p>
+    </header>
+    <section class="body" aria-label="아파트썸 공식 채널">
+      <div class="expertise" aria-label="분석 데이터 범위">
+        <p class="expertise-label">DATA COVERAGE</p>
+        <div class="data-sources">
+          <div class="data-source"><b>01 · 청약</b><span>모집공고<br>원문 확인</span></div>
+          <div class="data-source"><b>02 · 거래</b><span>국토부<br>실거래가</span></div>
+          <div class="data-source"><b>03 · 매물</b><span>네이버<br>실매물 정보</span></div>
+        </div>
+        <p class="source-note">자료의 출처와 기준을 확인해 분석 콘텐츠를 만듭니다.</p>
+      </div>
+      <p class="label">아파트썸 공식 채널</p>
+      <div class="links">
+        <a class="link" href="https://instagram.com/apt_sum" target="_blank" rel="noopener noreferrer" aria-label="인스타그램 아파트썸 열기">
+          <span class="icon ig" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><circle cx="17.7" cy="6.7" r="1.2" fill="currentColor"/></svg></span>
+          <span><span class="name">인스타그램</span><br><span class="handle">@apt_sum</span></span><span class="arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="link" href="https://www.threads.com/@apt_sum" target="_blank" rel="noopener noreferrer" aria-label="쓰레드 아파트썸 열기">
+          <span class="icon threads" aria-hidden="true"><svg viewBox="0 0 24 24"><text x="12" y="18" text-anchor="middle" fill="currentColor" font-size="21" font-weight="700" font-family="Arial,sans-serif">@</text></svg></span>
+          <span><span class="name">쓰레드</span><br><span class="handle">@apt_sum</span></span><span class="arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="link" href="https://blog.naver.com/apartment_analysis" target="_blank" rel="noopener noreferrer" aria-label="네이버 블로그 아파트썸 열기">
+          <span class="icon blog" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 4h4l6 9V4h4v16h-4l-6-9v9H5z"/></svg></span>
+          <span><span class="name">네이버 블로그</span><br><span class="handle">apartment_analysis</span></span><span class="arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="link" href="https://www.youtube.com/@apt_sum" target="_blank" rel="noopener noreferrer" aria-label="유튜브 아파트썸 열기">
+          <span class="icon youtube" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.8.5 7.6.5 7.6.5s5.8 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z"/></svg></span>
+          <span><span class="name">유튜브</span><br><span class="handle">@apt_sum</span></span><span class="arrow" aria-hidden="true">›</span>
+        </a>
+      </div>
+      <a class="site" href="https://aptsum.kr/" target="_blank" rel="noopener noreferrer">아파트썸에서 단지 시세 분석 <span aria-hidden="true">↗</span></a>
+      <div class="share-row">
+        <button class="share" type="button" id="copy">명함 링크 복사</button>
+        <button class="share" type="button" id="share">명함 공유하기</button>
+      </div>
+      <p class="note" id="message" aria-live="polite">공식 계정은 위 4개 채널입니다.</p>
+    </section>
+  </main>
+  <script>
+    const copyButton=document.getElementById('copy');
+    const shareButton=document.getElementById('share');
+    const message=document.getElementById('message');
+    const cardUrl=location.href;
+    copyButton.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(cardUrl);message.textContent='명함 링크를 복사했어요.'}
+      catch{message.textContent='주소창의 링크를 복사해 공유해 주세요.'}
+    });
+    shareButton.addEventListener('click',async()=>{
+      if(navigator.share){
+        try{await navigator.share({title:'아파트썸 아파트 시장 데이터 분석',text:'청약 공고·실거래·실매물 데이터로 분석하는 아파트썸 공식 채널을 확인해 보세요.',url:cardUrl})}
+        catch(error){if(error.name!=='AbortError')message.textContent='공유를 열 수 없어요. 명함 링크 복사를 이용해 주세요.'}
+      }else{
+        try{await navigator.clipboard.writeText(cardUrl);message.textContent='이 기기에서는 공유 메뉴를 지원하지 않아 링크를 복사했어요.'}
+        catch{message.textContent='주소창의 링크를 복사해 공유해 주세요.'}
+      }
+    });
+  </script>
+</body>
+</html>
