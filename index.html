@@ -6924,12 +6924,12 @@ function typeHouseholdCell(p){
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  const details=rows.length?rows.map(row=>{
+  if(rows.length)return rows.map(row=>{
     const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
-  }).join(''):'<div class="rng">공급 타입 미분류</div>';
-  return `<div>${exclusiveLabel}</div>${details}`;
+  }).join('');
+  return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
 }
 function mergeSummaryRowsByPyeong(rows){
   const grouped=new Map();
