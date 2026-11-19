@@ -6917,9 +6917,10 @@ function typeHouseholdCell(p){
   for(const [area,types] of Object.entries(complexTradeTypeData||{})){
     if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
     for(const type of removeCombinedTypeAliases(types)){
-      const match=allAreaRows.find(row=>String(row.type)===String(type));
-      if(Number.isInteger(p.supplyAreaFloor)&&!floors?.has(Number(match?.supplyAreaFloor)))continue;
-      if(!byType.has(type))byType.set(type,{type,households:null,supplyAreaFloor:match?.supplyAreaFloor??null});
+      const matches=allAreaRows.filter(row=>String(row.type)===String(type));
+      const match=Number.isInteger(p.supplyAreaFloor)?matches.find(row=>floors?.has(Number(row.supplyAreaFloor))):(matches.length===1?matches[0]:null);
+      if(Number.isInteger(p.supplyAreaFloor)&&!match)continue;
+      if(!byType.has(type))byType.set(type,{type,households:match?.households??null,supplyAreaFloor:match?.supplyAreaFloor??null});
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
