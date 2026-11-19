@@ -31,7 +31,7 @@ test('요약표에는 전용면적을 ㎡ 단위로 표시한다',()=>{
  const c=context();
  c.complexTypeHouseholdData=null;
  c.complexTradeTypeData=null;
- assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12㎡</div><div class="rng">공급 타입 미분류</div>');
+ assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div><div class="rng">세부 타입 미확인</div>');
 });
 
 test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면적만 표시한다',()=>{
