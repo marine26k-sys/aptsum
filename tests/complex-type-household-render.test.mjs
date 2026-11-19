@@ -23,15 +23,15 @@ function context(){
 
 test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 추가하지 않는다',()=>{
  const c=context();
- assert.equal(c.typeHouseholdCell({sizeKey:74}),'<div>74A · <b>175세대</b></div><div>74B · <b>175세대</b></div>');
+ assert.equal(c.typeHouseholdCell({sizeKey:74}),'<div>74㎡</div><div>74A · <b>175세대</b></div><div>74B · <b>175세대</b></div>');
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
-test('요약표 전용면적 숫자에는 제곱미터 단위를 붙이지 않는다',()=>{
+test('요약표에는 전용면적을 ㎡ 단위로 표시한다',()=>{
  const c=context();
  c.complexTypeHouseholdData=null;
  c.complexTradeTypeData=null;
- assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div>');
+ assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12㎡</div><div class="rng">공급 타입 미분류</div>');
 });
 
 test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면적만 표시한다',()=>{
