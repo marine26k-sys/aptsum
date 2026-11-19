@@ -6904,7 +6904,7 @@ function exclusiveTypeLabels(sizeKey,value){
 function typeHouseholdCell(p){
   if(p.mergedRows?.length)return p.mergedRows.map(typeHouseholdCell).join('');
   const allAreaRows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
-  const exclusiveLabel=`${esc(p.sizeKey)}㎡`;
+  const exclusiveLabel=esc(p.sizeKey);
   const byType=new Map();
   const floors=p.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
   // 공급면적 그룹이 확정된 경우에만 세대수 대응표를 연결한다.
@@ -6929,7 +6929,7 @@ function typeHouseholdCell(p){
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
-  return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
+  return `<div>${exclusiveLabel}</div><div class="rng">세부 타입 미확인</div>`;
 }
 function mergeSummaryRowsByPyeong(rows){
   const grouped=new Map();
