@@ -27,11 +27,11 @@ test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
-test('요약표 전용면적 숫자에는 제곱미터 단위를 붙이지 않는다',()=>{
+test('타입 미확인 요약표에는 전용면적 숫자만 표시한다',()=>{
  const c=context();
  c.complexTypeHouseholdData=null;
  c.complexTradeTypeData=null;
- assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div>');
+ assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div><div class="rng">세부 타입 미확인</div>');
 });
 
 test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면적만 표시한다',()=>{

@@ -88,16 +88,11 @@ h2{font-size:clamp(26px,3.5vw,36px);font-weight:900;letter-spacing:-1px;line-hei
 .stats-secondary{margin-top:14px;font-size:12px;color:var(--gray);line-height:1.5}
 .stats-secondary strong{color:var(--navy)}
 
-/* ---------- channels banner ---------- */
-.channels{background:var(--navy-2);padding:18px 0}
-.channels-in{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
-.channels-label{color:rgba(255,255,255,.6);font-size:13px;font-weight:500}
-.channels-links{display:flex;gap:6px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:700;padding:6px 16px 6px 8px;border-radius:99px;transition:background .2s,border-color .2s}
-.chip-icon{flex:none;display:block}
-.chip:hover{background:rgba(255,255,255,.08);border-color:#fff}
-.chip-highlight{background:var(--teal);border-color:var(--teal)}
-.chip-highlight:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+.nav-actions{display:flex;align-items:center;gap:8px}
+.nav-card-link{display:inline-flex;align-items:center;justify-content:center;background:var(--teal);color:#fff;font-size:14px;font-weight:800;padding:9px 18px;border-radius:99px;box-shadow:0 2px 8px rgba(0,130,138,.4);white-space:nowrap;transition:background .2s,transform .15s}
+.nav-card-link:hover{background:var(--teal-dark);transform:translateY(-1px)}
+@media(max-width:720px){
+}
 
 /* ---------- content cards ---------- */
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
@@ -164,7 +159,7 @@ footer a:hover{color:#fff}
   .logo{font-size:16px}
   .logo .dot{width:8px;height:8px}
   .logo-img{height:26px}
-  .nav-cta{padding:7px 14px;font-size:12.5px}
+  .nav-cta{padding:7px 11px;font-size:11.5px}.nav-card-link{padding:7px 11px;font-size:11.5px}.nav-actions{gap:6px}
 
   header{padding:68px 0 0}
   .eyebrow{font-size:10.5px;letter-spacing:2px;margin-bottom:10px}
@@ -300,7 +295,7 @@ section{padding:64px 0}
       <a href="#method">분석 기준</a>
       <a href="#ad">비즈니스</a>
     </div>
-    <a href="#ad" class="nav-cta">비즈니스 제안</a>
+    <div class="nav-actions"><a href="/card/" class="nav-card-link" aria-label="아파트썸 채널 안내 보기">아파트썸 채널 안내</a><a href="#ad" class="nav-cta">비즈니스 제안</a></div>
   </div>
 </nav>
 
@@ -309,7 +304,7 @@ section{padding:64px 0}
     <div class="hero-copy">
       <p class="eyebrow">APTSUM · BUSINESS</p>
       <h1>수도권 주거 관심층에게<br><span class="hl">브랜드를 전달하세요</span></h1>
-      <p class="hero-sub">공고문과 실매물 데이터를 기반으로 분석하는 아파트썸.<br>청약·시세 콘텐츠와 실거래 분석 서비스로 고객을 만납니다.</p>
+      <p class="hero-sub">네이버 실매물(중층 이상·입주 가능)을 금액대·지역별로 비교해 가치 있는 단지를 찾고,<br>청약 공고 핵심을 정리해 청약 대기자의 선택을 돕습니다.</p>
       <div class="hero-btns"><a class="btn btn-teal" href="#ad">비즈니스 제안하기 ↗</a><a class="btn btn-ghost" href="#content">콘텐츠 살펴보기</a></div>
     </div>
   </div>
@@ -318,7 +313,7 @@ section{padding:64px 0}
 <div class="stats">
   <div class="wrap stats-period">10월 인스타그램 성과</div>
   <div class="wrap stats-in">
-    <div class="stat"><b>7.9<em>만</em></b><span>인스타그램 팔로워</span></div>
+    <div class="stat"><b>8<em>만</em></b><span>인스타그램 팔로워</span></div>
     <div class="stat"><b>1,256<em>만</em></b><span>10월 전체 조회수</span></div>
     <div class="stat"><b>69<em>만</em></b><span>10월 도달한 계정</span></div>
   </div>
@@ -327,34 +322,6 @@ section{padding:64px 0}
     <div class="audience-card"><span class="audience-label">주요 연령</span><strong>25~44세 팔로워 <b>89%</b></strong><p>25~34세 46% · 35~44세 43%</p></div>
   </div>
   <div class="wrap stats-secondary">9월 비팔로워 조회 비중 <strong>26%</strong> <span>· 9월 지표 기준</span></div>
-</div>
-
-<div class="channels">
-  <div class="wrap channels-in">
-    <span class="channels-label">다른 채널에서도 만나보세요</span>
-    <div class="channels-links">
-      <a class="chip" href="/">
-        <svg class="chip-icon" width="18" height="18" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="15" width="5" height="11" rx="1" fill="#83D1D2" opacity=".55"/><rect x="11" y="9" width="5" height="17" rx="1" fill="#83D1D2" opacity=".8"/><rect x="20" y="2" width="5" height="24" rx="1" fill="#83D1D2"/></svg>
-        aptsum.kr 아파트 분석
-      </a>
-      <a class="chip" href="https://instagram.com/apt_sum" target="_blank" rel="noopener">
-        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><defs><radialGradient id="igGrad" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#igGrad)"/><rect x="5" y="5" width="14" height="14" rx="4" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="16.6" cy="7.4" r="1" fill="#fff"/></svg>
-        인스타그램
-      </a>
-      <a class="chip" href="https://www.threads.com/@apt_sum" target="_blank" rel="noopener">
-        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#000"/><text x="12" y="16.5" font-size="13" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">@</text></svg>
-        쓰레드
-      </a>
-      <a class="chip" href="https://www.youtube.com/@apt_sum" target="_blank" rel="noopener">
-        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#FF0000"/><path d="M10 8.3l6.2 3.7-6.2 3.7z" fill="#fff"/></svg>
-        유튜브
-      </a>
-      <a class="chip" href="https://blog.naver.com/apartment_analysis" target="_blank" rel="noopener">
-        <svg class="chip-icon" width="18" height="18" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#03C75A"/><path d="M7 6.5h3.1l3.7 5.5V6.5H17v11h-3.1l-3.7-5.5v5.5H7z" fill="#fff"/></svg>
-        블로그
-      </a>
-    </div>
-  </div>
 </div>
 
 <section class="ad" id="ad">
@@ -368,7 +335,7 @@ section{padding:64px 0}
         <article class="partner-card"><span class="partner-number">02</span><h3>웹앱 배너 광고</h3><p>아파트 시세와 실매물을 직접 조회하는 서비스 이용자에게 브랜드를 알립니다.</p><dl><dt>노출 채널</dt><dd>aptsum.kr</dd><dt>제공 콘텐츠</dt><dd>실거래 분석 서비스 내 배너</dd></dl></article>
         <article class="partner-card"><span class="partner-number">03</span><h3>브랜드 협찬 콘텐츠</h3><p>프롭테크·금융 브랜드의 상품을 주간 카드뉴스 콘텐츠와 연결합니다.</p><dl><dt>노출 채널</dt><dd>인스타그램</dd><dt>제공 콘텐츠</dt><dd>주간 카드뉴스 시리즈 내 상품 소개</dd></dl></article>
       </div>
-      <div class="partner-benefit"><b>다른 채널 연계</b><span>인스타그램 스토리 · 쓰레드(2.8만) · 블로그 · 유튜브 무료 게시</span></div>
+      <div class="partner-benefit"><b>다른 채널 연계</b><span>인스타그램 스토리 · 쓰레드 · 블로그 · 유튜브 무료 게시</span></div>
     </div>
     <div class="ad-box">
       <div><h3>함께할 프로젝트를 알려주세요</h3><p>브랜드명, 협업 목적, 희망 일정을 보내주시면 제안에 참고하겠습니다.</p><a class="contact-dm" href="https://instagram.com/apt_sum" target="_blank" rel="noopener">인스타그램 DM으로도 문의 가능합니다 ↗</a></div>
@@ -386,7 +353,7 @@ section{padding:64px 0}
       <div class="card">
         <div class="card-head"><span class="tag">청약</span><h3>청약 분석 카드뉴스</h3></div>
         <div class="card-body">
-          <p>공고문 전문을 뜯어 핵심만 4장에 담습니다.</p>
+          <p>청약 공고의 핵심 조건과 일정을 청약 대기자 관점에서 정리합니다.</p>
           <ul>
             <li>타입별 분양가 · 납부 일정</li>
             <li>자격 요건 · 규제 · 전매 제한</li>
@@ -398,10 +365,10 @@ section{padding:64px 0}
       <div class="card">
         <div class="card-head"><span class="tag">시세</span><h3>지역별 매물 카드뉴스</h3></div>
         <div class="card-body">
-          <p>가격대·평형별로 정리한 주간 시세 리포트.</p>
+          <p>네이버 실매물(중층 이상·입주 가능)을 금액대·지역별로 비교합니다.</p>
           <ul>
-            <li>4억대부터 20억대까지 가격대별 구성</li>
-            <li>20 · 30평대 실매물 기준</li>
+            <li>금액대·지역별 네이버 실매물 비교</li>
+            <li>네이버 실매물 · 중층 이상 · 입주 가능</li>
             <li>전고점 대비 변동률 표기</li>
             <li>자체 알고리즘 기반 단지 선별 & 추천</li>
           </ul>
