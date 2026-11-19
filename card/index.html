@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0E2433">
   <title>아파트썸 | 아파트 시장 데이터 분석</title>
-  <meta name="description" content="청약 공고 원문, 국토부 실거래가, 네이버 실매물 정보를 바탕으로 아파트 시장을 분석하는 아파트썸 공식 채널.">
+  <meta name="description" content="국토부 실거래가, 네이버 실매물 정보, 청약 공고 원문을 바탕으로 아파트 시장을 분석하는 아파트썸 공식 채널.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="아파트썸 | 아파트 시장 데이터 분석">
-  <meta property="og:description" content="청약 공고 원문·국토부 실거래가·네이버 실매물 정보를 바탕으로 지역별 주거 시장 흐름을 분석합니다.">
+  <meta property="og:description" content="국토부 실거래가·네이버 실매물 정보·청약 공고 원문을 바탕으로 지역별 주거 시장 흐름을 분석합니다.">
   <meta property="og:url" content="https://aptsum.kr/card/">
   <meta name="color-scheme" content="light">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,15 +68,15 @@
       </a>
       <p class="eyebrow">APTSUM · APARTMENT DATA ANALYSIS</p>
       <h1>데이터로 읽는<br><span>아파트 시장</span></h1>
-      <p class="subtitle">청약 공고 원문과 실거래·실매물 데이터를 바탕으로<br>지역과 단지별 주거 시장 흐름을 분석합니다.</p>
+      <p class="subtitle">실거래·실매물·청약 데이터를 바탕으로<br>지역과 단지별 주거 시장 흐름을 분석합니다.</p>
     </header>
     <section class="body" aria-label="아파트썸 공식 채널">
       <div class="expertise" aria-label="분석 데이터 범위">
         <p class="expertise-label">DATA COVERAGE</p>
         <div class="data-sources">
-          <div class="data-source"><b>01 · 청약</b><span>모집공고<br>원문 확인</span></div>
-          <div class="data-source"><b>02 · 거래</b><span>국토부<br>실거래가</span></div>
-          <div class="data-source"><b>03 · 매물</b><span>네이버<br>실매물 정보</span></div>
+          <div class="data-source"><b>01 · 거래</b><span>국토부<br>실거래가</span></div>
+          <div class="data-source"><b>02 · 매물</b><span>네이버<br>실매물 정보</span></div>
+          <div class="data-source"><b>03 · 청약</b><span>모집공고<br>원문 확인</span></div>
         </div>
         <p class="source-note">자료의 출처와 기준을 확인해 분석 콘텐츠를 만듭니다.</p>
       </div>
@@ -118,7 +118,7 @@
     });
     shareButton.addEventListener('click',async()=>{
       if(navigator.share){
-        try{await navigator.share({title:'아파트썸 아파트 시장 데이터 분석',text:'청약 공고·실거래·실매물 데이터로 분석하는 아파트썸 공식 채널을 확인해 보세요.',url:cardUrl})}
+        try{await navigator.share({title:'아파트썸 아파트 시장 데이터 분석',text:'실거래·실매물·청약 데이터로 분석하는 아파트썸 공식 채널을 확인해 보세요.',url:cardUrl})}
         catch(error){if(error.name!=='AbortError')message.textContent='공유를 열 수 없어요. 명함 링크 복사를 이용해 주세요.'}
       }else{
         try{await navigator.clipboard.writeText(cardUrl);message.textContent='이 기기에서는 공유 메뉴를 지원하지 않아 링크를 복사했어요.'}
