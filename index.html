@@ -4229,7 +4229,7 @@ function analyzeComplex(all, name, months, rawAll, lawd){
       recentMonthAvg, max, maxDate, quarters, trend,
       // 최고가 배지: 가장 최근 거래가 곧 최고가일 때만 표시
       isNewHigh: !!recent && recent.amt>=max && arr.length>=3, monthly, floorBand };
-  }).filter(Boolean).sort((a,b)=>a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
+  }).filter(Boolean).sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
   return { found:true, mode:'complex', name:officialName, splitBase, splitLawd:metaHits[0].lawd, umd:metaHits[0].umd, build:complexTradeBuild(metaHits),
     count:hits.length,
     period:`${ymLabel(months[months.length-1])} ~ ${ymLabel(months[0])}`,
@@ -4258,7 +4258,7 @@ function includeJeonseOnlySaleAreas(sale, jeonse){
       monthly:[], trend:null, floorBand:null,
     });
   }
-  result.byPy.sort((a,b)=>a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
+  result.byPy.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
   return result;
 }
 
@@ -6821,6 +6821,11 @@ function complexSupplyAreaLabel(p){
   if(!floors.length)return '';
   return floors.length>1?`${floors[0]}~${floors.at(-1)}㎡`:`${floors[0]}㎡`;
 }
+function complexPySortKey(p){
+  const label=String(complexPyLabel(p)||p?.py||'');
+  const match=label.match(/-?\\d+(?:\\.\\d+)?/);
+  return match?Number(match[0]):Number.MAX_SAFE_INTEGER;
+}
 function complexPyLabel(p){
   if(!Number.isInteger(p?.supplyAreaFloor))return p?.py;
   const floors=p?.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
@@ -6897,35 +6902,69 @@ function exclusiveTypeLabels(sizeKey,value){
   return suffixes.length?suffixes.map(suffix=>`${sizeKey}${suffix}`).join(' · '):String(sizeKey);
 }
 function typeHouseholdCell(p){
+  if(p.mergedRows?.length)return p.mergedRows.map(typeHouseholdCell).join('');
   const allAreaRows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   const exclusiveLabel=`${esc(p.sizeKey)}㎡`;
-  if(!Number.isInteger(p.supplyAreaFloor)&&allAreaRows.length)return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
   const byType=new Map();
   const floors=p.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
-  for(const row of allAreaRows){
-    if(Number.isInteger(p.supplyAreaFloor)&&!floors?.has(Number(row.supplyAreaFloor)))continue;
+  // 공급면적 그룹이 확정된 경우에만 세대수 대응표를 연결한다.
+  if(Number.isInteger(p.supplyAreaFloor))for(const row of allAreaRows){
+    if(!floors?.has(Number(row.supplyAreaFloor)))continue;
     const type=String(row.type||'').trim();
     if(type)byType.set(type,row);
   }
-  // 타입 대응은 확인됐지만 세대수는 미매칭인 면적도 요약표에 표시한다.
+  // 공급면적 그룹을 판별하지 못해도, 실거래 원자료에서 확인된 타입명은 표시한다.
   for(const [area,types] of Object.entries(complexTradeTypeData||{})){
     if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
     for(const type of removeCombinedTypeAliases(types)){
-      const match=(complexTypeHouseholdData?.[String(p.sizeKey)]||[]).find(row=>String(row.type)===String(type));
+      const match=allAreaRows.find(row=>String(row.type)===String(type));
       if(Number.isInteger(p.supplyAreaFloor)&&!floors?.has(Number(match?.supplyAreaFloor)))continue;
       if(!byType.has(type))byType.set(type,{type,households:null,supplyAreaFloor:match?.supplyAreaFloor??null});
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(!rows.length)return `<div>${exclusiveLabel}</div><div class="rng">공급 타입 미분류</div>`;
-  return rows.map(row=>{
-  const label=exclusiveTypeLabels(p.sizeKey,row.type);
+  const details=rows.length?rows.map(row=>{
+    const label=exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
-  }).join('');
+  }).join(''):'<div class="rng">공급 타입 미분류</div>';
+  return `<div>${exclusiveLabel}</div>${details}`;
+}
+function mergeSummaryRowsByPyeong(rows){
+  const grouped=new Map();
+  for(const row of rows){
+    const label=String(complexPyLabel(row)||row.py||'').trim();
+    if(!grouped.has(label))grouped.set(label,[]);
+    grouped.get(label).push(row);
+  }
+  return [...grouped.entries()].map(([label,items])=>{
+    if(items.length===1)return items[0];
+    const months=[...new Set(items.flatMap(row=>(row.monthly||[]).map(month=>month.ym)))].sort();
+    const monthly=[];let previous=null;
+    for(const ym of months){
+      const actual=items.flatMap(row=>(row.monthly||[]).filter(month=>month.ym===ym&&month.n>0));
+      if(actual.length){
+        const n=actual.reduce((sum,month)=>sum+month.n,0);
+        const avg=actual.reduce((sum,month)=>sum+month.avg*month.n,0)/n;
+        const month={ym,avg:Math.round(avg*10)/10,n};
+        monthly.push(month);previous=month;
+      }else if(previous){
+        monthly.push({ym,avg:previous.avg,n:0,carriedFrom:previous.ym});
+      }
+    }
+    const recent=items.map(row=>row.recent).filter(Boolean).sort((a,b)=>b.ym.localeCompare(a.ym)||(b.day||0)-(a.day||0))[0]||null;
+    const maxRow=items.filter(row=>Number.isFinite(row.max)).sort((a,b)=>b.max-a.max||String(b.maxDate||'').localeCompare(String(a.maxDate||'')))[0]||null;
+    const recentMonth=monthly.at(-1);
+    const sizeKeys=[...new Set(items.map(row=>row.sizeKey).filter(Number.isInteger))].sort((a,b)=>a-b);
+    const floors=[...new Set(items.flatMap(row=>row.supplyAreaFloors?.length?row.supplyAreaFloors:(Number.isInteger(row.supplyAreaFloor)?[row.supplyAreaFloor]:[])))].sort((a,b)=>a-b);
+    const n=items.reduce((sum,row)=>sum+(Number(row.n)||0),0);
+    return {...items[0],py:label,sizeKey:sizeKeys.length===1?sizeKeys[0]:null,supplyAreaFloor:null,supplyAreaFloors:floors,mergedRows:items,n,recent,
+      recentMonthAvg:recentMonth?{v:recentMonth.avg,n:recentMonth.n||0,carriedFrom:recentMonth.carriedFrom||null,ym:recentMonth.ym}:null,
+      max:maxRow?.max??null,maxDate:maxRow?.maxDate??null,isNewHigh:!!recent&&recent.amt>=Number(maxRow?.max)&&n>=3,monthly};
+  });
 }
 function pyTableHTML(d){
-  const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
+  const list = selPy === -1 ? mergeSummaryRowsByPyeong(d.byPy) : [d.byPy[selPy]];
   if(!list.length) return '';
   const columnWidths=['18%','30%','18%','18%','16%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
