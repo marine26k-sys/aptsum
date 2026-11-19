@@ -99,6 +99,21 @@ h2{font-size:clamp(26px,3.5vw,36px);font-weight:900;letter-spacing:-1px;line-hei
 .chip-highlight{background:var(--teal);border-color:var(--teal)}
 .chip-highlight:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
 
+.digital-card-band{background:var(--navy-2);padding:0 0 22px}
+.digital-card-banner{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;border:1px solid rgba(131,209,210,.35);border-radius:14px;background:linear-gradient(110deg,#E4F2F3 0%,#FFFFFF 75%);color:var(--navy);transition:transform .18s,box-shadow .18s}
+.digital-card-banner:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.12)}
+.digital-card-copy small{display:block;color:var(--teal-dark);font-size:10px;font-weight:900;letter-spacing:1.8px}
+.digital-card-copy strong{display:block;margin-top:5px;font-size:19px;line-height:1.4;letter-spacing:-.5px}
+.digital-card-copy em{display:block;margin-top:5px;color:var(--gray);font-size:12px;font-style:normal}
+.digital-card-cta{flex:none;padding:11px 16px;border-radius:9px;background:var(--teal);color:#fff;font-size:12px;font-weight:800}
+@media(max-width:720px){
+  .digital-card-band{padding:0 0 14px}
+  .digital-card-banner{padding:15px 16px;border-radius:11px;gap:10px}
+  .digital-card-copy strong{font-size:15px}
+  .digital-card-copy em{font-size:10px}
+  .digital-card-cta{padding:9px 11px;font-size:10px;white-space:nowrap}
+}
+
 /* ---------- content cards ---------- */
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
 .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;transition:transform .2s,box-shadow .2s}
@@ -354,6 +369,19 @@ section{padding:64px 0}
         블로그
       </a>
     </div>
+  </div>
+</div>
+
+<div class="digital-card-band">
+  <div class="wrap">
+    <a class="digital-card-banner" href="https://aptsum.kr/card/" aria-label="아파트썸 공식 채널 명함 보기">
+      <span class="digital-card-copy">
+        <small>APTSUM · OFFICIAL CARD</small>
+        <strong>아파트썸 공식 채널을<br>명함 한 장으로 만나보세요</strong>
+        <em>인스타그램 · 쓰레드 · 블로그 · 유튜브</em>
+      </span>
+      <span class="digital-card-cta">명함 바로가기 ↗</span>
+    </a>
   </div>
 </div>
 
