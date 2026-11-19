@@ -6968,7 +6968,7 @@ function showMoreTrades(){
 function trendHTML(d){
   const list = selPy === -1 ? d.byPy : [d.byPy[selPy]];
   const rows = list.map(p=>{
-    const size = `<span class="trend-size"><span>${esc(complexPyLabel(p))}</span><small>(전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})</small></span>`;
+    const size = `<span class="trend-size"><span>${esc(complexPyLabel(p))}</span><small>(전용 ${p.sizeKey})</small></span>`;
     if(p.rentOnly) return `<div class="trend trend-by-size" style="margin-bottom:8px"><span class="pct rng" style="font-size:13px">-</span>${size}<span class="d">매매 거래 없음</span></div>`;
     if(!p.trend) return `<div class="trend trend-by-size" style="margin-bottom:8px">
       <span class="pct rng" style="font-size:13px">-</span>
@@ -7091,7 +7091,7 @@ function selectPy(i){
   const ci = chartTarget(d);
   const p = d.byPy[ci];
   document.getElementById('pyChips').querySelectorAll('.chip').forEach((chip,j)=>{if(j>0){const size=d.byPy[j-1];chip.textContent=`${complexPyLabel(size)}평 (전용 ${size.sizeKey})`;}});
-  document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${complexPyLabel(p)}평 (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
+  document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${complexPyLabel(p)}평 (전용 ${p.sizeKey})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
   document.getElementById('chartBox').innerHTML = !p || p.rentOnly ? `<div class="rng" style="padding:8px 0">해당 평형 ${complexView==='jeonse'?'전세':'매매'} 거래 없음</div>` : chartSVG(p.monthly, complexPyLabel(p), d, priceLabel, complexRowGroupKey(p));
   if(isSale){
     document.getElementById('floorTitle').textContent = p ? `층별 가격 프리미엄 — ${complexPyLabel(p)} (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})${selPy===-1?' (거래 최다)':''} · 최근 6개월` : '층별 가격 프리미엄';
@@ -7161,7 +7161,7 @@ function complexDynamicHTML(){
     </div>
 
     <div class="sec">
-      <h3 id="chartTitle">월평균 ${priceLabel} 추이${p?` — ${esc(complexPyLabel(p))} (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''} · 거래 최다)`:''}</h3>
+      <h3 id="chartTitle">월평균 ${priceLabel} 추이${p?` — ${esc(complexPyLabel(p))} (전용 ${p.sizeKey} · 거래 최다)`:''}</h3>
       <div id="chartBox">${!p || p.rentOnly ? `<div class="rng" style="padding:8px 0">해당 평형 ${complexView==='jeonse'?'전세':'매매'} 거래 없음</div>` : chartSVG(p.monthly, complexPyLabel(p), d, priceLabel, complexRowGroupKey(p))}</div>
     </div>
     ${isSale ? `
