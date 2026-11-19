@@ -6350,6 +6350,7 @@ async function runSearch(opts){
         const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
         schoolWrap?.remove();
         box.innerHTML=complexDynamicHTML();
+        setupComplexInfoButton(updated);
         if(selPy>=-1&&selPy<curComplexData().byPy.length)selectPy(selPy);
         placeComplexSchools(schoolWrap);
       }).catch(()=>{
@@ -6360,6 +6361,7 @@ async function runSearch(opts){
           const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
           schoolWrap?.remove();
           box.innerHTML=complexDynamicHTML();
+          setupComplexInfoButton(initial);
           placeComplexSchools(schoolWrap);
         }
       });
@@ -7245,12 +7247,7 @@ function setComplexView(v){
   const schoolWrap=document.getElementById('complexNearbySchools')?.parentElement;
   if(box) box.innerHTML = complexDynamicHTML();
   if(v==='sale')loadComplexKbSalePrice(lastData);
-  const infoButton=document.getElementById('complexInfoButton');
-  if(infoButton&&lastData){
-    const infoLawd=lastData.lawd||lastData.splitLawd||sel.value;
-    infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(lastData,infoLawd,infoButton);};
-    checkRichgoComplexInfoAvailability(lastData,infoLawd,infoButton);
-  }
+  setupComplexInfoButton(lastData);
   placeComplexSchools(schoolWrap);
 }
 
@@ -7300,6 +7297,16 @@ function isMissingRichgoComplexInfo(error){
 }
 function setRichgoComplexInfoButton(button,visible){
   button.hidden=!visible;button.style.display=visible?'block':'none';
+}
+function setupComplexInfoButton(d){
+  const button=document.getElementById('complexInfoButton');
+  if(!button||!d)return;
+  const lawd=d.lawd||d.splitLawd||sel.value;
+  button.ontoggle=()=>{
+    button.querySelector('summary').textContent=button.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';
+    if(button.open)loadRichgoComplexInfoInline(d,lawd,button);
+  };
+  checkRichgoComplexInfoAvailability(d,lawd,button);
 }
 function checkRichgoComplexInfoAvailability(d,lawd,button){
   loadRichgoComplexInfo(d,lawd).then(info=>{
@@ -7786,9 +7793,7 @@ function renderComplex(d){
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   loadComplexTypeHouseholds(d);
-  const infoButton=document.getElementById('complexInfoButton'),infoLawd=d.lawd||d.splitLawd||sel.value;
-  infoButton.ontoggle=()=>{infoButton.querySelector('summary').textContent=infoButton.open?'단지 정보 · 접기':'단지 정보 · 펼쳐보기';if(infoButton.open)loadRichgoComplexInfoInline(d,infoLawd,infoButton);};
-  checkRichgoComplexInfoAvailability(d,infoLawd,infoButton);
+  setupComplexInfoButton(d);
   if(!d.stationWalkLoaded){
     const stationLawd=d.lawd||d.splitLawd||sel.value;
     const naverName=naverNameOf(stationLawd,d.name,d.umd);
