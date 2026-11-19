@@ -88,19 +88,10 @@ h2{font-size:clamp(26px,3.5vw,36px);font-weight:900;letter-spacing:-1px;line-hei
 .stats-secondary{margin-top:14px;font-size:12px;color:var(--gray);line-height:1.5}
 .stats-secondary strong{color:var(--navy)}
 
-.digital-card-band{background:var(--navy-2);padding:0 0 22px}
-.digital-card-banner{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:26px 28px;border:1px solid rgba(131,209,210,.35);border-radius:16px;background:linear-gradient(110deg,#E4F2F3 0%,#FFFFFF 75%);color:var(--navy);transition:transform .18s,box-shadow .18s}
-.digital-card-banner:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.12)}
-.digital-card-copy small{display:block;color:var(--teal-dark);font-size:10px;font-weight:900;letter-spacing:1.8px}
-.digital-card-copy strong{display:block;margin-top:6px;font-size:22px;line-height:1.4;letter-spacing:-.6px}
-.digital-card-copy em{display:block;margin-top:5px;color:var(--gray);font-size:12px;font-style:normal}
-.digital-card-cta{flex:none;padding:15px 22px;border-radius:12px;background:var(--teal);color:#fff;font-size:15px;font-weight:900;white-space:nowrap}
+.nav-actions{display:flex;align-items:center;gap:8px}
+.nav-card-link{display:inline-flex;align-items:center;justify-content:center;color:#fff;border:1px solid rgba(255,255,255,.32);font-size:13px;font-weight:800;padding:9px 15px;border-radius:99px;white-space:nowrap;transition:background .2s,border-color .2s}
+.nav-card-link:hover{background:rgba(255,255,255,.1);border-color:#fff}
 @media(max-width:720px){
-  .digital-card-band{padding:0 0 14px}
-  .digital-card-banner{padding:18px 18px;border-radius:12px;gap:12px}
-  .digital-card-copy strong{font-size:17px}
-  .digital-card-copy em{font-size:10px}
-  .digital-card-cta{padding:10px 12px;font-size:11.5px}
 }
 
 /* ---------- content cards ---------- */
@@ -168,7 +159,7 @@ footer a:hover{color:#fff}
   .logo{font-size:16px}
   .logo .dot{width:8px;height:8px}
   .logo-img{height:26px}
-  .nav-cta{padding:7px 14px;font-size:12.5px}
+  .nav-cta{padding:7px 11px;font-size:11.5px}.nav-card-link{padding:7px 10px;font-size:11px}.nav-actions{gap:6px}
 
   header{padding:68px 0 0}
   .eyebrow{font-size:10.5px;letter-spacing:2px;margin-bottom:10px}
@@ -304,7 +295,7 @@ section{padding:64px 0}
       <a href="#method">분석 기준</a>
       <a href="#ad">비즈니스</a>
     </div>
-    <a href="#ad" class="nav-cta">비즈니스 제안</a>
+    <div class="nav-actions"><a href="/card/" class="nav-card-link" aria-label="아파트썸 명함 보기">아파트썸 명함</a><a href="#ad" class="nav-cta">비즈니스 제안</a></div>
   </div>
 </nav>
 
@@ -331,19 +322,6 @@ section{padding:64px 0}
     <div class="audience-card"><span class="audience-label">주요 연령</span><strong>25~44세 팔로워 <b>89%</b></strong><p>25~34세 46% · 35~44세 43%</p></div>
   </div>
   <div class="wrap stats-secondary">9월 비팔로워 조회 비중 <strong>26%</strong> <span>· 9월 지표 기준</span></div>
-</div>
-
-<div class="digital-card-band">
-  <div class="wrap">
-    <a class="digital-card-banner" href="/card/" aria-label="아파트썸 명함 보기">
-      <span class="digital-card-copy">
-        <small>APTSUM · MARKET DATA</small>
-        <strong>실거래·실매물·통계 데이터로<br>아파트 시장 흐름을 분석합니다</strong>
-        <em>아파트썸 분석 채널과 데이터 콘텐츠를 한곳에서 확인하세요</em>
-      </span>
-      <span class="digital-card-cta">아파트썸 명함 보기 ↗</span>
-    </a>
-  </div>
 </div>
 
 <section class="ad" id="ad">
