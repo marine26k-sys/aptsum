@@ -27,7 +27,7 @@ test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
-test('요약표에는 전용면적을 ㎡ 단위로 표시한다',()=>{
+test('타입 미확인 요약표에는 전용면적 숫자만 표시한다',()=>{
  const c=context();
  c.complexTypeHouseholdData=null;
  c.complexTradeTypeData=null;
