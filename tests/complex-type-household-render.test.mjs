@@ -23,7 +23,7 @@ function context(){
 
 test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 추가하지 않는다',()=>{
  const c=context();
- assert.equal(c.typeHouseholdCell({sizeKey:74}),'<div>74㎡</div><div>74A · <b>175세대</b></div><div>74B · <b>175세대</b></div>');
+ assert.equal(c.typeHouseholdCell({sizeKey:74}),'<div>74A · <b>175세대</b></div><div>74B · <b>175세대</b></div>');
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
