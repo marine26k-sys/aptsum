@@ -10,7 +10,7 @@ function context(){
   complexTypeHouseholdData:{'74':[{type:'100A',households:175},{type:'100B',households:175}]},
   complexTradeTypeData:{'74.91':['100A','100A, 100B','100B']},
   Number,Map,Set,esc:String,selPy:-1,tradesShown:100,SALE_TRADES_FOOT:'거래 기준',
-  complexPyLabel:p=>p.py,isNewlyCollectedDeal:()=>false,
+  complexPyLabel:p=>p.py,complexRowGroupKey:p=>p.groupKey||String(p.sizeKey),isNewlyCollectedDeal:()=>false,
  });
  const typeStart=html.indexOf('function exactExclusiveKey(');
  const typeEnd=html.indexOf('function pyTableHTML(',typeStart);
