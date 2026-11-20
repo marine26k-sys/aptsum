@@ -22,37 +22,49 @@ function masterRegionCode(row) {
   return row && regionCodes.get(`${row['시']}|${row['구']}`);
 }
 const freshTypesByNaverId = new Map();
-const supplyPyeongByType = new Map();
-const supplyAreaFloorByType = new Map();
 const freshIdsByIdentity = new Map();
 for (const complex of freshKbTypes?.complexes || []) {
-  const ids = complex.targetNaverIds || (complex.matchedTarget?.naverId ? [complex.matchedTarget.naverId] : []);
-  for (const naverId of ids) {
-    if (!freshTypesByNaverId.has(Number(naverId))) freshTypesByNaverId.set(Number(naverId), []);
-    freshTypesByNaverId.get(Number(naverId)).push(...(complex.areas || []));
-  }
-  for (const area of complex.areas || []) {
-    const type = String(area.websiteTypeName || '').trim();
-    const supply = Number(area.supplyM2);
-    if (!type || !Number.isFinite(supply) || supply <= 0) continue;
-    for (const naverId of ids) {
-      const key = `${Number(naverId)}|${type}`;
-      const pyeong = Math.floor(supply * 0.3025);
-      if (!supplyPyeongByType.has(key)) supplyPyeongByType.set(key, pyeong);
-      else if (supplyPyeongByType.get(key) !== pyeong) supplyPyeongByType.set(key, null);
-      const areaFloor = Math.floor(supply);
-      if (!supplyAreaFloorByType.has(key)) supplyAreaFloorByType.set(key, areaFloor);
-      else if (supplyAreaFloorByType.get(key) !== areaFloor) supplyAreaFloorByType.set(key, null);
+  let target = complex.matchedTarget;
+  let ids = complex.targetNaverIds || (target?.naverId ? [target.naverId] : []);
+  // Some KB catalog records have a Naver ID on every area but lack the newer
+  // targetNaverIds confirmation. Accept only one shared ID whose master row
+  // exactly agrees on complex name, city, district, and legal dong.
+  if (!ids.length) {
+    const areaIds = new Set((complex.areas || []).map(area => Number(area.naverId)).filter(Number.isInteger));
+    if (areaIds.size === 1) {
+      const candidateId = [...areaIds][0];
+      const candidate = master[String(candidateId)];
+      const simplifyDistrict = value => normalize(value).replace(/시/g, '');
+      const sameIdentity = candidate &&
+        normalize(complex.city) === normalize(candidate['시']) &&
+        simplifyDistrict(complex.district) === simplifyDistrict(candidate['구']) &&
+        normalize(complex.dong) === normalize(candidate['법정동']) &&
+        normalize(complex.kbName) === normalize(candidate['단지명']);
+      if (sameIdentity) {
+        ids = [candidateId];
+        target = { naverId: candidateId, name: candidate['단지명'], district: candidate['구'], dong: candidate['법정동'] };
+      }
     }
   }
-  const target = complex.matchedTarget;
+  for (const naverId of ids) {
+    if (!freshTypesByNaverId.has(Number(naverId))) freshTypesByNaverId.set(Number(naverId), []);
+    freshTypesByNaverId.get(Number(naverId)).push(...(complex.areas || []).map(area => ({ ...area, kbComplexId: complex.kbComplexId })));
+  }
   const districtCodes = codesByDistrict.get(target?.district) || [];
   const masterCode = ids.length === 1 ? masterRegionCode(master[ids[0]]) : null;
   const lawd = districtCodes.includes(masterCode) ? masterCode : districtCodes.length === 1 ? districtCodes[0] : null;
   if (lawd && target?.dong && target?.name && ids.length === 1) {
-    const identity = [lawd, normalize(target.dong), normalize(target.name)].join('|');
-    if (!freshIdsByIdentity.has(identity)) freshIdsByIdentity.set(identity, new Set());
-    freshIdsByIdentity.get(identity).add(Number(ids[0]));
+    const targetMaster = master[String(ids[0])];
+    const identities = new Set([
+      [lawd, normalize(target.dong), normalize(target.name)].join('|'),
+    ]);
+    if (targetMaster && masterRegionCode(targetMaster) === lawd) {
+      identities.add([lawd, normalize(targetMaster['법정동']), normalize(targetMaster['단지명'])].join('|'));
+    }
+    for (const identity of identities) {
+      if (!freshIdsByIdentity.has(identity)) freshIdsByIdentity.set(identity, new Set());
+      freshIdsByIdentity.get(identity).add(Number(ids[0]));
+    }
   }
 }
 
@@ -80,6 +92,49 @@ for (const [id, row] of Object.entries(master)) {
 }
 
 const identityFor = (complex, name) => [complex.lawd, normalize(complex.umd), normalize(name)].join('|');
+const typeSuffix = (value) => {
+  const normalized = String(value || '').normalize('NFKC').toLocaleUpperCase('ko-KR').trim();
+  return normalized.match(/^\d+(?:\.\d+)?(.*)$/)?.[1]?.trim() || '';
+};
+function mapFreshAreaType(area, row) {
+  const exclusive = Number(area.exclusiveM2);
+  const supply = Number(area.supplyM2);
+  if (!(exclusive > 0) || !(supply >= exclusive)) return { type: '', siteTypeMatched: false };
+  const candidates = (row?.['면적별'] || []).filter(item =>
+    item['상태'] === 'confirmed' && String(item['타입명'] || '').trim() &&
+    Math.abs(Number(item['전용면적']) - exclusive) <= 0.02 &&
+    Math.abs(Number(item['공급면적']) - supply) <= 0.02);
+  const names = [...new Set(candidates.map(item => String(item['타입명']).trim()))];
+  if (names.length === 1) return { type: names[0], siteTypeMatched: true };
+  // Even when the catalog did not link a KB type to Naver, the operator's
+  // master map can still carry the same KB type label on the exact same area.
+  // Prefer that verified label before using a suffix-only fallback.
+  const kbType = normalize(area.kbTypeName);
+  const kbTypeMatches = [...new Set(kbType ? candidates.filter(item =>
+    normalize(item['KB타입명']) === kbType || normalize(item['타입명']) === kbType
+  ).map(item => String(item['타입명']).trim()) : [])];
+  if (kbTypeMatches.length === 1) return { type: kbTypeMatches[0], siteTypeMatched: true };
+  const websiteType = normalize(area.websiteTypeName);
+  const websiteMatches = [...new Set(websiteType ? candidates.filter(item =>
+    normalize(item['타입명']) === websiteType
+  ).map(item => String(item['타입명']).trim()) : [])];
+  if (websiteMatches.length === 1) return { type: websiteMatches[0], siteTypeMatched: true };
+  const suffix = typeSuffix(area.typeSuffix || area.kbTypeName);
+  const suffixMatches = [...new Set(candidates
+    .filter(item => suffix && typeSuffix(item['타입명']) === suffix)
+    .map(item => String(item['타입명']).trim()))];
+  if (suffixMatches.length === 1) return { type: suffixMatches[0], siteTypeMatched: true };
+  // KB's exact type-name match can include a second supply-area entry under
+  // the same Naver label; retain it as a separate supply-floor row.
+  if (area.typeMatchStatus === 'exact_KB_type' && area.websiteTypeName) {
+    return { type: String(area.websiteTypeName).trim(), siteTypeMatched: true };
+  }
+  // Keep the KB type available to the analysis even when Naver has no exact
+  // type-name row. The UI labels it as KB-sourced and never uses it to assign
+  // a trade to a supply-area group.
+  const kbLabel = String(area.kbTypeName || area.websiteTypeName || '').trim();
+  return { type: kbLabel ? `KB:${kbLabel}` : '', siteTypeMatched: false };
+}
 const matchByIndex = new Map();
 let ambiguous = 0, unmatched = 0, prefixDongMatches = 0, complexesWithAreas = 0, typeCount = 0;
 for (const complex of index) {
@@ -118,12 +173,18 @@ for (const complex of index) {
       candidates.set(canonical[0].id, canonical[0].row);
     }
   }
+  if (candidates.size === 1 && freshIds.size > 0 && [...freshIds].some(id => !candidates.has(String(id)))) {
+    ambiguous++;
+    continue;
+  }
   const resolvedNaverId = candidates.size === 1 ? Number([...candidates.keys()][0]) : freshIds.size === 1 ? [...freshIds][0] : null;
   if (!resolvedNaverId) { if (candidates.size > 1 || freshIds.size > 1) ambiguous++; else unmatched++; continue; }
   const row = candidates.size === 1 ? candidates.values().next().value : null;
   const byArea = new Map();
   const exactExclusiveTypes = new Map();
-  const masterSupplyByType = new Map();
+  const masterVerifiedAreas = (row?.['면적별'] || []).filter(area =>
+    area['상태'] === 'confirmed' && area['KB세대수상태'] === '확인됨' &&
+    Number.isInteger(Number(area['KB세대수'])) && Number(area['KB세대수']) > 0);
   for (const area of row?.['면적별'] || []) {
     const exclusive = Number(area['전용면적']);
     const type = String(area['타입명'] || '').trim();
@@ -141,15 +202,18 @@ for (const complex of index) {
     const areaKey = String(Math.floor(exclusive));
     if (!byArea.has(areaKey)) byArea.set(areaKey, new Map());
     const types = byArea.get(areaKey);
-    // 같은 타입이 소수점 면적 차이로 중복 기재된 경우 한 번만 집계한다.
-    types.set(type, Math.max(types.get(type) || 0, households));
     const supply = Number(area['공급면적']);
-    if (Number.isFinite(supply) && supply >= exclusive) {
-      const key = `${areaKey}|${type}`;
-      const grouping = `${Math.floor(supply)}|${Math.floor(supply * 0.3025)}`;
-      if (!masterSupplyByType.has(key)) masterSupplyByType.set(key, grouping);
-      else if (masterSupplyByType.get(key) !== grouping) masterSupplyByType.set(key, null);
-    }
+    const supplyAreaFloor = Number.isFinite(supply) && supply >= exclusive ? Math.floor(supply) : null;
+    const supplyPyeong = supplyAreaFloor == null ? null : Math.floor(supply * 0.3025);
+    const typeKey = `${type}|${supplyAreaFloor ?? ''}`;
+    const old = types.get(typeKey);
+    // 같은 타입명이더라도 KB 공급면적 정수 내림값이 다르면 별도 행으로 둔다.
+    types.set(typeKey, {
+      type,
+      households: Math.max(old?.households || 0, households),
+      supplyPyeong: supplyPyeong ?? old?.supplyPyeong ?? null,
+      supplyAreaFloor: supplyAreaFloor ?? old?.supplyAreaFloor ?? null,
+    });
   }
   // A matched KB complex is authoritative for the full area-type inventory.
   // Do not mix its type labels with older master-map rows, which can lack supply pyeong.
@@ -158,35 +222,61 @@ for (const complex of index) {
   for (const area of freshAreas) {
     const exclusive = Number(area.exclusiveM2);
     if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
-    // Keep the website/Naver type label. A raw KB label is unsafe when the
-    // Naver area match was ambiguous: it can duplicate or mislabel a confirmed
-    // type already present in the canonical map.
-    const type = String(area.websiteTypeName || '').trim();
+    // Use the site label from an exact match, or map by exact KB/Naver dimensions
+    // when the KB type is absent from the Naver catalog's type-name mapping.
+    const { type, siteTypeMatched } = mapFreshAreaType(area, row);
     if (!type) continue;
     const exactKey = exactAreaKey(area.exclusiveM2);
-    if (exactKey) {
+    if (exactKey && siteTypeMatched) {
       if (!exactExclusiveTypes.has(exactKey)) exactExclusiveTypes.set(exactKey, new Set());
       exactExclusiveTypes.get(exactKey).add(type);
     }
-    const households = Number(area.households);
+    const rawArea = (row?.['KB수집평형'] || []).find(item =>
+      Number(item['KB단지ID']) === Number(area.kbComplexId) &&
+      Number(item['KB면적ID']) === Number(area.kbAreaId));
+    const households = Number(rawArea?.['KB세대수'] ?? area.households);
     if (Number.isInteger(households) && households > 0) {
       const areaKey = String(Math.floor(exclusive));
       if (!byArea.has(areaKey)) byArea.set(areaKey, new Map());
       const types = byArea.get(areaKey);
-      types.set(type, Math.max(types.get(type) || 0, households));
+      const supply = Number(rawArea?.['공급면적'] ?? area.supplyM2);
+      const supplyAreaFloor = Number.isFinite(supply) && supply >= exclusive ? Math.floor(supply) : null;
+      const supplyPyeong = supplyAreaFloor == null ? null : Math.floor(supply * 0.3025);
+      const typeKey = `${type}|${supplyAreaFloor ?? ''}`;
+      const old = types.get(typeKey);
+      types.set(typeKey, {
+        type,
+        ...(type.startsWith('KB:') ? { kbTypeName: String(area.kbTypeName || area.websiteTypeName || '').trim() } : {}),
+        siteTypeMatched,
+        households: Math.max(old?.households || 0, households),
+        supplyPyeong: supplyPyeong ?? old?.supplyPyeong ?? null,
+        supplyAreaFloor: supplyAreaFloor ?? old?.supplyAreaFloor ?? null,
+      });
     }
   }
-  if (!byArea.size && !exactExclusiveTypes.size) continue;
-  function supplyForType(area, type) {
-    const typeKey = `${resolvedNaverId}|${type}`;
-    const supply = freshAreas.length ? null : masterSupplyByType.get(`${area}|${type}`);
-    const [floor, pyeong] = supply ? supply.split('|').map(Number) : [null, null];
-    return {
-      supplyPyeong: supplyPyeongByType.get(typeKey) ?? pyeong,
-      supplyAreaFloor: supplyAreaFloorByType.get(typeKey) ?? floor,
-    };
+  // Keep directly verified KB areas that the latest catalog response omitted.
+  for (const area of masterVerifiedAreas) {
+    const exclusive = Number(area['전용면적']);
+    const supply = Number(area['공급면적']);
+    const households = Number(area['KB세대수']);
+    const type = String(area['타입명'] || '').trim();
+    if (!(exclusive > 0 && supply >= exclusive && Number.isInteger(households) && households > 0 && type)) continue;
+    const size = String(Math.floor(exclusive));
+    if (!byArea.has(size)) byArea.set(size, new Map());
+    const supplyAreaFloor = Math.floor(supply);
+    const typeKey = `${type}|${supplyAreaFloor}`;
+    if (!byArea.get(size).has(typeKey)) byArea.get(size).set(typeKey, {
+      type,
+      households,
+      supplyPyeong: Math.floor(supply * 0.3025),
+      supplyAreaFloor,
+    });
+    const exact = exactAreaKey(exclusive);
+    if (!exactExclusiveTypes.has(exact)) exactExclusiveTypes.set(exact, new Set());
+    exactExclusiveTypes.get(exact).add(type);
   }
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, ...supplyForType(area, type) })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
+  if (!byArea.size && !exactExclusiveTypes.size) continue;
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }) || Number(a.supplyAreaFloor || 0) - Number(b.supplyAreaFloor || 0))]));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);
@@ -219,25 +309,28 @@ if (args['preserve-existing']) {
 function mergeAreas(previous, verified, previousExact, verifiedExact) {
   const areas = { ...previous };
   for (const [size, rows] of Object.entries(verified)) {
-    const byType = new Map((previous[size] || []).map(row => [row.type, row]));
+    const rowKey = row => `${row.type}|${Number.isInteger(row.supplyAreaFloor) ? row.supplyAreaFloor : ''}`;
+    const byType = new Map((previous[size] || []).map(row => [rowKey(row), row]));
     for (const row of rows) {
-      const old = byType.get(row.type);
+      const key = rowKey(row);
+      const old = byType.get(key);
       if (!old) {
-        byType.set(row.type, row);
+        byType.set(key, row);
         continue;
       }
-      const exactMatch = Object.entries(verifiedExact).some(([area, types]) =>
-        !Number.isInteger(Number(area)) && Math.floor(Number(area)) === Number(size) && types.includes(row.type) && previousExact[area]?.includes(row.type));
-      const compatibleSupply = old.supplyAreaFloor == null || old.supplyAreaFloor === row.supplyAreaFloor;
-      if (!compatibleSupply || (!exactMatch && old.households !== row.households)) continue;
-      byType.set(row.type, {
+      byType.set(key, {
         ...old,
-        households: exactMatch && row.supplyAreaFloor != null ? row.households : old.households,
-        supplyPyeong: old.supplyPyeong ?? row.supplyPyeong,
-        supplyAreaFloor: old.supplyAreaFloor ?? row.supplyAreaFloor,
+        ...row,
+        households: row.households ?? old.households,
+        supplyPyeong: row.supplyPyeong ?? old.supplyPyeong,
+        supplyAreaFloor: row.supplyAreaFloor ?? old.supplyAreaFloor,
       });
     }
-    areas[size] = [...byType.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }));
+    const verifiedTypesWithSupply = new Set(rows.filter(row => Number.isInteger(row.supplyAreaFloor)).map(row => row.type));
+    for (const [key, row] of byType) {
+      if (!Number.isInteger(row.supplyAreaFloor) && verifiedTypesWithSupply.has(row.type)) byType.delete(key);
+    }
+    areas[size] = [...byType.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }) || Number(a.supplyAreaFloor || 0) - Number(b.supplyAreaFloor || 0));
   }
   return areas;
 }
@@ -288,7 +381,7 @@ for (const [lawd, items] of shards) {
       }
       if (counts.size) bySize[size] = [...counts].sort((a,b) => b[1]-a[1] || a[0]-b[0])[0][0];
     }
-    supplyItems[lookupKey] = { ...bySize, ...previousSupply[lookupKey] };
+    supplyItems[lookupKey] = { ...previousSupply[lookupKey], ...bySize };
   }
 }
 await mkdir(outDir, { recursive: true });
