@@ -9,7 +9,18 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
 if (!args.master) throw new Error('--master=<전체 단지 매핑표 JSON 경로> is required');
 const freshKbTypes = args['kb-types'] ? JSON.parse(await readFile(args['kb-types'], 'utf8')) : null;
 const normalize = (value) => String(value || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g, '').toLocaleLowerCase('ko-KR');
-const regionCodes = new Map(REGIONS.flatMap(([, regions]) => regions));
+const regionCodes = new Map(REGIONS.flatMap(([city, regions]) => regions.map(([district, code]) => [`${city}|${district}`, code])));
+const codesByDistrict = new Map();
+for (const [, regions] of REGIONS) {
+  for (const [district, code] of regions) {
+    if (!codesByDistrict.has(district)) codesByDistrict.set(district, []);
+    codesByDistrict.get(district).push(code);
+  }
+}
+const master = JSON.parse(await readFile(args.master, 'utf8'));
+function masterRegionCode(row) {
+  return row && regionCodes.get(`${row['시']}|${row['구']}`);
+}
 const freshTypesByNaverId = new Map();
 const supplyPyeongByType = new Map();
 const supplyAreaFloorByType = new Map();
@@ -35,7 +46,9 @@ for (const complex of freshKbTypes?.complexes || []) {
     }
   }
   const target = complex.matchedTarget;
-  const lawd = target?.district ? regionCodes.get(target.district) : null;
+  const districtCodes = codesByDistrict.get(target?.district) || [];
+  const masterCode = ids.length === 1 ? masterRegionCode(master[ids[0]]) : null;
+  const lawd = districtCodes.includes(masterCode) ? masterCode : districtCodes.length === 1 ? districtCodes[0] : null;
   if (lawd && target?.dong && target?.name && ids.length === 1) {
     const identity = [lawd, normalize(target.dong), normalize(target.name)].join('|');
     if (!freshIdsByIdentity.has(identity)) freshIdsByIdentity.set(identity, new Set());
@@ -50,13 +63,12 @@ const exactAreaKey = (value) => {
   const normalizedFraction = fraction.replace(/0+$/, '');
   return normalizedFraction ? `${whole}.${normalizedFraction}` : whole;
 };
-const master = JSON.parse(await readFile(args.master, 'utf8'));
 const index = JSON.parse(await readFile('data/complex-index.json', 'utf8')).entries;
 const byIdentity = new Map();
 const byRegionAndName = new Map();
 for (const [id, row] of Object.entries(master)) {
   if (row['단지정보 상태'] !== '확인됨') continue;
-  const lawd = regionCodes.get(row['구']);
+  const lawd = masterRegionCode(row);
   if (!lawd || !row['법정동'] || !row['단지명']) continue;
   const key = [lawd, normalize(row['법정동']), normalize(row['단지명'])].join('|');
   if (!byIdentity.has(key)) byIdentity.set(key, []);
@@ -99,11 +111,19 @@ for (const complex of index) {
       continue;
     }
   }
+  if (candidates.size > 1) {
+    const canonical = byIdentity.get(identityFor(complex, complex.name)) || [];
+    if (canonical.length === 1) {
+      candidates.clear();
+      candidates.set(canonical[0].id, canonical[0].row);
+    }
+  }
   const resolvedNaverId = candidates.size === 1 ? Number([...candidates.keys()][0]) : freshIds.size === 1 ? [...freshIds][0] : null;
   if (!resolvedNaverId) { if (candidates.size > 1 || freshIds.size > 1) ambiguous++; else unmatched++; continue; }
   const row = candidates.size === 1 ? candidates.values().next().value : null;
   const byArea = new Map();
   const exactExclusiveTypes = new Map();
+  const masterSupplyByType = new Map();
   for (const area of row?.['면적별'] || []) {
     const exclusive = Number(area['전용면적']);
     const type = String(area['타입명'] || '').trim();
@@ -123,6 +143,13 @@ for (const complex of index) {
     const types = byArea.get(areaKey);
     // 같은 타입이 소수점 면적 차이로 중복 기재된 경우 한 번만 집계한다.
     types.set(type, Math.max(types.get(type) || 0, households));
+    const supply = Number(area['공급면적']);
+    if (Number.isFinite(supply) && supply >= exclusive) {
+      const key = `${areaKey}|${type}`;
+      const grouping = `${Math.floor(supply)}|${Math.floor(supply * 0.3025)}`;
+      if (!masterSupplyByType.has(key)) masterSupplyByType.set(key, grouping);
+      else if (masterSupplyByType.get(key) !== grouping) masterSupplyByType.set(key, null);
+    }
   }
   // A matched KB complex is authoritative for the full area-type inventory.
   // Do not mix its type labels with older master-map rows, which can lack supply pyeong.
@@ -150,7 +177,16 @@ for (const complex of index) {
     }
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, supplyPyeong: supplyPyeongByType.get(`${resolvedNaverId}|${type}`) ?? null, supplyAreaFloor: supplyAreaFloorByType.get(`${resolvedNaverId}|${type}`) ?? null })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
+  function supplyForType(area, type) {
+    const typeKey = `${resolvedNaverId}|${type}`;
+    const supply = freshAreas.length ? null : masterSupplyByType.get(`${area}|${type}`);
+    const [floor, pyeong] = supply ? supply.split('|').map(Number) : [null, null];
+    return {
+      supplyPyeong: supplyPyeongByType.get(typeKey) ?? pyeong,
+      supplyAreaFloor: supplyAreaFloorByType.get(typeKey) ?? floor,
+    };
+  }
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types].map(([type, households]) => ({ type, households, ...supplyForType(area, type) })).sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }))]));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);
@@ -165,6 +201,46 @@ const shards = new Map();
 const exactShards = new Map();
 const supplyPyeongShards = new Map();
 const ambiguousKeys = new Map();
+const outDir = 'data/complex-type-households';
+const supplyPyeongDir = 'data/complex-supply-pyeong';
+const preserved = new Map();
+if (args['preserve-existing']) {
+  for (const file of await readdir(outDir)) {
+    if (!file.endsWith('.json')) continue;
+    const lawd = file.slice(0, -5);
+    const previous = JSON.parse(await readFile(path.join(outDir, file), 'utf8'));
+    preserved.set(lawd, previous);
+    shards.set(lawd, { ...previous.items });
+    exactShards.set(lawd, { ...previous.exactExclusiveTypes });
+    ambiguousKeys.set(lawd, new Set());
+  }
+}
+
+function mergeAreas(previous, verified, previousExact, verifiedExact) {
+  const areas = { ...previous };
+  for (const [size, rows] of Object.entries(verified)) {
+    const byType = new Map((previous[size] || []).map(row => [row.type, row]));
+    for (const row of rows) {
+      const old = byType.get(row.type);
+      if (!old) {
+        byType.set(row.type, row);
+        continue;
+      }
+      const exactMatch = Object.entries(verifiedExact).some(([area, types]) =>
+        !Number.isInteger(Number(area)) && Math.floor(Number(area)) === Number(size) && types.includes(row.type) && previousExact[area]?.includes(row.type));
+      const compatibleSupply = old.supplyAreaFloor == null || old.supplyAreaFloor === row.supplyAreaFloor;
+      if (!compatibleSupply || (!exactMatch && old.households !== row.households)) continue;
+      byType.set(row.type, {
+        ...old,
+        households: exactMatch && row.supplyAreaFloor != null ? row.households : old.households,
+        supplyPyeong: old.supplyPyeong ?? row.supplyPyeong,
+        supplyAreaFloor: old.supplyAreaFloor ?? row.supplyAreaFloor,
+      });
+    }
+    areas[size] = [...byType.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }));
+  }
+  return areas;
+}
 let aliasesSkipped = 0, keysWritten = 0;
 for (const [key, entry] of matchByIndex) {
   if (entry.ids.size !== 1) { aliasesSkipped++; continue; }
@@ -175,34 +251,49 @@ for (const [key, entry] of matchByIndex) {
   const lookupKey = `${normalizedName}|${normalizedDong}`;
   const items = shards.get(entry.lawd);
   if (ambiguousKeys.get(entry.lawd).has(lookupKey)) continue;
-  if (items[lookupKey]) {
+  if (items[lookupKey] && !preserved.get(entry.lawd)?.items?.[lookupKey]) {
     delete items[lookupKey];
     delete exactShards.get(entry.lawd)[lookupKey];
     ambiguousKeys.get(entry.lawd).add(lookupKey);
     aliasesSkipped++;
     continue;
   }
-  items[lookupKey] = entry.areas;
-  exactShards.get(entry.lawd)[lookupKey] = entry.exactTypes;
-  const bySize = {};
-  for (const [size, rows] of Object.entries(entry.areas)) {
-    const counts = new Map();
-    for (const row of rows) {
-      const py = Number(row.supplyPyeong), hh = Number(row.households);
-      if (Number.isInteger(py) && py > 0 && Number.isFinite(hh) && hh > 0) counts.set(py, (counts.get(py) || 0) + hh);
-    }
-    if (counts.size) bySize[size] = [...counts].sort((a,b) => b[1]-a[1] || a[0]-b[0])[0][0];
+  const existing = preserved.get(entry.lawd);
+  const oldExact = existing?.exactExclusiveTypes?.[lookupKey] || {};
+  const exactTypes = { ...oldExact };
+  for (const [area, types] of Object.entries(entry.exactTypes)) {
+    exactTypes[area] = [...new Set([...(oldExact[area] || []), ...types])].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
   }
-  if (!supplyPyeongShards.has(entry.lawd)) supplyPyeongShards.set(entry.lawd, {});
-  supplyPyeongShards.get(entry.lawd)[lookupKey] = bySize;
+  items[lookupKey] = mergeAreas(existing?.items?.[lookupKey] || {}, entry.areas, oldExact, entry.exactTypes);
+  exactShards.get(entry.lawd)[lookupKey] = exactTypes;
   keysWritten++;
 }
 
-const outDir = 'data/complex-type-households';
+for (const [lawd, items] of shards) {
+  const previousSupply = preserved.has(lawd)
+    ? JSON.parse(await readFile(path.join(supplyPyeongDir, `${lawd}.json`), 'utf8').catch(error => {
+      if (error.code !== 'ENOENT') throw error;
+      return '{}';
+    })).items || {}
+    : {};
+  const supplyItems = { ...previousSupply };
+  supplyPyeongShards.set(lawd, supplyItems);
+  for (const [lookupKey, areas] of Object.entries(items)) {
+    const bySize = {};
+    for (const [size, rows] of Object.entries(areas)) {
+      const counts = new Map();
+      for (const row of rows) {
+        const py = Number(row.supplyPyeong), hh = Number(row.households);
+        if (Number.isInteger(py) && py > 0 && Number.isFinite(hh) && hh > 0) counts.set(py, (counts.get(py) || 0) + hh);
+      }
+      if (counts.size) bySize[size] = [...counts].sort((a,b) => b[1]-a[1] || a[0]-b[0])[0][0];
+    }
+    supplyItems[lookupKey] = { ...bySize, ...previousSupply[lookupKey] };
+  }
+}
 await mkdir(outDir, { recursive: true });
 for (const file of await readdir(outDir)) await unlink(path.join(outDir, file));
 for (const [lawd, items] of shards) await writeFile(path.join(outDir, `${lawd}.json`), JSON.stringify({ items, exactExclusiveTypes: exactShards.get(lawd) || {} }));
-const supplyPyeongDir = 'data/complex-supply-pyeong';
 await mkdir(supplyPyeongDir, { recursive: true });
 for (const file of await readdir(supplyPyeongDir)) await unlink(path.join(supplyPyeongDir, file));
 for (const [lawd, items] of supplyPyeongShards) await writeFile(path.join(supplyPyeongDir, `${lawd}.json`), JSON.stringify({ items }));
