@@ -13,7 +13,7 @@ function page(search){
     sel:{value:'11680'},regionSel:[{lawd:'11680',name:'강남구'}],
     aptsumSubscriberGate:{ready:Promise.resolve()},needsSubscriberSession:()=>false,isListingMode:()=>false,
     setMode(m){ctx.mode=m;return true;}, search(){ctx.calls++;},showError(){throw Error('unexpected auth error');},
-    syncListingFloor(){},resetQueriedSliderDefaults(){},regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(value){ctx.restoredListingFilters=value;},listingGapSet(){},setBuildYearValue(){}
+    syncListingFloor(){},syncListingTrendBelowPeak(on){ctx.belowPeak=on;},resetQueriedSliderDefaults(){},regionSelMax:()=>25,saveRegionSel(){},renderRegionChips(){},renderPyBandMultiBtn(){},lsSet(value){ctx.restoredListingFilters=value;},listingGapSet(){},setBuildYearValue(){}
   });
   vm.runInContext(html.slice(html.indexOf('function normalizeListingOccupancy('),html.indexOf('function listingOccupancy(){'))+source,ctx);return {ctx,elements};
 }
@@ -44,4 +44,23 @@ test('name-only shared listing query does not introduce a zero percent rate filt
  assert.equal(ctx.restoredListingFilters.r0,undefined);
  assert.equal(ctx.restoredListingFilters.r1,undefined);
  assert.equal(ctx.calls,1);
+});
+
+
+test('shared ranking restores the price view and regional scope codes', async()=>{
+  const rs='ALL:서울:서울 전체|CITYALL:성남시:성남시 전체|11680:강남구';
+  const {ctx}=page('?m=region&rrv=pyprice&rs='+encodeURIComponent(rs));
+  await ctx.initFromURL();
+  assert.equal(ctx.regionRankView,'pyprice');
+  assert.deepEqual(Array.from(ctx.regionSel, ({lawd,name})=>[lawd,name]), [
+    ['ALL:서울','서울 전체'], ['CITYALL:성남시','성남시 전체'], ['11680','강남구']
+  ]);
+  assert.equal(ctx.calls,1);
+});
+
+test('shared listing trend applies the below-peak filter before searching', async()=>{
+  const {ctx}=page('?m=listingtrend&r=11680&ltbp=1');
+  ctx.search=()=>{assert.equal(ctx.belowPeak,true);ctx.calls++;};
+  await ctx.initFromURL();
+  assert.equal(ctx.calls,1);
 });
