@@ -6943,7 +6943,7 @@ function typeHouseholdCell(p){
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');
-  return `<div>${exclusiveLabel}</div><div class="rng">세부 타입 미확인</div>`;
+  return `<div>${exclusiveLabel}</div>`;
 }
 function mergeSummaryRowsByPyeong(rows){
   const grouped=new Map();
