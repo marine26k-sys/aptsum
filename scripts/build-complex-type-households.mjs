@@ -124,6 +124,9 @@ for (const complex of index) {
   const byArea = new Map();
   const exactExclusiveTypes = new Map();
   const masterSupplyByType = new Map();
+  const operatorVerifiedAreas = (row?.['면적별'] || []).filter(area =>
+    String(area['KB세대수근거'] || '').startsWith('운영자 제공 KB 평형 선택 화면') &&
+    area['상태'] === 'confirmed' && area['KB세대수상태'] === '확인됨');
   for (const area of row?.['면적별'] || []) {
     const exclusive = Number(area['전용면적']);
     const type = String(area['타입명'] || '').trim();
@@ -175,6 +178,25 @@ for (const complex of index) {
       const types = byArea.get(areaKey);
       types.set(type, Math.max(types.get(type) || 0, households));
     }
+  }
+  // A later KB API collection may omit a type visible in the operator's KB
+  // area selection screen. Retain that individually verified type and supply
+  // area even when freshAreas replaces the older master inventory.
+  for (const area of operatorVerifiedAreas) {
+    const exclusive = Number(area['전용면적']);
+    const supply = Number(area['공급면적']);
+    const households = Number(area['KB세대수']);
+    const type = String(area['타입명'] || '').trim();
+    if (!(exclusive > 0 && supply >= exclusive && Number.isInteger(households) && households > 0 && type)) continue;
+    const size = String(Math.floor(exclusive));
+    if (!byArea.has(size)) byArea.set(size, new Map());
+    if (!byArea.get(size).has(type)) byArea.get(size).set(type, households);
+    const exact = exactAreaKey(exclusive);
+    if (!exactExclusiveTypes.has(exact)) exactExclusiveTypes.set(exact, new Set());
+    exactExclusiveTypes.get(exact).add(type);
+    const key = `${resolvedNaverId}|${type}`;
+    if (!supplyPyeongByType.has(key)) supplyPyeongByType.set(key, Math.floor(supply * 0.3025));
+    if (!supplyAreaFloorByType.has(key)) supplyAreaFloorByType.set(key, Math.floor(supply));
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
   function supplyForType(area, type) {
