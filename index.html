@@ -6960,7 +6960,7 @@ function typeHouseholdCell(p){
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
   if(rows.length)return rows.map(row=>{
-    const label=row.siteTypeMatched===false?`KB ${String(row.kbTypeName||row.type).replace(/^KB:/,'')}`:exclusiveTypeLabels(p.sizeKey,row.type);
+    const label=row.siteTypeMatched===false?p.sizeKey:exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
     return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
   }).join('');

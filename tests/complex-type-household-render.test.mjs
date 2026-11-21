@@ -34,6 +34,13 @@ test('타입 미확인 요약표에는 전용면적 숫자만 표시한다',()=>
  assert.equal(c.typeHouseholdCell({sizeKey:12}),'<div>12</div>');
 });
 
+test('KB 공급평을 타입명으로 대체하지 않고 전용면적 정수와 세대수를 표시한다',()=>{
+ const c=context();
+ c.complexTypeHouseholdData={'47':[{type:'KB:19',kbTypeName:'19',siteTypeMatched:false,households:75,supplyAreaFloor:63,supplyPyeong:19}]};
+ c.complexTradeTypeData=null;
+ assert.equal(c.typeHouseholdCell({sizeKey:47,supplyAreaFloor:63,supplyAreaFloors:[63]}),'<div>47 · <b>75세대</b></div>');
+});
+
 test('상세 거래내역은 타입이 있으면 타입만, 없으면 전용면적만 표시한다',()=>{
  const c=context();
  const data={byPy:[{sizeKey:84,py:34,max:5.8}],trades:[{date:'26.09.23',py:'34평',sizeKey:84,area:84.99,amt:5.8,floor:1}]};
