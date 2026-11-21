@@ -3835,14 +3835,14 @@ async function applyComplexSupplyPyeong(items){
   const key=`${normalizeName(name)}|${normalizeName(t.umd)}`;
   const shard=byLawd.get(t.lawd);
   const areas=shard?.items?.[key];
-  if(!areas)return {...t,py:null};
+  if(!areas)return t;
   const areaRows=areas[String(Math.floor(Number(t.area)))]||[];
   const exactTypes=shard.exactExclusiveTypes?.[key]||{};
   const group=complexSupplyAreaFloorForTrade(t,true,areaRows,exactTypes);
-  if(!Number.isInteger(group))return {...t,py:null};
+  if(!Number.isInteger(group))return t;
   const floors=complexSupplyAreaFloorGroup(Math.floor(Number(t.area)),group,areaRows);
   const py=complexPyLabel({sizeKey:Math.floor(Number(t.area)),supplyAreaFloor:group,supplyAreaFloors:floors},areas);
-  return {...t,py:Number.parseInt(py,10)||null};
+  return {...t,py:Number.parseInt(py,10)||t.py};
  });
 }
 function complexDisplayName(lawd,apt,umd,gu){
@@ -4463,7 +4463,7 @@ function analyzePricePerPyeong(all, months){
   // 2) 단지별로 공급면적 평당가(만원/공급평) 계산 후, 평당가가 가장 높은 평형 1개만 대표로 채택
   const byComplex = {};
   for(const t of Object.values(byPy)){
-    if(!t.area || !(Number(t.py)>0)) continue; // 공급평 미확정 거래는 평당가 계산 불가
+    if(!t.area || !(Number(t.py)>0)) continue; // 공급평을 계산할 수 없는 거래 제외
     const pk = `${t.apt}|${t.umd}|${t.gu||''}|${exclusiveAreaKey(t)}|${t.py}`;
     if((pyCount[pk]||0) < 2) continue; // 표본 1건뿐인 평형은 이상치 방지를 위해 대표 후보에서 제외
     const ck = `${t.apt}|${t.umd}|${t.gu||''}`;
@@ -5149,7 +5149,9 @@ async function acShow(input){
   const q = input.value.trim().replace(/\s/g,'');
   const ac = document.getElementById('ac');
   acInput = input;
-  acActiveIndex=-1;input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','ac');input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedesce�m����z�&��^w);
+  acActiveIndex=-1;input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','ac');input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedescendant');
+  acPos(input);
+  if(q.�m�ݼ�z�&��^w');
       if(row){
         acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
         if(listingHit){acInput.dataset.pickedKey=listingHit.key;acInput.dataset.pickedApt=listingHit.apt;}
