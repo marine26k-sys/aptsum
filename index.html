@@ -4065,24 +4065,13 @@ function complexSupplyAreaFloorForTrade(t,enabled=true){
   // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
   const types=tradeTypesForArea(t?.area);
   if(Array.isArray(types)&&types.length){
-    const matchedHouseholdsByGroup=new Map();
-    for(const type of types){
-      const matchingRows=rows.filter(item=>item.siteTypeMatched!==false&&String(item.type||'').trim()===String(type||'').trim());
-      const groupFloors=[...new Set(matchingRows
-        .map(row=>row.supplyAreaFloor)
-        .filter(Number.isInteger)
-        .map(floor=>clusters.find(group=>group.includes(floor))?.[0]??floor))];
-      // A repeated type label can span separate supply-area groups. Without
-      // another discriminator, leave that trade unassigned instead of guessing.
-      if(groupFloors.length!==1)continue;
-      const groupFloor=groupFloors[0];
-      const group=clusters.find(item=>item[0]===groupFloor)||[groupFloor];
-      const households=matchingRows
-        .filter(row=>Number.isInteger(row.supplyAreaFloor)&&group.includes(Number(row.supplyAreaFloor)))
-        .reduce((sum,row)=>sum+Math.max(0,Number(row.households)||0),0);
-      matchedHouseholdsByGroup.set(groupFloor,(matchedHouseholdsByGroup.get(groupFloor)||0)+households);
+    const matchedGroups=new Set();
+    for(const row of rows){
+      if(row.siteTypeMatched===false||!Number.isInteger(row.supplyAreaFloor)||!types.includes(String(row.type||'').trim()))continue;
+      const group=clusters.find(group=>group.includes(row.supplyAreaFloor));
+      if(group)matchedGroups.add(group[0]);
     }
-    if(matchedHouseholdsByGroup.size)return [...matchedHouseholdsByGroup].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0];
+    if(matchedGroups.size)return matchedGroups.size===1?[...matchedGroups][0]:null;
   }
   // 공급면적 정수 차이가 1~2㎡인 이웃 타입은 같은 그룹으로 둔다.
   // 타입 매칭 없이도 후보 그룹이 하나뿐일 때만 연결한다. 여러 그룹이면 임의 추정하지 않는다.

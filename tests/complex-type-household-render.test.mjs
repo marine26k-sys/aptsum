@@ -106,3 +106,10 @@ test('정확히 일치하는 KB 전용면적이 여러 공급 그룹에 있으�
  c.complexTradeTypeData=null;
  assert.equal(c.complexAreaGroupKey({area:59.91}),'59');
 });
+
+test('확인된 타입도 같은 전용면적에 공급 그룹이 여러 개면 세대수로 추정하지 않는다',()=>{
+ const c=context();
+ loadComplex(c,'41250','지행주공2단지|지행동');
+ assert.deepEqual(Array.from(c.tradeTypesForArea(59.99)),['77B','82A']);
+ assert.equal(c.complexAreaGroupKey({area:59.99}),'59');
+});
