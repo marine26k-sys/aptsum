@@ -4050,7 +4050,8 @@ function looseMatchComplex(all, qnList, stage){
 // 실거래 기본 그룹은 전용면적 정수 내림으로 잡고, KB 공급면적 정수 내림값 차이가 3㎡ 이상이면 세분한다.
 // 공급면적 기반 평형(py)은 세분된 그룹의 표시값과 평대 필터에 사용한다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
-function complexSupplyAreaFloorClusters(sizeKey,rows=complexTypeHouseholdData?.[String(sizeKey)]||[]){
+function complexSupplyAreaFloorClusters(sizeKey,areaRows){
+  const rows=areaRows??complexTypeHouseholdData?.[String(sizeKey)]??[];
   const floors=[...new Set(rows.map(row=>row.supplyAreaFloor).filter(Number.isInteger))].sort((a,b)=>a-b);
   const clusters=[];
   for(const floor of floors){
@@ -5149,11 +5150,7 @@ async function acShow(input){
   const q = input.value.trim().replace(/\s/g,'');
   const ac = document.getElementById('ac');
   acInput = input;
-  acActiveIndex=-1;input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','ac');input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedescendant');
-  acPos(input);
-  if(q.�m�ݼ�z�&��^w');
-      if(row){
-        acInput.dataset.pickedLawd=lawd;acInput.dataset.pickedName=name;
+  acActiveIndex=-1;input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','ac');input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedescendan�m����z�&��^wacInput.dataset.pickedName=name;
         if(listingHit){acInput.dataset.pickedKey=listingHit.key;acInput.dataset.pickedApt=listingHit.apt;}
         // 복원된 전체 권역 범위는 보존하고, 고른 단지의 실제 지역은 dataset에 따로 저장한다.
         if(!isAllScope(row.querySelector('select').value))setCmpRowLawd(row,lawd);
@@ -6721,7 +6718,8 @@ function complexPySortKey(p){
   const match=label.match(/-?\d+(?:\.\d+)?/);
   return match?Number(match[0]):Number.MAX_SAFE_INTEGER;
 }
-function complexPyLabel(p,areas=complexTypeHouseholdData){
+function complexPyLabel(p,areaData){
+  const areas=areaData??complexTypeHouseholdData;
   if(!Number.isInteger(p?.supplyAreaFloor))return p?.py;
   const floors=p?.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
   const rows=(areas?.[String(p?.sizeKey)]||[]).filter(row=>floors?.has(Number(row.supplyAreaFloor)));
@@ -6772,7 +6770,8 @@ function removeCombinedTypeAliases(types){
     return !(parts.length>1&&parts.every(part=>available.has(part)));
   });
 }
-function tradeTypesForArea(value,exactTypes=complexTradeTypeData){
+function tradeTypesForArea(value,areaTypes){
+  const exactTypes=areaTypes??complexTradeTypeData;
   if(!exactTypes)return null;
   const area=Number(value);
   if(!Number.isFinite(area)||area<=0)return null;
