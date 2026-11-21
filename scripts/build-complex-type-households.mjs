@@ -21,16 +21,62 @@ const master = JSON.parse(await readFile(args.master, 'utf8'));
 function masterRegionCode(row) {
   return row && regionCodes.get(`${row['시']}|${row['구']}`);
 }
+const locationKey = (city, district, dong) => [
+  normalize(city).replace(/도/g, ''),
+  normalize(district).replace(/시/g, ''),
+  normalize(dong),
+].join('|');
+function completionYear(value) {
+  const match = String(value ?? '').match(/(?:19|20)\d{2}/);
+  return match ? Number(match[0]) : null;
+}
+function hasCorroboratingKBData(complex, row) {
+  if (!row || locationKey(complex.city, complex.district, complex.dong) !==
+      locationKey(row['시'], row['구'], row['법정동'])) return false;
+  const areas = complex.areas || [];
+  if (!areas.length || areas.some(area => {
+    const exclusive = Number(area.exclusiveM2);
+    const supply = Number(area.supplyM2);
+    return !(exclusive > 0 && supply >= exclusive &&
+      Number.isInteger(Number(area.households)) && Number(area.households) > 0);
+  })) return false;
+  const households = areas.reduce((sum, area) => sum + Number(area.households), 0);
+  if (!Number(row['세대수']) || households !== Number(row['세대수'])) return false;
+  const confirmedAreas = (row['면적별'] || []).filter(area =>
+    area['상태'] === 'confirmed' && Number(area['전용면적']) > 0 &&
+    Number(area['공급면적']) >= Number(area['전용면적']));
+  const everyKBAreaExists = areas.every(area => confirmedAreas.some(candidate =>
+    Math.abs(Number(candidate['전용면적']) - Number(area.exclusiveM2)) <= 0.02 &&
+    Math.abs(Number(candidate['공급면적']) - Number(area.supplyM2)) <= 0.02));
+  if (!everyKBAreaExists) return false;
+  // The current KB type catalog does not expose a completion year. If a future
+  // export does, use it as another required cross-check when the master has one.
+  const kbYear = completionYear(complex.completionYear ?? complex.builtYear ?? complex.year ?? complex['준공연도'] ?? complex['준공년월']);
+  const masterYear = completionYear(row['준공년월'] ?? row['준공연도']);
+  return kbYear == null || masterYear == null || kbYear === masterYear;
+}
+const masterByLocation = new Map();
+for (const [id, row] of Object.entries(master)) {
+  if (row['단지정보 상태'] !== '확인됨' || !masterRegionCode(row) || !row['법정동']) continue;
+  const key = locationKey(row['시'], row['구'], row['법정동']);
+  if (!masterByLocation.has(key)) masterByLocation.set(key, []);
+  masterByLocation.get(key).push([id, row]);
+}
 const freshTypesByNaverId = new Map();
 const freshIdsByIdentity = new Map();
+let crossCheckedMatches = 0;
+let crossCheckedNameVariants = 0;
+let exactIdentityFallbacks = 0;
 for (const complex of freshKbTypes?.complexes || []) {
   let target = complex.matchedTarget;
   let ids = complex.targetNaverIds || (target?.naverId ? [target.naverId] : []);
-  // Some KB catalog records have a Naver ID on every area but lack the newer
-  // targetNaverIds confirmation. Accept only one shared ID whose master row
-  // exactly agrees on complex name, city, district, and legal dong.
+  // Some KB catalog records lack targetNaverIds. Use one shared area Naver ID
+  // when present; if the name differs, require exact location, total household
+  // count, and every KB area dimension to agree with the confirmed master row.
+  // With no Naver ID, accept one exact name+location row, or one unique row
+  // corroborated by the same household and complete area-dimension checks.
   if (!ids.length) {
-    const areaIds = new Set((complex.areas || []).map(area => Number(area.naverId)).filter(Number.isInteger));
+    const areaIds = new Set((complex.areas || []).map(area => Number(area.naverId)).filter(id => Number.isInteger(id) && id > 0));
     if (areaIds.size === 1) {
       const candidateId = [...areaIds][0];
       const candidate = master[String(candidateId)];
@@ -43,6 +89,28 @@ for (const complex of freshKbTypes?.complexes || []) {
       if (sameIdentity) {
         ids = [candidateId];
         target = { naverId: candidateId, name: candidate['단지명'], district: candidate['구'], dong: candidate['법정동'] };
+      } else if (hasCorroboratingKBData(complex, candidate)) {
+        ids = [candidateId];
+        target = { naverId: candidateId, name: candidate['단지명'], district: candidate['구'], dong: candidate['법정동'] };
+        crossCheckedMatches++;
+        if (normalize(complex.kbName) !== normalize(candidate['단지명'])) crossCheckedNameVariants++;
+      }
+    } else if (areaIds.size === 0) {
+      const locationCandidates = masterByLocation.get(locationKey(complex.city, complex.district, complex.dong)) || [];
+      const exactNameCandidates = locationCandidates.filter(([, row]) => normalize(complex.kbName) === normalize(row['단지명']));
+      const corroboratedCandidates = locationCandidates.filter(([, row]) => hasCorroboratingKBData(complex, row));
+      const selected = exactNameCandidates.length === 1
+        ? exactNameCandidates[0]
+        : corroboratedCandidates.length === 1 ? corroboratedCandidates[0] : null;
+      if (selected) {
+        const [candidateId, candidate] = selected;
+        ids = [Number(candidateId)];
+        target = { naverId: Number(candidateId), name: candidate['단지명'], district: candidate['구'], dong: candidate['법정동'] };
+        if (normalize(complex.kbName) === normalize(candidate['단지명'])) exactIdentityFallbacks++;
+        else {
+          crossCheckedMatches++;
+          crossCheckedNameVariants++;
+        }
       }
     }
   }
@@ -390,4 +458,4 @@ for (const [lawd, items] of shards) await writeFile(path.join(outDir, `${lawd}.j
 await mkdir(supplyPyeongDir, { recursive: true });
 for (const file of await readdir(supplyPyeongDir)) await unlink(path.join(supplyPyeongDir, file));
 for (const [lawd, items] of supplyPyeongShards) await writeFile(path.join(supplyPyeongDir, `${lawd}.json`), JSON.stringify({ items }));
-console.log(JSON.stringify({ indexComplexes: index.length, complexesWithTypes: complexesWithAreas, typeAreaRows: typeCount, lookupKeys: keysWritten, prefixDongMatches, aliasesSkipped, ambiguous, unmatched, shards: shards.size }, null, 2));
+console.log(JSON.stringify({ indexComplexes: index.length, complexesWithTypes: complexesWithAreas, typeAreaRows: typeCount, lookupKeys: keysWritten, prefixDongMatches, exactIdentityFallbacks, crossCheckedMatches, crossCheckedNameVariants, aliasesSkipped, ambiguous, unmatched, shards: shards.size }, null, 2));
