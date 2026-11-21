@@ -198,8 +198,8 @@ function mapFreshAreaType(area, row) {
     return { type: String(area.websiteTypeName).trim(), siteTypeMatched: true };
   }
   // Keep the KB type available to the analysis even when Naver has no exact
-  // type-name row. The UI labels it as KB-sourced and never uses it to assign
-  // a trade to a supply-area group.
+  // type-name row. The UI shows its exclusive area and can match its
+  // supply group using the exact area.
   const kbLabel = String(area.kbTypeName || area.websiteTypeName || '').trim();
   return { type: kbLabel ? `KB:${kbLabel}` : '', siteTypeMatched: false };
 }
@@ -250,6 +250,7 @@ for (const complex of index) {
   const row = candidates.size === 1 ? candidates.values().next().value : null;
   const byArea = new Map();
   const exactExclusiveTypes = new Map();
+  const resolvedKBLabels = new Map();
   const masterVerifiedAreas = (row?.['면적별'] || []).filter(area =>
     area['상태'] === 'confirmed' && area['KB세대수상태'] === '확인됨' &&
     Number.isInteger(Number(area['KB세대수'])) && Number(area['KB세대수']) > 0);
@@ -287,12 +288,22 @@ for (const complex of index) {
   // Do not mix its type labels with older master-map rows, which can lack supply pyeong.
   const freshAreas = freshTypesByNaverId.get(resolvedNaverId) || [];
   if (freshAreas.length) { byArea.clear(); exactExclusiveTypes.clear(); }
+  const targetMaster = master[String(resolvedNaverId)];
+  const sameTargetIdentity = targetMaster && masterRegionCode(targetMaster) === complex.lawd &&
+    normalize(targetMaster['법정동']) === normalize(complex.umd);
   for (const area of freshAreas) {
     const exclusive = Number(area.exclusiveM2);
     if (!Number.isFinite(exclusive) || exclusive <= 0) continue;
     // Use the site label from an exact match, or map by exact KB/Naver dimensions
     // when the KB type is absent from the Naver catalog's type-name mapping.
-    const { type, siteTypeMatched } = mapFreshAreaType(area, row);
+    // A linked complex can lack confirmed complex metadata while retaining
+    // confirmed Naver types for individual KB area IDs.
+    const typeRow = row || (sameTargetIdentity && {
+      '면적별': (targetMaster['면적별'] || []).filter(item =>
+        Number(item['KB단지ID']) === Number(area.kbComplexId) &&
+        Number(item['KB면적ID']) === Number(area.kbAreaId)),
+    });
+    const { type, siteTypeMatched } = mapFreshAreaType(area, typeRow);
     if (!type) continue;
     const exactKey = exactAreaKey(area.exclusiveM2);
     if (exactKey && siteTypeMatched) {
@@ -312,8 +323,14 @@ for (const complex of index) {
       const supplyPyeong = supplyAreaFloor == null ? null : Math.floor(supply * 0.3025);
       const typeKey = `${type}|${supplyAreaFloor ?? ''}`;
       const old = types.get(typeKey);
+      const kbLabel = String(area.kbTypeName || area.websiteTypeName || '').trim();
+      if (siteTypeMatched && kbLabel) {
+        if (!resolvedKBLabels.has(areaKey)) resolvedKBLabels.set(areaKey, new Set());
+        resolvedKBLabels.get(areaKey).add(`KB:${kbLabel}|${supplyAreaFloor ?? ''}`);
+      }
       types.set(typeKey, {
         type,
+        exclusiveAreas: [...new Set([...(old?.exclusiveAreas || []), exactKey].filter(Boolean))],
         ...(type.startsWith('KB:') ? { kbTypeName: String(area.kbTypeName || area.websiteTypeName || '').trim() } : {}),
         siteTypeMatched,
         households: Math.max(old?.households || 0, households),
@@ -344,13 +361,23 @@ for (const complex of index) {
     exactExclusiveTypes.get(exact).add(type);
   }
   if (!byArea.size && !exactExclusiveTypes.size) continue;
-  const areas = Object.fromEntries([...byArea].map(([area, types]) => [area, [...types.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }) || Number(a.supplyAreaFloor || 0) - Number(b.supplyAreaFloor || 0))]));
+  const areas = Object.fromEntries([...byArea].map(([area, types]) => {
+    const rows = [...types.values()].sort((a, b) => a.type.localeCompare(b.type, 'ko', { numeric: true }) || Number(a.supplyAreaFloor || 0) - Number(b.supplyAreaFloor || 0));
+    const floors = [...new Set(rows.map(row => row.supplyAreaFloor).filter(Number.isInteger))].sort((a, b) => a - b);
+    // Exact KB dimensions can resolve separate supply groups even when the
+    // site type is unknown. Keep them only where the fallback needs them.
+    if (!rows.some(row => row.siteTypeMatched === false) ||
+        !floors.some((floor, index) => index > 0 && floor - floors[index - 1] >= 3)) {
+      for (const row of rows) delete row.exclusiveAreas;
+    }
+    return [area, rows];
+  }));
   const exactTypes = Object.fromEntries([...exactExclusiveTypes].map(([area, types]) => [area, [...types].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))]));
   complexesWithAreas++;
   typeCount += Object.values(areas).reduce((sum, types) => sum + types.length, 0);
   for (const name of new Set([complex.name, ...(complex.names || [])].filter(Boolean))) {
     const key = identityFor(complex, name);
-    if (!matchByIndex.has(key)) matchByIndex.set(key, { ids: new Set(), lawd: complex.lawd, umd: complex.umd, areas, exactTypes });
+    if (!matchByIndex.has(key)) matchByIndex.set(key, { ids: new Set(), lawd: complex.lawd, umd: complex.umd, areas, exactTypes, resolvedKBLabels });
     matchByIndex.get(key).ids.add(resolvedNaverId);
   }
 }
@@ -374,11 +401,14 @@ if (args['preserve-existing']) {
   }
 }
 
-function mergeAreas(previous, verified, previousExact, verifiedExact) {
+function mergeAreas(previous, verified, resolvedKBLabels) {
   const areas = { ...previous };
   for (const [size, rows] of Object.entries(verified)) {
     const rowKey = row => `${row.type}|${Number.isInteger(row.supplyAreaFloor) ? row.supplyAreaFloor : ''}`;
-    const byType = new Map((previous[size] || []).map(row => [rowKey(row), row]));
+    const resolved = resolvedKBLabels.get(size);
+    const byType = new Map((previous[size] || [])
+      .filter(row => row.siteTypeMatched !== false || !resolved?.has(rowKey(row)))
+      .map(row => [rowKey(row), row]));
     for (const row of rows) {
       const key = rowKey(row);
       const old = byType.get(key);
@@ -386,13 +416,15 @@ function mergeAreas(previous, verified, previousExact, verifiedExact) {
         byType.set(key, row);
         continue;
       }
-      byType.set(key, {
+      const merged = {
         ...old,
         ...row,
         households: row.households ?? old.households,
         supplyPyeong: row.supplyPyeong ?? old.supplyPyeong,
         supplyAreaFloor: row.supplyAreaFloor ?? old.supplyAreaFloor,
-      });
+      };
+      if (!row.exclusiveAreas) delete merged.exclusiveAreas;
+      byType.set(key, merged);
     }
     const verifiedTypesWithSupply = new Set(rows.filter(row => Number.isInteger(row.supplyAreaFloor)).map(row => row.type));
     for (const [key, row] of byType) {
@@ -425,7 +457,7 @@ for (const [key, entry] of matchByIndex) {
   for (const [area, types] of Object.entries(entry.exactTypes)) {
     exactTypes[area] = [...new Set([...(oldExact[area] || []), ...types])].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
   }
-  items[lookupKey] = mergeAreas(existing?.items?.[lookupKey] || {}, entry.areas, oldExact, entry.exactTypes);
+  items[lookupKey] = mergeAreas(existing?.items?.[lookupKey] || {}, entry.areas, entry.resolvedKBLabels);
   exactShards.get(entry.lawd)[lookupKey] = exactTypes;
   keysWritten++;
 }

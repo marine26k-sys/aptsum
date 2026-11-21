@@ -4041,7 +4041,7 @@ function looseMatchComplex(all, qnList, stage){
 // 공급면적 기반 평형(py)은 세분된 그룹의 표시값과 평대 필터에 사용한다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
-  const floors=[...new Set((complexTypeHouseholdData?.[String(sizeKey)]||[]).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const floors=[...new Set((complexTypeHouseholdData?.[String(sizeKey)]||[]).map(row=>row.supplyAreaFloor).filter(Number.isInteger))].sort((a,b)=>a-b);
   const clusters=[];
   for(const floor of floors){
     const last=clusters.at(-1);
@@ -4059,6 +4059,9 @@ function complexSupplyAreaFloorForTrade(t,enabled=true){
   const rows=complexTypeHouseholdData?.[String(exclusiveAreaKey(t))]||[];
   const clusters=complexSupplyAreaFloorClusters(exclusiveAreaKey(t));
   if(!clusters.length)return null;
+  const exactArea=exactExclusiveKey(t.area);
+  const exactGroups=clusters.filter(group=>rows.some(row=>group.includes(row.supplyAreaFloor)&&row.exclusiveAreas?.includes(exactArea)));
+  if(exactGroups.length)return exactGroups.length===1?exactGroups[0][0]:null;
   // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
   const types=tradeTypesForArea(t?.area);
   if(Array.isArray(types)&&types.length){
@@ -4066,7 +4069,7 @@ function complexSupplyAreaFloorForTrade(t,enabled=true){
     for(const type of types){
       const matchingRows=rows.filter(item=>item.siteTypeMatched!==false&&String(item.type||'').trim()===String(type||'').trim());
       const groupFloors=[...new Set(matchingRows
-        .map(row=>Number(row.supplyAreaFloor))
+        .map(row=>row.supplyAreaFloor)
         .filter(Number.isInteger)
         .map(floor=>clusters.find(group=>group.includes(floor))?.[0]??floor))];
       // A repeated type label can span separate supply-area groups. Without
@@ -6879,7 +6882,7 @@ async function preloadComplexTypeHouseholds(lawd,entry){
   if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTradeTypeData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
   for(const name of names){
     try{
-      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v4'});
+      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v5'});
       const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
       // 다른 단지 조회가 먼저 시작됐다면 오래된 응답으로 전역 타입 데이터를 덮지 않는다.
       if(complexTypeHouseholdKey!==key)return;
@@ -6959,11 +6962,16 @@ function typeHouseholdCell(p){
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(rows.length)return rows.map(row=>{
-    const label=row.siteTypeMatched===false?p.sizeKey:exclusiveTypeLabels(p.sizeKey,row.type);
+  const householdsByLabel=new Map();
+  for(const row of rows){
+    const label=row.siteTypeMatched===false?String(p.sizeKey):exclusiveTypeLabels(p.sizeKey,row.type);
     const households=Number(row.households);
-    return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
-  }).join('');
+    const count=Number.isInteger(households)&&households>0?households:0;
+    householdsByLabel.set(label,(householdsByLabel.get(label)||0)+count);
+  }
+  if(householdsByLabel.size)return [...householdsByLabel].map(([label,households])=>
+    `<div>${esc(label)}${households?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`
+  ).join('');
   return `<div>${exclusiveLabel}</div>`;
 }
 function mergeSummaryRowsByPyeong(rows){
@@ -7821,7 +7829,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','supply-m2-floor-v4');
+        query.set('typeSchema','supply-m2-floor-v5');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
