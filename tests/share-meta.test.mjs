@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { prepareShareMeta } from '../scripts/prepare-share-meta.mjs';
+import { prepareShareMeta, prepareCardShareMeta } from '../scripts/prepare-share-meta.mjs';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const cardHtml = await readFile(new URL('../card/index.html', import.meta.url), 'utf8');
 const previewEnv = { CONTEXT: 'deploy-preview', DEPLOY_PRIME_URL: 'https://deploy-preview-159--aptsum.netlify.app/' };
 
 test('preview sharing metadata uses the preview image and page before JavaScript runs', () => {
@@ -14,6 +15,15 @@ test('preview sharing metadata uses the preview image and page before JavaScript
   assert.ok(output.includes('<link rel="canonical" href="https://deploy-preview-159--aptsum.netlify.app/">'));
   assert.equal(prepareShareMeta(output, previewEnv), output);
   assert.equal(output.slice(output.indexOf('<body')), html.slice(html.indexOf('<body')));
+});
+
+test('channel card preview uses its own deployed image URL', () => {
+  const preview = prepareCardShareMeta(cardHtml, previewEnv);
+  assert.ok(preview.includes('content="https://deploy-preview-159--aptsum.netlify.app/card/og-image-v2.png"'));
+  assert.ok(preview.includes('<meta property="og:url" content="https://deploy-preview-159--aptsum.netlify.app/card/">'));
+  assert.equal(prepareCardShareMeta(preview, previewEnv), preview);
+  const production = prepareCardShareMeta(preview, {});
+  assert.ok(production.includes('content="https://aptsum.kr/card/og-image-v2.png"'));
 });
 
 test('production and local builds keep production sharing URLs even after a preview build', () => {
