@@ -4310,8 +4310,8 @@ function includeJeonseOnlySaleAreas(sale, jeonse){
 }
 
 // KB 평형 자료가 있으면 화면의 평형 목록도 KB 기준으로 완성한다.
-// 조회 기간에 거래가 없어도 해당 타입을 표에 남기고, KB 면적에 대응하지 않는
-// 거래 그룹은 KB 타입으로 오인되지 않도록 요약표에서 제외한다.
+// 조회 기간에 거래가 없어도 해당 타입을 표에 남긴다. KB 타입에 대응하지
+// 않는 실제 거래는 타입 미확인 행으로 남겨 거래 자체를 숨기지 않는다.
 function includeKBTypeAreas(data){
   const source=complexTypeHouseholdData;
   if(!source||!Object.keys(source).length)return data;
@@ -4328,13 +4328,18 @@ function includeKBTypeAreas(data){
     }
   }
   if(!knownGroups.size)return data;
-  const normalized=(data?.byPy||[]).filter(row=>{
+  const normalized=(data?.byPy||[]).flatMap(row=>{
     const sizeKey=Number(row.sizeKey);
     const hasKBSize=Object.keys(source).some(size=>Number(size)===sizeKey);
-    if(!hasKBSize)return false;
-    if(!Number.isInteger(Number(row.supplyAreaFloor)))return false;
-    const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
-    return knownGroups.has(`${sizeKey}|${group[0]}`);
+    if(hasKBSize&&Number.isInteger(Number(row.supplyAreaFloor))){
+      const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
+      if(knownGroups.has(`${sizeKey}|${group[0]}`))return [row];
+    }
+    if(!row.n&&!row.recent&&row.max==null&&!row.monthly?.length)return [];
+    const unmatchedAreas=[...new Set((data?.trades||[])
+      .filter(trade=>complexRowGroupKey(trade)===complexRowGroupKey(row))
+      .map(trade=>Number(trade.area)).filter(area=>Number.isFinite(area)&&area>0))].sort((a,b)=>a-b);
+    return [{...row,kbTypeUnmatched:true,unmatchedAreas}];
   });
   const present=new Set(normalized.map(row=>{
     const group=complexSupplyAreaFloorGroup(Number(row.sizeKey),Number(row.supplyAreaFloor));
@@ -7016,6 +7021,10 @@ function exclusiveTypeLabels(sizeKey,value){
 }
 function typeHouseholdCell(p){
   if(p.mergedRows?.length)return p.mergedRows.map(typeHouseholdCell).join('');
+  if(p.kbTypeUnmatched){
+    const areas=p.unmatchedAreas?.length?p.unmatchedAreas.map(area=>`${area}㎡`).join(' · '):`${p.sizeKey}㎡`;
+    return `<div>전용 ${esc(areas)} · KB 타입 미확인</div>`;
+  }
   const allAreaRows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   const sharedExactTypeGroup=p.supplyAreaFloors?.length>1&&
     Math.max(...p.supplyAreaFloors)-Math.min(...p.supplyAreaFloors)>=3;
@@ -7135,7 +7144,9 @@ function tradesHTML(d, footNote){
       const exclusiveArea=Number(t.area);
       const exclusiveText=Number.isFinite(exclusiveArea)&&exclusiveArea>0?String(Math.round(exclusiveArea)):'';
       const tradeTypes=Array.isArray(exactTypes)?[...new Set(removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'))]:[];
-      const typeLabel=tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
+      const typeLabel=size?.kbTypeUnmatched&&Number.isFinite(exclusiveArea)
+        ?`${esc(String(exclusiveArea))}㎡ · KB 타입 미확인`
+        :tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
       return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
