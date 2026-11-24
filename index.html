@@ -4335,6 +4335,9 @@ function includeKBTypeAreas(data){
   const normalized=(data?.byPy||[]).flatMap(row=>{
     const sizeKey=Number(row.sizeKey);
     const hasKBSize=Object.keys(source).some(size=>Number(size)===sizeKey);
+    // 국토부 분양권·입주권에만 있는 전용면적은 KB 평형으로 만들지 않는다.
+    // 원거래는 전체 거래내역에 그대로 남긴다.
+    if(!hasKBSize)return [];
     if(hasKBSize&&Number.isInteger(Number(row.supplyAreaFloor))){
       const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
       if(knownGroups.has(`${sizeKey}|${group[0]}`))return [row];
@@ -7149,8 +7152,7 @@ function tradesHTML(d, footNote){
       const exclusiveArea=Number(t.area);
       const exclusiveText=Number.isFinite(exclusiveArea)&&exclusiveArea>0?String(Math.round(exclusiveArea)):'';
       const tradeTypes=Array.isArray(exactTypes)?[...new Set(removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'))]:[];
-      const kbSupplyUnknown=!size&&Array.isArray(complexTypeHouseholdData?.[String(t.sizeKey)])&&
-        complexSupplyAreaFloorClusters(t.sizeKey).length>1;
+      const kbSupplyUnknown=!size&&!!complexTypeHouseholdData;
       const typeLabel=(size?.kbTypeUnmatched||kbSupplyUnknown)&&Number.isFinite(exclusiveArea)
         ?`${esc(String(exclusiveArea))}㎡ · KB 타입 미확인`
         :tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');

@@ -48,6 +48,21 @@ test('공급 타입을 모르는 84.98㎡ 거래는 KB 공급평형을 합치지
   assert.deepEqual(Array.from(result.trades,t=>t.groupKey),['84|108','84','84']);
 });
 
+test('KB에 없는 입주권 전용면적은 모든 단지에서 요약 평형을 만들지 않는다', () => {
+  const ctx=vm.createContext({
+    complexTypeHouseholdData:{'22':[{type:'34',supplyAreaFloor:34,supplyPyeong:10,households:102}]},
+    complexTradeTypeData:null,complexTypeHouseholdKey:'41173|비산동|평촌엘프라우드',
+    complexPySortKey:p=>Number(String(p.py).match(/\d+/)?.[0]||0),
+  });
+  vm.runInContext(helpers+html.slice(html.indexOf('function includeKBTypeAreas('),html.indexOf('function analyzeRegion(')),ctx);
+  const trade={sizeKey:33,groupKey:'33',area:33.523,amt:8.3,kind:'입주권'};
+  const data={found:true,name:'평촌엘프라우드',umd:'비산동',trades:[trade],byPy:[{py:'15평',sizeKey:33,groupKey:'33',n:1,max:8.3}]};
+  const result=ctx.includeKBTypeAreas(data);
+  assert.deepEqual(Array.from(result.byPy,p=>p.sizeKey),[22]);
+  assert.equal(result.trades.length,1);
+  assert.equal(result.trades[0].area,33.523);
+});
+
 test('매매 거래가 없는 전용면적도 전세 거래가 있으면 매매 평형에 가격 없이 표시한다', () => {
   const ctx = vm.createContext({
     complexTypeHouseholdKey:'',complexTypeHouseholdData:null,complexTradeTypeData:null,
