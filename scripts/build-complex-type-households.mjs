@@ -146,6 +146,26 @@ const exactAreaKey = (value) => {
 const index = JSON.parse(await readFile('data/complex-index.json', 'utf8')).entries;
 const byIdentity = new Map();
 const byRegionAndName = new Map();
+const byVillageNameIdentity = new Map();
+const tradeYearsByDistrict = new Map();
+async function tradeYearsFor(lawd) {
+  if (tradeYearsByDistrict.has(lawd)) return tradeYearsByDistrict.get(lawd);
+  const years = new Map();
+  const dir = path.join('data/analyze', lawd);
+  for (const file of await readdir(dir).catch(() => [])) {
+    if (!file.endsWith('.json')) continue;
+    const month = JSON.parse(await readFile(path.join(dir, file), 'utf8'));
+    for (const trade of month.items || []) {
+      const year = completionYear(trade.build);
+      if (!year) continue;
+      const key = `${normalize(trade.umd)}|${normalize(trade.apt)}`;
+      if (!years.has(key)) years.set(key, new Set());
+      years.get(key).add(year);
+    }
+  }
+  tradeYearsByDistrict.set(lawd, years);
+  return years;
+}
 for (const [id, row] of Object.entries(master)) {
   if (row['단지정보 상태'] !== '확인됨') continue;
   const lawd = masterRegionCode(row);
@@ -154,6 +174,9 @@ for (const [id, row] of Object.entries(master)) {
   if (!byIdentity.has(key)) byIdentity.set(key, []);
   const entry = { id, row, dong: normalize(row['법정동']) };
   byIdentity.get(key).push(entry);
+  const villageKey = [lawd, normalize(row['법정동']), normalize(row['단지명']).replace(/마을/g, '')].join('|');
+  if (!byVillageNameIdentity.has(villageKey)) byVillageNameIdentity.set(villageKey, []);
+  byVillageNameIdentity.get(villageKey).push(entry);
   const nameKey = `${lawd}|${normalize(row['단지명'])}`;
   if (!byRegionAndName.has(nameKey)) byRegionAndName.set(nameKey, []);
   byRegionAndName.get(nameKey).push(entry);
@@ -212,6 +235,29 @@ for (const complex of index) {
   for (const name of names) {
     for (const match of byIdentity.get(identityFor(complex, name)) || []) candidates.set(match.id, match.row);
     for (const id of freshIdsByIdentity.get(identityFor(complex, name)) || []) freshIds.add(id);
+  }
+  // The index can retain "마을" while the verified Naver/KB identity omits it.
+  // Require the same dong, KB household total, and reported completion year.
+  if (!candidates.size && !freshIds.size) {
+    const variants = new Map();
+    const variantEntries = [...names].flatMap(name => {
+      const key = [complex.lawd, normalize(complex.umd), normalize(name).replace(/마을/g, '')].join('|');
+      return byVillageNameIdentity.get(key) || [];
+    });
+    if (variantEntries.length) {
+      const tradeYears = await tradeYearsFor(complex.lawd);
+      const indexYears = new Set([...names].flatMap(name =>
+        [...(tradeYears.get(`${normalize(complex.umd)}|${normalize(name)}`) || [])]));
+      for (const match of variantEntries) {
+        const freshAreas = freshTypesByNaverId.get(Number(match.id)) || [];
+        const masterYear = completionYear(match.row['준공년월'] ?? match.row['준공연도']);
+        const kbHouseholds = freshAreas.reduce((sum, area) => sum + Number(area.households || 0), 0);
+        if (masterYear && indexYears.has(masterYear) && kbHouseholds === Number(match.row['세대수'])) {
+          variants.set(match.id, match.row);
+        }
+      }
+    }
+    if (variants.size === 1) for (const [id, row] of variants) candidates.set(id, row);
   }
   // The complex index often includes a legal ri after the eup/myeon/dong
   // (for example, "봉담읍 내리"), while the canonical map stores only the

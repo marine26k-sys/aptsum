@@ -6935,7 +6935,7 @@ async function preloadComplexTypeHouseholds(lawd,entry){
   if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTradeTypeData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
   for(const name of names){
     try{
-      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v5'});
+      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v6'});
       const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
       // 다른 단지 조회가 먼저 시작됐다면 오래된 응답으로 전역 타입 데이터를 덮지 않는다.
       if(complexTypeHouseholdKey!==key)return;
@@ -7882,7 +7882,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','supply-m2-floor-v5');
+        query.set('typeSchema','supply-m2-floor-v6');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();

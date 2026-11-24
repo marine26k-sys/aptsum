@@ -85,6 +85,15 @@ test('KB 공급면적 정수 차이 1~2㎡는 같은 평형, 3㎡부터 별도 �
  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(59))),[[81,83],[84]]);
 });
 
+test('같은 동·세대수·준공연도가 확인된 마을 이름 변형도 KB 타입을 연결한다',()=>{
+ const c=context();
+ loadComplex(c,'41173','향촌마을현대4차|평촌동');
+ assert.equal(typeCellForTrade(c,59.94),'<div>59 · <b>188세대</b></div>');
+ assert.equal(typeCellForTrade(c,84.99),'<div>84 · <b>364세대</b></div>');
+ loadComplex(c,'41135','청솔마을주공9단지|금곡동');
+ assert.ok(Object.keys(c.complexTypeHouseholdData).length>0);
+});
+
 test('신림더루나의 확인된 네이버 타입과 세대수는 KB 자료를 다시 생성해도 유지한다',()=>{
  const c=context();
  loadComplex(c,'11620','신림더루나|신림동');
