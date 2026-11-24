@@ -4037,8 +4037,7 @@ function looseMatchComplex(all, qnList, stage){
   return null;
 }
 
-// 실거래 기본 그룹은 전용면적 정수 내림으로 잡고, KB 공급면적 정수 내림값 차이가 3㎡ 이상이면 세분한다.
-// 공급면적 기반 평형(py)은 세분된 그룹의 표시값과 평대 필터에 사용한다.
+// 실거래는 전용면적 정수 내림으로 묶고, KB 공급면적 평형이 다르면 나눠 표시한다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
   const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
@@ -4306,7 +4305,7 @@ function includeKBTypeAreas(data){
   const normalized=(data?.byPy||[]).filter(row=>{
     const sizeKey=Number(row.sizeKey);
     const hasKBSize=Object.keys(source).some(size=>Number(size)===sizeKey);
-    if(!hasKBSize)return true;
+    if(!hasKBSize)return false;
     if(!Number.isInteger(Number(row.supplyAreaFloor)))return false;
     const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
     return knownGroups.has(`${sizeKey}|${group[0]}`);
@@ -7942,7 +7941,7 @@ function renderComplex(d){
     </div>
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
-  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 전용면적 정수 기준으로 묶고, KB 공급면적 ㎡ 정수 부분이 3㎡ 이상 차이나면 별도 평형으로 표시</div>`;
+  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 평형·타입·세대수는 KB 기준</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   loadComplexTypeHouseholds(d);
