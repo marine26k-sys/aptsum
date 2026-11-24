@@ -1,7 +1,22 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
-import { applyNaverSupplyAreas,applySupplyAreaOverrides,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
+import { applyNaverSupplyAreas,applySupplyAreaOverrides,correctPresaleSupplyAreas,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
+test('presale supply correction preserves raw exclusive areas when another KB type overlaps',()=>{
+ const records=[
+  {apt:'평촌엘프라우드',hh:497,exclusiveArea:84.97,supplyArea:110.44},
+  {apt:'평촌엘프라우드',hh:12,exclusiveArea:110.57,supplyArea:149.36},
+ ];
+ const large={apt:'평촌 엘프라우드',umd:'비산동',area:110.4045,py:45,amt:14.7};
+ assert.deepEqual(correctPresaleSupplyAreas([large],records,'41173'),[large]);
+ const supply={apt:'평촌 엘프라우드',umd:'비산동',area:110.44,py:42};
+ assert.deepEqual(correctPresaleSupplyAreas([supply],records,'41173'),[supply]);
+ assert.equal(correctPresaleSupplyAreas([supply],[records[0]],'41173')[0].area,84.97);
+ const saved=JSON.parse(readFileSync(new URL('../data/presale/41173/202407.json',import.meta.url)));
+ const deals=saved.items.filter(t=>t.apt==='평촌 엘프라우드'&&t.amt===14.7&&t.ym==='202407');
+ assert.equal(deals.length,2);
+ assert.ok(deals.every(t=>t.area===110.4045&&t.py===45&&t.d==='31'));
+});
 test('runtime refreshes changed supply mappings after one minute',async()=>{
  const priorFetch=globalThis.fetch,priorNow=Date.now;let now=1_000,supply=232;
  try{

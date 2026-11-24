@@ -52,7 +52,10 @@ export function correctPresaleSupplyAreas(items, records, lawd) {
     if (verified) return { ...item, ...verified };
     const rows = byName.get(norm(item.apt)) || [];
     const supplyHits = rows.filter(row => Math.abs(row.supplyArea - Number(item.area)) <= 0.05);
-    if (!supplyHits.length || rows.some(row => Math.abs(row.exclusiveArea - Number(item.area)) <= 0.05)) return item;
+    // The reported exclusive area can differ slightly from the KB/Naver type area.
+    // A value near another type's supply area is ambiguous, so preserve the raw
+    // exclusive area instead of moving its transactions to the smaller type.
+    if (!supplyHits.length || rows.some(row => Math.abs(row.exclusiveArea - Number(item.area)) <= 0.2)) return item;
     const exclusiveAreas = [...new Set(supplyHits.map(row => row.exclusiveArea))];
     const householdCounts = [...new Set(supplyHits.map(row => row.hh).filter(Number.isInteger))];
     if (exclusiveAreas.length !== 1 || householdCounts.length > 1) return item;
