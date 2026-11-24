@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {snapshotForHistory} from '../netlify/functions/listings.mjs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const ctx=vm.createContext({Date,Map,LISTING_MIN_HH:300,lsPyMatch:()=>true});
+vm.runInContext(html.slice(html.indexOf('function listingTrendProductionKey('),html.indexOf('function listingPreviousPricePoint(')),ctx);
 vm.runInContext(html.slice(html.indexOf('function listingTrendChoices('),html.indexOf('async function searchListingTrend(')),ctx);
 const item=(ask,extra={})=>({nid:'a',ex:84,ask,hh:500,apt:'옛 단지',py:34,url:'https://fin.land.naver.com/articles/1',...extra});
 const snapshots=[12,11,10,13].map((ask,i)=>({uploadId:`u${i}`,asOf:`2026.10.0${i+1}`,items:[item(ask)]}));
@@ -39,7 +40,7 @@ test('choices deduplicate regional uploads and expose only latest three uploads'
 test('history metadata uses historical values and filters occupancy without modifying stored snapshot',()=>{
  const data={uploadId:'old',asOf:'2026.10.01',items:[item(12),item(9,{occupancy:'tenant'})]};
  assert.equal(snapshotForHistory(data,'available',true).items[0].apt,'옛 단지');
- assert.deepEqual(snapshotForHistory(data,'tenant',false).items,[{nid:'a',ex:84,ask:9}]);
+ assert.deepEqual(snapshotForHistory(data,'tenant',false).items.map(x=>[x.nid,x.ex,x.ask,x.py]),[['a',84,9,34]]);
  assert.equal(data.items.length,2);
 });
 
@@ -102,10 +103,11 @@ test('상승은 이전 구간 최저가를 기준으로 분류하고 연속 조�
 
 test('newly appearing price filter compares identities rather than price changes',()=>{
  const c=vm.createContext({Set});
+ vm.runInContext(html.slice(html.indexOf('function listingTrendProductionKey('),html.indexOf('function listingPreviousPricePoint(')),c);
  vm.runInContext(html.slice(html.indexOf('function listingBudgetNewKeys('),html.indexOf('async function searchListingTab(')),c);
  const previous={uploadId:'old',items:[item(4.5)]};
  const current={uploadId:'now',items:[item(4.2),item(6,{nid:'b'}),item(7,{ex:110})]};
- assert.deepEqual([...c.listingBudgetNewKeys(current,[previous,current])],['b|84','a|110']);
+ assert.deepEqual([...c.listingBudgetNewKeys(current,[previous,current])],['b|84|p34','a|110|p34']);
  assert.equal(c.listingBudgetNewKeys(current,[current]),null);
  assert.equal(c.listingBudgetNewKeys(current,[previous]),null);
 });

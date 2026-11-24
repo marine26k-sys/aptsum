@@ -46,9 +46,9 @@ test('all comparison averages and monthly graph points use the existing outlier 
  vm.runInContext(html.slice(html.indexOf('function markOutliers('),html.indexOf('// ── 층별 가격 프리미엄',html.indexOf('function markOutliers('))),c);
  const base={apt:'가상단지',umd:'가상동',area:84,py:34,ym:'202610',floor:12,direct:0};
  const analyze=items=>c.analyzeCompare({'11111':items},[{lawd:'11111',name:'가상단지'}],['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
- const p=analyze([12,13,14,5].map((amt,i)=>({...base,amt,d:i+1})).concat({...base,amt:50,d:5,direct:1}));
+ const p=analyze([{...base,ym:'202609',amt:13,d:1},...[12,13,14,5].map((amt,i)=>({...base,amt,d:i+1})),{...base,amt:50,d:5,direct:1}]);
  assert.equal(p.avg1.v,13);assert.equal(p.avg1.n,3);for(const key of ['avg3','avg6','avg12','avg24'])assert.equal(p[key],null);
- assert.equal(p.monthly[0].avg,13);assert.equal(p.monthly[0].n,3);assert.equal(p.avgAll,null);
+ assert.equal(p.monthly.at(-1).avg,13);assert.equal(p.monthly.at(-1).n,3);assert.equal(p.avgAll,null);
  const none=analyze([{...base,amt:50,d:1,direct:1}]);for(const key of ['avg1','avg3','avg6','avg12','avg24','avgAll'])assert.equal(none[key],null);assert.equal(none.monthly.length,0);
 });
 
@@ -124,7 +124,7 @@ test('Byeongjeom presale history and occupancy rights are merged into historical
  const merged=c.aptsumComplexIdentity.mergeSources([current],presales,{},'HS-병점구');
  assert.ok(merged.filter(t=>t.ym==='202105').every(t=>t.kind==='분양권'));
  const p=c.analyzeCompare({'HS-병점구':merged},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
- assert.equal(p.changes.y4.basePrice,5.3);assert.equal(p.changes.y5.basePrice,5.3);
+ assert.equal(p.changes.y4.basePrice,4.9);assert.equal(p.changes.y5.basePrice,4.9);
  const rights=c.aptsumComplexIdentity.mergeSources([current],[{...presales[0],ownership:'입주권',amt:6}],{},'HS-병점구');
  const q=c.analyzeCompare({'HS-병점구':rights},[{lawd:'HS-병점구',name:'병점역아이파크캐슬'}],['202610'],Date.parse('2026-10-20T00:00:00Z')).complexes[0].pys[0];
  assert.equal(rights[1].kind,'입주권');assert.equal(q.changes.y5.basePrice,6);

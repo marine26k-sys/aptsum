@@ -1481,7 +1481,7 @@ const viewStack = [];
 let pendingReturnView = null;
 function captureViewInputs(){
   return {
-    mode, lawd: sel.value,
+    mode, lawd: sel.value, regionRankView,
     q: document.getElementById('q').value,
     mN: analysisMonthsForMode(mode, document.getElementById('monthsN').value),
     fM: document.getElementById('floorMin').value,
@@ -1498,6 +1498,7 @@ function captureViewInputs(){
     listingNameKey:listingNameSelected?.key||'',
     budgetBand:listingBudgetSel,
     trendDirection:document.getElementById('listingTrendDirection').value,
+    trendBelowPeak:document.getElementById('listingTrendBelowPeak').getAttribute('aria-pressed')==='true',
     trendContinuous: document.getElementById('listingTrendContinuous').checked,
     budgetNewOnly: false,
     pym: pyBandMultiSel.slice(), // 평형 다중 선택 상태 — 2026.08부터 평형 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통
@@ -1526,7 +1527,11 @@ function buildShareURL(inp){
   if(['listingbudget','listingurgent'].includes(inp.mode)&&inp.listingFloor==='all')p.set('lf','all');
   if(['listingbudget','listingtrend','listingrise'].includes(inp.mode)&&inp.listingNameQuery){p.set('lnq',inp.listingNameQuery);if(inp.listingNameKey)p.set('lnk',inp.listingNameKey);}
   if(inp.by) p.set('by', inp.by);
-  if(['listingtrend','listingrise'].includes(inp.mode)&&inp.trendDirection==='all')p.set('ltd','all');
+  if(inp.mode==='region'&&inp.regionRankView==='pyprice')p.set('rrv','pyprice');
+  if(['listingtrend','listingrise'].includes(inp.mode)){
+    if(inp.trendDirection==='all')p.set('ltd','all');
+    if(inp.trendBelowPeak)p.set('ltbp','1');
+  }
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendUpload) p.set('ltu',inp.trendUpload);
   if((inp.mode==='listingtrend'||inp.mode==='listingrise') && inp.trendContinuous) p.set('ltc','1');
   if((inp.occupancy==='tenant' || (inp.mode==='listingbudget' && inp.occupancy==='presale')) && isListingMode(inp.mode)) p.set('occupancy',inp.occupancy);
@@ -1582,12 +1587,16 @@ async function initFromURL(){
   const requestedMode = URL_MODES.includes(m) ? m : 'complex';
   newHighWeekOnly = requestedMode==='newhigh' && p.get('nh7')==='1';
   if(needsSubscriberSession(requestedMode) || isListingMode(requestedMode)) await aptsumSubscriberGate.ready;
+  if(requestedMode==='region')regionRankView=p.get('rrv')==='pyprice'?'pyprice':'complex';
   if(!setMode(requestedMode, true)){
     showError(MASTER_REQUIRED_MSG);
     return;
   }
   document.getElementById('listingNameQuery').value=['listingbudget','listingtrend','listingrise'].includes(requestedMode)?(p.get('lnq')||''):'';
-  if(['listingtrend','listingrise'].includes(requestedMode)&&p.get('ltd')==='all')document.getElementById('listingTrendDirection').value='all';
+  if(['listingtrend','listingrise'].includes(requestedMode)){
+    if(p.get('ltd')==='all')document.getElementById('listingTrendDirection').value='all';
+    syncListingTrendBelowPeak(p.get('ltbp')==='1');
+  }
   listingNameSelected=null;listingNameRestoreKey=p.get('lnk')||'';
   listingFloorScope=p.get('lf')==='all'?'all':'mid';syncListingFloor();
   if(hasSharedQuery)resetQueriedSliderDefaults(requestedMode);
@@ -1621,7 +1630,7 @@ async function initFromURL(){
     if(p.get('r')) sel.value = p.get('r');
     // 복수 지역(칩) 선택 상태 복원 — setMode()가 이 탭들에 새로 진입할 때 칩을 비우므로 그 다음에 복원해야 함
     if(p.get('rs')){
-      regionSel = p.get('rs').split('|').map(s=>{ const i=s.indexOf(':'); return {lawd:s.slice(0,i), name:s.slice(i+1)}; }).filter(x=>x.name).slice(0, regionSelMax());
+      regionSel = parseCmpShareItems(p.get('rs')).slice(0, regionSelMax());
       saveRegionSel(); renderRegionChips();
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
@@ -1945,6 +1954,10 @@ function restoreListingSelectionInputs(inp){
   upload.value=listingTrendUploadId;
   document.getElementById('listingTrendContinuous').checked=false;
 
+  if(['listingtrend','listingrise'].includes(inp.mode)){
+    if(inp.trendDirection)document.getElementById('listingTrendDirection').value=inp.trendDirection;
+    syncListingTrendBelowPeak(!!inp.trendBelowPeak);
+  }
   listingBudgetSel=inp.budgetBand||null;
   document.getElementById('listingNameQuery').value=inp.listingNameQuery||'';
   listingNameSelected=null;listingNameRestoreKey=inp.listingNameKey||'';listingNameChoices=[];
@@ -2000,7 +2013,7 @@ function restoreView(vi){
     // 단지 분석과 그 탭이 동시에 선택된 것처럼 보였음(mode 변수도 그 탭 그대로라 검색 버튼·필터 UI가
     // 어긋난 상태로 남음 — 2026.09 운영자 리포트). setMode로 탭 상태·mode·필터 UI를 한 번에 초기화한다.
     const initialMode=new URLSearchParams(location.search).get('m');
-    if(initialMode){setMode(initialMode,true);if(initialMode==='listingfavorites')search();}else restoreMainMenu();
+    if(initialMode){initFromURL();}else restoreMainMenu();
     return;
     }
     // 스냅샷이 비어 있으면 URL 복원이 실패한 상태이므로 안전하게 초기 화면으로 돌아간다.
@@ -2010,13 +2023,13 @@ function restoreView(vi){
     return;
   }
   const inp = v.inputs;
+  if(inp.mode==='region')regionRankView=inp.regionRankView==='pyprice'?'pyprice':'complex';
   newHighWeekOnly = !!inp.nh7; // setMode()보다 먼저 복원 — renderNewHigh가 이 값을 읽어 탭 활성 표시·필터링에 쓰므로
   if(!setMode(inp.mode, true)){
     newHighWeekOnly = false;
     setMode('complex', true);
     return;
   }
-  if(['listingtrend','listingrise'].includes(inp.mode)&&inp.trendDirection)document.getElementById('listingTrendDirection').value=inp.trendDirection;
   sel.value = inp.lawd;
   document.getElementById('q').value = inp.q;
   document.getElementById('monthsN').value = analysisMonthsForMode(inp.mode, inp.mN);
@@ -2423,6 +2436,7 @@ function saveNativeRegionResult(){
   if(context) try { sessionStorage.setItem(NATIVE_REGION_RESULT,JSON.stringify({...context,inputs:captureViewInputs()})); }catch(e){}
 }
 function applyNativeRegionInputs(inp){
+  if(inp.mode==='region')regionRankView=inp.regionRankView==='pyprice'?'pyprice':'complex';
   newHighWeekOnly=!!inp.nh7;
   if(!setMode(inp.mode,true)) return false;
   sel.value=inp.lawd;
@@ -3190,7 +3204,7 @@ async function searchListingComplexNames(query,myToken,{occupancy='available',fl
 // Split district live and historical transactions now share the selected district calibration.
 const CACHE_VER = 27;
 // 분양권 면적 보정값은 별도 버전으로 관리해 매매·전세 전체 캐시를 비우지 않고 기존 분양권 캐시만 갱신한다.
-const CACHE_VER_P = 29;
+const CACHE_VER_P = 30;
 // 이전 CACHE_VER 세대의 고아 캐시 정리 — 버전을 올릴 때마다 옛 데이터가 안 지워지고 쌓이면
 // localStorage 용량을 넘겨서 매번 저장이 실패(=캐시가 전혀 안 쌓여 계속 느려짐)할 수 있으므로 시작 시 한 번 청소
 // ⚠️ "apc:favs"·"apc:pyBand"처럼 버전 태그가 없는 설정값은 절대 건드리면 안 됨 — "apc:숫자:" 형태(월별 캐시)만 정확히 골라서 지운다
@@ -4023,40 +4037,68 @@ function looseMatchComplex(all, qnList, stage){
   return null;
 }
 
-// 실거래 기본 그룹은 전용면적 정수 내림으로 잡고, KB 공급면적 정수 내림값 차이가 3㎡ 이상이면 세분한다.
-// 공급면적 기반 평형(py)은 세분된 그룹의 표시값과 평대 필터에 사용한다.
+// 실거래는 전용면적 정수 내림으로 묶고, KB 공급면적 정수 차이가 3㎡ 이상이면 나눈다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
-  const floors=[...new Set((complexTypeHouseholdData?.[String(sizeKey)]||[]).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
-  const clusters=[];
+  const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
+  const floors=[...new Set(rows.filter(row=>row.supplyAreaFloor!==null&&row.supplyAreaFloor!==undefined).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const groups=[];
   for(const floor of floors){
-    const last=clusters.at(-1);
-    if(!last||floor-last.at(-1)>=3)clusters.push([floor]);
-    else last.push(floor);
+    const current=groups.at(-1);
+    if(current&&floor-current[0]<3)current.push(floor);
+    else groups.push([floor]);
   }
-  return clusters;
+  // 국토부 거래에는 공급면적이 없다. KB 타입의 전용면적 소수점 값이
+  // 완전히 같다면 공급면적 차이와 무관하게 같은 거래 그룹으로 묶는다.
+  const sharedExclusiveFloors=new Map();
+  const addExclusiveFloor=(exclusive,floor)=>{
+    const area=Number(exclusive);
+    if(!Number.isInteger(floor)||!Number.isFinite(area)||Math.floor(area)!==Number(sizeKey))return;
+    const key=String(area);
+    if(!sharedExclusiveFloors.has(key))sharedExclusiveFloors.set(key,new Set());
+    sharedExclusiveFloors.get(key).add(floor);
+  };
+  for(const row of rows)for(const exclusive of row.exclusiveAreas||[])addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
+  for(const [exclusive,types] of Object.entries(complexTradeTypeData||{})){
+    if(!Array.isArray(types))continue;
+    for(const row of rows)if(types.includes(String(row.type||'')))addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
+  }
+  const parent=groups.map((_,i)=>i);
+  const root=i=>{while(parent[i]!==i)i=parent[i]=parent[parent[i]];return i;};
+  for(const shared of sharedExclusiveFloors.values()){
+    const linked=groups.map((group,i)=>[group,i]).filter(([group])=>group.some(floor=>shared.has(floor))).map(([,i])=>i);
+    for(const i of linked.slice(1))parent[root(i)]=root(linked[0]);
+  }
+  const merged=new Map();
+  for(let i=0;i<groups.length;i++){
+    const key=root(i);
+    if(!merged.has(key))merged.set(key,[]);
+    merged.get(key).push(...groups[i]);
+  }
+  return [...merged.values()].map(group=>group.sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]);
 }
 function complexSupplyAreaFloorGroup(sizeKey,groupFloor){
   if(!Number.isInteger(groupFloor))return [];
-  return complexSupplyAreaFloorClusters(sizeKey).find(group=>group[0]===groupFloor)||[groupFloor];
+  return complexSupplyAreaFloorClusters(sizeKey).find(group=>group.includes(groupFloor))||[groupFloor];
 }
 function complexSupplyAreaFloorForTrade(t,enabled=true){
   if(!enabled)return null;
   const rows=complexTypeHouseholdData?.[String(exclusiveAreaKey(t))]||[];
   const clusters=complexSupplyAreaFloorClusters(exclusiveAreaKey(t));
   if(!clusters.length)return null;
+  const exactArea=exactExclusiveKey(t.area);
+  const exactGroups=clusters.filter(group=>rows.some(row=>group.includes(row.supplyAreaFloor)&&row.exclusiveAreas?.includes(exactArea)));
+  if(exactGroups.length)return exactGroups.length===1?exactGroups[0][0]:null;
   // 평형별 거래목록과 같은 근접 전용면적 매칭을 적용해 소수점 정밀도 차이로 타입 그룹이 빠지지 않게 한다.
   const types=tradeTypesForArea(t?.area);
   if(Array.isArray(types)&&types.length){
-    const matchedHouseholdsByGroup=new Map();
-    for(const type of types){
-      const row=rows.find(item=>String(item.type||'').trim()===String(type||'').trim());
-      const floor=Number.isInteger(row?.supplyAreaFloor)?Number(row.supplyAreaFloor):null;
-      if(!Number.isInteger(floor))continue;
-      const groupFloor=clusters.find(group=>group.includes(floor))?.[0]??floor;
-      matchedHouseholdsByGroup.set(groupFloor,(matchedHouseholdsByGroup.get(groupFloor)||0)+Math.max(0,Number(row?.households)||0));
+    const matchedGroups=new Set();
+    for(const row of rows){
+      if(row.siteTypeMatched===false||!Number.isInteger(row.supplyAreaFloor)||!types.includes(String(row.type||'').trim()))continue;
+      const group=clusters.find(group=>group.includes(row.supplyAreaFloor));
+      if(group)matchedGroups.add(group[0]);
     }
-    if(matchedHouseholdsByGroup.size)return [...matchedHouseholdsByGroup].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0][0];
+    if(matchedGroups.size)return matchedGroups.size===1?[...matchedGroups][0]:null;
   }
   // 공급면적 정수 차이가 1~2㎡인 이웃 타입은 같은 그룹으로 둔다.
   // 타입 매칭 없이도 후보 그룹이 하나뿐일 때만 연결한다. 여러 그룹이면 임의 추정하지 않는다.
@@ -4173,6 +4215,8 @@ function analyzeComplex(all, name, months, rawAll, lawd){
   const cachedTypeIdentity=complexTypeHouseholdKey.split('|');
   const currentNames=new Set([name,officialName,...metaHits.map(t=>naverNameOf(lawd,t.apt,t.umd)||t.apt)].map(normalizeTypeIdentity));
   const useKbSupplyGroups=cachedTypeIdentity.length>=3&&cachedTypeIdentity[0]===String(lawd)&&normalizeTypeIdentity(cachedTypeIdentity[1])===normalizeTypeIdentity(metaHits[0]?.umd)&&currentNames.has(normalizeTypeIdentity(cachedTypeIdentity.slice(2).join('|')));
+  // 공급 타입을 확인할 수 없는 거래는 전용면적 키로만 보관한다.
+  // KB 공급평형별 시세에 임의 배정하거나 다른 공급평형까지 합치지 않는다.
   const areaGroupKey=t=>complexAreaGroupKey(t,useKbSupplyGroups);
   hits.sort((a,b)=>dkey(b).localeCompare(dkey(a)));
   const groups={}; for(const t of historyHits)groups[areaGroupKey(t)] ||= [];
@@ -4241,16 +4285,23 @@ function analyzeComplex(all, name, months, rawAll, lawd){
 // 전세만 거래된 전용면적도 매매 화면의 평형 목록에 보여준다.
 // 매매 가격·최고가·차트는 만들지 않고 전세에서 확인한 평형 라벨만 가져온다.
 function includeJeonseOnlySaleAreas(sale, jeonse){
-  if(!jeonse?.found || sale.multi) return sale;
+  if(sale.multi) return sale;
+  if(!jeonse?.found || !sale.found){
+    const withKB=includeKBTypeAreas(sale);
+    if(!jeonse?.found)return withKB;
+    sale=withKB;
+  }
   const result = sale.found ? sale : {
     found:true, mode:'complex', name:jeonse.name, umd:jeonse.umd, build:jeonse.build,
     splitLawd:jeonse.splitLawd, period:jeonse.period, years:jeonse.years,
     count:0, trades:[], byPy:[],
   };
-  if(sale.found && (sale.umd!==jeonse.umd || naverKey(sale.name)!==naverKey(jeonse.name))) return sale;
+  if(sale.found && (sale.umd!==jeonse.umd || naverKey(sale.name)!==naverKey(jeonse.name))) return includeKBTypeAreas(sale);
   const known = new Set(result.byPy.map(complexRowGroupKey));
   for(const p of jeonse.byPy){
     if(known.has(complexRowGroupKey(p))) continue;
+    if(result.byPy.some(row=>row.sizeKey===p.sizeKey&&
+      (complexRowGroupKey(row)===String(p.sizeKey)||complexRowGroupKey(p)===String(p.sizeKey))))continue;
     result.byPy.push({
       py:p.py, sizeKey:p.sizeKey, groupKey:complexRowGroupKey(p), supplyAreaFloor:p.supplyAreaFloor, supplyAreaFloors:p.supplyAreaFloors, area:p.area, n:0, rentOnly:true,
       quarters:p.quarters.map(q=>({label:q.label,avg:null})),
@@ -4259,7 +4310,75 @@ function includeJeonseOnlySaleAreas(sale, jeonse){
     });
   }
   result.byPy.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
-  return result;
+  return includeKBTypeAreas(result);
+}
+
+// KB 평형 자료가 있으면 화면의 평형 목록도 KB 기준으로 완성한다.
+// 조회 기간에 거래가 없어도 해당 타입을 표에 남긴다. KB 타입에 대응하지
+// 않는 실제 거래는 타입 미확인 행으로 남겨 거래 자체를 숨기지 않는다.
+function includeKBTypeAreas(data){
+  const source=complexTypeHouseholdData;
+  if(!source||!Object.keys(source).length)return data;
+  const knownGroups=new Map();
+  for(const [sizeText,types] of Object.entries(source)){
+    const sizeKey=Number(sizeText);
+    if(!Number.isInteger(sizeKey)||!Array.isArray(types))continue;
+    for(const group of complexSupplyAreaFloorClusters(sizeKey)){
+      const groupFloor=group[0];
+      const groupRows=types.filter(row=>group.includes(Number(row.supplyAreaFloor)));
+      if(!groupRows.length)continue;
+      const key=`${sizeKey}|${groupFloor}`;
+      knownGroups.set(key,{sizeKey,groupFloor,group,rows:groupRows});
+    }
+  }
+  if(!knownGroups.size)return data;
+  const normalized=(data?.byPy||[]).flatMap(row=>{
+    const sizeKey=Number(row.sizeKey);
+    const hasKBSize=Object.keys(source).some(size=>Number(size)===sizeKey);
+    if(hasKBSize&&Number.isInteger(Number(row.supplyAreaFloor))){
+      const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
+      if(knownGroups.has(`${sizeKey}|${group[0]}`))return [row];
+    }
+    // 같은 전용면적에 여러 KB 공급평형이 있으면 미확인 거래는 거래목록에만 남긴다.
+    // 별도 공급평형 행을 만들면 KB에 없는 평형이 생기고, 어느 한 행에
+    // 포함하면 그 공급평형의 시세가 왜곡된다.
+    if(hasKBSize&&complexSupplyAreaFloorClusters(sizeKey).length>1)return [];
+    if(!row.n&&!row.recent&&row.max==null&&!row.monthly?.length)return [];
+    const unmatchedAreas=[...new Set((data?.trades||[])
+      .filter(trade=>complexRowGroupKey(trade)===complexRowGroupKey(row))
+      .map(trade=>Number(trade.area)).filter(area=>Number.isFinite(area)&&area>0))].sort((a,b)=>a-b);
+    return [{...row,kbTypeUnmatched:true,unmatchedAreas}];
+  });
+  const present=new Set(normalized.map(row=>{
+    const group=complexSupplyAreaFloorGroup(Number(row.sizeKey),Number(row.supplyAreaFloor));
+    return `${row.sizeKey}|${group[0]}`;
+  }));
+  for(const [key,group] of knownGroups){
+    if(present.has(key))continue;
+    normalized.push({
+      py:`${Number(group.rows[0].supplyPyeong)||0}평`,
+      sizeKey:group.sizeKey,
+      groupKey:key,
+      supplyAreaFloor:group.groupFloor,
+      supplyAreaFloors:group.group,
+      area:`(전용 ${group.sizeKey})`,
+      n:0,
+      rentOnly:true,
+      noTradeLabel:'매매 거래 없음',
+      quarters:[],
+      max:null,
+      maxDate:null,
+      recent:null,
+      recentMonthAvg:null,
+      isNewHigh:false,
+      monthly:[],
+      trend:null,
+      floorBand:null,
+    });
+  }
+  normalized.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
+  const [,sourceDong,sourceName]=complexTypeHouseholdKey.split('|');
+  return {...data,found:true,mode:'complex',name:data?.name||sourceName,umd:data?.umd||sourceDong,count:Number(data?.count)||0,trades:data?.trades||[],byPy:normalized};
 }
 
 function analyzeRegion(all, months){
@@ -4278,7 +4397,11 @@ function analyzeRegion(all, months){
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
     return {apt, umd, gu:gu||null, lawd:sorted[0].lawd||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?` (전용 ${mainArea})`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).sort((a,b)=>b.n-a.n);
-  const grouped = Object.entries(byApt).map(([k,arr])=>{
+  // Keep one highest deal per exclusive size. A complex can have several KB
+  // pyeong types in the selected range, and each must appear in the ranking.
+  const byAptAndSize={};
+  for(const t of all){const k=`${t.apt}|${t.umd}|${t.gu||''}|${t.lawd||''}|${exclusiveAreaKey(t)}`;(byAptAndSize[k]=byAptAndSize[k]||[]).push(t);}
+  const grouped = Object.entries(byAptAndSize).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
     const [apt,umd,gu] = k.split('|');
     return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, area:top.area, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
@@ -6832,6 +6955,9 @@ function complexPyLabel(p){
   const rows=(complexTypeHouseholdData?.[String(p?.sizeKey)]||[]).filter(row=>floors?.has(Number(row.supplyAreaFloor)));
   const counts=new Map();
   for(const row of rows){const py=Number(row.supplyPyeong),hh=Number(row.households);if(Number.isInteger(py)&&py>0&&Number.isFinite(hh)&&hh>0)counts.set(py,(counts.get(py)||0)+hh);}
+  if(floors?.size>1&&Math.max(...floors)-Math.min(...floors)>=3&&counts.size>1){
+    return `${[...counts.keys()].sort((a,b)=>a-b).join('·')}평`;
+  }
   if(counts.size){const [py]=[...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0];return `${py}평`;}
   return p.py;
 }
@@ -6856,7 +6982,7 @@ async function preloadComplexTypeHouseholds(lawd,entry){
   if(complexTypeHouseholdKey!==key){complexTypeHouseholdKey=key;complexTypeHouseholdData=null;complexTradeTypeData=null;complexTypeHouseholdLoaded=false;complexTypeHouseholdPromise=null;}
   for(const name of names){
     try{
-      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v4'});
+      const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong,typeSchema:'supply-m2-floor-v6'});
       const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
       // 다른 단지 조회가 먼저 시작됐다면 오래된 응답으로 전역 타입 데이터를 덮지 않는다.
       if(complexTypeHouseholdKey!==key)return;
@@ -6903,33 +7029,55 @@ function exclusiveTypeLabels(sizeKey,value){
 }
 function typeHouseholdCell(p){
   if(p.mergedRows?.length)return p.mergedRows.map(typeHouseholdCell).join('');
+  if(p.kbTypeUnmatched){
+    const areas=p.unmatchedAreas?.length?p.unmatchedAreas.map(area=>`${area}㎡`).join(' · '):`${p.sizeKey}㎡`;
+    return `<div>전용 ${esc(areas)} · KB 타입 미확인</div>`;
+  }
   const allAreaRows=complexTypeHouseholdData?.[String(p.sizeKey)]||[];
   const exclusiveLabel=esc(p.sizeKey);
   const byType=new Map();
   const floors=p.supplyAreaFloors?.length?new Set(p.supplyAreaFloors):null;
+  const addTypeRow=row=>{
+    const type=String(row.type||'').trim();
+    if(!type)return;
+    const old=byType.get(type);
+    const households=Number(row.households);
+    const prior=Number(old?.households);
+    byType.set(type,{
+      ...old,
+      ...row,
+      type,
+      households:(Number.isInteger(households)&&households>0?households:0)+(Number.isInteger(prior)&&prior>0?prior:0)||null,
+    });
+  };
   // 공급면적 그룹이 확정된 경우에만 세대수 대응표를 연결한다.
   if(Number.isInteger(p.supplyAreaFloor))for(const row of allAreaRows){
     if(!floors?.has(Number(row.supplyAreaFloor)))continue;
-    const type=String(row.type||'').trim();
-    if(type)byType.set(type,row);
+    addTypeRow(row);
   }
   // 공급면적 그룹을 판별하지 못해도, 실거래 원자료에서 확인된 타입명은 표시한다.
   for(const [area,types] of Object.entries(complexTradeTypeData||{})){
     if(Math.floor(Number(area))!==Number(p.sizeKey)||!Array.isArray(types))continue;
     for(const type of removeCombinedTypeAliases(types)){
-      const matches=allAreaRows.filter(row=>String(row.type)===String(type));
+      const matches=allAreaRows.filter(row=>row.siteTypeMatched!==false&&String(row.type)===String(type));
       const match=Number.isInteger(p.supplyAreaFloor)?matches.find(row=>floors?.has(Number(row.supplyAreaFloor))):(matches.length===1?matches[0]:null);
       if(Number.isInteger(p.supplyAreaFloor)&&!match)continue;
-      if(!byType.has(type))byType.set(type,{type,households:match?.households??null,supplyAreaFloor:match?.supplyAreaFloor??null});
+      if(!byType.has(type))addTypeRow({type,households:match?.households??null,supplyAreaFloor:match?.supplyAreaFloor??null});
     }
   }
   const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
-  if(rows.length)return rows.map(row=>{
-    const label=exclusiveTypeLabels(p.sizeKey,row.type);
+  const householdsByLabel=new Map();
+  for(const row of rows){
+    const baseLabel=row.siteTypeMatched===false?String(p.sizeKey):exclusiveTypeLabels(p.sizeKey,row.type);
+    const label=baseLabel;
     const households=Number(row.households);
-    return `<div>${esc(label)}${Number.isInteger(households)&&households>0?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`;
-  }).join('');
-  return `<div>${exclusiveLabel}</div><div class="rng">세부 타입 미확인</div>`;
+    const count=Number.isInteger(households)&&households>0?households:0;
+    householdsByLabel.set(label,(householdsByLabel.get(label)||0)+count);
+  }
+  if(householdsByLabel.size)return [...householdsByLabel].map(([label,households])=>
+    `<div>${esc(label)}${households?` · <b>${households.toLocaleString('ko-KR')}세대</b>`:''}</div>`
+  ).join('');
+  return `<div>${exclusiveLabel}</div>`;
 }
 function mergeSummaryRowsByPyeong(rows){
   const grouped=new Map();
@@ -7000,9 +7148,13 @@ function tradesHTML(d, footNote){
       const exactTypes=t.area?tradeTypesForArea(t.area):null;
       const exclusiveArea=Number(t.area);
       const exclusiveText=Number.isFinite(exclusiveArea)&&exclusiveArea>0?String(Math.round(exclusiveArea)):'';
-      const tradeTypes=Array.isArray(exactTypes)?removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'):[];
-      const typeLabel=tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
-      return `<tr><td>${esc(t.date||'-')}</td><td>${esc(size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
+      const tradeTypes=Array.isArray(exactTypes)?[...new Set(removeCombinedTypeAliases(exactTypes).map(type=>exclusiveTypeLabels(t.sizeKey,type)).filter(type=>type&&type!=='-'))]:[];
+      const kbSupplyUnknown=!size&&Array.isArray(complexTypeHouseholdData?.[String(t.sizeKey)])&&
+        complexSupplyAreaFloorClusters(t.sizeKey).length>1;
+      const typeLabel=(size?.kbTypeUnmatched||kbSupplyUnknown)&&Number.isFinite(exclusiveArea)
+        ?`${esc(String(exclusiveArea))}㎡ · KB 타입 미확인`
+        :tradeTypes.length?tradeTypes.map(esc).join(' · '):(exclusiveText?esc(exclusiveText):'-');
+      return `<tr><td>${esc(t.date||'-')}</td><td>${esc(kbSupplyUnknown?'공급 미확인':size?complexPyLabel(size):t.py)}${isNewlyCollectedDeal(t)?'<span class="trade-new-badge">N</span>':''}${isMax?'<span class="nh">최고가</span>':''}${t.ex?`<span class="extag${t.ex==='저가'?' outlier-tag':''}">${esc(exclusionLabel)}</span>`:''}${t.kind?`<span class="extag" style="color:#00565C;background:#E0F2F3;border-color:#B9E4E6">${esc(t.kind)}</span>`:''}</td><td>${typeLabel}</td><td>${t.floor?esc(t.floor)+'층':'-'}</td><td class="tr-r"><b>${t.amt.toFixed(1)}억</b></td></tr>`;
     }).join('')}
   </table>
   ${remain>0? `<button onclick="showMoreTrades()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer">더보기 (${remain}건 남음)</button>` : ''}
@@ -7139,8 +7291,8 @@ function selectPy(i){
   document.getElementById('pyTable').innerHTML = pyTableHTML(d);
   const ci = chartTarget(d);
   const p = d.byPy[ci];
-  document.getElementById('pyChips').querySelectorAll('.chip').forEach((chip,j)=>{if(j>0){const size=d.byPy[j-1];chip.textContent=`${complexPyLabel(size)}평 (전용 ${size.sizeKey})`;}});
-  document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${complexPyLabel(p)}평 (전용 ${p.sizeKey})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
+  document.getElementById('pyChips').querySelectorAll('.chip').forEach((chip,j)=>{if(j>0){const size=d.byPy[j-1];chip.textContent=`${complexPyLabel(size)} (전용 ${size.sizeKey})`;}});
+  document.getElementById('chartTitle').textContent = p ? `월평균 ${priceLabel} 추이 — ${complexPyLabel(p)} (전용 ${p.sizeKey})${selPy===-1?' (거래 최다)':''}` : `월평균 ${priceLabel} 추이`;
   document.getElementById('chartBox').innerHTML = !p || p.rentOnly ? `<div class="rng" style="padding:8px 0">해당 평형 ${complexView==='jeonse'?'전세':'매매'} 거래 없음</div>` : chartSVG(p.monthly, complexPyLabel(p), d, priceLabel, complexRowGroupKey(p));
   if(isSale){
     document.getElementById('floorTitle').textContent = p ? `층별 가격 프리미엄 — ${complexPyLabel(p)} (전용 ${p.sizeKey}${complexSupplyAreaLabel(p)?` · ${complexSupplyAreaLabel(p)}`:''})${selPy===-1?' (거래 최다)':''} · 최근 6개월` : '층별 가격 프리미엄';
@@ -7786,7 +7938,7 @@ async function loadComplexTypeHouseholds(d){
         const query=new URLSearchParams({kind:'complex-type-households',lawd,name,dong});
         // Bump the lookup URL when adding response fields so an older CDN/browser response
         // (which only had floored-area household data) cannot suppress exact-area type labels.
-        query.set('typeSchema','supply-m2-floor-v4');
+        query.set('typeSchema','supply-m2-floor-v6');
         const response=await fetch(`/api/dashboard-data?${query}`,{cache:'no-store'});
         if(!response.ok)continue;
         const result=await response.json();
@@ -7844,7 +7996,7 @@ function renderComplex(d){
     </div>
     <div id="complexDynamic">${complexDynamicHTML()}</div>
   </div>
-  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 해제거래 제외 · 전용면적 정수 기준으로 묶고, KB 공급면적 ㎡ 정수 부분이 3㎡ 이상 차이나면 별도 평형으로 표시</div>`;
+  <div class="src-note">출처: 국토교통부 실거래가 공개시스템 · 평형·타입·세대수는 KB 기준</div>`;
   document.getElementById('loadMsg').textContent='조회 완료 100%';
   const r = document.getElementById('result'); r.innerHTML=html; r.classList.add('on');
   loadComplexTypeHouseholds(d);
@@ -8255,6 +8407,14 @@ function setRegionRankView(view){
   regionRankView=view;
   syncRegionRankPicker();
   syncAnalysisFilterGroup();
+  const url=new URL(location.href);
+  if(url.searchParams.get('m')==='region'){
+    if(view==='pyprice')url.searchParams.set('rrv',view);
+    else url.searchParams.delete('rrv');
+    try{history.replaceState(history.state,'',url);}catch{}
+  }
+  const snapshot=viewStack[history.state?.vi];
+  if(snapshot?.inputs.mode==='region')snapshot.inputs.regionRankView=view;
   if(lastData?.mode==='region')renderRegion(lastData);
 }
 function syncUndervaluePicker(){

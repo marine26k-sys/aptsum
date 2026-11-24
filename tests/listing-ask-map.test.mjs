@@ -49,8 +49,8 @@ test('호가 통계 지도는 전주 대비 변동률을 표시한다',()=>{
 test('호가 통계는 GitHub Actions가 만든 정적 지도 데이터를 불러온다',()=>{
   const standalone=readFileSync(new URL('../listing-ask-map.html',import.meta.url),'utf8');
   assert.match(standalone,/자료를 불러오는 중/);
-  assert.match(standalone,/fetchJson\('\/data\/listing-ask-map\.json'\)/);
-  assert.doesNotMatch(standalone,/async function loadRegion/);
+  assert.match(standalone,/githubJson\('data\/listing-ask-map\.json','main'/);
+  assert.doesNotMatch(standalone,/fetch\([^)]*\/api\/analyze/);
   const workflow=readFileSync(new URL('../.github/workflows/build-listing-ask-map.yml',import.meta.url),'utf8');
   assert.match(workflow,/schedule:/);
   assert.match(workflow,/node scripts\/build-listing-ask-map\.mjs/);
