@@ -9,7 +9,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="아파트썸 | 아파트 데이터 분석">
   <meta property="og:description" content="실거래·실매물·지역 통계를 한곳에서 확인하세요.">
-  <meta property="og:url" content="https://aptsum.kr/card/">
+  <meta property="og:url" content="https://aptsum.kr/card/?v=2">
   <meta property="og:site_name" content="aptsum.kr">
   <meta property="og:image" content="https://aptsum.kr/card/og-image-v2.png">
   <meta property="og:image:width" content="1731">
@@ -127,7 +127,9 @@
     const copyButton=document.getElementById('copy');
     const shareButton=document.getElementById('share');
     const message=document.getElementById('message');
-    const cardUrl=location.href;
+    const cardLink=new URL(location.href);
+    cardLink.searchParams.set('v','2');
+    const cardUrl=cardLink.href;
     copyButton.addEventListener('click',async()=>{
       try{await navigator.clipboard.writeText(cardUrl);message.textContent='채널 링크를 복사했어요.'}
       catch{message.textContent='주소창의 링크를 복사해 공유해 주세요.'}
