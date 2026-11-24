@@ -6,7 +6,8 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function setup(){
  const now=Date.parse('2026-10-19T15:30:00Z');
  class FixedDate extends Date{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}}
- const c=vm.createContext({Date:FixedDate,matchComplex:all=>({hits:all}),naverNameOf:()=>null,markOutliers:a=>a,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:()=>34,avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s.slice(2,4)+'.'+s.slice(4),yearsLabel:()=>'',dkey:t=>`${t.ym}${t.d}`,complexTradeBuild:()=>2020});
+ const c=vm.createContext({Date:FixedDate,matchComplex:all=>({hits:all}),naverNameOf:()=>null,markOutliers:a=>a,exclusiveAreaKey:t=>Math.floor(t.area),representativePy:()=>34,avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,R1:n=>Math.round(n*10)/10,ymLabel:s=>s.slice(2,4)+'.'+s.slice(4),yearsLabel:()=>'',dkey:t=>`${t.ym}${t.d}`,complexTradeBuild:()=>2020,complexTypeHouseholdKey:'',complexTypeHouseholdData:null,complexTradeTypeData:null});
+ vm.runInContext(html.slice(html.indexOf('function exclusiveAreaKey('),html.indexOf('function representativePy('))+html.slice(html.indexOf('function complexPySortKey('),html.indexOf('function exactExclusiveKey(')),c);
  vm.runInContext(html.slice(html.indexOf('function calendarMonths('),html.indexOf('function analyzeComplex(')),c);
  vm.runInContext(html.slice(html.indexOf('function buildRepRows('),html.indexOf('// ═══ 단기 저평가')),c);
  return c;

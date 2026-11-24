@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
-import { applyNaverSupplyAreas,applySupplyAreaOverrides,correctPresaleSupplyAreas,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
+import { applyNaverSupplyAreas,applyKBTypeSupplyPyeong,applySupplyAreaOverrides,correctPresaleSupplyAreas,supplyAreaToPy } from '../shared/supply-area-loader.mjs';
 const row={apt:'단지',hh:100,exclusiveArea:194.98,supplyArea:232};
 test('presale supply correction preserves raw exclusive areas when another KB type overlaps',()=>{
  const records=[
@@ -28,11 +28,18 @@ test('runtime refreshes changed supply mappings after one minute',async()=>{
   assert.equal((await applySupplyAreaOverrides(items,'41173','https://refresh-calibration.test'))[0].py,75);
  }finally{globalThis.fetch=priorFetch;Date.now=priorNow;}
 });
-test('Pyeongchon Xi Persnity confirmed mapping covers presale decimal precision',()=>{
- const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/41173.json',import.meta.url)));
+test('Pyeongchon Xi Persnity KB type mapping covers presale decimal precision',()=>{
+ const kb=JSON.parse(readFileSync(new URL('../data/complex-type-households/41173.json',import.meta.url)));
  const trades=[{apt:'평촌자이 퍼스니티',area:53.9578,py:22},{apt:'평촌자이 퍼스니티',area:59.9833,py:25}];
- assert.deepEqual(applyNaverSupplyAreas(trades,records).map(t=>t.py),[21,24]);
- assert.equal(records.find(r=>r.apt==='평촌자이 퍼스니티'&&r.exclusiveArea===53.95)?.supplyArea,72.37);
+ const withDong=trades.map(t=>({...t,umd:'비산동'}));
+ assert.deepEqual(applyKBTypeSupplyPyeong(withDong,kb).map(t=>t.py),[21,24]);
+ assert.equal(kb.items['평촌자이퍼스니티|비산동']['53'][0].supplyAreaFloor,72);
+});
+test('KB 타입을 유일하게 정할 수 없는 거래의 공급평은 임의로 바꾸지 않는다',()=>{
+ const hill=JSON.parse(readFileSync(new URL('../data/complex-type-households/11440.json',import.meta.url)));
+ const doosan=JSON.parse(readFileSync(new URL('../data/complex-type-households/11620.json',import.meta.url)));
+ assert.equal(applyKBTypeSupplyPyeong([{apt:'힐스테이트마포더퍼스트',umd:'신수동',area:84.98,py:34}],hill)[0].py,34);
+ assert.equal(applyKBTypeSupplyPyeong([{apt:'두산',umd:'봉천동',area:114.99,py:44}],doosan)[0].py,44);
 });
 test('revised Naver mapping floors supply pyeong including values just below 21',()=>{
  assert.equal(supplyAreaToPy(68.62),20);
@@ -81,11 +88,11 @@ test('runtime uses the same calibration for split districts and tolerates absent
  assert.equal((await applySupplyAreaOverrides([{apt:'단지',area:194.98,py:77}],'11680','https://fixture-offline.test'))[0].py,77);
  }finally{globalThis.fetch=prior;}
 });
-test('all exported data has only the four allowed fields and no ambiguous type or household keys',()=>{
+test('all exported Naver supply data has four fields and unique exact area keys',()=>{
  const dir=new URL('../data/supply-area-naver/',import.meta.url);
  for(const f of readdirSync(dir).filter(f=>f.endsWith('.json'))){
-  const rows=JSON.parse(readFileSync(new URL(f,dir)));const hh=new Map();const keys=new Set();
-  for(const r of rows){assert.deepEqual(Object.keys(r).sort(),['apt','exclusiveArea','hh','supplyArea']);assert.ok(r.hh>0&&r.supplyArea>r.exclusiveArea);const k=r.apt+'|'+r.exclusiveArea.toFixed(2);assert.equal(keys.has(k),false,`${f} ${k}`);keys.add(k);assert.ok(!hh.has(r.apt)||hh.get(r.apt)===r.hh);hh.set(r.apt,r.hh);}
+  const rows=JSON.parse(readFileSync(new URL(f,dir)));const keys=new Set();
+  for(const r of rows){assert.deepEqual(Object.keys(r).sort(),['apt','exclusiveArea','hh','supplyArea']);assert.ok(r.hh>0&&r.supplyArea>r.exclusiveArea);const k=r.apt+'|'+r.exclusiveArea.toFixed(2);assert.equal(keys.has(k),false,`${f} ${k}`);keys.add(k);}
  }
 });
 
@@ -123,9 +130,11 @@ for(const kind of ['analyze','presale','rent'])test(`${kind}: split district liv
   assert.equal(response.status,200);const data=await response.json();assert.ok(data.items.length>0);assert.ok(data.items.every(t=>t.py===23));
  }finally{globalThis.fetch=priorFetch;if(priorKey===undefined)delete process.env.DATA_GO_KR_KEY;else process.env.DATA_GO_KR_KEY=priorKey;}
 });
-test('2026-10-14 전체 갱신 표의 수정 평형을 실거래 소수 면적에도 적용한다',()=>{
+test('KB 원본 평형을 별칭 단지와 실거래 소수 면적에도 적용한다',()=>{
  for(const [lawd,apt,area,py] of [['41173','평촌래미안푸르지오',97.9024,39],['11260','성원',84.91,30],['41281','햇빛주공23',59.93,25],['11410','극동',84.98,31]]){
   const records=JSON.parse(readFileSync(new URL('../data/supply-area-naver/'+lawd+'.json',import.meta.url),'utf8'));
-  assert.equal(applyNaverSupplyAreas([{apt,area,py:99}],records,lawd)[0].py,py);
+  const kb=JSON.parse(readFileSync(new URL('../data/complex-type-households/'+lawd+'.json',import.meta.url),'utf8'));
+  const umd={'41173':'비산동','11260':'신내동','41281':'행신동','11410':'홍은동'}[lawd];
+  assert.equal(applyKBTypeSupplyPyeong(applyNaverSupplyAreas([{apt,umd,area,py:99}],records,lawd),kb)[0].py,py);
  }
 });

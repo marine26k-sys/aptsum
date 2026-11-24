@@ -9,11 +9,13 @@ const trade = (area, py, amt, ym='202609') => ({apt:'한빛마을4단지롯데�
 
 test('단지 분석은 같은 25평이어도 전용 59와 60을 분리하고 같은 전용 84는 합친다', () => {
   const ctx = vm.createContext({
+    complexTypeHouseholdKey:'',complexTypeHouseholdData:null,complexTradeTypeData:null,
     matchComplex: all => ({hits:all}), naverNameOf:()=>null,
     dkey:t=>`${t.ym}${t.d}`, markOutliers:a=>a, floorBands:()=>null,
     avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,
     R1:n=>Math.round(n*10)/10, ymLabel:s=>s, yearsLabel:()=>'',
   });
+  vm.runInContext(html.slice(html.indexOf('function complexPySortKey('),html.indexOf('let complexTypeHouseholdData=')),ctx);
   vm.runInContext(helpers + html.slice(html.indexOf('function analyzeComplex('), html.indexOf('function analyzeRegion(')), ctx);
   const trades=[trade(59.4702,25,7),trade(59.85,25,8),trade(60.1761,25,9),trade(84.20,34,10),trade(84.75,32,11)];
   const result=ctx.analyzeComplex(trades,'한빛마을4단지롯데캐슬Ⅱ',['202609'],undefined,'41480');
@@ -22,14 +24,43 @@ test('단지 분석은 같은 25평이어도 전용 59와 60을 분리하고 같
   assert.equal(result.trades.filter(t=>t.sizeKey===60).length,1);
 });
 
+test('공급 타입을 모르는 84.98㎡ 거래는 같은 전용 84㎡ 행의 시세에 포함한다', () => {
+  const shard=JSON.parse(readFileSync(new URL('../data/complex-type-households/11440.json',import.meta.url),'utf8'));
+  const key='힐스테이트마포더퍼스트|신수동';
+  const ctx=vm.createContext({
+    complexTypeHouseholdKey:'11440|신수동|힐스테이트마포더퍼스트',
+    complexTypeHouseholdData:shard.items[key],complexTradeTypeData:shard.exactExclusiveTypes[key],
+    matchComplex:all=>({hits:all}),naverNameOf:()=>null,dkey:t=>`${t.ym}${t.d}`,
+    markOutliers:a=>a,floorBands:()=>null,avgA:a=>a.reduce((sum,t)=>sum+t.amt,0)/a.length,
+    R1:n=>Math.round(n*10)/10,ymLabel:s=>s,yearsLabel:()=>'',
+  });
+  vm.runInContext(html.slice(html.indexOf('function complexPySortKey('),html.indexOf('let complexTypeHouseholdData=')),ctx);
+  vm.runInContext(html.slice(html.indexOf('function exactExclusiveKey('),html.indexOf('function typeSuffixLabel(')),ctx);
+  vm.runInContext(helpers+html.slice(html.indexOf('function analyzeComplex('),html.indexOf('function analyzeRegion(')),ctx);
+  const deals=[
+    {apt:'힐스테이트마포더퍼스트',umd:'신수동',area:84.07,py:32,amt:23,ym:'202609',d:'05',floor:'19'},
+    {apt:'힐스테이트마포더퍼스트',umd:'신수동',area:84.98,py:34,amt:20.9,ym:'202609',d:'03',floor:'5'},
+    {apt:'힐스테이트마포더퍼스트',umd:'신수동',area:84.98,py:34,amt:16.2,ym:'202608',d:'13',floor:'16'},
+  ];
+  const result=ctx.includeKBTypeAreas(ctx.analyzeComplex(deals,'힐스테이트마포더퍼스트',['202609','202608'],undefined,'11440'));
+  const rows=result.byPy.filter(p=>p.sizeKey===84);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].n,3);
+  assert.equal(rows[0].max,23);
+  assert.equal(ctx.complexPyLabel(rows[0]),'32·36평');
+  assert.deepEqual(Array.from(result.trades,t=>t.groupKey),['84','84','84']);
+});
+
 test('매매 거래가 없는 전용면적도 전세 거래가 있으면 매매 평형에 가격 없이 표시한다', () => {
   const ctx = vm.createContext({
+    complexTypeHouseholdKey:'',complexTypeHouseholdData:null,complexTradeTypeData:null,
     matchComplex: all => ({hits:all}), naverNameOf:()=>null, naverKey:s=>s,
     dkey:t=>`${t.ym}${t.d}`, markOutliers:a=>a, floorBands:()=>null,
     avgA:a=>a.reduce((n,t)=>n+t.amt,0)/a.length,
     R1:n=>Math.round(n*10)/10, ymLabel:s=>s, yearsLabel:()=>'',
     esc:s=>String(s), selPy:-1,
   });
+  vm.runInContext(html.slice(html.indexOf('function complexPySortKey('),html.indexOf('let complexTypeHouseholdData=')),ctx);
   vm.runInContext(helpers + html.slice(html.indexOf('function analyzeComplex('), html.indexOf('function analyzeRegion(')) +
     html.slice(html.indexOf('function avgCell('), html.indexOf('function tradesHTML(')), ctx);
   const months=['202610','202609','202608','202607','202606','202605','202604','202603','202602','202601','202512','202511'];

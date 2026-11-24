@@ -48,7 +48,7 @@ test('랭킹에서 단지를 누르면 법정동·단지 식별자를 넘겨 상
  assert.equal(searched,1);
 });
 test('단지 분석 자동완성은 실거래 단지 인덱스의 준공 예정 단지도 검색한다',async()=>{
- const c=vm.createContext({complexSearchIndex:complexIndex,mode:'complex',document:{getElementById:()=>({dataset:{}})}});
+ const c=vm.createContext({complexSearchIndex:complexIndex,loadComplexSearchIndex:async()=>complexIndex,mode:'complex',document:{getElementById:()=>({dataset:{}})}});
  vm.runInContext(extract('async function complexSearchTargets(', 'function complexCandidateIdentityKey('),c);
  const result=await c.complexSearchTargets('평촌자이',[],true,{dataset:{}});
  assert.ok(result.hits.some(x=>x.name==='평촌자이퍼스니티'&&x.lawd==='41173'&&x.umd==='비산동'));

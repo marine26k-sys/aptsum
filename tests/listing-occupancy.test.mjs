@@ -7,7 +7,7 @@ const stats=readFileSync(new URL('../stats.html',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function summarize(rows){
  const ctx=vm.createContext({});
- vm.runInContext('const MID_UP=new Set(["중층","고층"]);const MOVE_IN="입주가능";'+stats.slice(stats.indexOf('function summarizeListings('),stats.indexOf('async function postListings(')),ctx);
+ vm.runInContext('const MID_UP=new Set(["중층","고층"]);const MOVE_IN="입주가능";'+stats.slice(stats.indexOf('function listingNumber('),stats.indexOf('async function loadListingMeta('))+stats.slice(stats.indexOf('function summarizeListings('),stats.indexOf('async function postListings(')),ctx);
  return ctx.summarizeListings(rows);
 }
 const base={'시':'서울시','구':'강남구','법정동':'역삼동','단지명':'테스트','단지ID':123,'세대수':500,'전용면적(㎡)':84,'면적(평)':34,'실거래최고가(억)':20,'확인일':'20261002','층구분':'중층','입주구분':'입주가능','매매가(억)':15};

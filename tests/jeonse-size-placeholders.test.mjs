@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import{readFileSync}from'node:fs';
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');const c=vm.createContext({});
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');const c=vm.createContext({complexPySortKey:p=>Number(String(p.py).match(/\d+/)?.[0]||0)});
 vm.runInContext(html.slice(html.indexOf('function completeJeonseSizeRows('),html.indexOf('function curComplexData(')),c);
 const size=k=>({sizeKey:k,py:k===41?'18평':'24평',n:2,max:9,quarters:[1,2,3,4].map(label=>({label,avg:{v:8,n:2}})),monthly:[{avg:8}]});
 test('매매만 있는 평형도 전세 목록에 표시하되 가격을 복사하지 않는다',()=>{

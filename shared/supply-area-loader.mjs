@@ -2,6 +2,7 @@ import { excludeConfirmedPublicRental } from "./public-rental-exclusions.mjs";
 // 실거래 단지명으로 저장된 보정표만 조회한다. 이름 추정은 로컬 가져오기에서
 // naver의 비교 규칙 + 법정동 + K-apt 세대수 검증을 통과한 뒤 수행한다.
 const norm = s => String(s || '').replace(/\s/g,'');
+const kbIdentity = s => String(s || '').normalize('NFKC').replace(/[\s·ㆍ()\[\]{}.,_-]/g,'').toLocaleLowerCase('ko-KR');
 const caches = new Map();
 // 개정 네이버 매칭표의 supply_pyeong_rule: floor(supply_area * 0.3025).
 export function supplyAreaToPy(supplyArea) {
@@ -93,19 +94,35 @@ export function applyNaverSupplyAreas(items, records, lawd) {
     return {...t,py:hit.py};
   });
 }
+export function applyKBTypeSupplyPyeong(items, shard) {
+  if (!shard?.items || !shard?.exactExclusiveTypes) return items;
+  return items.map(item => {
+    const key = `${kbIdentity(item.apt)}|${kbIdentity(item.umd)}`;
+    const areas = shard.items[key], exact = shard.exactExclusiveTypes[key];
+    const area = Number(item.area);
+    if (!areas || !exact || !(area > 0)) return item;
+    const areaKey = String(Math.floor(area * 100 + 1e-7) / 100);
+    const types = exact[areaKey];
+    if (!Array.isArray(types) || !types.length) return item;
+    const rows = areas[String(Math.floor(area))] || [];
+    const matched = rows.filter(row => types.includes(row.type) && Number.isInteger(row.supplyPyeong) && row.supplyPyeong > 0);
+    const pyeongs = new Set(matched.map(row => row.supplyPyeong));
+    return pyeongs.size === 1 ? { ...item, py: matched[0].supplyPyeong } : item;
+  });
+}
 async function load(origin,lawd) {
   const key = `${origin}|${lawd}`;
   const cached = caches.get(key);
   if(cached && cached.expires > Date.now())return cached.data;
   const read=async path=>{try{const r=await fetch(`${origin}/data/${path}/${encodeURIComponent(lawd)}.json`,{cache:'no-store'});return r.ok?await r.json():null;}catch{return null;}};
-  const [hub,naver]=await Promise.all([/^\d{5}$/.test(lawd)?read('supply-area'):null,read('supply-area-naver')]);
+  const [hub,naver,kbTypes]=await Promise.all([/^\d{5}$/.test(lawd)?read('supply-area'):null,read('supply-area-naver'),read('complex-type-households')]);
   const map=new Map(Object.entries(hub?.items||{}).map(([n,t])=>[norm(n),t]));
-  const data={map,naver};caches.set(key,{data,expires:Date.now()+60_000});return data;
+  const data={map,naver,kbTypes};caches.set(key,{data,expires:Date.now()+60_000});return data;
 }
 export async function applySupplyAreaOverrides(items,lawd,origin) {
   items=excludeConfirmedPublicRental(items,lawd);
   if(!origin||!lawd)return items;
-  const {map,naver}=await load(origin,lawd);
+  const {map,naver,kbTypes}=await load(origin,lawd);
   const hubItems=items.map(t=>{
     const types=map.get(norm(t.apt));if(!Array.isArray(types))return t;
     const match=types.find(ty=>Math.round(ty.exclusiveArea)===Math.round(t.area));
@@ -113,10 +130,10 @@ export async function applySupplyAreaOverrides(items,lawd,origin) {
     const py=supplyAreaToPy(match.supplyArea);
     return Math.abs(py-t.py)>3?t:{...t,py};
   });
-  return applyNaverSupplyAreas(hubItems,naver,lawd);
+  return applyKBTypeSupplyPyeong(applyNaverSupplyAreas(hubItems,naver,lawd),kbTypes);
 }
 export async function applyPresaleSupplyAreaOverrides(items, lawd, origin) {
   if (!origin || !lawd) return items;
-  const { naver } = await load(origin, lawd);
-  return correctPresaleSupplyAreas(items, naver, lawd);
+  const { naver, kbTypes } = await load(origin, lawd);
+  return applyKBTypeSupplyPyeong(correctPresaleSupplyAreas(items, naver, lawd),kbTypes);
 }
