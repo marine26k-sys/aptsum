@@ -35,7 +35,7 @@ export function prepareCardShareMeta(html, env = process.env) {
   const targets = [
     [/<meta property="og:image" content="[^"]*">/g, `<meta property="og:image" content="${origin}/card/og-image-v2.png">`],
     [/<meta name="twitter:image" content="[^"]*">/g, `<meta name="twitter:image" content="${origin}/card/og-image-v2.png">`],
-    [/<meta property="og:url" content="[^"]*">/g, `<meta property="og:url" content="${origin}/card/?v=2">`],
+    [/<meta property="og:url" content="[^"]*">/g, `<meta property="og:url" content="${origin}/card/">`],
   ];
   for (const [pattern, replacement] of targets) {
     if ([...html.matchAll(pattern)].length !== 1) throw new Error(`Missing or duplicated card sharing metadata: ${pattern}`);
