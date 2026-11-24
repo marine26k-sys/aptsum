@@ -196,6 +196,15 @@ function mapFreshAreaType(area, row) {
     Math.abs(Number(item['전용면적']) - exclusive) <= 0.02 &&
     Math.abs(Number(item['공급면적']) - supply) <= 0.02);
   const names = [...new Set(candidates.map(item => String(item['타입명']).trim()))];
+  // A master row can carry the wrong Naver label for a specific KB area ID.
+  // The fresh catalog's per-area website label must win in that case.
+  const matchingKbArea = candidates.find(item =>
+    Number(item['KB면적ID']) === Number(area.kbAreaId) &&
+    normalize(item['KB타입명']) === normalize(area.kbTypeName));
+  if (matchingKbArea && area.websiteTypeName &&
+      normalize(matchingKbArea['타입명']) !== normalize(area.websiteTypeName)) {
+    return { type: String(area.websiteTypeName).trim(), siteTypeMatched: true };
+  }
   if (names.length === 1) return { type: names[0], siteTypeMatched: true };
   // Even when the catalog did not link a KB type to Naver, the operator's
   // master map can still carry the same KB type label on the exact same area.
@@ -367,7 +376,7 @@ for (const complex of index) {
       const supply = Number(rawArea?.['공급면적'] ?? area.supplyM2);
       const supplyAreaFloor = Number.isFinite(supply) && supply >= exclusive ? Math.floor(supply) : null;
       const supplyPyeong = supplyAreaFloor == null ? null : Math.floor(supply * 0.3025);
-      const typeKey = `${type}|${supplyAreaFloor ?? ''}`;
+      const typeKey = area.kbAreaId ? `KB:${area.kbComplexId}|${area.kbAreaId}` : `${type}|${supplyAreaFloor ?? ''}`;
       const old = types.get(typeKey);
       const kbLabel = String(area.kbTypeName || area.websiteTypeName || '').trim();
       if (siteTypeMatched && kbLabel) {
@@ -376,6 +385,7 @@ for (const complex of index) {
       }
       types.set(typeKey, {
         type,
+        ...(area.kbAreaId ? { kbAreaId: Number(area.kbAreaId) } : {}),
         exclusiveAreas: [...new Set([...(old?.exclusiveAreas || []), exactKey].filter(Boolean))],
         ...(type.startsWith('KB:') ? { kbTypeName: String(area.kbTypeName || area.websiteTypeName || '').trim() } : {}),
         siteTypeMatched,
@@ -387,6 +397,8 @@ for (const complex of index) {
   }
   // Keep directly verified KB areas that the latest catalog response omitted.
   for (const area of masterVerifiedAreas) {
+    if (freshAreas.some(fresh => Number(fresh.kbComplexId) === Number(area['KB단지ID']) &&
+      Number(fresh.kbAreaId) === Number(area['KB면적ID']))) continue;
     const exclusive = Number(area['전용면적']);
     const supply = Number(area['공급면적']);
     const households = Number(area['KB세대수']);
@@ -450,10 +462,12 @@ if (args['preserve-existing']) {
 function mergeAreas(previous, verified, resolvedKBLabels) {
   const areas = { ...previous };
   for (const [size, rows] of Object.entries(verified)) {
-    const rowKey = row => `${row.type}|${Number.isInteger(row.supplyAreaFloor) ? row.supplyAreaFloor : ''}`;
+    const rowKey = row => row.kbAreaId ? `KB:${row.kbAreaId}` : `${row.type}|${Number.isInteger(row.supplyAreaFloor) ? row.supplyAreaFloor : ''}`;
     const resolved = resolvedKBLabels.get(size);
+    const freshLabels = new Set(rows.map(row => `${row.type}|${row.supplyAreaFloor ?? ''}`));
     const byType = new Map((previous[size] || [])
-      .filter(row => row.siteTypeMatched !== false || !resolved?.has(rowKey(row)))
+      .filter(row => !freshLabels.has(`${row.type}|${row.supplyAreaFloor ?? ''}`) &&
+        (row.siteTypeMatched !== false || !resolved?.has(rowKey(row))))
       .map(row => [rowKey(row), row]));
     for (const row of rows) {
       const key = rowKey(row);

@@ -159,6 +159,16 @@ test('봉천동 두산의 전용 114.99㎡ 거래를 KB 43·48평 공통 그룹�
  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(114))),[[143],[159]]);
 });
 
+test('KB 면적 ID가 다른 금천롯데캐슬골드파크3차 전용 59 네 타입을 모두 보존한다',()=>{
+ const shard=JSON.parse(readFileSync(new URL('../data/complex-type-households/11545.json',import.meta.url),'utf8'));
+ const rows=shard.items['금천롯데캐슬골드파크3차|독산동']['59'];
+ assert.deepEqual(rows.map(row=>[row.type,row.kbAreaId,row.households]),[
+  ['84B',29500,232],['84B-1',75882,264],['85A',142889,186],['85A-1',114007,60],
+ ]);
+ assert.deepEqual(shard.exactExclusiveTypes['금천롯데캐슬골드파크3차|독산동']['59.96'],
+  ['84B','84B-1','85A','85A-1']);
+});
+
 test('KB 공급 그룹을 확인할 수 없는 거래는 기존 평형 행을 합치지 않고 거래내역에 표시한다',()=>{
  const c=context();
  loadComplex(c,'11440','힐스테이트마포더퍼스트|신수동');
