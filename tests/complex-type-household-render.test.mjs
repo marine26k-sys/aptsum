@@ -123,19 +123,39 @@ test('미확인 타입의 표시가 같은 공급 그룹에서는 세대수를 �
  assert.equal(typeCellForTrade(c,12.18),'<div>12 · <b>17세대</b></div>');
 });
 
-test('정확히 일치하는 KB 전용면적이 여러 공급 그룹에 있으면 거래를 미분류 상태로 둔다',()=>{
+test('전용면적 소수점 값이 같으면 KB 공급면적 차이가 커도 거래를 한 번만 묶는다',()=>{
  const c=context();
  c.complexTypeHouseholdData={'59':[
   {type:'KB:22',siteTypeMatched:false,supplyAreaFloor:74,exclusiveAreas:['59.91']},
   {type:'KB:24',siteTypeMatched:false,supplyAreaFloor:81,exclusiveAreas:['59.91']},
  ]};
  c.complexTradeTypeData=null;
- assert.equal(c.complexAreaGroupKey({area:59.91}),'59');
+ assert.equal(c.complexAreaGroupKey({area:59.91}),'59|74');
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(59))),[[74,81]]);
 });
 
-test('확인된 타입도 같은 전용면적에 공급 그룹이 여러 개면 세대수로 추정하지 않는다',()=>{
+test('확인된 KB 타입도 전용면적이 정확히 같으면 공급면적별로 거래를 나누지 않는다',()=>{
  const c=context();
  loadComplex(c,'41250','지행주공2단지|지행동');
  assert.deepEqual(Array.from(c.tradeTypesForArea(59.99)),['77B','82A']);
- assert.equal(c.complexAreaGroupKey({area:59.99}),'59');
+ assert.equal(c.complexAreaGroupKey({area:59.99}),'59|77');
+});
+
+test('봉천동 두산의 전용 114.99㎡ 거래를 KB 43·48평 공통 그룹으로 연결한다',()=>{
+ const c=context();
+ loadComplex(c,'11620','두산|봉천동');
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(114))),[[143,159]]);
+ assert.equal(c.complexAreaGroupKey({area:114.99}),'114|143');
+ const label=typeCellForTrade(c,114.99);
+ assert.ok(label.includes('114 (43평) · <b>487세대</b>'));
+ assert.ok(label.includes('114 (48평) · <b>23세대</b>'));
+ const start=html.indexOf('function complexPyLabel('),end=html.indexOf('let complexTypeHouseholdData=',start);
+ vm.runInContext(html.slice(start,end),c);
+ assert.equal(c.complexPyLabel({sizeKey:114,supplyAreaFloor:143,supplyAreaFloors:[143,159],py:'44평'}),'43·48평');
+ c.complexTypeHouseholdData={'114':[
+  {type:'143',supplyAreaFloor:143,exclusiveAreas:['114.99']},
+  {type:'159',supplyAreaFloor:159,exclusiveAreas:['114.991']},
+ ]};
+ c.complexTradeTypeData=null;
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(114))),[[143],[159]]);
 });
