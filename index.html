@@ -4037,23 +4037,22 @@ function looseMatchComplex(all, qnList, stage){
   return null;
 }
 
-// 실거래는 전용면적 정수 내림으로 묶고, KB 공급면적 평형이 다르면 나눠 표시한다.
+// 실거래는 전용면적 정수 내림으로 묶고, KB 공급면적 정수 차이가 3㎡ 이상이면 나눈다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
   const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
-  const groups=new Map();
-  for(const row of rows){
-    const floor=Number(row.supplyAreaFloor);
-    if(!Number.isInteger(floor))continue;
-    const key=row.supplyPyeong!==null&&row.supplyPyeong!==undefined&&Number.isInteger(Number(row.supplyPyeong))?`py:${Number(row.supplyPyeong)}`:`floor:${floor}`;
-    if(!groups.has(key))groups.set(key,[]);
-    groups.get(key).push(floor);
+  const floors=[...new Set(rows.filter(row=>row.supplyAreaFloor!==null&&row.supplyAreaFloor!==undefined).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const groups=[];
+  for(const floor of floors){
+    const current=groups.at(-1);
+    if(current&&floor-current[0]<3)current.push(floor);
+    else groups.push([floor]);
   }
-  return [...groups.values()].map(floors=>[...new Set(floors)].sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]);
+  return groups;
 }
 function complexSupplyAreaFloorGroup(sizeKey,groupFloor){
   if(!Number.isInteger(groupFloor))return [];
-  return complexSupplyAreaFloorClusters(sizeKey).find(group=>group[0]===groupFloor)||[groupFloor];
+  return complexSupplyAreaFloorClusters(sizeKey).find(group=>group.includes(groupFloor))||[groupFloor];
 }
 function complexSupplyAreaFloorForTrade(t,enabled=true){
   if(!enabled)return null;

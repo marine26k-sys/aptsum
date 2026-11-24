@@ -68,6 +68,23 @@ function typeCellForTrade(c, area){
  return c.typeHouseholdCell({sizeKey,supplyAreaFloor,supplyAreaFloors:c.complexSupplyAreaFloorGroup(sizeKey,supplyAreaFloor)});
 }
 
+test('KB 공급면적 정수 차이 1~2㎡는 같은 평형, 3㎡부터 별도 평형으로 묶는다',()=>{
+ const c=context();
+ loadComplex(c,'41173','평촌엘프라우드|비산동');
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(59))),[[81,82]]);
+ assert.equal(c.complexAreaGroupKey({area:59.76}),'59|81');
+ assert.equal(c.complexAreaGroupKey({area:59.97}),'59|81');
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorGroup(59,82))),[81,82]);
+ const typeCell=typeCellForTrade(c,59.76);
+ for(const [type,households] of [['59A',306],['59B',498],['59C',233],['59D',322]])assert.ok(typeCell.includes(`${type} · <b>${households}세대</b>`));
+ c.complexTypeHouseholdData={'59':[
+  {supplyAreaFloor:81,supplyPyeong:24},
+  {supplyAreaFloor:83,supplyPyeong:25},
+  {supplyAreaFloor:84,supplyPyeong:25},
+ ]};
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(59))),[[81,83],[84]]);
+});
+
 test('신림더루나의 확인된 네이버 타입과 세대수는 KB 자료를 다시 생성해도 유지한다',()=>{
  const c=context();
  loadComplex(c,'11620','신림더루나|신림동');
