@@ -4041,14 +4041,16 @@ function looseMatchComplex(all, qnList, stage){
 // 공급면적 기반 평형(py)은 세분된 그룹의 표시값과 평대 필터에 사용한다.
 function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
-  const floors=[...new Set((complexTypeHouseholdData?.[String(sizeKey)]||[]).map(row=>row.supplyAreaFloor).filter(Number.isInteger))].sort((a,b)=>a-b);
-  const clusters=[];
-  for(const floor of floors){
-    const last=clusters.at(-1);
-    if(!last||floor-last.at(-1)>=3)clusters.push([floor]);
-    else last.push(floor);
+  const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
+  const groups=new Map();
+  for(const row of rows){
+    const floor=Number(row.supplyAreaFloor);
+    if(!Number.isInteger(floor))continue;
+    const key=row.supplyPyeong!==null&&row.supplyPyeong!==undefined&&Number.isInteger(Number(row.supplyPyeong))?`py:${Number(row.supplyPyeong)}`:`floor:${floor}`;
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(floor);
   }
-  return clusters;
+  return [...groups.values()].map(floors=>[...new Set(floors)].sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]);
 }
 function complexSupplyAreaFloorGroup(sizeKey,groupFloor){
   if(!Number.isInteger(groupFloor))return [];
@@ -4256,13 +4258,18 @@ function analyzeComplex(all, name, months, rawAll, lawd){
 // 전세만 거래된 전용면적도 매매 화면의 평형 목록에 보여준다.
 // 매매 가격·최고가·차트는 만들지 않고 전세에서 확인한 평형 라벨만 가져온다.
 function includeJeonseOnlySaleAreas(sale, jeonse){
-  if(!jeonse?.found || sale.multi) return sale;
+  if(sale.multi) return sale;
+  if(!jeonse?.found || !sale.found){
+    const withKB=includeKBTypeAreas(sale);
+    if(!jeonse?.found)return withKB;
+    sale=withKB;
+  }
   const result = sale.found ? sale : {
     found:true, mode:'complex', name:jeonse.name, umd:jeonse.umd, build:jeonse.build,
     splitLawd:jeonse.splitLawd, period:jeonse.period, years:jeonse.years,
     count:0, trades:[], byPy:[],
   };
-  if(sale.found && (sale.umd!==jeonse.umd || naverKey(sale.name)!==naverKey(jeonse.name))) return sale;
+  if(sale.found && (sale.umd!==jeonse.umd || naverKey(sale.name)!==naverKey(jeonse.name))) return includeKBTypeAreas(sale);
   const known = new Set(result.byPy.map(complexRowGroupKey));
   for(const p of jeonse.byPy){
     if(known.has(complexRowGroupKey(p))) continue;
@@ -4274,7 +4281,66 @@ function includeJeonseOnlySaleAreas(sale, jeonse){
     });
   }
   result.byPy.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
-  return result;
+  return includeKBTypeAreas(result);
+}
+
+// KB 평형 자료가 있으면 화면의 평형 목록도 KB 기준으로 완성한다.
+// 조회 기간에 거래가 없어도 해당 타입을 표에 남기고, KB 면적에 대응하지 않는
+// 거래 그룹은 KB 타입으로 오인되지 않도록 요약표에서 제외한다.
+function includeKBTypeAreas(data){
+  const source=complexTypeHouseholdData;
+  if(!source||!Object.keys(source).length)return data;
+  const knownGroups=new Map();
+  for(const [sizeText,types] of Object.entries(source)){
+    const sizeKey=Number(sizeText);
+    if(!Number.isInteger(sizeKey)||!Array.isArray(types))continue;
+    for(const group of complexSupplyAreaFloorClusters(sizeKey)){
+      const groupFloor=group[0];
+      const groupRows=types.filter(row=>group.includes(Number(row.supplyAreaFloor)));
+      if(!groupRows.length)continue;
+      const key=`${sizeKey}|${groupFloor}`;
+      knownGroups.set(key,{sizeKey,groupFloor,group,rows:groupRows});
+    }
+  }
+  if(!knownGroups.size)return data;
+  const normalized=(data?.byPy||[]).filter(row=>{
+    const sizeKey=Number(row.sizeKey);
+    const hasKBSize=Object.keys(source).some(size=>Number(size)===sizeKey);
+    if(!hasKBSize)return true;
+    if(!Number.isInteger(Number(row.supplyAreaFloor)))return false;
+    const group=complexSupplyAreaFloorGroup(sizeKey,Number(row.supplyAreaFloor));
+    return knownGroups.has(`${sizeKey}|${group[0]}`);
+  });
+  const present=new Set(normalized.map(row=>{
+    const group=complexSupplyAreaFloorGroup(Number(row.sizeKey),Number(row.supplyAreaFloor));
+    return `${row.sizeKey}|${group[0]}`;
+  }));
+  for(const [key,group] of knownGroups){
+    if(present.has(key))continue;
+    normalized.push({
+      py:`${Number(group.rows[0].supplyPyeong)||0}평`,
+      sizeKey:group.sizeKey,
+      groupKey:key,
+      supplyAreaFloor:group.groupFloor,
+      supplyAreaFloors:group.group,
+      area:`(전용 ${group.sizeKey})`,
+      n:0,
+      rentOnly:true,
+      noTradeLabel:'매매 거래 없음',
+      quarters:[],
+      max:null,
+      maxDate:null,
+      recent:null,
+      recentMonthAvg:null,
+      isNewHigh:false,
+      monthly:[],
+      trend:null,
+      floorBand:null,
+    });
+  }
+  normalized.sort((a,b)=>complexPySortKey(a)-complexPySortKey(b)||a.sizeKey-b.sizeKey||(a.supplyAreaFloor??-1)-(b.supplyAreaFloor??-1));
+  const [,sourceDong,sourceName]=complexTypeHouseholdKey.split('|');
+  return {...data,found:true,mode:'complex',name:data?.name||sourceName,umd:data?.umd||sourceDong,count:Number(data?.count)||0,trades:data?.trades||[],byPy:normalized};
 }
 
 function analyzeRegion(all, months){
