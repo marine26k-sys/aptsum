@@ -24,7 +24,7 @@ test('단지 분석은 같은 25평이어도 전용 59와 60을 분리하고 같
   assert.equal(result.trades.filter(t=>t.sizeKey===60).length,1);
 });
 
-test('공급 타입을 모르는 84.98㎡ 거래는 같은 전용 84㎡ 행의 시세에 포함한다', () => {
+test('공급 타입을 모르는 84.98㎡ 거래는 KB 공급평형을 합치지 않고 거래내역에 보존한다', () => {
   const shard=JSON.parse(readFileSync(new URL('../data/complex-type-households/11440.json',import.meta.url),'utf8'));
   const key='힐스테이트마포더퍼스트|신수동';
   const ctx=vm.createContext({
@@ -44,11 +44,8 @@ test('공급 타입을 모르는 84.98㎡ 거래는 같은 전용 84㎡ 행의 �
   ];
   const result=ctx.includeKBTypeAreas(ctx.analyzeComplex(deals,'힐스테이트마포더퍼스트',['202609','202608'],undefined,'11440'));
   const rows=result.byPy.filter(p=>p.sizeKey===84);
-  assert.equal(rows.length,1);
-  assert.equal(rows[0].n,3);
-  assert.equal(rows[0].max,23);
-  assert.equal(ctx.complexPyLabel(rows[0]),'32·36평');
-  assert.deepEqual(Array.from(result.trades,t=>t.groupKey),['84','84','84']);
+  assert.deepEqual(Array.from(rows,p=>[ctx.complexPyLabel(p),p.n,p.max]),[['32평',1,23],['36평',0,null]]);
+  assert.deepEqual(Array.from(result.trades,t=>t.groupKey),['84|108','84','84']);
 });
 
 test('매매 거래가 없는 전용면적도 전세 거래가 있으면 매매 평형에 가격 없이 표시한다', () => {

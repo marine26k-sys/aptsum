@@ -147,8 +147,7 @@ test('봉천동 두산의 전용 114.99㎡ 거래를 KB 43·48평 공통 그룹�
  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(114))),[[143,159]]);
  assert.equal(c.complexAreaGroupKey({area:114.99}),'114|143');
  const label=typeCellForTrade(c,114.99);
- assert.ok(label.includes('114 (43평) · <b>487세대</b>'));
- assert.ok(label.includes('114 (48평) · <b>23세대</b>'));
+ assert.ok(label.includes('114 · <b>510세대</b>'));
  const start=html.indexOf('function complexPyLabel('),end=html.indexOf('let complexTypeHouseholdData=',start);
  vm.runInContext(html.slice(start,end),c);
  assert.equal(c.complexPyLabel({sizeKey:114,supplyAreaFloor:143,supplyAreaFloors:[143,159],py:'44평'}),'43·48평');
@@ -160,7 +159,7 @@ test('봉천동 두산의 전용 114.99㎡ 거래를 KB 43·48평 공통 그룹�
  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(114))),[[143],[159]]);
 });
 
-test('KB 공급 그룹을 확인할 수 없는 거래는 같은 전용면적 KB 타입들과 한 행에 표시한다',()=>{
+test('KB 공급 그룹을 확인할 수 없는 거래는 기존 평형 행을 합치지 않고 거래내역에 표시한다',()=>{
  const c=context();
  loadComplex(c,'11440','힐스테이트마포더퍼스트|신수동');
  c.complexTypeHouseholdKey='11440|신수동|힐스테이트마포더퍼스트';
@@ -174,13 +173,12 @@ test('KB 공급 그룹을 확인할 수 없는 거래는 같은 전용면적 KB 
    recent:{amt:20.9,ym:'26.09',day:'03'},max:20.9,monthly:[]};
  const result=c.includeKBTypeAreas({found:true,name:'힐스테이트마포더퍼스트',umd:'신수동',
    trades:[trade],byPy:[row]});
- const combined=result.byPy.find(p=>p.combinedKbSize);
- assert.ok(combined);
- assert.equal(combined.max,20.9);
- assert.equal(c.complexPyLabel(combined),'32·36평');
- assert.equal(result.byPy.filter(p=>p.sizeKey===84).length,1);
- assert.match(c.typeHouseholdCell(combined),/84A \(32평\) · <b>106세대<\/b>/);
- assert.match(c.typeHouseholdCell(combined),/84C \(36평\) · <b>51세대<\/b>/);
+ const rows=result.byPy.filter(p=>p.sizeKey===84);
+ assert.deepEqual(Array.from(rows,p=>c.complexPyLabel(p)),['32평','36평']);
+ assert.equal(rows[0].max,null);
+ assert.match(c.typeHouseholdCell(rows[0]),/84A · <b>106세대<\/b>/);
+ assert.match(c.typeHouseholdCell(rows[1]),/84C · <b>51세대<\/b>/);
  const detail=c.tradesHTML(result);
+ assert.match(detail,/<td>공급 미확인<\/td>/);
  assert.match(detail,/<td>84\.98㎡ · KB 타입 미확인<\/td>/);
 });
