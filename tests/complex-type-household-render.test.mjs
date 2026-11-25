@@ -30,6 +30,17 @@ test('개별 타입이 있는 평형에서 결합 타입 표기는 중복으로 
  assert.deepEqual(Array.from(c.tradeTypesForArea(74.91)),['100A','100B']);
 });
 
+test('묶인 전용면적 타입은 세대수 내림차순으로 표시한다',()=>{
+ const c=context();
+ c.complexTypeHouseholdData={'59':[
+  {type:'59A',households:28,supplyAreaFloor:80},
+  {type:'59B',households:24,supplyAreaFloor:81},
+  {type:'59C',households:36,supplyAreaFloor:82},
+ ]};
+ assert.equal(c.typeHouseholdCell({sizeKey:59,supplyAreaFloor:80,supplyAreaFloors:[80,81,82]}),
+  '<div>59C · <b>36세대</b></div><div>59A · <b>28세대</b></div><div>59B · <b>24세대</b></div>');
+});
+
 test('타입 미확인 요약표에는 전용면적 숫자만 표시한다',()=>{
  const c=context();
  c.complexTypeHouseholdData=null;

@@ -7085,7 +7085,9 @@ function typeHouseholdCell(p){
       if(!byType.has(type))addTypeRow({type,households:match?.households??null,supplyAreaFloor:match?.supplyAreaFloor??null});
     }
   }
-  const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
+  const rows=[...byType.values()].sort((a,b)=>
+    (Number(b.households)||0)-(Number(a.households)||0)||
+    String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
   const householdsByLabel=new Map();
   for(const row of rows){
     const baseLabel=row.siteTypeMatched===false?String(p.sizeKey):exclusiveTypeLabels(p.sizeKey,row.type);
