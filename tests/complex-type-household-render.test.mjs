@@ -85,6 +85,23 @@ test('KB 공급면적 정수 차이 1~2㎡는 같은 평형, 3㎡부터 별도 �
  assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(59))),[[81,83],[84]]);
 });
 
+test('공급면적이 1~2㎡ 차이라도 다른 전용면적 타입을 끌어 합치지 않는다',()=>{
+ const c=context();
+ c.complexTypeHouseholdData={'70':[
+  {type:'93D',households:33,supplyAreaFloor:93,supplyPyeong:28,exclusiveAreas:['70.06']},
+  {type:'94C',households:16,supplyAreaFloor:94,supplyPyeong:28,exclusiveAreas:['70.06']},
+  {type:'99A',households:17,supplyAreaFloor:99,supplyPyeong:30,exclusiveAreas:['70.06']},
+  {type:'99B',households:19,supplyAreaFloor:99,supplyPyeong:30,exclusiveAreas:['70.06']},
+  {type:'101E',households:72,supplyAreaFloor:101,supplyPyeong:30,exclusiveAreas:['70']},
+  {type:'102F',households:71,supplyAreaFloor:102,supplyPyeong:31,exclusiveAreas:['70.01']},
+ ]};
+ c.complexTradeTypeData=null;
+ assert.deepEqual(JSON.parse(JSON.stringify(c.complexSupplyAreaFloorClusters(70))),[[93,94,99],[101,102]]);
+ assert.equal(c.complexAreaGroupKey({area:70.06}),'70|93');
+ assert.equal(c.complexAreaGroupKey({area:70}),'70|101');
+ assert.equal(c.complexAreaGroupKey({area:70.01}),'70|101');
+});
+
 test('같은 동·세대수·준공연도가 확인된 마을 이름 변형도 KB 타입을 연결한다',()=>{
  const c=context();
  loadComplex(c,'41173','향촌마을현대4차|평촌동');

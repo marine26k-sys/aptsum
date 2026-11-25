@@ -4042,10 +4042,30 @@ function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
   const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
   const floors=[...new Set(rows.filter(row=>row.supplyAreaFloor!==null&&row.supplyAreaFloor!==undefined).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const exclusiveByFloor=new Map();
+  const recordExclusive=(exclusive,floor)=>{
+    const area=Number(exclusive);
+    if(!Number.isInteger(floor)||!Number.isFinite(area)||Math.floor(area)!==Number(sizeKey))return;
+    if(!exclusiveByFloor.has(floor))exclusiveByFloor.set(floor,new Set());
+    exclusiveByFloor.get(floor).add(String(area));
+  };
+  for(const row of rows)for(const exclusive of row.exclusiveAreas||[])recordExclusive(exclusive,Number(row.supplyAreaFloor));
+  for(const [exclusive,types] of Object.entries(complexTradeTypeData||{})){
+    if(!Array.isArray(types))continue;
+    for(const row of rows)if(types.includes(String(row.type||'')))recordExclusive(exclusive,Number(row.supplyAreaFloor));
+  }
+  const repeatedExclusiveFloors=new Map();
+  for(const [floor,exclusives] of exclusiveByFloor)for(const exclusive of exclusives){
+    if(!repeatedExclusiveFloors.has(exclusive))repeatedExclusiveFloors.set(exclusive,new Set());
+    repeatedExclusiveFloors.get(exclusive).add(floor);
+  }
+  const protectedFloors=new Set([...repeatedExclusiveFloors.values()].filter(set=>set.size>1).flatMap(set=>[...set]));
   const groups=[];
   for(const floor of floors){
     const current=groups.at(-1);
-    if(current&&floor-current[0]<3)current.push(floor);
+    const currentProtected=current?.some(value=>protectedFloors.has(value));
+    const floorSharesExclusive=current?.some(value=>[...(exclusiveByFloor.get(value)||[])].some(exclusive=>exclusiveByFloor.get(floor)?.has(exclusive)));
+    if(current&&floor-current[0]<3&&(!currentProtected||floorSharesExclusive||protectedFloors.has(floor)))current.push(floor);
     else groups.push([floor]);
   }
   // 국토부 거래에는 공급면적이 없다. KB 타입의 전용면적 소수점 값이
@@ -4058,11 +4078,7 @@ function complexSupplyAreaFloorClusters(sizeKey){
     if(!sharedExclusiveFloors.has(key))sharedExclusiveFloors.set(key,new Set());
     sharedExclusiveFloors.get(key).add(floor);
   };
-  for(const row of rows)for(const exclusive of row.exclusiveAreas||[])addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
-  for(const [exclusive,types] of Object.entries(complexTradeTypeData||{})){
-    if(!Array.isArray(types))continue;
-    for(const row of rows)if(types.includes(String(row.type||'')))addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
-  }
+  for(const [floor,exclusives] of exclusiveByFloor)for(const exclusive of exclusives)addExclusiveFloor(exclusive,floor);
   const parent=groups.map((_,i)=>i);
   const root=i=>{while(parent[i]!==i)i=parent[i]=parent[parent[i]];return i;};
   for(const shared of sharedExclusiveFloors.values()){
