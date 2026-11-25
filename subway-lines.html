@@ -175,7 +175,15 @@ function restoreState(){
 
 async function load(){
   try{
-    DATA = await aptsumGithubData.json('data/subway-lines.json');
+    // PR 원본 ref의 CDN 캐시가 이전 커밋을 돌려줄 수 있으므로 프리뷰는
+    // 해당 배포에 포함된 데이터를 읽는다. 운영은 기존 GitHub 자동 갱신을 유지한다.
+    if(/^deploy-preview-\d+--/.test(location.hostname)){
+      const response=await fetch('/data/subway-lines.json',{cache:'no-store'});
+      if(!response.ok)throw new Error('Preview subway data unavailable');
+      DATA=await response.json();
+    }else{
+      DATA=await aptsumGithubData.json('data/subway-lines.json');
+    }
     const saved = restoreState();
     if(saved && DATA.lines.some(l => l.id === saved.activeLine)){
       activeLine = saved.activeLine;
