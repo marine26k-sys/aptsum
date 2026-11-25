@@ -1,5 +1,6 @@
 import { attachHouseholds } from "../shared/naver-name-match.mjs";
 import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
+import { tierPriceGroupKey, tierSupplyPyeong } from "../shared/tier-pricing.mjs";
 // 급지(가격 등급) 대시보드 데이터 생성 (2026.09 신규 — subuji-main 참고)
 // 목적: 이미 collect-trades.mjs가 쌓아온 data/analyze/<lawd>/<ym>.json 매매 실거래를 스캔해서,
 // 단지별 "평당가(공급면적 기준, 3.3㎡=1평당 가격)"를 뽑고 가격대별 6단계 등급(최상급지~하급지)으로
@@ -8,7 +9,7 @@ import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 // 대상 범위: 서울·경기·인천·부산(2026.09 인천 재포함, 운영자 요청) — REGIONS에 있는 4개 시·도 전부 다룬다.
 //
 // "평당가" 계산(2026.09 2차 개편 — index.html의 "전용면적 평당가"(pyprice) 탭과 같은 골격, 기준만 다름):
-// 1) 단지+전용면적 내림 정수별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
+// 1) 단지+전용면적 내림 정수+공급평형별로 "최근 3년(기본 36개월) 내 최고가" 거래 1건을 뽑는다(표본이
 //    1건뿐인 평형은 이상치 방지로 제외 — pyprice 탭과 동일 원칙, 우연히 섞인 이례적 면적 1건이 대표로
 //    잘못 뽑히는 걸 막음).
 // 2) 그렇게 나온 평형별 최고가를 각 평형의 평당가로 환산한 뒤, 그중 평당가가 가장 높은 평형 딱 1개를
@@ -22,8 +23,8 @@ import { applyNaverSupplyAreas } from "../shared/supply-area-loader.mjs";
 // API는 전용면적만 주기 때문에, pyprice 탭은 정밀도를 위해 일부러 보간 없이 "전용면적÷3.3058"로
 // 계산한다(화면에도 "전용면적 평당가"라고 명시). 반면 이 대시보드는 애초에 정밀 분석이 아니라 근사
 // 등급 표시가 목적이라, 사람들이 흔히 말하는 "평당가"(공급면적 기준) 감각에 맞추는 걸 우선시했음.
-// 정밀 계산 대신 collect-trades.mjs가 각 거래에 이미 붙여둔 t.py(공급면적 관행 기준 평형 라벨 —
-// shared/rtms-parse.mjs의 areaToPy(), data/supply-area 실측치로 보정된 보간표)를 그대로 재사용한다.
+// KB 전용면적 소수점 매칭이 유일하면 그 공급평형을 우선 사용한다. 확인되지 않은 경우 네이버
+// 공급면적 또는 기존 실거래 평형 추정을 사용하되, 서로 다른 공급평형은 같은 표본으로 합치지 않는다.
 //
 // 사용법: node scripts/build-tier-map.mjs [--months=36]
 
@@ -86,7 +87,7 @@ async function main() {
     recentYms.add(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  // "구|동|단지명|전용면적 내림 정수" -> { maxAmt, count } — 공급면적 평형은 별도 표시·평당가 계산에 사용
+  // "구|동|단지명|전용면적 내림 정수|공급평형" -> { maxAmt, count }
   const pyGroups = new Map();
   // 단지명 표기가 "청담 르엘"/"청담르엘"처럼 띄어쓰기만 다른 경우 서로 다른 단지로 갈라져 급지 목록에
   // 중복으로 뜨던 문제(2026.09 제보) — 그룹 키는 공백을 제거한 이름으로 통일해서 합치되, 화면에 보여줄
@@ -119,6 +120,8 @@ async function main() {
     try { naverNames = JSON.parse(await readFile(path.join("data/naver-names", `${lawd}.json`), "utf-8")); } catch {}
     let complexSupplyPyeong = {};
     try { complexSupplyPyeong = JSON.parse(await readFile(path.join("data/complex-supply-pyeong", `${lawd}.json`), "utf-8")).items || {}; } catch {}
+    let kbTypes = {};
+    try { kbTypes = JSON.parse(await readFile(path.join("data/complex-type-households", `${lawd}.json`), "utf-8")); } catch {}
     const normalizeComplexKey = value => String(value || "").normalize("NFKC").replace(/[\s·ㆍ()\[\]{}.,_-]/g, "").toLocaleLowerCase("ko-KR");
     for (const [dir, isPresale] of [[analyzeDir, false], [presaleDir, true]]) {
       let ymFiles;
@@ -133,16 +136,15 @@ async function main() {
         for (const rawTrade of applyNaverSupplyAreas(j.items || [], calibratedAreas, lawd)) {
           const canonicalName = naverNames[`${rawTrade.apt}|${rawTrade.umd}`] || rawTrade.apt;
           const supplyPy = complexSupplyPyeong[`${normalizeComplexKey(canonicalName)}|${normalizeComplexKey(rawTrade.umd)}`]?.[String(Math.floor(Number(rawTrade.area)))];
-          const t = Number.isInteger(supplyPy) && supplyPy > 0 ? { ...rawTrade, py: supplyPy } : rawTrade;
+          const t = { ...rawTrade, py: tierSupplyPyeong(rawTrade, canonicalName, kbTypes, supplyPy) };
           if (t.direct) continue; // 직거래 제외 — 사이트 다른 탭과 동일 원칙
           if (!(t.py > 0)) continue; // areaToPy 실패(면적 정보 없음 등)로 평형을 못 정한 거래는 평당가 계산 불가
           totalTx++;
           const nameNorm = String(t.apt).replace(/\s/g, ""); // 띄어쓰기 표기 차이 통합용 키(화면 표기는 아래서 별도 채택)
           const ck = `${region}|${t.umd}|${nameNorm}`;
-          const pk = `${ck}|${Math.floor(t.area)}`;
-          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, pyCounts: {}, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
+          const pk = tierPriceGroupKey(ck, t);
+          const g = pyGroups.get(pk) || { region, province, dong: t.umd, name: nameNorm, py: t.py, maxAmt: -Infinity, area: null, count: 0, presaleOnly: true };
           g.count++;
-          g.pyCounts[t.py] = (g.pyCounts[t.py] || 0) + 1;
           if (!isPresale) g.presaleOnly = false; // 매매 거래가 한 건이라도 섞이면 더 이상 "분양권 전용"이 아님
           if (t.amt > g.maxAmt) { g.maxAmt = t.amt; g.area = t.area || null; } // "기간 내 최고가"와 그 거래의 전용면적(㎡)
           pyGroups.set(pk, g);
@@ -197,7 +199,6 @@ async function main() {
   // 단지별로 평형(py) 중 평당가가 가장 높은 것 1개만 대표로 채택
   const byComplex = new Map(); // "구|동|정규화된 단지명" -> 대표 평형 그룹 + ppy
   for (const g of pyGroups.values()) {
-    g.py = +Object.entries(g.pyCounts).sort((a,b)=>b[1]-a[1] || Number(a[0])-Number(b[0]))[0][0];
     if (g.count < MIN_SAMPLES_PER_TYPE) continue; // 표본 1건뿐인 평형은 대표 후보에서 제외
     if (g.py < PY_MIN || g.py > PY_MAX) continue; // 20~39평 범위 밖 평형은 대표 후보에서 제외
     const ck = `${g.region}|${g.dong}|${g.name}`;
@@ -272,7 +273,7 @@ async function main() {
       complexes: result.length,
       months,
       provinces: ["서울", "경기", "인천", "부산"],
-      basis: `단지+전용면적 내림 정수별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평당가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
+      basis: `단지+전용면적 내림 정수+공급평형별 최근 ${months}개월 (약 ${Math.round(months/12*10)/10}년) 내 최고가 기준 (매매·분양권·입주권 포함), ${PY_MIN}~${PY_MAX}평 범위의 평형 중 평당가 (공급면적 기준, 3.3㎡=1평) 최고치를 단지 대표값으로 채택 — 서울·경기·인천·부산 대상`,
     },
     grades: gradesOut,
     complexes: result,
