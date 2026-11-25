@@ -230,7 +230,7 @@ try {
   .py-summary-table td.td-recent b{color:var(--teal-dark)}
   .py-summary-table td.td-max{background:#FCEEEE}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
-  .py-summary-table td:first-child{white-space:nowrap}
+  .py-summary-table td:first-child{white-space:normal;word-break:keep-all}
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
@@ -7152,7 +7152,7 @@ function chartGroupMatches(trade,keys){
 function pyTableHTML(d){
   const list = mergeSummaryRowsByPyeong(selectedComplexRows(d));
   if(!list.length) return '';
-  const columnWidths=['18%','30%','18%','18%','16%'];
+  const columnWidths=['22%','26%','18%','18%','16%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>
