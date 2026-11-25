@@ -4065,7 +4065,8 @@ function complexSupplyAreaFloorClusters(sizeKey){
     const current=groups.at(-1);
     const currentProtected=current?.some(value=>protectedFloors.has(value));
     const floorSharesExclusive=current?.some(value=>[...(exclusiveByFloor.get(value)||[])].some(exclusive=>exclusiveByFloor.get(floor)?.has(exclusive)));
-    if(current&&floor-current[0]<3&&(!currentProtected||floorSharesExclusive||protectedFloors.has(floor)))current.push(floor);
+    const floorProtected=protectedFloors.has(floor);
+    if(current&&floor-current[0]<3&&(!(currentProtected||floorProtected)||floorSharesExclusive))current.push(floor);
     else groups.push([floor]);
   }
   // 국토부 거래에는 공급면적이 없다. KB 타입의 전용면적 소수점 값이
