@@ -20,7 +20,7 @@ test('preview sharing metadata uses the preview image and page before JavaScript
 test('channel card preview uses its own deployed image URL', () => {
   const preview = prepareCardShareMeta(cardHtml, previewEnv);
   assert.ok(preview.includes('content="https://deploy-preview-159--aptsum.netlify.app/card/og-image-v2.png"'));
-  assert.ok(preview.includes('<meta property="og:url" content="https://deploy-preview-159--aptsum.netlify.app/card/?v=2">'));
+  assert.ok(preview.includes('<meta property="og:url" content="https://deploy-preview-159--aptsum.netlify.app/card/">'));
   assert.equal(prepareCardShareMeta(preview, previewEnv), preview);
   const production = prepareCardShareMeta(preview, {});
   assert.ok(production.includes('content="https://aptsum.kr/card/og-image-v2.png"'));
