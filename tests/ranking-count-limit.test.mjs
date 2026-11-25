@@ -16,7 +16,7 @@ test('단지 랭킹은 100개를 넘겨도 가격순으로 모두 반환한다',
  assert.equal(result.highDeals[124].amt,1);
  assert.equal(result.topVolume.length,125);
 });
-test('한 단지의 서로 다른 전용면적 최고가를 각각 표시한다',()=>{
+test('조회한 평형 중 단지별 최고 거래 한 건만 표시한다',()=>{
  const trades=[
   {apt:'금호어울림',umd:'호계동',lawd:'41173',area:59.93,py:24,ym:'202604',d:'30',amt:4.5},
   {apt:'금호어울림',umd:'호계동',lawd:'41173',area:59.93,py:24,ym:'202604',d:'27',amt:4.4},
@@ -24,7 +24,9 @@ test('한 단지의 서로 다른 전용면적 최고가를 각각 표시한다'
  ];
  const result=context.analyzeRegion(trades,['202604','202607']);
  assert.equal(result.topVolume.length,1);
- assert.deepEqual(Array.from(result.highDeals,row=>[row.area,row.py,row.amt]),[[70.22,'27평',4.8],[59.93,'24평',4.5]]);
+ assert.deepEqual(Array.from(result.highDeals,row=>[row.area,row.py,row.amt]),[[70.22,'27평',4.8]]);
+ const only24=context.analyzeRegion(trades.filter(row=>row.py===24),['202604','202607']);
+ assert.deepEqual(Array.from(only24.highDeals,row=>[row.area,row.py,row.amt]),[[59.93,'24평',4.5]]);
 });
 test('평당가 랭킹은 표본 조건을 충족하는 100개 초과 단지를 모두 반환한다',()=>{
  const result=context.analyzePricePerPyeong(rows.flatMap(row=>[row,{...row,d:'02'}]),['202609']);

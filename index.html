@@ -4400,11 +4400,11 @@ function analyzeRegion(all, months){
     const surge = r3n>=6 && r3n >= p3n*2; // 최근 3개월이 이전 3개월의 2배 이상
     return {apt, umd, gu:gu||null, lawd:sorted[0].lawd||null, n:sorted.length, mainPy:`${mainPy}평${mainArea!=null?` (전용 ${mainArea})`:''}`, recentAmt:sorted[0].amt, surge, build:(sorted.find(t=>t.build)||{}).build || ''};
   }).sort((a,b)=>b.n-a.n);
-  // Keep one highest deal per exclusive size. A complex can have several KB
-  // pyeong types in the selected range, and each must appear in the ranking.
-  const byAptAndSize={};
-  for(const t of all){const k=`${t.apt}|${t.umd}|${t.gu||''}|${t.lawd||''}|${exclusiveAreaKey(t)}`;(byAptAndSize[k]=byAptAndSize[k]||[]).push(t);}
-  const grouped = Object.entries(byAptAndSize).map(([k,arr])=>{
+  // The input already has the selected size filters applied. Show only the
+  // highest deal among those sizes for each complex.
+  const byComplex={};
+  for(const t of all){const k=`${t.apt}|${t.umd}|${t.gu||''}|${t.lawd||''}`;(byComplex[k]=byComplex[k]||[]).push(t);}
+  const grouped = Object.entries(byComplex).map(([k,arr])=>{
     const top = arr.slice().sort((a,b)=>b.amt-a.amt || dkey(b).localeCompare(dkey(a)))[0];
     const [apt,umd,gu] = k.split('|');
     return {apt, umd, gu:gu||null, lawd:top.lawd||null, py:`${top.py}평`, area:top.area, amt:top.amt, date:`${ymLabel(top.ym)}.${top.d}`,
