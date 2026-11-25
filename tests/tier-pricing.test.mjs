@@ -13,6 +13,7 @@ const kbTypes = {
 
 test('급지 평당가는 소수점까지 일치한 KB 전용면적의 공급평형을 우선한다', () => {
   assert.equal(tierSupplyPyeong(trade, '샘플', kbTypes, 32), 36);
+  assert.equal(tierSupplyPyeong({ ...trade, py: 36 }, '샘플', kbTypes, 32), 36);
 });
 
 test('KB 공급평형이 여럿이고 정확한 타입을 모르면 다수 타입을 임의 배정하지 않는다', () => {
