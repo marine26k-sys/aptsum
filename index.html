@@ -845,11 +845,13 @@ try {
           const statusVersion = ++tradeStatusVersion;
           clearTimeout(tradeStatusTimer);
           const description = zone.querySelector('.brand-description');
-          const original = '실거래 · 실매물 · 아파트 분석';
+          const original = description?.textContent || '실거래 · 실매물 · 아파트 분석';
+          const originalMode = mode;
           const showStatus = (message, delay) => {
+            if (mode !== originalMode) return;
             if (description) description.textContent = message;
             tradeStatusTimer = setTimeout(() => {
-              if (description && statusVersion === tradeStatusVersion) description.textContent = original;
+              if (description && statusVersion === tradeStatusVersion && mode === originalMode && description.textContent === message) description.textContent = original;
             }, delay);
           };
           if (description) description.textContent = '실거래 수집 요청 중…';
