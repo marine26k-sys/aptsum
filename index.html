@@ -1477,8 +1477,13 @@ function showLookupProgress(done,total){
   const buttons=[document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])];
   buttons.filter(button=>button?.dataset).forEach(button=>{button.dataset.idleLabel||=button.textContent.trim()||'조회';button.textContent=label;});
 }
+function resetLookupProgressButton(){
+  [document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])].filter(button=>button?.dataset).forEach(button=>{button.textContent=button.dataset.idleLabel||'조회';});
+}
 function updateFetchProgressTask(token,id,done,total){
-  if(token!==searchToken)return;
+  // 조회 후 백그라운드로 시작한 전세·세대수 보충 요청이 완료될 때
+  // 이미 끝난 검색의 버튼 진행률을 다시 덮어쓰지 않도록 로딩 중일 때만 반영한다.
+  if(token!==searchToken||!document.getElementById('loading')?.classList.contains('on'))return;
   if(lookupProgressTaskToken!==token){lookupProgressTasks=new Map();lookupProgressTaskToken=token;}
   lookupProgressTasks.set(id,{done,total});
   const work=[...lookupProgressTasks.values()];
@@ -5990,7 +5995,7 @@ async function search(opts){
   try{await runSearch(opts);}
   finally{
     if(requestId===search.requestId&&!document.getElementById('loading')?.classList?.contains('on')){
-      [document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])].filter(button=>button?.dataset).forEach(button=>{button.textContent=button.dataset.idleLabel||'조회';});
+      resetLookupProgressButton();
     }
   }
   if(requestId===search.requestId&&(!opts?.silentScroll||opts?.scrollToListingResult)&&mode===requestedMode&&result?.classList?.contains('on')&&result.firstChild!==previousResult){
@@ -6544,6 +6549,9 @@ async function runSearch(opts){
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
       document.getElementById('btn').disabled = false;
+      // 각 검색 경로의 바깥 래퍼가 진행률을 복구하지 못한 경우에도,
+      // 실제 조회를 끝낸 공통 경로에서 버튼을 초기화한다.
+      resetLookupProgressButton();
     }
   }
 }
