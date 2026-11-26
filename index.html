@@ -230,7 +230,7 @@ try {
   .py-summary-table td.td-recent b{color:var(--teal-dark)}
   .py-summary-table td.td-max{background:#FCEEEE}
   .py-summary-table th{font-size:10px;font-weight:700;line-height:1.2;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
-  .py-summary-table td:first-child{white-space:nowrap}
+  .py-summary-table td:first-child{white-space:normal;word-break:keep-all}
   .py-summary-table td:first-child .rng{white-space:normal}
   .py-summary-table td b{font-size:11.5px}
   .py-summary-table td .rng{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:9px}
@@ -963,7 +963,7 @@ try {
       <div class="tab-grp-name">발급</div>
       <div class="tab-grp-tabs"><a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a></div>
     </div>
-    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈 &amp; LH 분양</span></div>
+    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span onclick="tapCheongyakRefresh()">청약홈 &amp; LH 분양</span></div>
     <div class="tab-grp">
       <div class="tab-grp-name">분양</div>
       <div class="tab-grp-tabs">
@@ -1408,6 +1408,30 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
+let cheongyakTitleTapTimes=[];
+let cheongyakRefreshPending=false;
+async function tapCheongyakRefresh(){
+  const now=Date.now();
+  cheongyakTitleTapTimes=cheongyakTitleTapTimes.filter(time=>now-time<1400);
+  cheongyakTitleTapTimes.push(now);
+  if(cheongyakTitleTapTimes.length<3)return;
+  cheongyakTitleTapTimes=[];
+  if(cheongyakRefreshPending)return;
+  cheongyakRefreshPending=true;
+  const title=document.querySelector('#tabCheongyakDivider span');
+  const original=title?.textContent||'청약홈 & LH 분양';
+  if(title)title.textContent='청약홈·LH 공고 수집 요청 중…';
+  try{
+    const response=await fetch('/api/manual-cheongyak-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.message||'수동 수집을 요청하지 못했습니다.');
+    if(title)title.textContent='수집 실행을 요청했습니다';
+    setTimeout(()=>{if(title)title.textContent=original;},3000);
+  }catch(error){
+    if(title)title.textContent=error.message||'수집 요청에 실패했습니다';
+    setTimeout(()=>{if(title)title.textContent=original;},4000);
+  }finally{cheongyakRefreshPending=false;}
+}
 const molitUndervaluePriceState={sources:new Map(),min:0,max:100,lo:0,hi:100,touched:false};
 const MOLIT_UNDERVALUE_PY_MIN=10, MOLIT_UNDERVALUE_PY_MAX=40;
 const molitUndervaluePyState={min:MOLIT_UNDERVALUE_PY_MIN,max:MOLIT_UNDERVALUE_PY_MAX,lo:MOLIT_UNDERVALUE_PY_MIN,hi:MOLIT_UNDERVALUE_PY_MAX};
@@ -4042,10 +4066,31 @@ function exclusiveAreaKey(t){ return Math.floor(Number(t.area)); }
 function complexSupplyAreaFloorClusters(sizeKey){
   const rows=complexTypeHouseholdData?.[String(sizeKey)]||[];
   const floors=[...new Set(rows.filter(row=>row.supplyAreaFloor!==null&&row.supplyAreaFloor!==undefined).map(row=>Number(row.supplyAreaFloor)).filter(Number.isInteger))].sort((a,b)=>a-b);
+  const exclusiveByFloor=new Map();
+  const recordExclusive=(exclusive,floor)=>{
+    const area=Number(exclusive);
+    if(!Number.isInteger(floor)||!Number.isFinite(area)||Math.floor(area)!==Number(sizeKey))return;
+    if(!exclusiveByFloor.has(floor))exclusiveByFloor.set(floor,new Set());
+    exclusiveByFloor.get(floor).add(String(area));
+  };
+  for(const row of rows)for(const exclusive of row.exclusiveAreas||[])recordExclusive(exclusive,Number(row.supplyAreaFloor));
+  for(const [exclusive,types] of Object.entries(complexTradeTypeData||{})){
+    if(!Array.isArray(types))continue;
+    for(const row of rows)if(types.includes(String(row.type||'')))recordExclusive(exclusive,Number(row.supplyAreaFloor));
+  }
+  const repeatedExclusiveFloors=new Map();
+  for(const [floor,exclusives] of exclusiveByFloor)for(const exclusive of exclusives){
+    if(!repeatedExclusiveFloors.has(exclusive))repeatedExclusiveFloors.set(exclusive,new Set());
+    repeatedExclusiveFloors.get(exclusive).add(floor);
+  }
+  const protectedFloors=new Set([...repeatedExclusiveFloors.values()].filter(set=>set.size>1).flatMap(set=>[...set]));
   const groups=[];
   for(const floor of floors){
     const current=groups.at(-1);
-    if(current&&floor-current[0]<3)current.push(floor);
+    const currentProtected=current?.some(value=>protectedFloors.has(value));
+    const floorSharesExclusive=current?.some(value=>[...(exclusiveByFloor.get(value)||[])].some(exclusive=>exclusiveByFloor.get(floor)?.has(exclusive)));
+    const floorProtected=protectedFloors.has(floor);
+    if(current&&floor-current[0]<3&&(!(currentProtected||floorProtected)||floorSharesExclusive))current.push(floor);
     else groups.push([floor]);
   }
   // 국토부 거래에는 공급면적이 없다. KB 타입의 전용면적 소수점 값이
@@ -4058,11 +4103,7 @@ function complexSupplyAreaFloorClusters(sizeKey){
     if(!sharedExclusiveFloors.has(key))sharedExclusiveFloors.set(key,new Set());
     sharedExclusiveFloors.get(key).add(floor);
   };
-  for(const row of rows)for(const exclusive of row.exclusiveAreas||[])addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
-  for(const [exclusive,types] of Object.entries(complexTradeTypeData||{})){
-    if(!Array.isArray(types))continue;
-    for(const row of rows)if(types.includes(String(row.type||'')))addExclusiveFloor(exclusive,Number(row.supplyAreaFloor));
-  }
+  for(const [floor,exclusives] of exclusiveByFloor)for(const exclusive of exclusives)addExclusiveFloor(exclusive,floor);
   const parent=groups.map((_,i)=>i);
   const root=i=>{while(parent[i]!==i)i=parent[i]=parent[parent[i]];return i;};
   for(const shared of sharedExclusiveFloors.values()){
@@ -7068,7 +7109,9 @@ function typeHouseholdCell(p){
       if(!byType.has(type))addTypeRow({type,households:match?.households??null,supplyAreaFloor:match?.supplyAreaFloor??null});
     }
   }
-  const rows=[...byType.values()].sort((a,b)=>String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
+  const rows=[...byType.values()].sort((a,b)=>
+    (Number(b.households)||0)-(Number(a.households)||0)||
+    String(a.type).localeCompare(String(b.type),'ko',{numeric:true}));
   const householdsByLabel=new Map();
   for(const row of rows){
     const baseLabel=row.siteTypeMatched===false?String(p.sizeKey):exclusiveTypeLabels(p.sizeKey,row.type);
@@ -7135,7 +7178,7 @@ function chartGroupMatches(trade,keys){
 function pyTableHTML(d){
   const list = mergeSummaryRowsByPyeong(selectedComplexRows(d));
   if(!list.length) return '';
-  const columnWidths=['18%','30%','18%','18%','16%'];
+  const columnWidths=['22%','26%','18%','18%','16%'];
   return `<table class="py-summary-table"><colgroup>${columnWidths.map(width=>`<col style="width:${width}">`).join('')}</colgroup>
     <tr><th>공급(평)</th><th>전용면적·타입·세대수</th><th class="tr-r th-average">평균 시세<br>(1개월)</th><th class="tr-r th-recent">최근 거래</th><th class="tr-r th-max">최고가</th></tr>
     ${list.map(p=>`<tr>

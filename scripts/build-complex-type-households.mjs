@@ -1,6 +1,7 @@
 import { readFile, mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { REGIONS } from '../shared/regions.mjs';
+import { verifiedCombinedKBTypes } from '../shared/kb-combined-complex.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
   const i = arg.indexOf('=');
@@ -64,12 +65,29 @@ for (const [id, row] of Object.entries(master)) {
 }
 const freshTypesByNaverId = new Map();
 const freshIdsByIdentity = new Map();
+// KB가 두 관리단지로 수집한 곳을 네이버가 한 단지로 표시한다. 위치·면적·세대수
+// 합계가 모두 일치할 때만 두 KB 원본을 합산 단지에 연결한다.
+const combinedKBGroups = new Map([[1992, [4756, 4750]]]);
+const verifiedCombined = new Map();
+for (const [naverId, kbIds] of combinedKBGroups) {
+  const kbComplexes = kbIds.map(id => freshKbTypes?.complexes?.find(complex => Number(complex.kbComplexId) === id));
+  if (kbComplexes.every(Boolean) && verifiedCombinedKBTypes(master[String(naverId)], kbComplexes)) {
+    for (const kbId of kbIds) verifiedCombined.set(kbId, naverId);
+  }
+}
+const verifiedCombinedNaverIds = new Set(verifiedCombined.values());
 let crossCheckedMatches = 0;
 let crossCheckedNameVariants = 0;
 let exactIdentityFallbacks = 0;
 for (const complex of freshKbTypes?.complexes || []) {
   let target = complex.matchedTarget;
   let ids = complex.targetNaverIds || (target?.naverId ? [target.naverId] : []);
+  const combinedNaverId = verifiedCombined.get(Number(complex.kbComplexId));
+  if (combinedNaverId) {
+    const combinedMaster = master[String(combinedNaverId)];
+    ids = [combinedNaverId];
+    target = { naverId: combinedNaverId, name: combinedMaster['단지명'], district: combinedMaster['구'], dong: combinedMaster['법정동'] };
+  }
   // Some KB catalog records lack targetNaverIds. Use one shared area Naver ID
   // when present; if the name differs, require exact location, total household
   // count, and every KB area dimension to agree with the confirmed master row.
@@ -376,7 +394,8 @@ for (const complex of index) {
       const supply = Number(rawArea?.['공급면적'] ?? area.supplyM2);
       const supplyAreaFloor = Number.isFinite(supply) && supply >= exclusive ? Math.floor(supply) : null;
       const supplyPyeong = supplyAreaFloor == null ? null : Math.floor(supply * 0.3025);
-      const typeKey = area.kbAreaId ? `KB:${area.kbComplexId}|${area.kbAreaId}` : `${type}|${supplyAreaFloor ?? ''}`;
+      const combinedType = verifiedCombinedNaverIds.has(Number(resolvedNaverId));
+      const typeKey = combinedType ? `${type}|${supplyAreaFloor ?? ''}` : area.kbAreaId ? `KB:${area.kbComplexId}|${area.kbAreaId}` : `${type}|${supplyAreaFloor ?? ''}`;
       const old = types.get(typeKey);
       const kbLabel = String(area.kbTypeName || area.websiteTypeName || '').trim();
       if (siteTypeMatched && kbLabel) {
@@ -385,11 +404,11 @@ for (const complex of index) {
       }
       types.set(typeKey, {
         type,
-        ...(area.kbAreaId ? { kbAreaId: Number(area.kbAreaId) } : {}),
+        ...(!combinedType && area.kbAreaId ? { kbAreaId: Number(area.kbAreaId) } : {}),
         exclusiveAreas: [...new Set([...(old?.exclusiveAreas || []), exactKey].filter(Boolean))],
         ...(type.startsWith('KB:') ? { kbTypeName: String(area.kbTypeName || area.websiteTypeName || '').trim() } : {}),
         siteTypeMatched,
-        households: Math.max(old?.households || 0, households),
+        households: combinedType ? (old?.households || 0) + households : Math.max(old?.households || 0, households),
         supplyPyeong: supplyPyeong ?? old?.supplyPyeong ?? null,
         supplyAreaFloor: supplyAreaFloor ?? old?.supplyAreaFloor ?? null,
       });
