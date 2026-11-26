@@ -830,17 +830,47 @@ try {
           codeSubmit.disabled = false;
         }
       });
-      let taps = 0, lastTap = 0;
+      let taps = 0, lastTap = 0, tradeRefreshPending = false, tradeStatusTimer = 0, tradeStatusVersion = 0;
       const zone = document.getElementById('logoTapZone');
       if (zone) {
         zone.addEventListener('click', async () => {
+          if (tradeRefreshPending) { taps = 0; lastTap = 0; return; }
           const now = Date.now();
           taps = (now - lastTap > 1500) ? 1 : taps + 1;
           lastTap = now;
           if (taps < 5) return;
 
           taps = 0;
-          await openSubscriberCodeInput();
+          tradeRefreshPending = true;
+          const statusVersion = ++tradeStatusVersion;
+          clearTimeout(tradeStatusTimer);
+          const description = zone.querySelector('.brand-description');
+          const original = description?.textContent || '실거래 · 실매물 · 아파트 분석';
+          const originalMode = mode;
+          const showStatus = (message, delay) => {
+            if (mode !== originalMode) return;
+            if (description) description.textContent = message;
+            tradeStatusTimer = setTimeout(() => {
+              if (description && statusVersion === tradeStatusVersion && mode === originalMode && description.textContent === message) description.textContent = original;
+            }, delay);
+          };
+          if (description) description.textContent = '실거래 수집 요청 중…';
+          try {
+            const response = await fetch('/api/manual-trades-refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: '{}'
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || '실거래 수집 요청에 실패했습니다.');
+            showStatus('실거래 수집 실행을 요청했습니다', 3500);
+          } catch (error) {
+            showStatus(error.message || '실거래 수집 요청에 실패했습니다.', 4500);
+          } finally {
+            tradeRefreshPending = false;
+            taps = 0;
+            lastTap = 0;
+          }
         });
       }
       let logoutTaps = 0, lastLogoutTap = 0;
@@ -1477,8 +1507,13 @@ function showLookupProgress(done,total){
   const buttons=[document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])];
   buttons.filter(button=>button?.dataset).forEach(button=>{button.dataset.idleLabel||=button.textContent.trim()||'조회';button.textContent=label;});
 }
+function resetLookupProgressButton(){
+  [document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])].filter(button=>button?.dataset).forEach(button=>{button.textContent=button.dataset.idleLabel||'조회';});
+}
 function updateFetchProgressTask(token,id,done,total){
-  if(token!==searchToken)return;
+  // 조회 후 백그라운드로 시작한 전세·세대수 보충 요청이 완료될 때
+  // 이미 끝난 검색의 버튼 진행률을 다시 덮어쓰지 않도록 로딩 중일 때만 반영한다.
+  if(token!==searchToken||!document.getElementById('loading')?.classList.contains('on'))return;
   if(lookupProgressTaskToken!==token){lookupProgressTasks=new Map();lookupProgressTaskToken=token;}
   lookupProgressTasks.set(id,{done,total});
   const work=[...lookupProgressTasks.values()];
@@ -5990,7 +6025,7 @@ async function search(opts){
   try{await runSearch(opts);}
   finally{
     if(requestId===search.requestId&&!document.getElementById('loading')?.classList?.contains('on')){
-      [document.getElementById('btn'),...(document.querySelectorAll?.('#listingIndividualSearch button[onclick="search()"]')||[])].filter(button=>button?.dataset).forEach(button=>{button.textContent=button.dataset.idleLabel||'조회';});
+      resetLookupProgressButton();
     }
   }
   if(requestId===search.requestId&&(!opts?.silentScroll||opts?.scrollToListingResult)&&mode===requestedMode&&result?.classList?.contains('on')&&result.firstChild!==previousResult){
@@ -6544,6 +6579,9 @@ async function runSearch(opts){
     if(myToken===searchToken){
       document.getElementById('loading').classList.remove('on');
       document.getElementById('btn').disabled = false;
+      // 각 검색 경로의 바깥 래퍼가 진행률을 복구하지 못한 경우에도,
+      // 실제 조회를 끝낸 공통 경로에서 버튼을 초기화한다.
+      resetLookupProgressButton();
     }
   }
 }
