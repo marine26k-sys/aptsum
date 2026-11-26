@@ -2,7 +2,8 @@ import { hasValidStatsSession } from "../../shared/sessions.mjs";
 
 const REPO='marine26k-sys/aptsum';
 const WORKFLOWS=['collect-cheongyak.yml','collect-lh-sale.yml'];
-const ALLOWED_ORIGINS=/^https:\/\/(?:www\.)?aptsum\.kr$|^https:\/\/deploy-preview-\d+--aptsum\.netlify\.app$/;
+const PREVIEW_ORIGIN=/^https:\/\/deploy-preview-\d+--aptsum\.netlify\.app$/;
+const ALLOWED_ORIGINS=/^https:\/\/(?:www\.)?aptsum\.kr$/;
 let lastDispatchAt=0;
 export const config={path:'/api/manual-cheongyak-refresh'};
 
@@ -13,6 +14,7 @@ function json(data,status=200){
 export default async request=>{
   if(request.method!=='POST')return json({message:'POST 요청만 허용됩니다.'},405);
   const origin=request.headers.get('origin')||'';
+  if(PREVIEW_ORIGIN.test(origin))return json({message:'수동 수집은 운영 사이트에서만 실행할 수 있습니다.'},403);
   if(!ALLOWED_ORIGINS.test(origin))return json({message:'허용되지 않은 요청입니다.'},403);
   const sessionSecret=process.env.SUBSCRIBER_SESSION_SECRET;
   if(!sessionSecret||!process.env.STATS_ACCESS_CODE)return json({message:'관리자 인증 설정이 필요합니다.'},503);
