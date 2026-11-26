@@ -963,7 +963,7 @@ try {
       <div class="tab-grp-name">발급</div>
       <div class="tab-grp-tabs"><a class="tab apply-cta" id="tabApply" style="display:none" href="./apply.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><span>전 지역 이용 신청 + 개인 맞춤 단지 선별</span></a></div>
     </div>
-    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span>청약홈 &amp; LH 분양</span></div>
+    <div class="tab-divider source-divider" id="tabCheongyakDivider"><span onclick="tapCheongyakRefresh()">청약홈 &amp; LH 분양</span></div>
     <div class="tab-grp">
       <div class="tab-grp-name">분양</div>
       <div class="tab-grp-tabs">
@@ -1408,6 +1408,30 @@ function regionScopeLabel(items){
 }
 let mode = 'complex';
 let lastData = null;
+let cheongyakTitleTapTimes=[];
+let cheongyakRefreshPending=false;
+async function tapCheongyakRefresh(){
+  const now=Date.now();
+  cheongyakTitleTapTimes=cheongyakTitleTapTimes.filter(time=>now-time<1400);
+  cheongyakTitleTapTimes.push(now);
+  if(cheongyakTitleTapTimes.length<3)return;
+  cheongyakTitleTapTimes=[];
+  if(cheongyakRefreshPending)return;
+  cheongyakRefreshPending=true;
+  const title=document.querySelector('#tabCheongyakDivider span');
+  const original=title?.textContent||'청약홈 & LH 분양';
+  if(title)title.textContent='청약홈·LH 공고 수집 요청 중…';
+  try{
+    const response=await fetch('/api/manual-cheongyak-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.message||'수동 수집을 요청하지 못했습니다.');
+    if(title)title.textContent='수집 실행을 요청했습니다';
+    setTimeout(()=>{if(title)title.textContent=original;},3000);
+  }catch(error){
+    if(title)title.textContent=error.message||'수집 요청에 실패했습니다';
+    setTimeout(()=>{if(title)title.textContent=original;},4000);
+  }finally{cheongyakRefreshPending=false;}
+}
 const molitUndervaluePriceState={sources:new Map(),min:0,max:100,lo:0,hi:100,touched:false};
 const MOLIT_UNDERVALUE_PY_MIN=10, MOLIT_UNDERVALUE_PY_MAX=40;
 const molitUndervaluePyState={min:MOLIT_UNDERVALUE_PY_MIN,max:MOLIT_UNDERVALUE_PY_MAX,lo:MOLIT_UNDERVALUE_PY_MIN,hi:MOLIT_UNDERVALUE_PY_MAX};
