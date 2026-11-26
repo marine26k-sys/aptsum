@@ -18,7 +18,7 @@ export default async request=>{
   if(!ALLOWED_ORIGINS.test(origin))return json({message:'허용되지 않은 요청입니다.'},403);
   const sessionSecret=process.env.SUBSCRIBER_SESSION_SECRET;
   if(!sessionSecret||!process.env.STATS_ACCESS_CODE)return json({message:'관리자 인증 설정이 필요합니다.'},503);
-  if(!hasValidStatsSession(request,sessionSecret))return json({message:'관리자 세션으로 로그인한 뒤 다시 시도해주세요.'},401);
+  if(!hasValidStatsSession(request,sessionSecret))return json({message:'관리자 로그인이 필요합니다. 국토부 실거래 분석 제목을 3회 눌러 로그인한 뒤 다시 시도해주세요.'},401);
   const token=process.env.GITHUB_ACTIONS_TOKEN;
   if(!token)return json({message:'수동 수집 연동 설정이 필요합니다.'},503);
   if(Date.now()-lastDispatchAt<60_000)return json({message:'이미 실거래 수집을 요청했습니다. 잠시 후 다시 시도해주세요.'},429);

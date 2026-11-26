@@ -830,20 +830,28 @@ try {
           codeSubmit.disabled = false;
         }
       });
-      let taps = 0, lastTap = 0, tradeRefreshPending = false;
+      let taps = 0, lastTap = 0, tradeRefreshPending = false, tradeStatusTimer = 0, tradeStatusVersion = 0;
       const zone = document.getElementById('logoTapZone');
       if (zone) {
         zone.addEventListener('click', async () => {
+          if (tradeRefreshPending) { taps = 0; lastTap = 0; return; }
           const now = Date.now();
           taps = (now - lastTap > 1500) ? 1 : taps + 1;
           lastTap = now;
           if (taps < 5) return;
 
           taps = 0;
-          if (tradeRefreshPending) return;
           tradeRefreshPending = true;
+          const statusVersion = ++tradeStatusVersion;
+          clearTimeout(tradeStatusTimer);
           const description = zone.querySelector('.brand-description');
-          const original = description?.textContent || '실거래 · 실매물 · 아파트 분석';
+          const original = '실거래 · 실매물 · 아파트 분석';
+          const showStatus = (message, delay) => {
+            if (description) description.textContent = message;
+            tradeStatusTimer = setTimeout(() => {
+              if (description && statusVersion === tradeStatusVersion) description.textContent = original;
+            }, delay);
+          };
           if (description) description.textContent = '실거래 수집 요청 중…';
           try {
             const response = await fetch('/api/manual-trades-refresh', {
@@ -853,13 +861,13 @@ try {
             });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(result.message || '실거래 수집 요청에 실패했습니다.');
-            if (description) description.textContent = '실거래 수집 실행을 요청했습니다';
-            setTimeout(() => { if (description) description.textContent = original; }, 3500);
+            showStatus('실거래 수집 실행을 요청했습니다', 3500);
           } catch (error) {
-            if (description) description.textContent = error.message || '실거래 수집 요청에 실패했습니다.';
-            setTimeout(() => { if (description) description.textContent = original; }, 4500);
+            showStatus(error.message || '실거래 수집 요청에 실패했습니다.', 4500);
           } finally {
             tradeRefreshPending = false;
+            taps = 0;
+            lastTap = 0;
           }
         });
       }
