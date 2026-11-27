@@ -344,6 +344,7 @@ try {
   .listing-trend-row:last-child{border-bottom:none}
   .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
   .listing-trend-row .rk .nm small{font-size:11px}
+  .listing-trend-row .rk .nm .listing-trend-subway-line{display:block;color:var(--teal-dark);font-weight:700}
   .listing-ref-label{display:inline-block;width:3em;text-align:right;white-space:nowrap}
   .listing-ref-price{font-variant-numeric:tabular-nums}
   .listing-ref-date{white-space:nowrap}
@@ -10176,9 +10177,9 @@ function regionMulti(list){
   return { pre: head ? head + ' ' : '' };
 }
 function guShort(gu, m){ return (m && m.pre && gu.startsWith(m.pre)) ? gu.slice(m.pre.length) : gu; }
-function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=false){
+function listingInfoHTML(x, multiRegion, hidePyeong=false, commonInfoInHeader=false, includeSubway=true){
   if(commonInfoInHeader)return `<b style="color:var(--teal-dark)">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}</b>`;
-  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${listingSubwayHTML(x)}`;
+  return `<b style="color:var(--teal-dark)">${hidePyeong?'':`${esc(x.py)}평 (전용 ${x.area||x.ex})`}</b>${hidePyeong?'':' · '} ${(multiRegion&&x.gu)?`${esc(guShort(x.gu, multiRegion))} `:''}${esc(x.umd)}${x.built?` · ${buildAgeLabel(x.built)}`:''}${x.hh?` · ${x.hh.toLocaleString()}세대`:''}${x.fl?` · ${esc(String(x.fl))}${/층$/.test(String(x.fl))?'':'층'}`:''}${includeSubway?listingSubwayHTML(x):''}`;
 }
 // 실매물 결과를 실거래·가격지수와 공통 11열 타일 배치로 요약한다.
 // 매물 행은 평형별 최저 호가이므로, 지역별로 그 값의 평균과 포함 매물 수를 표시한다.
@@ -10423,8 +10424,10 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
       : `<span class="price${latest?' now':''}">${label}</span>`;
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
+  const info=listingInfoHTML(x,multiRegion,smallPeakDate,x.commonInfoInHeader,!smallPeakDate);
+  const subwayLine=smallPeakDate&&!x.commonInfoInHeader?listingSubwayHTML(x,'var(--teal-dark)',''):'';
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}${x.commonInfoInHeader?'':`<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b>`}</span>`:listingNameHTML(x,true)}<small>${listingInfoHTML(x, multiRegion, smallPeakDate, x.commonInfoInHeader)}</small></span>
+    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}${x.commonInfoInHeader?'':`<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b>`}</span>`:listingNameHTML(x,true)}<small>${info}</small>${subwayLine?`<small class="listing-trend-subway-line">${subwayLine}</small>`:''}</span>
     </div>
     ${smallPeakDate?`<div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최근 실거래 자료 없음'}</div>`:''}
     ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
