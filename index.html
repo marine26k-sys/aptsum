@@ -344,8 +344,8 @@ try {
   .listing-trend-row:last-child{border-bottom:none}
   .listing-trend-row .rk{padding:0;border:0;align-items:flex-start}
   .listing-trend-row .rk .nm small{font-size:11px}
-  .listing-trend-row .rk .nm .listing-trend-subway-line{display:block;color:var(--sub);font-weight:400}
-  .listing-trend-row .rk .nm .listing-trend-subway-line span{color:var(--sub)!important;font-weight:400!important}
+  .listing-trend-row .rk .nm .listing-trend-info{display:block;white-space:nowrap}
+  .listing-trend-row .rk .nm .listing-trend-info>span{color:var(--sub)!important;font-weight:400!important}
   .listing-ref-label{display:inline-block;width:3em;text-align:right;white-space:nowrap}
   .listing-ref-price{font-variant-numeric:tabular-nums}
   .listing-ref-date{white-space:nowrap}
@@ -10312,6 +10312,11 @@ function fitListingHeadingNames(){
     const available=title.clientWidth-reserved-1,natural=name.scrollWidth;
     if(available>0&&natural>available)name.style.fontSize=`${fontSize*available/natural}px`;
   });
+  document.querySelectorAll('.listing-trend-info').forEach(info=>{
+    info.style.fontSize='';
+    const fontSize=parseFloat(getComputedStyle(info).fontSize),available=info.clientWidth,natural=info.scrollWidth;
+    if(available>0&&natural>available)info.style.fontSize=`${Math.max(8,fontSize*available/natural)}px`;
+  });
 }
 function fitListingTrendPrices(){
   fitListingHeadingNames();
@@ -10426,9 +10431,9 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
     return `${j ? '<span class="arrow">→</span>' : ''}${chip}`;
   }).join('');
   const info=listingInfoHTML(x,multiRegion,smallPeakDate,x.commonInfoInHeader,!smallPeakDate);
-  const subwayLine=smallPeakDate&&!x.commonInfoInHeader?listingSubwayHTML(x,'var(--teal-dark)',''):'';
+  const subwayLine=smallPeakDate&&!x.commonInfoInHeader?listingSubwayHTML(x,'var(--sub)'):'';
   return `<div class="listing-trend-row${direction==='up'?' rising':''}"><div class="rk"><span class="no${i<3?' top3':''}">${i+1}</span>
-    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}${x.commonInfoInHeader?'':`<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b>`}</span>`:listingNameHTML(x,true)}<small>${info}</small>${subwayLine?`<small class="listing-trend-subway-line">${subwayLine}</small>`:''}</span>
+    <span class="nm">${smallPeakDate?`<span class="listing-trend-heading" title="${esc(x.apt)} ${esc(x.py)}평">${listingNameHTML(x, true)}${x.commonInfoInHeader?'':`<b class="listing-pyeong">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</b>`}</span>`:listingNameHTML(x,true)}<small${smallPeakDate?' class="listing-trend-info"':''}>${info}${subwayLine}</small></span>
     </div>
     ${smallPeakDate?`<div class="listing-trend-peak">${x.latestSale?.price>0?`<span style="font-size:.85em">(${esc(peakYmLabel(String(x.latestSale.date).slice(0,6)))})</span> <span class="listing-ref-label">최신</span> <b>${x.latestSale.price.toFixed(1)}억</b>${Number.isInteger(x.latestSale.floor)?` <span style="font-size:.85em">(${x.latestSale.floor}층)</span>`:''}`:'최근 실거래 자료 없음'}</div>`:''}
     ${comparisonPeak>0?`<div class="listing-trend-peak">${peakLabel} <b>${comparisonPeak.toFixed(1)}억</b> 대비 ${listingTrendPeakChangeHTML({...x,peak:comparisonPeak})}</div>`:""}
