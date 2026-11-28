@@ -2082,8 +2082,22 @@ function restoreView(vi){
     const individualTrialEntry=requestedMode==='listingbudget'&&urlParams.get('individual')==='1'&&!urlParams.has('lnq');
     const autoTrialEntry=(['listingbudget','listingurgent','listingtrend','longpeaklisting','listinggap'].includes(requestedMode)&&urlParams.get('individual')!=='1')||individualTrialEntry;
     if(autoTrialEntry&&isListingTrial()&&!urlParams.has('r')&&!urlParams.has('rs')&&!urlParams.has('lnq')){
-      try{history.replaceState({vi:-1},'','./index.html');}catch(e){}
-      restoreMainMenu();
+      // 뒤로가기 한 번이면 자동 조회 전의 무료체험 조건 화면으로 돌아가고,
+      // 다음 뒤로가기에서 아파트썸 첫 화면으로 나간다.
+      if(setMode(requestedMode,true)){
+        regionSel=[];
+        sel.value=LISTING_TRIAL_LAWD;
+        addRegion(LISTING_TRIAL_LAWD);
+        if(individualTrialEntry){
+          document.getElementById('listingNameQuery').value='개포자이프레지던스';
+          listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];listingNameAutoSelectExact=false;
+          document.getElementById('listingNameCandidates').replaceChildren();
+        }
+        lastData=null;
+        const result=document.getElementById('result');result.replaceChildren();result.classList.remove('on');
+        document.getElementById('error').classList.remove('on');
+        document.getElementById('loading').classList.remove('on');
+      } else restoreMainMenu();
       return;
     }
     // 일부 모바일 브라우저는 popstate 직전에 페이지를 새 문서로 복원해
