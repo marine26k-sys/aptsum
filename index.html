@@ -2975,7 +2975,7 @@ function listingTrialBlocked(lawd){
 }
 // 네이버 실매물 기준 탭 3개(저평가 실매물·예산별 실매물·급매 선별) 결과 헤더 공통 — 비인증 사용자에게만 표시
 function listingTrialBadgeHTML(){
-  return isListingTrial() ? `<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.45);border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span><a href="./apply.html" style="display:inline-block;font-size:11px;font-weight:800;color:#fff;text-decoration:underline;text-underline-offset:2px">다른 지역 조회 · 30일 4,900원 →</a></div>` : '';
+  return isListingTrial() ? `<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.45);border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span><a href="./apply.html" aria-label="다른 지역 30일 이용 신청, 4,900원" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;border:1px solid #fff;border-radius:999px;background:#fff;color:#07545A;font-size:11.5px;font-weight:900;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer"><span>다른 지역 조회</span><span style="font-size:10.5px;font-weight:700;white-space:nowrap">30일 · 4,900원</span><span aria-hidden="true" style="font-size:15px;line-height:1">→</span></a></div>` : '';
 }
 const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
