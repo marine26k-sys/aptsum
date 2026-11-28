@@ -399,6 +399,8 @@ try {
   .listing-gap-prices a,.listing-gap-prices .price{flex:1;min-width:0;padding:5px 7px;border-radius:7px;background:var(--slate-bg);font-size:11px;font-weight:700;color:var(--ink);text-decoration:none}
   .listing-gap-prices .large{background:var(--teal-soft);color:var(--teal-dark)}
   .listing-gap-prices small{display:block;margin-top:2px;font-size:9px;font-weight:400;color:var(--sub)}
+  .listing-gap-prices .listing-gap-peak{margin-top:5px;padding-top:4px;border-top:1px dashed rgba(100,116,139,.28);font-size:8.5px;line-height:1.45}
+  .listing-gap-prices .listing-gap-peak span{display:block}
   .listing-gap-prices a:hover{text-decoration:underline}
 
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px;margin-bottom:8px}
@@ -10506,10 +10508,16 @@ function listingTrendRowHTML(x, i, multiRegion, direction='down', smallPeakDate=
     <span class="listing-trend-change">${prices}<span class="val" style="margin-left:auto;color:var(--${direction==='up'?'red':direction==='flat'?'sub':'blue'})">${direction==='up'?'▲':direction==='flat'?'보합 ':'▼'}${x.drop.toFixed(precision)}억</span></span>
     ${listingTrendHistoryHTML(x.points, historyId)}</div>`;
 }
+function listingGapPeakHTML(x){
+  const peak=Number(x.peak),ask=Number(x.ask);
+  if(!(Number.isFinite(peak)&&peak>0&&Number.isFinite(ask)&&ask>0))return '<small class="listing-gap-peak">전고점 자료 없음</small>';
+  const delta=ask-peak,pct=delta/peak*100,color=delta>0?'var(--red)':delta<0?'var(--blue)':'var(--sub)',arrow=delta>0?'▲':delta<0?'▼':'';
+  return `<small class="listing-gap-peak"><span>전고점 ${peak.toFixed(1)}억${x.peakYm?` (${esc(peakYmLabel(x.peakYm))})`:''}</span><span style="color:${color}">전고점 대비 ${arrow}${Math.abs(pct).toFixed(1)}%</span></small>`;
+}
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
-  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
-  return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 네이버 매물 보기">${content}</a>`
+  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>${listingGapPeakHTML(x)}`;
+  return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 ${x.ask.toFixed(1)}억 매물, 전고점 대비 변동 확인">${content}</a>`
     : `<span class="price ${large?'large':''}">${content}</span>`;
 }
 function renderListingGap(d){
