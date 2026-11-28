@@ -10512,7 +10512,7 @@ function listingGapPeakHTML(x){
   const peak=Number(x.peak),ask=Number(x.ask);
   if(!(Number.isFinite(peak)&&peak>0&&Number.isFinite(ask)&&ask>0))return '<small class="listing-gap-peak">전고점 자료 없음</small>';
   const delta=ask-peak,pct=delta/peak*100,color=delta>0?'var(--red)':delta<0?'var(--blue)':'var(--sub)',arrow=delta>0?'▲':delta<0?'▼':'';
-  return `<small class="listing-gap-peak"><span>전고점 ${peak.toFixed(1)}억${x.peakYm?` (${esc(peakYmLabel(x.peakYm))})`:''}</span><span style="color:${color}">전고점 대비 ${arrow}${Math.abs(pct).toFixed(1)}%</span></small>`;
+  return `<small class="listing-gap-peak"><span>전고점 ${peak.toFixed(1)}억${x.peakYm?` (${esc(peakYmLabel(x.peakYm))})`:''}</span><span style="color:${color}">전고점 대비 ${arrow}${Math.round(Math.abs(pct))}%</span></small>`;
 }
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
