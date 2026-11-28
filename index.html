@@ -415,8 +415,7 @@ try {
   .listing-gap-prices .listing-gap-peak span{display:block}
   .listing-gap-prices .listing-gap-link{display:block;padding:0;border-radius:0;background:transparent;font-size:inherit;font-weight:inherit;color:inherit;text-decoration:none}
   .listing-gap-prices .listing-gap-link:hover{text-decoration:underline}
-  .listing-gap-link-arrow{display:inline-flex;align-items:center;vertical-align:baseline;margin-left:2px}
-  .listing-gap-link-arrow svg{display:block;width:.8em;height:.8em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .listing-gap-link-arrow{display:inline-block;vertical-align:-2px;margin-left:4px;color:var(--sub)}
   .listing-gap-prices a:hover{text-decoration:underline}
 
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px;margin-bottom:8px}
@@ -10532,7 +10531,7 @@ function listingGapPeakHTML(x){
 }
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
-  const gapLinkArrow='<span class="listing-gap-link-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>';const priceLine=`${label}${x.url ? gapLinkArrow : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
+  const gapLinkArrow='<svg class="listing-gap-link-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';const priceLine=`${label}${x.url ? gapLinkArrow : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
   const priceContent=x.url
     ? `<a class="listing-gap-link" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 ${x.ask.toFixed(1)}억 네이버 매물 보기">${priceLine}</a>`
     : priceLine;
@@ -10554,7 +10553,7 @@ function renderListingGap(d){
     <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">${esc(d.filterLabel||'선택한 두 평형대')}의 같은 단지 최저 호가 비교</div>
     ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 전용 59·84·109·134㎡에 가까운 매물 우선 · 호가 차이 적은 순`)}
     ${listingLinkLegend()}
-    <div class="rng" style="display:flex;align-items:center;gap:2px;margin:6px 0;color:#036B31">평형·가격 옆 <span class="listing-gap-link-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>를 누르면 해당 네이버 매물로 이동합니다.</div>
+    
     ${body}</div></div><div class="src-note">평형대별 대표 전용면적(59/84/109/134㎡)에 가까운 매물을 비교하며, 차이가 같으면 낮은 호가를 선택합니다. 큰 평형 호가가 낮으면 음수로 표시합니다. 실거래가·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);
 }
