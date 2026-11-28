@@ -1733,6 +1733,11 @@ async function initFromURL(){
       && !individualListing
       && !p.get('r')
       && !p.get('rs');
+    const cleanBudgetTrial=autoStartGangnamTrial&&requestedMode==='listingbudget'&&[...p.keys()].every(key=>key==='m');
+    if(cleanBudgetTrial){
+      resetQueriedSliderDefaults(requestedMode);
+      listingBudgetSel='all';
+    }
     if(autoStartGangnamTrial||autoStartIndividualTrial){
       regionSel=[];
       sel.value=LISTING_TRIAL_LAWD;
@@ -1760,7 +1765,7 @@ async function initFromURL(){
       }
     }
     if(autoStartGangnamTrial||autoStartIndividualTrial){
-      search({silentScroll:true,scrollToListingResult:true});
+      search({silentScroll:true,scrollToListingResult:true,skipSavedListingFilters:cleanBudgetTrial});
     } else if(requestedMode==='listingfavorites'||hasSharedQuery){
       if(requestedMode==='complex'){ if(p.get('q')) search(); }
       else search();
@@ -2104,6 +2109,10 @@ function restoreView(vi){
       // 뒤로가기 한 번이면 자동 조회 전의 무료체험 조건 화면으로 돌아가고,
       // 다음 뒤로가기에서 아파트썸 첫 화면으로 나간다.
       if(setMode(requestedMode,true)){
+        if(requestedMode==='listingbudget'&&[...urlParams.keys()].every(key=>key==='m')){
+          resetQueriedSliderDefaults(requestedMode);
+          listingBudgetSel='all';
+        }
         regionSel=[];
         sel.value=LISTING_TRIAL_LAWD;
         addRegion(LISTING_TRIAL_LAWD);
@@ -6166,7 +6175,7 @@ async function runSearch(opts){
     const queriedRegions = regionSel.length ? regionSel.slice() : (lawd ? [{lawd,name:regionNameByLawd(lawd)}] : []);
     saveRecentRegionSearch(queriedRegions);
   }
-  if(isListingMode(mode))saveQueriedSliders();
+  if(isListingMode(mode)&&!opts?.skipSavedListingFilters)saveQueriedSliders();
   if(mode==='longpeaklisting') return searchListingUndervalue(myToken, lawd);
   if((mode==='listingtrend'||mode==='listingrise')) return searchListingTrend(myToken, lawd, silentScroll);
   if(mode==='listinggap') return searchListingGap(myToken, lawd, silentScroll);
@@ -9753,7 +9762,7 @@ const LISTING_BUDGET_BANDS = [
   { v:'20-30', l:'20~30억', lo:20, hi:30 },
   { v:'30-', l:'30억 이상', lo:30, hi:Infinity },
 ];
-let listingBudgetSel = null; // 선택한 금액대(v) — 세션 동안 유지, 없으면 결과의 중앙값이 속한 금액대
+let listingBudgetSel = null; // 'all'은 전체 금액대, null은 기본 중앙값 금액대
 let listingFilterSourceItems = [];
 let listingManualFacets=new Set();
 
@@ -10668,7 +10677,9 @@ function renderListingBudget(d,limit=100){
   const counts = {};
   for(const x of d.rows){ const b = listingBudgetBandOf(x.ask); if(b) counts[b.v] = (counts[b.v]||0) + 1; }
   const bands = LISTING_BUDGET_BANDS.filter(b => counts[b.v]);
-  if(!listingBudgetSel || !counts[listingBudgetSel]){
+  const allSelected=listingBudgetSel==='all';
+  if(allSelected)d.allBudgetOption=true;
+  if(!allSelected&&(!listingBudgetSel||!counts[listingBudgetSel])){
     const asks = d.rows.map(x=>x.ask).sort((a,b)=>a-b);
     const mid = listingBudgetBandOf(asks[asks.length>>1] || 0);
     listingBudgetSel = mid && counts[mid.v] ? mid.v : (bands[0] && bands[0].v);
@@ -10677,13 +10688,14 @@ function renderListingBudget(d,limit=100){
   const gapValues=typeof listingGapInvestmentValues==='function'?listingGapInvestmentValues():{min:1,max:0};
   const showGapBands=gapMode&&!listingGapInvestmentBand&&gapValues.min===0&&gapValues.max===Infinity;
   const hideBands=presale||d.nameSearch||d.askRangeSelected||gapMode;
-  const cur = hideBands ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
+  const cur = hideBands||allSelected ? null : LISTING_BUDGET_BANDS.find(b=>b.v===listingBudgetSel);
   const gapRows=d.gapRows||[];
   const all = (cur ? d.rows.filter(x => x.ask >= cur.lo && x.ask < cur.hi) : d.rows.slice()).sort((a,b)=> a.ask - b.ask || b.peak - a.peak);
   listingBudgetVisibleCount=Math.min(all.length,limit);
   const list=all.slice(0,listingBudgetVisibleCount);
   const multiRegion = regionMulti(all);
-  const chips = gapMode ? '' : hideBands ? '' : bands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${counts[b.v]}</span></button>`).join('');
+  const displayBands=d.allBudgetOption&&d.rows.length?[{v:'all',l:'전체'},...bands.filter(b=>b.v!=='all')]:bands;
+  const chips = gapMode ? '' : hideBands ? '' : displayBands.map(b=>`<button type="button" onclick="setListingBudgetBand('${b.v}')" style="border:1px solid ${b.v===listingBudgetSel?'var(--teal)':'var(--line)'};background:${b.v===listingBudgetSel?'var(--teal)':'#fff'};color:${b.v===listingBudgetSel?'#fff':'var(--navy)'};font-weight:700;font-size:11.5px;border-radius:14px;padding:4px 10px;cursor:pointer">${b.l} <span style="opacity:.75;font-weight:500">${b.v==='all'?d.rows.length:counts[b.v]}</span></button>`).join('');
   const body = !list.length
     ? `<div class="rng" style="padding:10px 0">조건 충족 매물 없음 (${LISTING_BUDGET_MIN_HH}세대 이상 · ${listingOccupancyLabel()}·${listingFloorLabel()} 매물)</div>`
     : list.map((x,i)=>{
@@ -10704,7 +10716,7 @@ function renderListingBudget(d,limit=100){
   <div class="card">
     ${listingHeaderHTML(d, d.individual?'단지 분석':'금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
     <div class="sec">
-      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':'금액대별 매물'} (낮은 가격순)</div>
+      <div class="rng" style="margin-bottom:6px;color:var(--teal-dark)">${d.individual?'선택 단지의 평형별 현재 매물':!hideBands&&allSelected?'전체 금액대 매물':'금액대별 매물'} (낮은 가격순)</div>
       ${d.uncomparable?.length ? `<div class="rng">이전 기록이 없어 비교 제외: ${esc(d.uncomparable.join(', '))}</div>` : ''}
       ${showGapBands ? '<div id="listingGapInvestmentResultBands" style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px"></div>' : ''}
       ${hideBands ? '' : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px">${chips}</div>`}
