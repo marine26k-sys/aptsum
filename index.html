@@ -1696,15 +1696,26 @@ async function initFromURL(){
     }
     // 무료체험 진입은 강남구 결과부터 바로 보여준다. 구독 인증 상태에서는 기존처럼
     // 방문자가 직접 지역을 고르고 조회하도록 지역 선택과 자동 조회를 건드리지 않는다.
-    const autoStartGangnamTrial = ['listingbudget','listingurgent','listingtrend','longpeaklisting','listinggap'].includes(requestedMode)
+    const individualListing = new URLSearchParams(location.search).get('individual')==='1';
+    const autoStartIndividualTrial = requestedMode==='listingbudget'
+      && individualListing
       && isListingTrial()
       && !p.get('r')
       && !p.get('rs')
-      && new URLSearchParams(location.search).get('individual')!=='1';
-    if(autoStartGangnamTrial){
+      && !p.get('lnq');
+    const autoStartGangnamTrial = ['listingbudget','listingurgent','listingtrend','longpeaklisting','listinggap'].includes(requestedMode)
+      && isListingTrial()
+      && !individualListing
+      && !p.get('r')
+      && !p.get('rs');
+    if(autoStartGangnamTrial||autoStartIndividualTrial){
       regionSel=[];
       sel.value=LISTING_TRIAL_LAWD;
       addRegion(LISTING_TRIAL_LAWD);
+    }
+    if(autoStartIndividualTrial){
+      document.getElementById('listingNameQuery').value='개포자이프레지던스';
+      listingNameAutoSelectExact=true;
     }
     if(typeof syncRegionPickBtn === 'function') syncRegionPickBtn(); // sel.value 직접 변경은 change 이벤트가 안 나서 화면 라벨을 따로 갱신해야 함
     if(p.get('pym') || hasSharedQuery){ pyBandMultiSel = (p.get('pym')||'').split(',').filter(Boolean); renderPyBandMultiBtn(); } // 2026.08 — 평형 다중 선택 있는 탭 전부(region/volume/updown/gap/newhigh/newlow/pyprice) 공통 복원
@@ -1723,7 +1734,7 @@ async function initFromURL(){
         qInput.dataset.pickedApt=sharedName.replace(/\s*\[[^\]]+\]\s*$/,'');
       }
     }
-    if(autoStartGangnamTrial){
+    if(autoStartGangnamTrial||autoStartIndividualTrial){
       search({silentScroll:true,scrollToListingResult:true});
     } else if(requestedMode==='listingfavorites'||hasSharedQuery){
       if(requestedMode==='complex'){ if(p.get('q')) search(); }
@@ -9994,13 +10005,13 @@ function openListingRecentComplex(entry){
   document.getElementById('listingNameCandidates').replaceChildren();clearTimeout(acTimer);acHide();listingOccupancyApply();
   search({silentScroll:true,scrollToListingResult:true});
 }
-let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[];
+let listingNameSelected=null,listingNameRestoreKey='',listingNameChoices=[],listingNameAutoSelectExact=false;
 function isIndividualListing(){return new URLSearchParams(location.search).get('individual')==='1';}
 function openListingNameSearch(focusInput=true){document.getElementById('listingIndividualSearch').style.display='';if(focusInput)document.getElementById('listingNameQuery').focus();}
 function clearListingNameSearch(){document.getElementById('listingNameQuery').value='';listingNameChanged();}
 function listingNameActive(){return ['listingbudget','listingtrend','listingrise'].includes(mode)&&document.getElementById('listingNameQuery').value.trim().length>0;}
 function listingNameChanged(){
-  listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];
+  listingNameSelected=null;listingNameRestoreKey='';listingNameChoices=[];listingNameAutoSelectExact=false;
   document.getElementById('listingNameCandidates').replaceChildren();
   clearTimeout(acTimer);
   const input=document.getElementById('listingNameQuery');
@@ -10036,6 +10047,12 @@ async function resolveListingName(myToken){
   listingNameChoices=[...grouped.values()].sort((a,b)=>a.apt.localeCompare(b.apt,'ko')||a.name.localeCompare(b.name,'ko')||a.umd.localeCompare(b.umd,'ko'));
   const key=selected?.key||listingNameRestoreKey;listingNameRestoreKey='';
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
+  const autoSelectExact=listingNameAutoSelectExact;listingNameAutoSelectExact=false;
+  if(!listingNameSelected&&autoSelectExact){
+    const normalizeName=value=>String(value||'').normalize('NFKC').replace(/[\\s\\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
+    const exact=listingNameChoices.filter(x=>normalizeName(x.apt)===normalizeName(query));
+    if(exact.length===1)listingNameSelected=exact[0];
+  }
   // 최근 단지·링크 복원 등 이미 단지 식별자가 지정된 조회는 일반 자동완성 후보 목록을 노출하지 않는다.
   // 같은 이름의 다른 지역/동 단지가 섞여 보여 선택 대상이 바뀐 것처럼 보이는 혼란도 막는다.
   if(listingNameSelected){document.getElementById('listingNameCandidates').replaceChildren();return listingNameSelected;}
