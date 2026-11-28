@@ -1,4 +1,4 @@
-import {CATEGORIES,kstToday,noticeKey,noticeStatus,daysUntil,officialURL,filterNotices,uniqueScheduleDates} from '../shared/cheongyak.mjs';
+import {CATEGORIES,kstToday,noticeKey,noticeStatus,daysUntil,officialURL,filterNotices,uniqueScheduleDates,mergeCrossSourceNotices} from '../shared/cheongyak.mjs';
 const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let items=[],limit=20,today=kstToday(),favorites=[],loading=false,lastLoaded=0,lastPayload='',hasData=false;
 try{const data=JSON.parse(localStorage.getItem('apc:cheongyak:favs:v1')||'[]');if(Array.isArray(data))favorites=data.filter(x=>typeof x==='string');}catch{}
@@ -15,7 +15,7 @@ function card(item){
  const state=noticeStatus(item,today),status={open:'접수 중',upcoming:'접수 예정',closed:'마감',unknown:'일정 확인'}[state];
  const remaining=daysUntil(state==='upcoming'?item.apply_start:item.apply_end,today);
  const dday=['open','upcoming'].includes(state)&&remaining!==null?(remaining===0?'오늘 마감':state==='open'?`마감 D-${remaining}`:`접수 D-${remaining}`):'';
- const key=noticeKey(item),saved=favorites.includes(key),detail=officialURL(item.detail_url),apply=officialURL(item.apply_url);
+ const key=noticeKey(item),saved=favorites.includes(key)||favorites.includes(item.alternate_notice_key),detail=officialURL(item.detail_url),lhDetail=officialURL(item.lh_detail_url),apply=officialURL(item.apply_url);
  const units=(item.units||[]).filter(x=>x?.type),schedule=(item.schedule||[]).filter(x=>x?.label&&Array.isArray(x.dates));
  const prices=item.price_min>0?(item.price_max>item.price_min?`${money(item.price_min)} ~ ${money(item.price_max)}`:money(item.price_min)):'';
  const fields=[];
@@ -26,7 +26,7 @@ function card(item){
  if(prices)fields.push(['공급 금액',prices]);
  if(item.move_in)fields.push(['입주 예정',item.move_in]);
  const source=item.category==='lh-sale'?'LH청약플러스':'청약홈';
- return `<article class="notice"><div class="notice-head"><div class="topline"><span>${esc(item.region)} · ${esc(CATEGORIES[item.category]||'청약')}</span><button class="favorite" data-key="${esc(key)}" aria-label="${esc(item.name)} 관심 공고 ${saved?'해제':'저장'}" aria-pressed="${saved}">${saved?'★':'☆'}</button></div><h2>${esc(item.name)}</h2>${item.address?`<p class="address">${esc(item.address)}</p>`:''}</div><div class="notice-body"><div class="statusline"><span class="badge ${state}">${status}</span><span>${dday}</span></div>${fields.length?`<dl>${fields.map(([label,value])=>`<dt>${esc(label)}</dt><dd>${esc(value)}</dd>`).join('')}</dl>`:''}${units.length||schedule.length?`<details><summary><span>청약 금액</span><span class="disclosure-state disclosure-open">펼치기 ⌄</span><span class="disclosure-state disclosure-close">접기 ⌃</span></summary>${units.length?`<table><thead><tr><th>주택형</th><th>공급</th><th>금액</th></tr></thead><tbody>${units.map(u=>`<tr><td>${esc(u.type)}</td><td>${Number.isFinite(u.total)?u.total+'세대':'—'}</td><td>${esc(money(u.price))}</td></tr>`).join('')}</tbody></table>`:''}${schedule.length?`<ul class="schedule">${schedule.map(s=>`<li>${esc(s.label)} · ${esc(uniqueScheduleDates(s.dates).join(' / '))}</li>`).join('')}</ul>`:''}</details>`:''}<div class="actions">${detail?`<a class="action" href="${esc(detail)}" target="_blank" rel="noopener noreferrer">${source} 공고문 ↗</a>`:''}${apply&&state!=='closed'?`<a class="action primary" href="${esc(apply)}" target="_blank" rel="noopener noreferrer">청약홈 신청 ↗</a>`:''}</div></div></article>`;
+ return `<article class="notice"><div class="notice-head"><div class="topline"><span>${esc(item.region)} · ${esc(CATEGORIES[item.category]||'청약')}</span><button class="favorite" data-key="${esc(key)}" aria-label="${esc(item.name)} 관심 공고 ${saved?'해제':'저장'}" aria-pressed="${saved}">${saved?'★':'☆'}</button></div><h2>${esc(item.name)}</h2>${item.address?`<p class="address">${esc(item.address)}</p>`:''}</div><div class="notice-body"><div class="statusline"><span class="badge ${state}">${status}</span><span>${dday}</span></div>${fields.length?`<dl>${fields.map(([label,value])=>`<dt>${esc(label)}</dt><dd>${esc(value)}</dd>`).join('')}</dl>`:''}${units.length||schedule.length?`<details><summary><span>청약 금액</span><span class="disclosure-state disclosure-open">펼치기 ⌄</span><span class="disclosure-state disclosure-close">접기 ⌃</span></summary>${units.length?`<table><thead><tr><th>주택형</th><th>공급</th><th>금액</th></tr></thead><tbody>${units.map(u=>`<tr><td>${esc(u.type)}</td><td>${Number.isFinite(u.total)?u.total+'세대':'—'}</td><td>${esc(money(u.price))}</td></tr>`).join('')}</tbody></table>`:''}${schedule.length?`<ul class="schedule">${schedule.map(s=>`<li>${esc(s.label)} · ${esc(uniqueScheduleDates(s.dates).join(' / '))}</li>`).join('')}</ul>`:''}</details>`:''}<div class="actions">${detail?`<a class="action" href="${esc(detail)}" target="_blank" rel="noopener noreferrer">${source} 공고문 ↗</a>`:''}${lhDetail?`<a class="action primary" href="${esc(lhDetail)}" target="_blank" rel="noopener noreferrer">LH청약플러스 공고문 ↗</a>`:''}${apply&&state!=='closed'?`<a class="action primary" href="${esc(apply)}" target="_blank" rel="noopener noreferrer">청약홈 신청 ↗</a>`:''}</div></div></article>`;
 }
 function render(){
  if(!hasData)return;
@@ -48,13 +48,13 @@ $('query').addEventListener('input',()=>{limit=20;render();});
 document.querySelectorAll('.count').forEach(b=>b.addEventListener('click',()=>{selectedStatus=b.dataset.status;limit=20;render();}));
  $('reset').addEventListener('click',()=>{selectedStatus='upcoming';$('category').value='';$('region').value='';$('query').value='';$('favoritesOnly').checked=false;syncFilterPills();limit=20;render();});
 $('more').addEventListener('click',()=>{limit+=20;render();});
-$('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;favorites=favorites.includes(key)?favorites.filter(x=>x!==key):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
+$('results').addEventListener('click',event=>{const b=event.target.closest('[data-key]');if(!b)return;const key=b.dataset.key;const alternate=items.find(item=>noticeKey(item)===key)?.alternate_notice_key;favorites=favorites.includes(key)||favorites.includes(alternate)?favorites.filter(x=>x!==key&&x!==alternate):[...favorites,key];try{localStorage.setItem('apc:cheongyak:favs:v1',JSON.stringify(favorites));}catch{}render();[...document.querySelectorAll('.favorite')].find(x=>x.dataset.key===key)?.focus();});
 async function load(){
  if(loading)return;loading=true;
  try{
   const response=await fetch('/api/cheongyak',{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('network');const data=await response.json();if(!Array.isArray(data.items)||data.items.some(x=>!x||typeof x.name!=='string'||!x.pblancNo||x.units!=null&&!Array.isArray(x.units)||x.schedule!=null&&!Array.isArray(x.schedule)))throw Error('format');
   const payload=JSON.stringify(data),changed=payload!==lastPayload;
-  const seen=new Set();items=data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&['apt','remainder','lh-sale'].includes(x.category)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x)));
+  const seen=new Set();items=mergeCrossSourceNotices(data.items.filter(x=>['서울','경기','인천','부산'].includes(x.region)&&['apt','remainder','lh-sale'].includes(x.category)&&x.name&&x.pblancNo&&!seen.has(noticeKey(x))&&seen.add(noticeKey(x))));
   $('updated').textContent=`최근 갱신 ${data.updated_at||'확인 불가'}${data.lh_updated_at?` · LH ${data.lh_updated_at}`:''}\n서울·경기·인천·부산`;
   const match=String(data.updated_at||'').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) KST$/),updated=match?Date.parse(`${match[1]}T${match[2]}:00+09:00`):NaN;
   $('warning').hidden=true;

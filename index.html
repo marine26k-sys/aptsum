@@ -10233,8 +10233,8 @@ async function searchListingTab(myToken, lawd, tabMode, silentScroll){
 // 네이버 매물 링크 범례 — 단지명 옆 작은 아이콘이 네이버 실매물로 연결된다는 걸 눈에 띄게(2026.09 운영자 요청).
 // 네이버 실매물 기준 탭 3종(저평가 실매물·예산별 실매물·급매 선별) 공통.
 function listingTrendGraphLegend(individual=false){return '<div class="rng" style="margin:6px 0 10px;color:var(--blue)">최근 가격 옆 ▾를 누르면 호가 변동 그래프가 펼쳐집니다. 다시 누르면 접힙니다.'+(individual?'<br>가격 변동은 최근 2주 중 현재 가격 구간 이전의 최저 호가와 최신 호가를 비교합니다.':'')+'</div>';}
-function listingLinkLegend(){
-  return `<div style="display:flex;align-items:center;gap:6px;margin:6px 0 6px;padding:6px 9px;border:1.5px solid #03C75A;border-radius:10px;background:#F0FBF4;font-size:11.5px;font-weight:700;color:#036B31;line-height:1.35"><span style="flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#03C75A;color:#fff;font-size:11px;font-weight:900">N</span><span>단지명 옆 <span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;width:18px;height:18px;border:1px solid #03C75A;border-radius:4px;background:#fff;color:var(--teal-dark)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span> 누르면 네이버 실매물 바로 보기</span></div>`;
+function listingLinkLegend(gapPrices=false){
+  return `<div style="display:flex;align-items:center;gap:6px;margin:6px 0 6px;padding:6px 9px;border:1.5px solid #03C75A;border-radius:10px;background:#F0FBF4;font-size:11.5px;font-weight:700;color:#036B31;line-height:1.35"><span style="flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#03C75A;color:#fff;font-size:11px;font-weight:900">N</span><span>${gapPrices?'평형·가격을 누르면 네이버 실매물 바로 보기':`단지명 옆 <span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;width:18px;height:18px;border:1px solid #03C75A;border-radius:4px;background:#fff;color:var(--teal-dark)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span> 누르면 네이버 실매물 바로 보기`}</span></div>`;
 }
 // 매물 행 공용 조각 — 단지명 + 급매 배지 + 네이버 매물 링크. 네이버 실매물 탭은 단지명을 단지 분석으로 연결하지
 // 않는다(운영자 요청, 2026.09 — 네이버 단지명이 실거래 표기와 달라 단지 분석에서 못 찾는 경우가 있음).
@@ -10412,12 +10412,18 @@ function fitListingTrendPrices(){
 }
 window.addEventListener('resize',fitListingTrendPrices);
 window.addEventListener('scroll',syncCompareSummarySticky,{passive:true});
+function syncListingTrendHistoryControl(button, expanded){
+  button.setAttribute('aria-expanded',String(expanded));
+  const label=button.getAttribute('aria-label');
+  if(label)button.setAttribute('aria-label',label.replace(/가격 이력 (?:펼치기|접기)$/,`가격 이력 ${expanded?'접기':'펼치기'}`));
+  const chevron=button.querySelector('.history-chevron');
+  if(chevron)chevron.textContent=expanded?'▴':'▾';
+}
 function toggleListingTrendHistory(button){
   const history=button.closest('.listing-trend-row').querySelector('.listing-trend-history');
   if(!history)return;
   history.hidden=!history.hidden;
-  button.setAttribute('aria-expanded',String(!history.hidden));
-  button.querySelector('.history-chevron').textContent=history.hidden?'▾':'▴';
+  syncListingTrendHistoryControl(button,!history.hidden);
   syncListingTrendHistoryBulkButton();
 }
 function syncListingTrendHistoryBulkButton(){
@@ -10435,11 +10441,7 @@ function toggleAllListingTrendHistory(){
   histories.forEach(history=>{
     history.hidden=!expand;
     const control=history.closest('.listing-trend-row')?.querySelector('button[aria-controls]');
-    if(control){
-      control.setAttribute('aria-expanded',String(expand));
-      const chevron=control.querySelector('.history-chevron');
-      if(chevron)chevron.textContent=expand?'▴':'▾';
-    }
+    if(control)syncListingTrendHistoryControl(control,expand);
   });
   syncListingTrendHistoryBulkButton();
 }
@@ -10552,7 +10554,7 @@ function renderListingGap(d){
   const html=`<div class="card">${listingHeaderHTML(d,'평형 갭',null,null)}<div class="sec">
     <div class="rng" style="margin-bottom:5px;color:var(--teal-dark)">${esc(d.filterLabel||'선택한 두 평형대')}의 같은 단지 최저 호가 비교</div>
     ${hint(`${listingOccupancyLabel()} · 중층 이상 · ${LISTING_MIN_HH}세대↑ · 전용 59·84·109·134㎡에 가까운 매물 우선 · 호가 차이 적은 순`)}
-    ${listingLinkLegend()}
+    ${d.rows.some(x=>x.small.url||x.large.url)?listingLinkLegend(true):''}
     
     ${body}</div></div><div class="src-note">평형대별 대표 전용면적(59/84/109/134㎡)에 가까운 매물을 비교하며, 차이가 같으면 낮은 호가를 선택합니다. 큰 평형 호가가 낮으면 음수로 표시합니다. 실거래가·세금·거래비용은 포함하지 않습니다. 출처: 네이버 부동산</div>`;
   const r=document.getElementById('result'); r.innerHTML=html; r.classList.add('on'); appendMolitMore(d);

@@ -29,14 +29,40 @@ export function daysUntil(date,today=kstToday()){
 export function officialURL(value){
   try{const u=new URL(value);return u.protocol==='https:'&&['www.applyhome.co.kr','applyhome.co.kr','apply.lh.or.kr'].includes(u.hostname)&&!u.username&&!u.password?u.href:null;}catch{return null;}
 }
+// LH 원문에 명시된 주택관리번호와 공고 ID만 교차 연결한다. 이름만으로 합치지 않는다.
+const VERIFIED_LH_NOTICES = [{
+  applyhome:'apt:2026000611',
+  lh:'lh-sale:LH-0000061217',
+  schedule:[
+    {label:'특별공급',dates:['2026-12-07 10:00 ~ 2026-12-08 17:00']},
+    {label:'일반공급·신생아 우선공급',dates:['2026-12-09 10:00 ~ 2026-12-10 17:00']}
+  ]
+}];
+export function mergeCrossSourceNotices(items){
+  const byKey=new Map(items.map(item=>[noticeKey(item),item]));
+  for(const pair of VERIFIED_LH_NOTICES){
+    const primary=byKey.get(pair.applyhome),lh=byKey.get(pair.lh);
+    const lhDetail=officialURL(lh?.detail_url);
+    if(!primary||!lhDetail)continue;
+    byKey.set(pair.applyhome,{
+      ...primary,
+      lh_detail_url:lhDetail,
+      alternate_notice_key:pair.lh,
+      apply_url:'',
+      schedule:pair.schedule
+    });
+    byKey.delete(pair.lh);
+  }
+  return [...byKey.values()];
+}
 export function filterNotices(items,{status='active',category='',region='',query='',favoritesOnly=false,favorites=[]}={},today=kstToday()){
   const saved=new Set(favorites),q=query.replace(/\s/g,'').toLowerCase();
   return items.filter(item=>{
     const state=noticeStatus(item,today);
     return ['apt','remainder','lh-sale'].includes(item.category)&&(status==='all'||(status==='active'?['open','upcoming'].includes(state):state===status))&&
-      (!category||item.category===category)&&(!region||item.region===region)&&
+      (!category||item.category===category||(category==='lh-sale'&&item.lh_detail_url))&&(!region||item.region===region)&&
       (!q||`${item.name||''}${item.address||''}`.replace(/\s/g,'').toLowerCase().includes(q))&&
-      (!favoritesOnly||saved.has(noticeKey(item)));
+      (!favoritesOnly||saved.has(noticeKey(item))||saved.has(item.alternate_notice_key));
   }).sort((a,b)=>{
     if(['active','open','upcoming'].includes(status)){
       const order=(validDate(b.notice_date)||'').localeCompare(validDate(a.notice_date)||'');
