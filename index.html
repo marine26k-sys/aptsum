@@ -10697,6 +10697,7 @@ function renderListingBudget(d,limit=100){
         <span class="nm">${listingNameHTML(x, !(drop!==null && drop<=0))}<small>${listingInfoHTML(x, multiRegion, true)}</small></span>
         <span class="val" style="color:var(--teal)"><span style="font-size:10px;color:var(--sub);font-weight:600">${esc(x.py)}평 (전용 ${esc(x.area||x.ex)})</span> ${x.ask.toFixed(1)}억${rent}${latest}${peak}${change}</span>
       </div>${d.individual?`<div class="rng" style="margin:4px 0 10px">${d.individualTrendError?'호가 이력을 불러오지 못했습니다. 다시 조회해 주세요.':'비교 가능한 직전 호가 이력이 없습니다.'}</div>`:''}${rkSep(i,list.length)}`; }).join('');
+  const hasHistoryGraphs=!!d.individual&&body.includes('class="listing-trend-history"');
   const html = `
   <div class="card">
     ${listingHeaderHTML(d, d.individual?'단지 분석':'금액대별 실매물', null, null, cur ? `${shortRegionLabel(d.scopeLabel||'')} ${cur.l}` : '')}
@@ -10708,6 +10709,7 @@ function renderListingBudget(d,limit=100){
       ${hint(`호가 기준 · ${(d.hhMin||LISTING_BUDGET_MIN_HH).toLocaleString()}세대↑${d.filterLabel?` · ${esc(d.filterLabel)}`:''} · 평형별 최저가 매물만`)}
       ${listingLinkLegend()}
       ${d.individual?listingTrendGraphLegend(true):''}
+      ${hasHistoryGraphs?'<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button id="listingTrendHistoryAll" type="button" aria-expanded="false" onclick="toggleAllListingTrendHistory()" style="padding:6px 11px;border:1px solid var(--teal-light);border-radius:9px;background:#fff;color:var(--teal-dark);font:inherit;font-size:11px;font-weight:800;cursor:pointer">그래프 전체 펼치기</button></div>':''}
       ${body}
       ${list.length<all.length ? `<button id="listingBudgetMore" type="button" onclick="showMoreListingBudget()" style="display:block;width:100%;margin-top:12px;padding:12px;border:1px solid var(--teal);border-radius:10px;background:#fff;color:var(--teal-dark);font-weight:700">더보기 · ${Math.min(100,all.length-list.length)}개 추가 (남은 ${all.length-list.length}개)</button>` : ''}
     </div>
