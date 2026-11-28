@@ -9386,7 +9386,7 @@ function listingGapSet(small, large, changed){
   if(small>=large){ if(changed==='large') small=large-10; else large=small+10; }
   document.getElementById('listingGapSmall').value = small;
   document.getElementById('listingGapLarge').value = large;
-  const label=document.getElementById('listingGapText');if(label)label.textContent=`${listingGapBandLabel(small)} → ${listingGapBandLabel(large)}`;
+  const label=document.getElementById('listingGapText');if(label)label.textContent=`${listingGapBandLabel(small)} ↔ ${listingGapBandLabel(large)}`;
   for(const id of ['listingGapSmall','listingGapLarge']){const input=document.getElementById(id+'Number');if(input)input.value=document.getElementById(id).value;}
 }
 function listingGapApply(changed){
@@ -9435,7 +9435,7 @@ async function searchListingGap(myToken, lawd, silentScroll){
     if(failed.length===targets.length){ showError('실매물 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
     const d={found:true,mode:'listinggap',asOf,failedRegions:failed,...bands,
       rows:analyzeListingGap(all,bands.smallBand,bands.largeBand),
-      filterLabel:`${listingGapBandLabel(bands.smallBand)} → ${listingGapBandLabel(bands.largeBand)}`,
+      filterLabel:`${listingGapBandLabel(bands.smallBand)} ↔ ${listingGapBandLabel(bands.largeBand)}`,
       scopeLabel:regionSel.length ? regionScopeLabel(targets) : sel.options[sel.selectedIndex].textContent};
     lastData=d;
     renderListingGap(d);
