@@ -1593,6 +1593,7 @@ function buildShareURL(inp){
   p.set('m', inp.mode); p.set('p', inp.mode==='region' ? analysisMonthsForMode(inp.mode, inp.mN) : inp.mN); p.set('f', inp.fM);
   if(['listingbudget','listingurgent'].includes(inp.mode)&&inp.listingFloor==='all')p.set('lf','all');
   if(['listingbudget','listingtrend','listingrise'].includes(inp.mode)&&inp.listingNameQuery){p.set('lnq',inp.listingNameQuery);if(inp.listingNameKey)p.set('lnk',inp.listingNameKey);}
+  if(inp.mode==='listingbudget'&&inp.budgetBand)p.set('lb',inp.budgetBand);
   if(inp.by) p.set('by', inp.by);
   if(inp.mode==='region'&&inp.regionRankView==='pyprice')p.set('rrv','pyprice');
   if(['listingtrend','listingrise'].includes(inp.mode)){
@@ -1660,6 +1661,7 @@ async function initFromURL(){
     return;
   }
   document.getElementById('listingNameQuery').value=['listingbudget','listingtrend','listingrise'].includes(requestedMode)?(p.get('lnq')||''):'';
+  if(requestedMode==='listingbudget'&&p.has('lb'))listingBudgetSel=p.get('lb')||null;
   if(['listingtrend','listingrise'].includes(requestedMode)){
     if(p.get('ltd')==='all')document.getElementById('listingTrendDirection').value='all';
     syncListingTrendBelowPeak(p.get('ltbp')==='1');
@@ -2691,6 +2693,7 @@ function saveQueriedSliders(priceRange){
   const selects={};
   for(const id of ['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'])selects[id]=id==='monthsN'?analysisMonthsForMode(mode,document.getElementById(id).value):document.getElementById(id).value;
   const v={bands:pyBandMultiSel.slice(),selects,by:document.getElementById('buildYear').value};
+  if(mode==='listingbudget')v.budgetBand=listingBudgetSel;
   if(mode==='newhigh')v.newHighPrice=priceRange||newHighPriceRange();
   if(isListingMode(mode)){v.ls=lsGet();v.limits=lsSavedLimits();v.manualFacets=[...listingManualFacets];v.gap=listingGapBands();}
   try{localStorage.setItem(queriedSliderKey(mode),JSON.stringify(v));}catch{}
@@ -2713,6 +2716,7 @@ function restoreQueriedSliders(m){
   const v=getQueriedSliderPref(m);
   resetQueriedSliderDefaults(m);
   if(!v)return;
+  if(m==='listingbudget'&&typeof v.budgetBand==='string')listingBudgetSel=v.budgetBand;
   for(const [id,value] of Object.entries(v.selects||{})){
     if(m==='longtermrise'&&id==='risePeriodN')continue; // 새 진입은 12개월 기본값, 명시적 공유 링크·뒤로가기는 별도 복원
     if(!['monthsN','floorMin','risePeriodN','priceBandPeriodN','priceBandN','subwayWalkMax'].includes(id))continue;
@@ -3013,7 +3017,7 @@ function listingTrialBlocked(lawd){
 }
 // 네이버 실매물 기준 탭 3개(저평가 실매물·예산별 실매물·급매 선별) 결과 헤더 공통 — 비인증 사용자에게만 표시
 function listingTrialBadgeHTML(){
-  return isListingTrial() ? `<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.45);border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span><a href="./apply.html" aria-label="다른 지역 30일 이용 신청, 4,900원" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;border:1px solid #fff;border-radius:999px;background:#fff;color:#07545A;font-size:11.5px;font-weight:900;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer"><span>다른 지역 조회</span><span style="font-size:10.5px;font-weight:700;white-space:nowrap">30일 · 4,900원</span><span aria-hidden="true" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:900;white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 19h14"/></svg>클릭</span></a></div>` : '';
+  return isListingTrial() ? `<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-top:7px;text-align:center"><span style="display:inline-block;font-size:11px;font-weight:700;color:#0B3D02;background:#39FF14;box-shadow:0 2px 8px rgba(57,255,20,.45);border-radius:10px;padding:2px 9px">무료 체험 · 강남구</span><a href="./apply.html" aria-label="다른 지역 30일 이용 신청, 4,900원" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;border:1px solid #fff;border-radius:999px;background:#fff;color:#07545A;font-size:11.5px;font-weight:900;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer"><span>다른 지역 조회</span><span style="font-size:10.5px;font-weight:700;white-space:nowrap">30일 · 4,900원</span><span aria-hidden="true" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:900;white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v17l4.5-4.2 2.7 6.2 2.4-1.1-2.8-6.1H19L5 3z" fill="currentColor"/><path d="M18 3v3M22 7l-2 2M14 2l1 3" stroke-width="1.7"/></svg>클릭</span></a></div>` : '';
 }
 const LISTING_TRIAL_MSG = `무료 체험은 <b>강남구</b>만 조회할 수 있습니다. 전 지역 조회는 비공개 탭 인증 후 이용해 주세요. ${SUBSCRIBER_APPLY_LINK}`;
 function setMode(m, fromRestore){
@@ -10080,7 +10084,7 @@ async function resolveListingName(myToken){
   listingNameSelected=listingNameChoices.find(x=>x.key===key)||null;
   const autoSelectExact=listingNameAutoSelectExact;listingNameAutoSelectExact=false;
   if(!listingNameSelected&&autoSelectExact){
-    const normalizeName=value=>String(value||'').normalize('NFKC').replace(/[\\s\\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
+    const normalizeName=value=>String(value||'').normalize('NFKC').replace(/[\s\-_·]/g,'').replace(/아파트$/,'').toLowerCase();
     const exact=listingNameChoices.filter(x=>normalizeName(x.apt)===normalizeName(query));
     if(exact.length===1)listingNameSelected=exact[0];
   }
@@ -10613,6 +10617,7 @@ function renderListingUrgent(d){
 
 function setListingBudgetBand(v){
   listingBudgetSel = v;
+  saveQueriedSliders();
   if(lastData && lastData.mode==='listingbudget') renderListingBudget(lastData);
 }
 function showMoreListingBudget(){
