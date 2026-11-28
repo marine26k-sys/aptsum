@@ -1696,7 +1696,7 @@ async function initFromURL(){
     }
     // 무료체험 진입은 강남구 결과부터 바로 보여준다. 구독 인증 상태에서는 기존처럼
     // 방문자가 직접 지역을 고르고 조회하도록 지역 선택과 자동 조회를 건드리지 않는다.
-    const autoStartGangnamTrial = requestedMode==='listingbudget'
+    const autoStartGangnamTrial = ['listingbudget','listingurgent','listingtrend','longpeaklisting','listinggap'].includes(requestedMode)
       && isListingTrial()
       && !p.get('r')
       && !p.get('rs')
