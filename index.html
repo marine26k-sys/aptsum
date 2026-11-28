@@ -9961,6 +9961,7 @@ function lsApply(){
     lsDataBounds(listingFilterSourceItems,mode==='listingbudget'?['py','ask','age','hh','rate']:['py','ask','age','hh']);
     if(mode==='listingbudget')listingGapInvestmentSetMax(listingFilterSourceItems.filter(x=>lsMatch(x,lsGet())));
   }
+  if(['listingbudget','listingurgent','listingtrend','listingrise','longpeaklisting'].includes(mode))saveQueriedSliders();
   if(lastData && (lastData.mode === 'listingurgent' || (lastData.mode==='listingtrend'||lastData.mode==='listingrise') || lastData.mode === 'longpeaklisting') && lastData.mode === mode) search({silentScroll:true});
 }
 function getListingBudgetFavorites(){
