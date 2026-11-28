@@ -401,6 +401,8 @@ try {
   .listing-gap-prices small{display:block;margin-top:2px;font-size:9px;font-weight:400;color:var(--sub)}
   .listing-gap-prices .listing-gap-peak{margin-top:5px;padding-top:4px;border-top:1px dashed rgba(100,116,139,.28);font-size:8.5px;line-height:1.45}
   .listing-gap-prices .listing-gap-peak span{display:block}
+  .listing-gap-prices .listing-gap-link{display:block;color:inherit;text-decoration:none}
+  .listing-gap-prices .listing-gap-link:hover{text-decoration:underline}
   .listing-gap-prices a:hover{text-decoration:underline}
 
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px;margin-bottom:8px}
@@ -10516,9 +10518,11 @@ function listingGapPeakHTML(x){
 }
 function listingGapPriceHTML(x, large){
   const label=`${esc(x.py)}평 · ${x.ask.toFixed(1)}억`;
-  const content=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>${listingGapPeakHTML(x)}`;
-  return x.url ? `<a class="${large?'large':''}" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 ${x.ask.toFixed(1)}억 매물, 전고점 대비 변동 확인">${content}</a>`
-    : `<span class="price ${large?'large':''}">${content}</span>`;
+  const priceLine=`${label}${x.url ? ' ↗' : ''}<small>전용 ${esc(x.ex)}㎡</small>`;
+  const priceContent=x.url
+    ? `<a class="listing-gap-link" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.apt)} ${esc(x.py)}평 ${x.ask.toFixed(1)}억 네이버 매물 보기">${priceLine}</a>`
+    : priceLine;
+  return `<div class="price ${large?'large':''}">${priceContent}${listingGapPeakHTML(x)}</div>`;
 }
 function renderListingGap(d){
   d=molitPageData(d,"rows",renderListingGap);
